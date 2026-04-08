@@ -1809,6 +1809,108 @@ function SourceDetailWorkspace({
   );
 }
 
+/* ─── Provincie source detail workspace ────────────────────── */
+
+function ProvincieSourceDetailWorkspace({
+  sourceKey,
+  provincieCode,
+  onBack,
+}: {
+  sourceKey: string;
+  provincieCode: string;
+  onBack: () => void;
+}) {
+  const source = PROVINCIE_DATA_SOURCES.find((s) => s.key === sourceKey);
+
+  // Resolve provincie naam from geojson for breadcrumb consistency
+  // with the gemeente workspace's "Terug naar Venlo" pattern.
+  const { data: provincieGeoJSON } = useProvincieGeoJSON(true);
+  const provincieNaam = useMemo(() => {
+    if (!provincieGeoJSON) return null;
+    const feature = provincieGeoJSON.features.find(
+      (f) =>
+        String((f.properties as Record<string, unknown>)?.statcode ?? "") ===
+        provincieCode,
+    );
+    return feature
+      ? String(
+          (feature.properties as Record<string, unknown>)?.statnaam ??
+            provincieCode,
+        )
+      : provincieCode;
+  }, [provincieGeoJSON, provincieCode]);
+
+  if (!source) {
+    return (
+      <div className="space-y-6">
+        <motion.button
+          variants={fadeUp}
+          initial="hidden"
+          animate="show"
+          onClick={onBack}
+          className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#0E1111]"
+        >
+          <ArrowLeft size={14} />
+          Terug naar {provincieNaam ?? "provincie"}
+        </motion.button>
+        <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+          <p className="text-[13px] text-slate-400">
+            Databron &ldquo;{sourceKey}&rdquo; niet gevonden.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const Icon = source.icon;
+
+  return (
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <motion.button
+        variants={fadeUp}
+        initial="hidden"
+        animate="show"
+        onClick={onBack}
+        className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#0E1111]"
+      >
+        <ArrowLeft size={14} />
+        Terug naar {provincieNaam ?? "provincie"}
+      </motion.button>
+
+      {/* Source heading — mirrors gemeente SourceDetailWorkspace */}
+      <motion.div
+        variants={fadeUp}
+        initial="hidden"
+        animate="show"
+        className="flex items-center gap-4"
+      >
+        <div className="flex size-14 items-center justify-center rounded-full bg-[#0E1111]">
+          <Icon className="size-7 text-[#F9A826]" strokeWidth={2} />
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            Databron · {source.category}
+          </p>
+          <h1 className="text-[28px] font-black leading-none tracking-tight text-[#0E1111]">
+            {source.label}
+          </h1>
+          <p className="mt-1 text-[12px] text-slate-500">{source.description}</p>
+        </div>
+      </motion.div>
+
+      {/* Always the shared shell — no enriched cases at provincie level */}
+      <motion.div variants={fadeUp} initial="hidden" animate="show">
+        <DocumentSourceDetailView
+          entityType="provincie"
+          entityCode={provincieCode}
+          sourceKey={sourceKey}
+        />
+      </motion.div>
+    </div>
+  );
+}
+
 /* ─── Landelijk source detail view ──────────────────────────── */
 
 function LandelijkSourceDetail({
