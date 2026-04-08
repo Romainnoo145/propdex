@@ -7,7 +7,8 @@ import {
   useGemeenteProfile,
   SEVERITY_COLORS,
 } from "@/hooks/useGemeenteProfile";
-import { Shield, Loader2, ArrowRight } from "lucide-react";
+import { Shield, ArrowRight } from "lucide-react";
+import { DetailLoading, DetailEmpty, DetailError } from "./DetailStates";
 import {
   SectionInsightCard,
   SubCard,
@@ -19,33 +20,18 @@ interface Props {
   gemeenteNaam: string | null;
 }
 
-function DetailLoading() {
-  return (
-    <div className="flex items-center justify-center gap-2 rounded-[20px] border border-[#EAEFEF] bg-white p-12">
-      <Loader2 className="size-5 animate-spin text-slate-400" />
-      <span className="text-[13px] text-slate-400">Data laden…</span>
-    </div>
-  );
-}
-
 export function VergunningKlimaatDetailEnriched({ gemeenteNaam }: Props) {
   const { data: profile, isLoading, error } = useGemeenteProfile(gemeenteNaam);
 
   if (!gemeenteNaam || isLoading) return <DetailLoading />;
-  if (error) {
+  if (error) return <DetailError error={error as Error} />;
+  if (!profile) return <DetailEmpty message="Geen data beschikbaar." />;
+  if (profile.data_coverage === 'none') {
     return (
-      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-        <p className="text-[13px] text-red-400">Fout bij laden.</p>
-      </div>
-    );
-  }
-  if (!profile) {
-    return (
-      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-        <p className="text-[13px] font-semibold text-[#0E1111]">
-          Geen data beschikbaar
-        </p>
-      </div>
+      <DetailEmpty
+        message="Geen vergunningdata beschikbaar"
+        description="Voor deze gemeente zijn nog geen vergunningen verwerkt. Probeer een andere gemeente of kijk later terug."
+      />
     );
   }
 
