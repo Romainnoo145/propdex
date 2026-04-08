@@ -633,7 +633,7 @@ export function S8VergunningChecklist({ data, sourceParcelId }: S8VergunningChec
   return (
     <div className="space-y-4">
       {/* ── Strategy toggle + progress on one line ────────────── */}
-      <div className="flex items-center gap-4 rounded-2xl border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-3">
+      <div className="flex items-center gap-4">
         {/* Toggle pills */}
         <div className="flex h-[44px] min-w-0 flex-1 rounded-full bg-[#F2F6F3] p-1">
           {useCases.map((uc) => {
