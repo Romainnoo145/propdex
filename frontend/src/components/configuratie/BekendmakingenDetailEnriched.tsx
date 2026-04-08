@@ -10,7 +10,8 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { Bell, ExternalLink, Loader2 } from "lucide-react";
+import { Bell, ExternalLink } from "lucide-react";
+import { DetailLoading, DetailEmpty, DetailError } from "./DetailStates";
 import { useAuth } from "@/lib/auth/useAuth";
 import { fetchAllChanges } from "@/lib/api";
 import type { ChangeRecord } from "@/lib/types/monitoring";
@@ -25,37 +26,6 @@ const dateFmt = new Intl.DateTimeFormat("nl-NL", {
   month: "short",
   year: "numeric",
 });
-
-/* ─── State helpers (contract §10) ────────────────────────────── */
-
-function DetailLoading() {
-  return (
-    <div className="flex items-center justify-center gap-2 rounded-[20px] border border-[#EAEFEF] bg-white p-12">
-      <Loader2 className="size-5 animate-spin text-slate-400" />
-      <span className="text-[13px] text-slate-400">Data laden…</span>
-    </div>
-  );
-}
-
-function DetailEmpty({ message }: { message?: string }) {
-  return (
-    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-      <p className="text-[13px] font-semibold text-[#0E1111]">
-        {message ?? "Geen data beschikbaar."}
-      </p>
-    </div>
-  );
-}
-
-function DetailError({ error }: { error: Error | null }) {
-  return (
-    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-      <p className="text-[13px] text-red-400">
-        {error?.message ?? "Er is een fout opgetreden."}
-      </p>
-    </div>
-  );
-}
 
 /* ─── Change type label (contract §5: neutral pills) ──────────── */
 
