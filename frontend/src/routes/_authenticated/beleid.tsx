@@ -69,7 +69,6 @@ import { RaadsinformatieDetailEnriched } from "@/components/configuratie/Raadsin
 import { HuisvestingsverordeningDetailEnriched } from "@/components/configuratie/HuisvestingsverordeningDetailEnriched";
 import { BeschermdErfgoedDetailEnriched } from "@/components/configuratie/BeschermdErfgoedDetailEnriched";
 import { DocumentSourceDetailView } from "@/components/configuratie/DocumentSourceDetailView";
-import { SourceGuidanceCard } from "@/components/configuratie/SourceGuidanceCard";
 
 import type { LucideIcon } from "lucide-react";
 
@@ -799,14 +798,31 @@ function DataSourceCard({
           category: source.category,
         },
       });
-    } else if (!gemeenteCode && source.status === "live") {
-      // Landelijk sources: navigate without gemeente param
+    } else if (entityType === "provincie" && entityCode) {
+      navigate({
+        to: "/beleid",
+        search: {
+          provincie: entityCode,
+          source: source.key,
+          category: source.category,
+        },
+      });
+    } else {
+      // Landelijk — no gemeente, no provincie. All sources click through,
+      // including document sources (no status check).
       navigate({
         to: "/beleid",
         search: { source: source.key, category: source.category },
       });
     }
-  }, [gemeenteCode, navigate, source.key]);
+  }, [
+    gemeenteCode,
+    entityType,
+    entityCode,
+    navigate,
+    source.key,
+    source.category,
+  ]);
 
   const liveMetrics = isLive ? getLiveMetrics(source.key, gemeenteData) : null;
 
@@ -1585,7 +1601,13 @@ function CompactProvincieGrid({
 /* ─── Landelijk content (curated subsidies, compact) ────────── */
 
 function LandelijkContent() {
-  return <CategoryTabbedSources sources={LANDELIJK_DATA_SOURCES} />;
+  return (
+    <CategoryTabbedSources
+      sources={LANDELIJK_DATA_SOURCES}
+      entityType="landelijk"
+      entityCode="NL"
+    />
+  );
 }
 
 /* ─── Source detail workspace (skeleton — T02/T03 add content) ── */
@@ -1786,6 +1808,110 @@ function SourceDetailWorkspace({
   );
 }
 
+/* ─── Provincie source detail workspace ────────────────────── */
+
+function ProvincieSourceDetailWorkspace({
+  sourceKey,
+  provincieCode,
+  onBack,
+}: {
+  sourceKey: string;
+  provincieCode: string;
+  onBack: () => void;
+}) {
+  const source = PROVINCIE_DATA_SOURCES.find((s) => s.key === sourceKey);
+
+  // Resolve provincie naam from geojson for breadcrumb consistency
+  // with the gemeente workspace's "Terug naar Venlo" pattern.
+  const { data: provincieGeoJSON } = useProvincieGeoJSON(true);
+  const provincieNaam = useMemo(() => {
+    if (!provincieGeoJSON) return null;
+    const feature = provincieGeoJSON.features.find(
+      (f) =>
+        String((f.properties as Record<string, unknown>)?.statcode ?? "") ===
+        provincieCode,
+    );
+    return feature
+      ? String(
+          (feature.properties as Record<string, unknown>)?.statnaam ??
+            provincieCode,
+        )
+      : provincieCode;
+  }, [provincieGeoJSON, provincieCode]);
+
+  if (!source) {
+    return (
+      <div className="space-y-6">
+        <motion.button
+          variants={fadeUp}
+          initial="hidden"
+          animate="show"
+          onClick={onBack}
+          className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#0E1111]"
+        >
+          <ArrowLeft size={14} />
+          Terug naar {provincieNaam ?? "provincie"}
+        </motion.button>
+        <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+          <p className="text-[13px] text-slate-400">
+            Databron &ldquo;{sourceKey}&rdquo; niet gevonden.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const Icon = source.icon;
+
+  return (
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <motion.button
+        variants={fadeUp}
+        initial="hidden"
+        animate="show"
+        onClick={onBack}
+        className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#0E1111]"
+      >
+        <ArrowLeft size={14} />
+        Terug naar {provincieNaam ?? "provincie"}
+      </motion.button>
+
+      {/* Source heading — mirrors gemeente SourceDetailWorkspace */}
+      <motion.div
+        variants={fadeUp}
+        initial="hidden"
+        animate="show"
+        className="flex items-center gap-4"
+      >
+        <div className="flex size-14 items-center justify-center rounded-full bg-[#0E1111]">
+          <Icon className="size-7 text-[#F9A826]" strokeWidth={2} />
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            Databron · {source.category}
+          </p>
+          <h1 className="text-[28px] font-black leading-none tracking-tight text-[#0E1111]">
+            {source.label}
+          </h1>
+          <p className="mt-1 text-[12px] text-slate-500">
+            {source.description}
+          </p>
+        </div>
+      </motion.div>
+
+      {/* Always the shared shell — no enriched cases at provincie level */}
+      <motion.div variants={fadeUp} initial="hidden" animate="show">
+        <DocumentSourceDetailView
+          entityType="provincie"
+          entityCode={provincieCode}
+          sourceKey={sourceKey}
+        />
+      </motion.div>
+    </div>
+  );
+}
+
 /* ─── Landelijk source detail view ──────────────────────────── */
 
 function LandelijkSourceDetail({
@@ -1829,12 +1955,11 @@ function LandelijkSourceDetail({
         return <OmgevingswetDetailEnriched />;
       default:
         return (
-          <div className="space-y-4">
-            <SourceGuidanceCard sourceKey={sourceKey} />
-            <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-6">
-              <p className="text-[13px] text-slate-500">{source.description}</p>
-            </div>
-          </div>
+          <DocumentSourceDetailView
+            entityType="landelijk"
+            entityCode="NL"
+            sourceKey={sourceKey}
+          />
         );
     }
   };
@@ -1948,6 +2073,26 @@ function ConfiguratiePage() {
     );
   }
 
+  // Provincie source workspace — must be checked BEFORE activeProvincie alone
+  if (activeProvincie && activeSource) {
+    return (
+      <ResultsShell>
+        <div className="mx-auto max-w-4xl">
+          <ProvincieSourceDetailWorkspace
+            sourceKey={activeSource}
+            provincieCode={activeProvincie}
+            onBack={() =>
+              navigate({
+                to: "/beleid",
+                search: { provincie: activeProvincie },
+              })
+            }
+          />
+        </div>
+      </ResultsShell>
+    );
+  }
+
   // If gemeente is selected, show detail view
   if (activeGemeente) {
     return (
@@ -1977,8 +2122,8 @@ function ConfiguratiePage() {
     );
   }
 
-  // If landelijk source is selected (no gemeente), show landelijk detail view
-  if (activeSource && !activeGemeente) {
+  // If landelijk source is selected (no gemeente, no provincie), show landelijk detail view
+  if (activeSource && !activeGemeente && !activeProvincie) {
     return (
       <ResultsShell>
         <div className="mx-auto max-w-4xl">
