@@ -1894,7 +1894,9 @@ function ProvincieSourceDetailWorkspace({
           <h1 className="text-[28px] font-black leading-none tracking-tight text-[#0E1111]">
             {source.label}
           </h1>
-          <p className="mt-1 text-[12px] text-slate-500">{source.description}</p>
+          <p className="mt-1 text-[12px] text-slate-500">
+            {source.description}
+          </p>
         </div>
       </motion.div>
 
