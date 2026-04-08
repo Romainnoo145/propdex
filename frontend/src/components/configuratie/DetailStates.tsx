@@ -29,7 +29,7 @@ export function DetailEmpty({ message, description }: DetailEmptyProps) {
   return (
     <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
       <p className="text-[13px] font-semibold text-[#0E1111]">
-        {message ?? 'Geen data beschikbaar.'}
+        {message ?? 'Geen data beschikbaar'}
       </p>
       {description && (
         <p className="mx-auto mt-2 max-w-sm text-[12px] text-slate-400">
