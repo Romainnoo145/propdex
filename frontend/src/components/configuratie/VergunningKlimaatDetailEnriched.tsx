@@ -24,10 +24,17 @@ export function VergunningKlimaatDetailEnriched({ gemeenteNaam }: Props) {
   const { data: profile, isLoading, error } = useGemeenteProfile(gemeenteNaam)
 
   if (!gemeenteNaam || isLoading) return <DetailLoading />
-  if (error || !profile) {
+  if (error) {
     return (
       <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-        <p className="text-[13px] text-slate-400">{error ? 'Fout bij laden.' : 'Geen data beschikbaar.'}</p>
+        <p className="text-[13px] text-red-400">Fout bij laden.</p>
+      </div>
+    )
+  }
+  if (!profile) {
+    return (
+      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+        <p className="text-[13px] font-semibold text-[#0E1111]">Geen data beschikbaar</p>
       </div>
     )
   }
