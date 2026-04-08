@@ -892,7 +892,7 @@ function DataSourceCard({
                   `${docCount} document${docCount !== 1 ? "en" : ""}`}
               </span>
               {aiSummary && (
-                <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-600 shrink-0">
+                <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 shrink-0">
                   <Sparkles size={9} />
                   AI
                 </span>
