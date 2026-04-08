@@ -39,7 +39,7 @@ export function VergunningKlimaatDetailEnriched({ gemeenteNaam }: Props) {
   const maxCount = permitEntries.length > 0 ? permitEntries[0][1] : 1
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       {/* Main card — reuses SectionInsightCard from rapport sections */}
       <SectionInsightCard
         kicker="Vergunningklimaat"
@@ -47,15 +47,13 @@ export function VergunningKlimaatDetailEnriched({ gemeenteNaam }: Props) {
         Icon={Shield}
         badge={`${profile.sample_size} zaken`}
       >
-        {/* Severity bar */}
+        {/* Severity indicator bar */}
         <div className="mb-4 flex items-center gap-3">
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-bold text-white"
-            style={{ backgroundColor: sevColor }}
-          >
-            {profile.severity_label}
+          <span className="inline-flex items-center gap-1.5">
+            <span className="size-2 rounded-full" style={{ backgroundColor: sevColor }} />
+            <span className="text-[11px] font-semibold text-slate-600">{profile.severity_label}</span>
           </span>
-          <span className="text-[12px] text-slate-400">op basis van {profile.sample_size} vergunningen</span>
+          <span className="text-[11px] text-slate-400">op basis van {profile.sample_size} vergunningen</span>
         </div>
 
         {/* Core metrics — reuses StatCell from rapport */}

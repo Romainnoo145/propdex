@@ -1,7 +1,11 @@
 /**
  * Enriched Raadsinformatie detail for the configuratie source-detail view.
  *
- * Reuses shared report components: SectionInsightCard, SubCard, StatCell.
+ * Follows CONFIGURATIE-DESIGN-CONTRACT.md strictly:
+ * - SectionInsightCard wrappers
+ * - TimelineRow-style list items (contract §6)
+ * - Neutral bg-[#F8FAFA] type pills (contract §5)
+ * - space-y-6 top-level with Plus Jakarta font
  */
 import { useState, useMemo } from 'react'
 import { useRaadsinformatie, type RaadsstukResponse } from '@/hooks/useRaadsinformatie'
@@ -27,6 +31,8 @@ function formatDate(dateStr: string | null): string {
   }
 }
 
+/* ─── State helpers (contract §10) ────────────────────────────── */
+
 function DetailLoading() {
   return (
     <div className="flex items-center justify-center gap-2 rounded-[20px] border border-[#EAEFEF] bg-white p-12">
@@ -36,38 +42,70 @@ function DetailLoading() {
   )
 }
 
-/* ─── Stuk list item — same structure as RulingListItem ──────── */
-
-function StukItem({ stuk }: { stuk: RaadsstukResponse }) {
+function DetailEmpty({ message }: { message?: string }) {
   return (
-    <div className="flex items-start gap-3 border-b border-[#EAEFEF] py-3 last:border-0">
+    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+      <p className="text-[13px] text-slate-400">{message ?? 'Geen data beschikbaar.'}</p>
+    </div>
+  )
+}
+
+function DetailError({ error }: { error: Error | null }) {
+  return (
+    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+      <p className="text-[13px] text-red-400">{error?.message ?? 'Er is een fout opgetreden.'}</p>
+    </div>
+  )
+}
+
+/* ─── Stuk list item (contract §6: TimelineRow) ──────────────── */
+
+function StukItem({ stuk, idx, total }: { stuk: RaadsstukResponse; idx: number; total: number }) {
+  return (
+    <div className="flex gap-3 py-3 border-b border-[#EAEFEF] last:border-b-0">
+      <div className="flex flex-col items-center pt-1.5">
+        <span className="h-2 w-2 rounded-full bg-aura-amber shrink-0" />
+        {idx < total - 1 && <span className="w-px flex-1 bg-[#EAEFEF] mt-1" />}
+      </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-semibold text-[#0E1111]">{stuk.titel}</p>
+        <p className="text-[12px] font-semibold text-[#0E1111] leading-snug line-clamp-2">
+          {stuk.bron_url ? (
+            <a
+              href={stuk.bron_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-aura-amber transition-colors"
+            >
+              {stuk.titel}
+            </a>
+          ) : (
+            stuk.titel
+          )}
+        </p>
         <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
           {stuk.datum && <span>{formatDate(stuk.datum)}</span>}
           {stuk.type && (
-            <>
-              <span className="text-slate-300">·</span>
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
-                {stuk.type}
-              </span>
-            </>
+            <span className="rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-1.5 py-0.5 text-[10px]">
+              {stuk.type}
+            </span>
+          )}
+          {stuk.bron_url && (
+            <a
+              href={stuk.bron_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-0.5 hover:text-[#0E1111]"
+            >
+              <ExternalLink size={9} />
+            </a>
           )}
         </div>
         {stuk.samenvatting && (
-          <p className="mt-1.5 text-[12px] leading-relaxed text-slate-400 line-clamp-2">{stuk.samenvatting}</p>
+          <p className="mt-1.5 text-[12px] leading-relaxed text-slate-400 line-clamp-2">
+            {stuk.samenvatting}
+          </p>
         )}
       </div>
-      {stuk.bron_url && (
-        <a
-          href={stuk.bron_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-1 flex-shrink-0 text-slate-400 hover:text-[#B07D18] transition-colors"
-        >
-          <ExternalLink size={14} />
-        </a>
-      )}
     </div>
   )
 }
@@ -91,23 +129,10 @@ export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
   }, [data?.stukken, searchQuery])
 
   if (!gemeenteNaam || isLoading) return <DetailLoading />
-  if (error || !data) {
-    return (
-      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-        <p className="text-[13px] text-slate-400">{error ? 'Fout bij laden.' : 'Geen data beschikbaar.'}</p>
-      </div>
-    )
-  }
+  if (error) return <DetailError error={error as Error} />
+  if (!data || data.stukken.length === 0) return <DetailEmpty message="Geen raadsstukken gevonden." />
 
-  if (data.stukken.length === 0) {
-    return (
-      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-        <p className="text-[13px] text-slate-400">Geen raadsstukken gevonden.</p>
-      </div>
-    )
-  }
-
-  // Type counts
+  // Type counts for summary pills
   const typeCounts: Record<string, number> = {}
   for (const stuk of data.stukken) {
     const t = stuk.type || 'Overig'
@@ -116,21 +141,21 @@ export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
   const sortedTypes = Object.entries(typeCounts).sort(([, a], [, b]) => b - a)
 
   return (
-    <div className="space-y-5">
-      {/* Main card — reuses SectionInsightCard */}
+    <div className="space-y-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      {/* Main card */}
       <SectionInsightCard
         kicker="Raadsinformatie"
         title={`${data.total_found} stukken`}
         Icon={FileText}
         badge={data.dekking ? 'Goede dekking' : 'Beperkte dekking'}
       >
-        {/* Type summary — pill row, same as category_label pills in Bekendmakingen */}
+        {/* Type summary — neutral pills per contract §5 */}
         {sortedTypes.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
             {sortedTypes.map(([type, count]) => (
               <span
                 key={type}
-                className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold text-slate-500"
+                className="rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-2 py-0.5 text-[10px] font-medium text-slate-500"
               >
                 {type} ({count})
               </span>
@@ -154,9 +179,9 @@ export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
 
         {/* Stukken feed */}
         {filteredStukken.length > 0 ? (
-          <div className="max-h-[400px] overflow-y-auto">
-            {filteredStukken.map((stuk) => (
-              <StukItem key={stuk.doc_id} stuk={stuk} />
+          <div className="max-h-[480px] overflow-y-auto">
+            {filteredStukken.map((stuk, idx) => (
+              <StukItem key={stuk.doc_id} stuk={stuk} idx={idx} total={filteredStukken.length} />
             ))}
           </div>
         ) : (

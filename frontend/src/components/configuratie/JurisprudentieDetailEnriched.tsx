@@ -1,33 +1,35 @@
 /**
  * Enriched Jurisprudentie detail for the configuratie source-detail view.
  *
- * Fetches the rulings feed for the active gemeente and renders:
- *  - win/loss summary bar (toegewezen / afgewezen / gedeeltelijk / onbekend)
- *  - scrollable list of the 10 most recent rulings with uitkomst badges
- *  - link to the full jurisprudentie explorer
+ * Follows CONFIGURATIE-DESIGN-CONTRACT.md strictly:
+ * - SectionInsightCard wrappers
+ * - TimelineRow-style list items (contract §6)
+ * - SemanticPill for uitkomst (contract §5)
+ * - space-y-6 top-level with Plus Jakarta font
  */
 
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, Loader2 } from 'lucide-react'
+import { ArrowRight, Scale, ExternalLink, Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth/useAuth'
 import {
   getGemeenteRulingsFeed,
   type GemeenteRulingsFeedItem,
   type WinLossRatio,
 } from '@/lib/api'
+import { SectionInsightCard } from '@/components/reports/components/SectionInsightCard'
 
-/* ─── Uitkomst helpers (mirrored from RulingCard) ────────────── */
+/* ─── Uitkomst helpers ──────────────────────────────────────── */
 
 function uitkomstStyle(uitkomst: string | null): string {
   switch (uitkomst) {
     case 'toegewezen':
-      return 'bg-emerald-500/15 text-emerald-600'
+      return 'border-emerald-200 bg-emerald-50 text-emerald-700'
     case 'afgewezen':
-      return 'bg-red-500/15 text-red-600'
+      return 'border-red-200 bg-red-50 text-red-700'
     case 'gedeeltelijk':
-      return 'bg-amber-500/15 text-amber-600'
+      return 'border-amber-200 bg-amber-50 text-amber-700'
     default:
-      return 'bg-slate-100 text-slate-500'
+      return 'border-slate-200 bg-slate-50 text-slate-600'
   }
 }
 
@@ -50,7 +52,7 @@ const dateFmt = new Intl.DateTimeFormat('nl-NL', {
   year: 'numeric',
 })
 
-/* ─── Lightweight state helpers (inline equiv of configuratie helpers) ── */
+/* ─── State helpers (contract §10) ────────────────────────────── */
 
 function DetailLoading() {
   return (
@@ -77,48 +79,40 @@ function DetailError({ error }: { error: Error | null }) {
   )
 }
 
-/* ─── Win / Loss summary bar ─────────────────────────────────── */
+/* ─── Win / Loss distribution bar (contract §9) ──────────────── */
 
 const WIN_LOSS_SEGMENTS: {
   key: keyof Omit<WinLossRatio, 'total'>
   label: string
-  dot: string
-  text: string
+  bg: string
+  color: string
 }[] = [
-  { key: 'toegewezen', label: 'Toegewezen', dot: 'bg-emerald-500', text: 'text-emerald-600' },
-  { key: 'afgewezen', label: 'Afgewezen', dot: 'bg-red-500', text: 'text-red-600' },
-  { key: 'gedeeltelijk', label: 'Gedeeltelijk', dot: 'bg-amber-500', text: 'text-amber-600' },
-  { key: 'onbekend', label: 'Onbekend', dot: 'bg-slate-400', text: 'text-slate-500' },
+  { key: 'toegewezen', label: 'Toegewezen', bg: 'bg-emerald-500', color: 'text-emerald-700' },
+  { key: 'afgewezen', label: 'Afgewezen', bg: 'bg-red-500', color: 'text-red-700' },
+  { key: 'gedeeltelijk', label: 'Gedeeltelijk', bg: 'bg-amber-500', color: 'text-amber-700' },
+  { key: 'onbekend', label: 'Onbekend', bg: 'bg-slate-400', color: 'text-slate-600' },
 ]
 
 function WinLossSummary({ data }: { data: WinLossRatio }) {
-  const total = data.total || 1 // avoid division by zero
+  const total = data.total || 1
 
   return (
-    <div className="space-y-3 rounded-[16px] border border-[#EAEFEF] bg-white p-5">
-      <p className="text-[12px] font-semibold uppercase tracking-wide text-slate-400">Win / loss verdeling</p>
-
+    <div className="space-y-3">
       {/* Stacked bar */}
       <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
-        {WIN_LOSS_SEGMENTS.map(({ key, dot }) => {
+        {WIN_LOSS_SEGMENTS.map(({ key, bg }) => {
           const pct = (data[key] / total) * 100
           if (pct === 0) return null
-          return (
-            <div
-              key={key}
-              className={`${dot} transition-all`}
-              style={{ width: `${pct}%` }}
-            />
-          )
+          return <div key={key} className={`${bg} transition-all`} style={{ width: `${pct}%` }} />
         })}
       </div>
 
-      {/* Legend pills */}
+      {/* Legend */}
       <div className="flex flex-wrap gap-3">
-        {WIN_LOSS_SEGMENTS.map(({ key, label, dot, text }) => (
+        {WIN_LOSS_SEGMENTS.map(({ key, label, bg, color }) => (
           <div key={key} className="flex items-center gap-1.5">
-            <span className={`size-2 rounded-full ${dot}`} />
-            <span className={`text-[12px] font-semibold ${text}`}>
+            <span className={`size-2 rounded-full ${bg}`} />
+            <span className={`text-[11px] font-semibold ${color}`}>
               {data[key]} {label}
             </span>
           </div>
@@ -128,32 +122,35 @@ function WinLossSummary({ data }: { data: WinLossRatio }) {
   )
 }
 
-/* ─── Ruling list item ───────────────────────────────────────── */
+/* ─── Ruling list item (contract §6: TimelineRow) ─────────────── */
 
-function RulingListItem({ ruling }: { ruling: GemeenteRulingsFeedItem }) {
-  const formattedDate = ruling.datum_uitspraak
-    ? dateFmt.format(new Date(ruling.datum_uitspraak))
-    : null
+function RulingListItem({ ruling, idx, total }: { ruling: GemeenteRulingsFeedItem; idx: number; total: number }) {
+  const formattedDate = ruling.datum_uitspraak ? dateFmt.format(new Date(ruling.datum_uitspraak)) : null
 
   return (
-    <div className="flex items-start gap-3 border-b border-[#EAEFEF] py-3 last:border-0">
+    <div className="flex gap-3 py-3 border-b border-[#EAEFEF] last:border-b-0">
+      <div className="flex flex-col items-center pt-1.5">
+        <span className="h-2 w-2 rounded-full bg-aura-amber shrink-0" />
+        {idx < total - 1 && <span className="w-px flex-1 bg-[#EAEFEF] mt-1" />}
+      </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-semibold text-[#0E1111]">{ruling.title}</p>
+        <p className="text-[12px] font-semibold text-[#0E1111] leading-snug line-clamp-2">
+          {ruling.title}
+        </p>
         <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
           {formattedDate && <span>{formattedDate}</span>}
           {ruling.vergunningstype && (
-            <>
-              <span className="text-slate-300">·</span>
-              <span>{ruling.vergunningstype}</span>
-            </>
+            <span className="rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-1.5 py-0.5 text-[10px]">
+              {ruling.vergunningstype}
+            </span>
           )}
+          <span
+            className={`inline-block rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${uitkomstStyle(ruling.uitkomst)}`}
+          >
+            {uitkomstLabel(ruling.uitkomst)}
+          </span>
         </div>
       </div>
-      <span
-        className={`mt-0.5 shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${uitkomstStyle(ruling.uitkomst)}`}
-      >
-        {uitkomstLabel(ruling.uitkomst)}
-      </span>
     </div>
   )
 }
@@ -167,11 +164,7 @@ export default function JurisprudentieDetailEnriched({
 }) {
   const { accessToken } = useAuth()
 
-  const {
-    data,
-    isLoading,
-    error,
-  } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['gemeente-rulings-feed', gemeenteNaam],
     queryFn: () => getGemeenteRulingsFeed(gemeenteNaam!, accessToken),
     enabled: !!gemeenteNaam,
@@ -185,24 +178,27 @@ export default function JurisprudentieDetailEnriched({
   const recentRulings = data.rulings.slice(0, 10)
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       {/* Win/loss summary */}
-      <WinLossSummary data={data.win_loss} />
+      <SectionInsightCard kicker="Uitkomsten" title="Win / loss verdeling" Icon={Scale}>
+        <WinLossSummary data={data.win_loss} />
+      </SectionInsightCard>
 
       {/* Recent rulings */}
-      <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
-        <p className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-slate-400">
-          Recente uitspraken
-        </p>
+      <SectionInsightCard
+        kicker="Uitspraken"
+        title={`Recente uitspraken (${recentRulings.length})`}
+        Icon={Scale}
+      >
         <div className="max-h-[400px] overflow-y-auto">
-          {recentRulings.map((ruling) => (
-            <RulingListItem key={ruling.ecli} ruling={ruling} />
+          {recentRulings.map((ruling, idx) => (
+            <RulingListItem key={ruling.ecli} ruling={ruling} idx={idx} total={recentRulings.length} />
           ))}
         </div>
-      </div>
+      </SectionInsightCard>
 
       {/* Link to full explorer */}
-      <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
+      <SectionInsightCard kicker="Meer" title="Volledige jurisprudentie" Icon={ExternalLink}>
         <a
           href="/jurisprudentie"
           className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#B07D18] hover:underline"
@@ -210,7 +206,7 @@ export default function JurisprudentieDetailEnriched({
           Bekijk volledige jurisprudentie-analyse
           <ArrowRight size={14} />
         </a>
-      </div>
+      </SectionInsightCard>
     </div>
   )
 }
