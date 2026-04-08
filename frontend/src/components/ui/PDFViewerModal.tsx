@@ -6,104 +6,104 @@
  * capture-phase Escape, blob fetch with auth header, object URL lifecycle).
  */
 
-'use client'
+"use client";
 
-import { useState, useEffect, useCallback } from 'react'
-import { createPortal } from 'react-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { X, ExternalLink, RefreshCw } from 'lucide-react'
-import { useAuth } from '@/lib/auth/useAuth'
+import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, ExternalLink, RefreshCw } from "lucide-react";
+import { useAuth } from "@/lib/auth/useAuth";
 
 export interface PDFViewerModalProps {
   /** API endpoint URL to fetch the PDF from (e.g. `/api/policy-documents/...`) */
-  url: string
+  url: string;
   /** Optional document title shown in the modal header */
-  title?: string
+  title?: string;
   /** Callback to close the modal */
-  onClose: () => void
+  onClose: () => void;
 }
 
 const prefersReducedMotion =
-  typeof window !== 'undefined'
-    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    : false
+  typeof window !== "undefined"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    : false;
 
 export function PDFViewerModal({ url, title, onClose }: PDFViewerModalProps) {
-  const { accessToken } = useAuth()
-  const [pdfObjectUrl, setPdfObjectUrl] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { accessToken } = useAuth();
+  const [pdfObjectUrl, setPdfObjectUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchPdf = useCallback(
     (signal?: AbortSignal) => {
-      if (!accessToken) return
+      if (!accessToken) return;
 
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
 
       fetch(url, {
         headers: { Authorization: `Bearer ${accessToken}` },
-        credentials: 'include',
+        credentials: "include",
         signal,
       })
         .then((r) => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`)
-          return r.blob()
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.blob();
         })
         .then((blob) => {
-          const objectUrl = URL.createObjectURL(blob)
-          setPdfObjectUrl(objectUrl)
-          setLoading(false)
+          const objectUrl = URL.createObjectURL(blob);
+          setPdfObjectUrl(objectUrl);
+          setLoading(false);
         })
         .catch((err) => {
-          if (err instanceof DOMException && err.name === 'AbortError') return
-          setError(err instanceof Error ? err.message : 'Kon PDF niet laden')
-          setLoading(false)
-        })
+          if (err instanceof DOMException && err.name === "AbortError") return;
+          setError(err instanceof Error ? err.message : "Kon PDF niet laden");
+          setLoading(false);
+        });
     },
     [url, accessToken],
-  )
+  );
 
   // Fetch PDF blob with auth and create object URL
   useEffect(() => {
-    const controller = new AbortController()
-    fetchPdf(controller.signal)
+    const controller = new AbortController();
+    fetchPdf(controller.signal);
 
     return () => {
-      controller.abort()
-    }
-  }, [fetchPdf])
+      controller.abort();
+    };
+  }, [fetchPdf]);
 
   // Revoke object URL on unmount or when it changes
   useEffect(() => {
     return () => {
-      if (pdfObjectUrl) URL.revokeObjectURL(pdfObjectUrl)
-    }
-  }, [pdfObjectUrl])
+      if (pdfObjectUrl) URL.revokeObjectURL(pdfObjectUrl);
+    };
+  }, [pdfObjectUrl]);
 
   // Close on Escape — capture phase to prevent parent panel closes
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        e.stopImmediatePropagation()
-        onClose()
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        onClose();
       }
-    }
-    document.addEventListener('keydown', handler, true)
-    return () => document.removeEventListener('keydown', handler, true)
-  }, [onClose])
+    };
+    document.addEventListener("keydown", handler, true);
+    return () => document.removeEventListener("keydown", handler, true);
+  }, [onClose]);
 
   const handleRetry = () => {
     // Revoke old URL before retrying
     if (pdfObjectUrl) {
-      URL.revokeObjectURL(pdfObjectUrl)
-      setPdfObjectUrl(null)
+      URL.revokeObjectURL(pdfObjectUrl);
+      setPdfObjectUrl(null);
     }
-    fetchPdf()
-  }
+    fetchPdf();
+  };
 
-  const displayTitle = title || 'Document'
+  const displayTitle = title || "Document";
 
   return createPortal(
     <AnimatePresence>
@@ -119,11 +119,13 @@ export function PDFViewerModal({ url, title, onClose }: PDFViewerModalProps) {
       >
         {/* Content */}
         <motion.div
-          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 24 }}
+          initial={
+            prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 24 }
+          }
           animate={{ opacity: 1, y: 0 }}
           exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 24 }}
           transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-          className="relative flex w-full max-w-6xl flex-col rounded-[32px] bg-[#F8FAFA] shadow-2xl mx-4 max-h-[calc(100vh-64px)]"
+          className="relative flex w-full max-w-3xl flex-col rounded-[32px] bg-[#F8FAFA] shadow-2xl mx-4 h-[calc(100vh-64px)]"
           onClick={(e) => e.stopPropagation()}
         >
           {/* ── Header ── */}
@@ -132,7 +134,9 @@ export function PDFViewerModal({ url, title, onClose }: PDFViewerModalProps) {
               <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
                 Document viewer
               </p>
-              <h2 className="text-[18px] font-bold text-[#0E1111] mt-0.5">{displayTitle}</h2>
+              <h2 className="text-[18px] font-bold text-[#0E1111] mt-0.5">
+                {displayTitle}
+              </h2>
             </div>
             <div className="flex items-center gap-2">
               {/* Open in new tab fallback */}
@@ -157,7 +161,7 @@ export function PDFViewerModal({ url, title, onClose }: PDFViewerModalProps) {
           </div>
 
           {/* ── Body ── */}
-          <div className="flex-1 min-h-0 px-8 pb-6 flex flex-col" style={{ minHeight: '60vh' }}>
+          <div className="flex-1 min-h-0 px-8 pb-6 flex flex-col">
             {loading && (
               <div className="flex flex-1 items-center justify-center">
                 <div className="animate-spin h-6 w-6 border-2 border-aura-amber border-t-transparent rounded-full" />
@@ -167,7 +171,9 @@ export function PDFViewerModal({ url, title, onClose }: PDFViewerModalProps) {
 
             {error && !loading && (
               <div className="flex flex-1 flex-col items-center justify-center text-center gap-3">
-                <p className="text-[13px] text-red-600">Fout bij het laden van de PDF: {error}</p>
+                <p className="text-[13px] text-red-600">
+                  Fout bij het laden van de PDF: {error}
+                </p>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -202,5 +208,5 @@ export function PDFViewerModal({ url, title, onClose }: PDFViewerModalProps) {
       </motion.div>
     </AnimatePresence>,
     document.body,
-  )
+  );
 }
