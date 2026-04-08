@@ -4,7 +4,9 @@
  * standard SectionInsightCard shell.
  *
  * Data comes from sourceGuidance.ts. If the sourceKey has no entry,
- * the component renders null (the caller decides the fallback).
+ * renders a fallback SectionInsightCard with a generic "Geen
+ * begeleidende informatie beschikbaar" message so the section is
+ * never silently empty.
  */
 import { BookOpen, CheckCircle2 } from "lucide-react";
 import { SectionInsightCard } from "@/components/reports/components/SectionInsightCard";
@@ -16,7 +18,20 @@ interface Props {
 
 export function SourceGuidanceCard({ sourceKey }: Props) {
   const guidance = SOURCE_GUIDANCE[sourceKey];
-  if (!guidance) return null;
+
+  if (!guidance) {
+    return (
+      <SectionInsightCard
+        kicker="Uitleg"
+        title="Wat is dit document?"
+        Icon={BookOpen}
+      >
+        <p className="text-[13px] leading-relaxed text-slate-400">
+          Geen begeleidende informatie beschikbaar voor deze bron.
+        </p>
+      </SectionInsightCard>
+    );
+  }
 
   return (
     <SectionInsightCard
