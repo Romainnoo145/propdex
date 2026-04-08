@@ -63,3 +63,9 @@ backend/.venv
 # ── GSD baseline (auto-generated) ──
 .gsd-id
 .vercel
+
+# Stack workflow ephemeral state (per-developer slice markers)
+.claude/state/
+
+# ── GSD baseline (auto-generated) ──
+.bg-shell/
