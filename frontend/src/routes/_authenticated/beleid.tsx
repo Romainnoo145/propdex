@@ -69,7 +69,6 @@ import { RaadsinformatieDetailEnriched } from "@/components/configuratie/Raadsin
 import { HuisvestingsverordeningDetailEnriched } from "@/components/configuratie/HuisvestingsverordeningDetailEnriched";
 import { BeschermdErfgoedDetailEnriched } from "@/components/configuratie/BeschermdErfgoedDetailEnriched";
 import { DocumentSourceDetailView } from "@/components/configuratie/DocumentSourceDetailView";
-import { SourceGuidanceCard } from "@/components/configuratie/SourceGuidanceCard";
 
 import type { LucideIcon } from "lucide-react";
 
@@ -1954,12 +1953,11 @@ function LandelijkSourceDetail({
         return <OmgevingswetDetailEnriched />;
       default:
         return (
-          <div className="space-y-4">
-            <SourceGuidanceCard sourceKey={sourceKey} />
-            <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-6">
-              <p className="text-[13px] text-slate-500">{source.description}</p>
-            </div>
-          </div>
+          <DocumentSourceDetailView
+            entityType="landelijk"
+            entityCode="NL"
+            sourceKey={sourceKey}
+          />
         );
     }
   };
