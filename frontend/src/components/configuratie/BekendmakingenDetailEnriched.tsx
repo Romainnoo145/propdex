@@ -40,7 +40,7 @@ function DetailLoading() {
 function DetailEmpty({ message }: { message?: string }) {
   return (
     <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-      <p className="text-[13px] text-slate-400">{message ?? 'Geen data beschikbaar.'}</p>
+      <p className="text-[13px] font-semibold text-[#0E1111]">{message ?? 'Geen data beschikbaar.'}</p>
     </div>
   )
 }
