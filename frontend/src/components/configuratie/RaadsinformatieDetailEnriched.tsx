@@ -12,7 +12,8 @@ import {
   useRaadsinformatie,
   type RaadsstukResponse,
 } from "@/hooks/useRaadsinformatie";
-import { FileText, ExternalLink, Search, Loader2 } from "lucide-react";
+import { FileText, ExternalLink, Search } from "lucide-react";
+import { DetailLoading, DetailEmpty, DetailError } from "./DetailStates";
 import { SectionInsightCard } from "@/components/reports/components";
 
 interface Props {
@@ -32,37 +33,6 @@ function formatDate(dateStr: string | null): string {
   } catch {
     return dateStr;
   }
-}
-
-/* ─── State helpers (contract §10) ────────────────────────────── */
-
-function DetailLoading() {
-  return (
-    <div className="flex items-center justify-center gap-2 rounded-[20px] border border-[#EAEFEF] bg-white p-12">
-      <Loader2 className="size-5 animate-spin text-slate-400" />
-      <span className="text-[13px] text-slate-400">Data laden…</span>
-    </div>
-  );
-}
-
-function DetailEmpty({ message }: { message?: string }) {
-  return (
-    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-      <p className="text-[13px] text-slate-400">
-        {message ?? "Geen data beschikbaar."}
-      </p>
-    </div>
-  );
-}
-
-function DetailError({ error }: { error: Error | null }) {
-  return (
-    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-      <p className="text-[13px] text-red-400">
-        {error?.message ?? "Er is een fout opgetreden."}
-      </p>
-    </div>
-  );
 }
 
 /* ─── Stuk list item (contract §6: TimelineRow) ──────────────── */
@@ -109,7 +79,7 @@ function StukItem({
               href={stuk.bron_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-0.5 hover:text-[#0E1111]"
+              className="inline-flex items-center gap-0.5 text-slate-400 hover:text-[#0E1111]"
             >
               <ExternalLink size={9} />
             </a>
