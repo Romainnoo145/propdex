@@ -4,20 +4,12 @@
  * Reuses shared report components: SectionInsightCard, SubCard.
  */
 import { useErfgoed, type BeschermdGezichtResponse } from "@/hooks/useErfgoed";
-import { Landmark, Loader2 } from "lucide-react";
+import { Landmark } from "lucide-react";
+import { DetailLoading, DetailEmpty, DetailError } from "./DetailStates";
 import { SectionInsightCard } from "@/components/reports/components";
 
 interface Props {
   gemeenteNaam: string | null;
-}
-
-function DetailLoading() {
-  return (
-    <div className="flex items-center justify-center gap-2 rounded-[20px] border border-[#EAEFEF] bg-white p-12">
-      <Loader2 className="size-5 animate-spin text-slate-400" />
-      <span className="text-[13px] text-slate-400">Data laden…</span>
-    </div>
-  );
 }
 
 /* ─── Gezicht list item — §6 TimelineRow pattern ────────────── */
@@ -63,27 +55,13 @@ export function BeschermdErfgoedDetailEnriched({ gemeenteNaam }: Props) {
   const { data, isLoading, error } = useErfgoed(gemeenteNaam);
 
   if (!gemeenteNaam || isLoading) return <DetailLoading />;
-  if (error) {
-    return (
-      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-        <p className="text-[13px] text-red-400">
-          Fout bij laden van erfgoeddata.
-        </p>
-      </div>
-    );
-  }
+  if (error) return <DetailError error={error as Error} />;
 
   const gezichten = data?.beschermde_gezichten ?? [];
   const total = data?.total ?? 0;
 
   if (total === 0) {
-    return (
-      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-        <p className="text-[13px] text-slate-400">
-          Geen beschermde gezichten gevonden.
-        </p>
-      </div>
-    );
+    return <DetailEmpty message="Geen beschermde gezichten gevonden." />;
   }
 
   return (
