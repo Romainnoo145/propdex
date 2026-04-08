@@ -24,7 +24,7 @@ import { Route as AuthenticatedJurisprudentieRouteImport } from './routes/_authe
 import { Route as AuthenticatedInstellingenRouteImport } from './routes/_authenticated/instellingen'
 import { Route as AuthenticatedDocumentatieRouteImport } from './routes/_authenticated/documentatie'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedConfiguratieRouteImport } from './routes/_authenticated/configuratie'
+import { Route as AuthenticatedBeleidRouteImport } from './routes/_authenticated/beleid'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedInstellingenIndexRouteImport } from './routes/_authenticated/instellingen.index'
 import { Route as AuthenticatedRapportIdRouteImport } from './routes/_authenticated/rapport.$id'
@@ -109,12 +109,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedConfiguratieRoute =
-  AuthenticatedConfiguratieRouteImport.update({
-    id: '/configuratie',
-    path: '/configuratie',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
+const AuthenticatedBeleidRoute = AuthenticatedBeleidRouteImport.update({
+  id: '/beleid',
+  path: '/beleid',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -153,7 +152,7 @@ const AuthenticatedChecklistIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AuthenticatedAdminRoute
-  '/configuratie': typeof AuthenticatedConfiguratieRoute
+  '/beleid': typeof AuthenticatedBeleidRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/documentatie': typeof AuthenticatedDocumentatieRoute
   '/instellingen': typeof AuthenticatedInstellingenRouteWithChildren
@@ -176,7 +175,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AuthenticatedAdminRoute
-  '/configuratie': typeof AuthenticatedConfiguratieRoute
+  '/beleid': typeof AuthenticatedBeleidRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/documentatie': typeof AuthenticatedDocumentatieRoute
   '/jurisprudentie': typeof AuthenticatedJurisprudentieRoute
@@ -200,7 +199,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
-  '/_authenticated/configuratie': typeof AuthenticatedConfiguratieRoute
+  '/_authenticated/beleid': typeof AuthenticatedBeleidRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/documentatie': typeof AuthenticatedDocumentatieRoute
   '/_authenticated/instellingen': typeof AuthenticatedInstellingenRouteWithChildren
@@ -225,7 +224,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
-    | '/configuratie'
+    | '/beleid'
     | '/dashboard'
     | '/documentatie'
     | '/instellingen'
@@ -248,7 +247,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
-    | '/configuratie'
+    | '/beleid'
     | '/dashboard'
     | '/documentatie'
     | '/jurisprudentie'
@@ -271,7 +270,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/_authenticated/admin'
-    | '/_authenticated/configuratie'
+    | '/_authenticated/beleid'
     | '/_authenticated/dashboard'
     | '/_authenticated/documentatie'
     | '/_authenticated/instellingen'
@@ -406,11 +405,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/configuratie': {
-      id: '/_authenticated/configuratie'
-      path: '/configuratie'
-      fullPath: '/configuratie'
-      preLoaderRoute: typeof AuthenticatedConfiguratieRouteImport
+    '/_authenticated/beleid': {
+      id: '/_authenticated/beleid'
+      path: '/beleid'
+      fullPath: '/beleid'
+      preLoaderRoute: typeof AuthenticatedBeleidRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/admin': {
@@ -478,7 +477,7 @@ const AuthenticatedInstellingenRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
-  AuthenticatedConfiguratieRoute: typeof AuthenticatedConfiguratieRoute
+  AuthenticatedBeleidRoute: typeof AuthenticatedBeleidRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDocumentatieRoute: typeof AuthenticatedDocumentatieRoute
   AuthenticatedInstellingenRoute: typeof AuthenticatedInstellingenRouteWithChildren
@@ -496,7 +495,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
-  AuthenticatedConfiguratieRoute: AuthenticatedConfiguratieRoute,
+  AuthenticatedBeleidRoute: AuthenticatedBeleidRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDocumentatieRoute: AuthenticatedDocumentatieRoute,
   AuthenticatedInstellingenRoute: AuthenticatedInstellingenRouteWithChildren,

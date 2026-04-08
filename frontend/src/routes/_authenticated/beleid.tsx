@@ -92,7 +92,7 @@ interface GemeenteIntelligenceData {
 
 /* ─── Route ─────────────────────────────────────────────────── */
 
-export const Route = createFileRoute("/_authenticated/configuratie")({
+export const Route = createFileRoute("/_authenticated/beleid")({
   validateSearch: (search: Record<string, unknown>) => ({
     gemeente:
       typeof search.gemeente === "string" && /^GM\d{4}$/.test(search.gemeente)
@@ -792,7 +792,7 @@ function DataSourceCard({
   const handleCardClick = useCallback(() => {
     if (gemeenteCode) {
       navigate({
-        to: "/configuratie",
+        to: "/beleid",
         search: {
           gemeente: gemeenteCode,
           source: source.key,
@@ -802,7 +802,7 @@ function DataSourceCard({
     } else if (!gemeenteCode && source.status === "live") {
       // Landelijk sources: navigate without gemeente param
       navigate({
-        to: "/configuratie",
+        to: "/beleid",
         search: { source: source.key, category: source.category },
       });
     }
@@ -1912,20 +1912,20 @@ function ConfiguratiePage() {
 
   const handleSelectGemeente = useCallback(
     (code: string) => {
-      navigate({ to: "/configuratie", search: { gemeente: code } });
+      navigate({ to: "/beleid", search: { gemeente: code } });
     },
     [navigate],
   );
 
   const handleSelectProvincie = useCallback(
     (code: string) => {
-      navigate({ to: "/configuratie", search: { provincie: code } });
+      navigate({ to: "/beleid", search: { provincie: code } });
     },
     [navigate],
   );
 
   const handleBackToMain = useCallback(() => {
-    navigate({ to: "/configuratie", search: {} });
+    navigate({ to: "/beleid", search: {} });
   }, [navigate]);
 
   // If source workspace is selected, show full-page source detail
@@ -1938,7 +1938,7 @@ function ConfiguratiePage() {
             gemeenteCode={activeGemeente}
             onBack={() =>
               navigate({
-                to: "/configuratie",
+                to: "/beleid",
                 search: { gemeente: activeGemeente, category: activeCategory },
               })
             }
