@@ -7,60 +7,45 @@
  * - Neutral bg-[#F8FAFA] type pills (contract §5)
  * - space-y-6 top-level with Plus Jakarta font
  */
-import { useState, useMemo } from 'react'
-import { useRaadsinformatie, type RaadsstukResponse } from '@/hooks/useRaadsinformatie'
-import { FileText, ExternalLink, Search, Loader2 } from 'lucide-react'
-import { SectionInsightCard } from '@/components/reports/components'
+import { useState, useMemo } from "react";
+import {
+  useRaadsinformatie,
+  type RaadsstukResponse,
+} from "@/hooks/useRaadsinformatie";
+import { FileText, ExternalLink, Search } from "lucide-react";
+import { DetailLoading, DetailEmpty, DetailError } from "./DetailStates";
+import { SectionInsightCard } from "@/components/reports/components";
 
 interface Props {
-  gemeenteNaam: string | null
+  gemeenteNaam: string | null;
 }
 
-const dateFmt = new Intl.DateTimeFormat('nl-NL', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-})
+const dateFmt = new Intl.DateTimeFormat("nl-NL", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
 
 function formatDate(dateStr: string | null): string {
-  if (!dateStr) return ''
+  if (!dateStr) return "";
   try {
-    return dateFmt.format(new Date(dateStr))
+    return dateFmt.format(new Date(dateStr));
   } catch {
-    return dateStr
+    return dateStr;
   }
-}
-
-/* ─── State helpers (contract §10) ────────────────────────────── */
-
-function DetailLoading() {
-  return (
-    <div className="flex items-center justify-center gap-2 rounded-[20px] border border-[#EAEFEF] bg-white p-12">
-      <Loader2 className="size-5 animate-spin text-slate-400" />
-      <span className="text-[13px] text-slate-400">Data laden…</span>
-    </div>
-  )
-}
-
-function DetailEmpty({ message }: { message?: string }) {
-  return (
-    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-      <p className="text-[13px] text-slate-400">{message ?? 'Geen data beschikbaar.'}</p>
-    </div>
-  )
-}
-
-function DetailError({ error }: { error: Error | null }) {
-  return (
-    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-      <p className="text-[13px] text-red-400">{error?.message ?? 'Er is een fout opgetreden.'}</p>
-    </div>
-  )
 }
 
 /* ─── Stuk list item (contract §6: TimelineRow) ──────────────── */
 
-function StukItem({ stuk, idx, total }: { stuk: RaadsstukResponse; idx: number; total: number }) {
+function StukItem({
+  stuk,
+  idx,
+  total,
+}: {
+  stuk: RaadsstukResponse;
+  idx: number;
+  total: number;
+}) {
   return (
     <div className="flex gap-3 py-3 border-b border-[#EAEFEF] last:border-b-0">
       <div className="flex flex-col items-center pt-1.5">
@@ -94,7 +79,7 @@ function StukItem({ stuk, idx, total }: { stuk: RaadsstukResponse; idx: number; 
               href={stuk.bron_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-0.5 hover:text-[#0E1111]"
+              className="inline-flex items-center gap-0.5 text-slate-400 hover:text-[#0E1111]"
             >
               <ExternalLink size={9} />
             </a>
@@ -107,47 +92,51 @@ function StukItem({ stuk, idx, total }: { stuk: RaadsstukResponse; idx: number; 
         )}
       </div>
     </div>
-  )
+  );
 }
 
 /* ─── Main component ─────────────────────────────────────────── */
 
 export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
-  const { data, isLoading, error } = useRaadsinformatie(gemeenteNaam)
-  const [searchQuery, setSearchQuery] = useState('')
+  const { data, isLoading, error } = useRaadsinformatie(gemeenteNaam);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filteredStukken = useMemo(() => {
-    if (!data?.stukken) return []
-    if (!searchQuery.trim()) return data.stukken
-    const q = searchQuery.trim().toLowerCase()
+    if (!data?.stukken) return [];
+    if (!searchQuery.trim()) return data.stukken;
+    const q = searchQuery.trim().toLowerCase();
     return data.stukken.filter(
       (s) =>
         s.titel.toLowerCase().includes(q) ||
         (s.samenvatting && s.samenvatting.toLowerCase().includes(q)) ||
         (s.type && s.type.toLowerCase().includes(q)),
-    )
-  }, [data?.stukken, searchQuery])
+    );
+  }, [data?.stukken, searchQuery]);
 
-  if (!gemeenteNaam || isLoading) return <DetailLoading />
-  if (error) return <DetailError error={error as Error} />
-  if (!data || data.stukken.length === 0) return <DetailEmpty message="Geen raadsstukken gevonden." />
+  if (!gemeenteNaam || isLoading) return <DetailLoading />;
+  if (error) return <DetailError error={error as Error} />;
+  if (!data || data.stukken.length === 0)
+    return <DetailEmpty message="Geen raadsstukken gevonden." />;
 
   // Type counts for summary pills
-  const typeCounts: Record<string, number> = {}
+  const typeCounts: Record<string, number> = {};
   for (const stuk of data.stukken) {
-    const t = stuk.type || 'Overig'
-    typeCounts[t] = (typeCounts[t] || 0) + 1
+    const t = stuk.type || "Overig";
+    typeCounts[t] = (typeCounts[t] || 0) + 1;
   }
-  const sortedTypes = Object.entries(typeCounts).sort(([, a], [, b]) => b - a)
+  const sortedTypes = Object.entries(typeCounts).sort(([, a], [, b]) => b - a);
 
   return (
-    <div className="space-y-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div
+      className="space-y-6"
+      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+    >
       {/* Main card */}
       <SectionInsightCard
         kicker="Raadsinformatie"
         title={`${data.total_found} stukken`}
         Icon={FileText}
-        badge={data.dekking ? 'Goede dekking' : 'Beperkte dekking'}
+        badge={data.dekking ? "Goede dekking" : "Beperkte dekking"}
       >
         {/* Type summary — neutral pills per contract §5 */}
         {sortedTypes.length > 0 && (
@@ -155,7 +144,7 @@ export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
             {sortedTypes.map(([type, count]) => (
               <span
                 key={type}
-                className="rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-2 py-0.5 text-[10px] font-medium text-slate-500"
+                className="rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-1.5 py-0.5 text-[10px]"
               >
                 {type} ({count})
               </span>
@@ -166,7 +155,10 @@ export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
         {/* Search */}
         {data.stukken.length > 5 && (
           <div className="relative mb-4">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            />
             <input
               type="text"
               value={searchQuery}
@@ -181,13 +173,20 @@ export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
         {filteredStukken.length > 0 ? (
           <div className="max-h-[480px] overflow-y-auto">
             {filteredStukken.map((stuk, idx) => (
-              <StukItem key={stuk.doc_id} stuk={stuk} idx={idx} total={filteredStukken.length} />
+              <StukItem
+                key={stuk.doc_id}
+                stuk={stuk}
+                idx={idx}
+                total={filteredStukken.length}
+              />
             ))}
           </div>
         ) : (
-          <p className="text-[13px] text-slate-400">Geen resultaten voor deze zoekopdracht.</p>
+          <p className="text-[13px] text-slate-400">
+            Geen resultaten voor deze zoekopdracht.
+          </p>
         )}
       </SectionInsightCard>
     </div>
-  )
+  );
 }
