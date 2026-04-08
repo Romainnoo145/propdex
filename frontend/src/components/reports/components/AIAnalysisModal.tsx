@@ -268,13 +268,11 @@ function PDFViewerTab({ sourceParcelId }: { sourceParcelId: string }) {
   }
 
   return (
-    <div className="flex-1 min-h-0 min-h-[60vh]">
-      <iframe
-        src={pdfUrl}
-        className="w-full h-full rounded-[16px] border border-[#EAEFEF]"
-        title="Bestemmingsplan PDF"
-      />
-    </div>
+    <iframe
+      src={pdfUrl}
+      className="w-full flex-1 rounded-[16px] border border-[#EAEFEF]"
+      title="Bestemmingsplan PDF"
+    />
   )
 }
 
@@ -319,7 +317,7 @@ export function AIAnalysisModal({ parsed, disclaimerBanner, sourceParcelId, onCl
           animate={{ opacity: 1, y: 0 }}
           exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 24 }}
           transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-          className="relative flex w-full max-w-5xl flex-col rounded-[32px] bg-[#F8FAFA] shadow-2xl mx-4 max-h-[calc(100vh-80px)]"
+          className="relative flex w-full max-w-5xl flex-col rounded-[32px] bg-[#F8FAFA] shadow-2xl mx-4 h-[calc(100vh-80px)]"
           onClick={(e) => e.stopPropagation()}
         >
           {/* ── Header ── */}
@@ -370,9 +368,9 @@ export function AIAnalysisModal({ parsed, disclaimerBanner, sourceParcelId, onCl
           </div>
 
           {/* ── Content ── */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-8 py-4 flex flex-col">
+          <div className="flex-1 min-h-0 px-8 py-4 flex flex-col">
             {activeTab === 'analyse' ? (
-              <div className="space-y-4">
+              <div className="flex-1 min-h-0 overflow-y-auto space-y-4">
                 {/* Samenvatting */}
                 <div className="rounded-[16px] border border-[#EAEFEF] bg-white px-5 py-4">
                   <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">Samenvatting</p>
