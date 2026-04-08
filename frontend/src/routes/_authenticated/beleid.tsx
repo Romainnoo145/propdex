@@ -799,14 +799,31 @@ function DataSourceCard({
           category: source.category,
         },
       });
-    } else if (!gemeenteCode && source.status === "live") {
-      // Landelijk sources: navigate without gemeente param
+    } else if (entityType === "provincie" && entityCode) {
+      navigate({
+        to: "/beleid",
+        search: {
+          provincie: entityCode,
+          source: source.key,
+          category: source.category,
+        },
+      });
+    } else {
+      // Landelijk — no gemeente, no provincie. All sources click through,
+      // including document sources (no status check).
       navigate({
         to: "/beleid",
         search: { source: source.key, category: source.category },
       });
     }
-  }, [gemeenteCode, navigate, source.key]);
+  }, [
+    gemeenteCode,
+    entityType,
+    entityCode,
+    navigate,
+    source.key,
+    source.category,
+  ]);
 
   const liveMetrics = isLive ? getLiveMetrics(source.key, gemeenteData) : null;
 
