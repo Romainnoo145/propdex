@@ -26,7 +26,7 @@ export function VergunningKlimaatDetailEnriched({ gemeenteNaam }: Props) {
   if (!gemeenteNaam || isLoading) return <DetailLoading />;
   if (error) return <DetailError error={error as Error} />;
   if (!profile) return <DetailEmpty message="Geen data beschikbaar." />;
-  if (profile.data_coverage === 'none') {
+  if (profile.data_coverage === "none") {
     return (
       <DetailEmpty
         message="Geen vergunningdata beschikbaar"
