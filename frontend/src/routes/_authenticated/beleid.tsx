@@ -1130,7 +1130,7 @@ function EntityDetail({
         className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#0E1111]"
       >
         <ArrowLeft size={14} />
-        Configuratie
+        Beleid
       </motion.button>
 
       {/* Hero */}
@@ -1707,8 +1707,9 @@ function SourceDetailWorkspace({
     error: erfgoedError,
   } = useErfgoed(resolvedNaam);
 
-  // Breadcrumb label
-  const breadcrumbLabel = gemeenteNaam ?? gemeenteCode;
+  // Breadcrumb label — graceful fallback to "gemeente" if naam not loaded
+  // (matches provincie pattern; avoids showing the raw gemeenteCode like "GM0983")
+  const breadcrumbLabel = gemeenteNaam ?? "gemeente";
 
   if (!source) {
     return (
@@ -1790,9 +1791,7 @@ function SourceDetailWorkspace({
         animate="show"
         className="flex items-center gap-4"
       >
-        <div
-          className={`flex size-14 items-center justify-center rounded-full ${"bg-[#0E1111]"}`}
-        >
+        <div className="flex size-14 items-center justify-center rounded-full bg-[#0E1111]">
           <Icon className="size-7 text-[#F9A826]" strokeWidth={2} />
         </div>
         <div>
@@ -1998,7 +1997,7 @@ function LandelijkSourceDetail({
         </div>
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-            Landelijk · {source.category}
+            Databron · {source.category}
           </p>
           <h1 className="text-[28px] font-black leading-none tracking-tight text-[#0E1111]">
             {source.label}
@@ -2165,7 +2164,7 @@ function ConfiguratiePage() {
             Beleidsconfiguratie
           </p>
           <h1 className="mt-1 text-[28px] font-black leading-none tracking-tight text-[#0E1111]">
-            Configuratie
+            Beleid
           </h1>
           <p
             className="mt-2 text-[13px] text-slate-500"
@@ -2216,7 +2215,7 @@ function ConfiguratiePage() {
 
         {/* Footer */}
         <p className="mt-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-          Configuratie · 3 bestuursniveaus
+          Beleid · 3 bestuursniveaus
         </p>
       </div>
     </ResultsShell>
