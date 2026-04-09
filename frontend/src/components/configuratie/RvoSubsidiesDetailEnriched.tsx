@@ -379,7 +379,10 @@ function LiveRvoSection() {
 
 export default function RvoSubsidiesDetailEnriched() {
   return (
-    <div className="space-y-6">
+    <div
+      className="space-y-6"
+      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+    >
       {/* Summary stats bar */}
       <StatusSummaryBar subsidies={LANDELIJK_SUBSIDIES} />
 
@@ -399,23 +402,24 @@ export default function RvoSubsidiesDetailEnriched() {
       {/* Live RVO subsidies section */}
       <LiveRvoSection />
 
-      {/* Footer link to RVO.nl */}
-      <a
-        href="https://www.rvo.nl/subsidies-financiering"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center justify-between rounded-[16px] border border-[#EAEFEF] bg-white p-5 transition-colors hover:border-blue-200 hover:bg-blue-50/30"
-      >
-        <div className="space-y-0.5">
-          <p className="text-[13px] font-medium text-[#0E1111]">
-            Alle subsidies & financiering op RVO.nl
+      {/* Footer — §11 external link pattern inside a neutral container */}
+      <SectionInsightCard kicker="Bron" title="RVO.nl" Icon={ExternalLink}>
+        <div className="flex items-start justify-between gap-4">
+          <p className="text-[12px] leading-relaxed text-slate-500">
+            Bekijk het volledige overzicht van rijkssubsidies en
+            financieringsregelingen voor vastgoed en woningbouw op rvo.nl.
           </p>
-          <p className="text-[12px] text-slate-400">
-            Bekijk het volledige overzicht van rijkssubsidies
-          </p>
+          <a
+            href="https://www.rvo.nl/subsidies-financiering"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex shrink-0 items-center gap-2 text-[13px] font-semibold text-[#B07D18] hover:underline"
+          >
+            Open RVO.nl
+            <ExternalLink size={14} />
+          </a>
         </div>
-        <ExternalLink className="size-4 shrink-0 text-blue-500" />
-      </a>
+      </SectionInsightCard>
     </div>
   )
 }
