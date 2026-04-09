@@ -9,7 +9,7 @@
  */
 
 import { useMemo, useState } from 'react'
-import { Banknote, ExternalLink, Loader2, AlertCircle } from 'lucide-react'
+import { Banknote, ExternalLink, Loader2, AlertCircle, Search } from 'lucide-react'
 import {
   useSubsidieExplorer,
   type SubsidieExplorerItem,
@@ -19,6 +19,7 @@ import {
   type CuratedSubsidie,
   type SubsidieStatus,
 } from '@/lib/subsidies/curatedSubsidies'
+import { SectionInsightCard, SubCard } from '@/components/reports/components'
 
 /* ─── Curated landelijk subsidies ────────────────────────────── */
 
@@ -28,10 +29,25 @@ const LANDELIJK_SUBSIDIES = CURATED_SUBSIDIES.filter(
 
 /* ─── Status helpers ─────────────────────────────────────────── */
 
-const STATUS_CONFIG: Record<SubsidieStatus, { label: string; bg: string; text: string; dot: string }> = {
-  open: { label: 'Open', bg: 'bg-emerald-500/15', text: 'text-emerald-600', dot: 'bg-emerald-500' },
-  gesloten: { label: 'Gesloten', bg: 'bg-red-500/15', text: 'text-red-600', dot: 'bg-red-500' },
-  doorlopend: { label: 'Doorlopend', bg: 'bg-blue-500/15', text: 'text-blue-600', dot: 'bg-blue-500' },
+const STATUS_CONFIG: Record<
+  SubsidieStatus,
+  { label: string; pill: string; dot: string }
+> = {
+  open: {
+    label: 'Open',
+    pill: 'border border-emerald-200 bg-emerald-50 text-emerald-700',
+    dot: 'bg-emerald-500',
+  },
+  gesloten: {
+    label: 'Gesloten',
+    pill: 'border border-red-200 bg-red-50 text-red-700',
+    dot: 'bg-red-500',
+  },
+  doorlopend: {
+    label: 'Doorlopend',
+    pill: 'border border-slate-200 bg-slate-50 text-slate-600',
+    dot: 'bg-slate-400',
+  },
 }
 
 /* ─── Inline loading/error/empty state helpers ───────────────── */
@@ -54,7 +70,7 @@ function DetailError({ error }: { error: Error | null }) {
   )
 }
 
-/* ─── Summary stats bar ──────────────────────────────────────── */
+/* ─── Summary stats bar (contract-conform SectionInsightCard) ── */
 
 function StatusSummaryBar({ subsidies }: { subsidies: CuratedSubsidie[] }) {
   const counts = useMemo(() => {
@@ -64,46 +80,51 @@ function StatusSummaryBar({ subsidies }: { subsidies: CuratedSubsidie[] }) {
   }, [subsidies])
 
   return (
-    <div className="space-y-3 rounded-[16px] border border-[#EAEFEF] bg-white p-5">
-      <div className="flex items-center justify-between">
-        <p className="text-[12px] font-semibold uppercase tracking-wide text-slate-400">
-          Landelijke subsidies
-        </p>
-        <span className="text-[13px] font-medium text-[#0E1111]">
-          {subsidies.length} regelingen
-        </span>
-      </div>
+    <SectionInsightCard
+      kicker="Overzicht"
+      title="Landelijke subsidies"
+      Icon={Banknote}
+      badge={`${subsidies.length} regelingen`}
+    >
+      <div className="space-y-3">
+        {/* Stacked bar */}
+        <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
+          {(['open', 'gesloten', 'doorlopend'] as const).map((status) => {
+            const pct =
+              subsidies.length > 0 ? (counts[status] / subsidies.length) * 100 : 0
+            if (pct === 0) return null
+            return (
+              <div
+                key={status}
+                className={`${STATUS_CONFIG[status].dot} transition-all`}
+                style={{ width: `${pct}%` }}
+              />
+            )
+          })}
+        </div>
 
-      {/* Stacked bar */}
-      <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
-        {(['open', 'gesloten', 'doorlopend'] as const).map((status) => {
-          const pct = subsidies.length > 0 ? (counts[status] / subsidies.length) * 100 : 0
-          if (pct === 0) return null
-          return (
-            <div
-              key={status}
-              className={`${STATUS_CONFIG[status].dot} transition-all`}
-              style={{ width: `${pct}%` }}
-            />
-          )
-        })}
-      </div>
-
-      {/* Legend pills */}
-      <div className="flex flex-wrap gap-3">
-        {(['open', 'gesloten', 'doorlopend'] as const).map((status) => {
-          const cfg = STATUS_CONFIG[status]
-          return (
-            <div key={status} className="flex items-center gap-1.5">
-              <span className={`size-2 rounded-full ${cfg.dot}`} />
-              <span className={`text-[12px] font-medium ${cfg.text}`}>
-                {counts[status]} {cfg.label}
+        {/* Legend */}
+        <div className="flex flex-wrap gap-3">
+          {(['open', 'gesloten', 'doorlopend'] as const).map((status) => {
+            const cfg = STATUS_CONFIG[status]
+            return (
+              <span
+                key={status}
+                className="flex items-center gap-1.5 text-[11px]"
+              >
+                <span className={`size-2 rounded-full ${cfg.dot}`} />
+                <span className="font-semibold text-slate-500">
+                  {cfg.label}
+                </span>
+                <span className="tabular-nums text-slate-400">
+                  {counts[status]}
+                </span>
               </span>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
-    </div>
+    </SectionInsightCard>
   )
 }
 
@@ -119,7 +140,9 @@ function CuratedSubsidieCard({ subsidie }: { subsidie: CuratedSubsidie }) {
         <h4 className="text-[14px] font-semibold text-[#0E1111] leading-snug">
           {subsidie.title}
         </h4>
-        <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${cfg.bg} ${cfg.text}`}>
+        <span
+          className={`inline-block shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${cfg.pill}`}
+        >
           {cfg.label}
         </span>
       </div>
