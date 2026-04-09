@@ -9,7 +9,14 @@
  */
 
 import { useMemo, useState } from 'react'
-import { Banknote, ExternalLink, Loader2, AlertCircle, Search } from 'lucide-react'
+import {
+  Banknote,
+  ExternalLink,
+  Loader2,
+  AlertCircle,
+  Search,
+  Building2,
+} from 'lucide-react'
 import {
   useSubsidieExplorer,
   type SubsidieExplorerItem,
@@ -128,16 +135,16 @@ function StatusSummaryBar({ subsidies }: { subsidies: CuratedSubsidie[] }) {
   )
 }
 
-/* ─── Curated subsidie card ──────────────────────────────────── */
+/* ─── Curated subsidie card (SubCard-wrapped) ────────────────── */
 
 function CuratedSubsidieCard({ subsidie }: { subsidie: CuratedSubsidie }) {
   const cfg = STATUS_CONFIG[subsidie.status]
 
   return (
-    <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5 space-y-3">
+    <SubCard className="space-y-2.5">
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
-        <h4 className="text-[14px] font-semibold text-[#0E1111] leading-snug">
+        <h4 className="text-[13px] font-semibold leading-snug text-[#0E1111]">
           {subsidie.title}
         </h4>
         <span
@@ -148,13 +155,13 @@ function CuratedSubsidieCard({ subsidie }: { subsidie: CuratedSubsidie }) {
       </div>
 
       {/* Beschrijving */}
-      <p className="text-[13px] leading-relaxed text-slate-500 line-clamp-3">
+      <p className="text-[12px] leading-relaxed text-slate-500 line-clamp-3">
         {subsidie.beschrijving}
       </p>
 
-      {/* Meta row */}
+      {/* Meta row — neutral type-pills per §5 */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-[#F2F6F3] px-2.5 py-0.5 text-[11px] font-medium text-[#0E1111]">
+        <span className="rounded-full border border-[#EAEFEF] bg-white px-2 py-0.5 text-[10px] font-medium text-[#0E1111]">
           {subsidie.doelgroep}
         </span>
         {subsidie.budget && (
@@ -176,24 +183,24 @@ function CuratedSubsidieCard({ subsidie }: { subsidie: CuratedSubsidie }) {
       </div>
 
       {/* Voorwaarden */}
-      <p className="text-[12px] leading-relaxed text-slate-400 line-clamp-2">
-        <span className="font-medium text-slate-500">Voorwaarden: </span>
+      <p className="text-[11px] leading-relaxed text-slate-400 line-clamp-2">
+        <span className="font-semibold text-slate-500">Voorwaarden: </span>
         {subsidie.voorwaarden}
       </p>
 
-      {/* External link */}
+      {/* External link — §11 pattern */}
       {subsidie.url && (
         <a
           href={subsidie.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-[12px] font-medium text-blue-600 hover:text-blue-700 transition-colors"
+          className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#B07D18] hover:underline"
         >
           Bekijk op RVO.nl
-          <ExternalLink className="size-3" />
+          <ExternalLink size={12} />
         </a>
       )}
-    </div>
+    </SubCard>
   )
 }
 
@@ -351,17 +358,18 @@ export default function RvoSubsidiesDetailEnriched() {
       {/* Summary stats bar */}
       <StatusSummaryBar subsidies={LANDELIJK_SUBSIDIES} />
 
-      {/* Curated landelijk subsidies */}
-      <div className="space-y-3">
-        <h3 className="text-[14px] font-semibold text-[#0E1111]">
-          Landelijke woningbouwsubsidies
-        </h3>
+      {/* Curated landelijk subsidies — wrapped in SectionInsightCard */}
+      <SectionInsightCard
+        kicker="Subsidies"
+        title="Landelijke woningbouwsubsidies"
+        Icon={Building2}
+      >
         <div className="grid gap-3">
           {LANDELIJK_SUBSIDIES.map((s) => (
             <CuratedSubsidieCard key={s.id} subsidie={s} />
           ))}
         </div>
-      </div>
+      </SectionInsightCard>
 
       {/* Live RVO subsidies section */}
       <LiveRvoSection />
