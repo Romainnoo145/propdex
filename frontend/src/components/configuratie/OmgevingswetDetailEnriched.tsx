@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   BookOpen,
   HardHat,
+  type LucideIcon,
 } from 'lucide-react'
 import { SectionInsightCard, SubCard } from '@/components/reports/components'
 
@@ -30,7 +31,7 @@ interface ReferenceSection {
   id: string
   kicker: string
   title: string
-  icon: React.ElementType
+  icon: LucideIcon
   intro: string
   items: ReferenceItem[]
 }
