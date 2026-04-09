@@ -9,7 +9,14 @@
  */
 
 import { useMemo, useState } from 'react'
-import { Banknote, ExternalLink, Loader2, AlertCircle } from 'lucide-react'
+import {
+  Banknote,
+  ExternalLink,
+  Loader2,
+  AlertCircle,
+  Search,
+  Building2,
+} from 'lucide-react'
 import {
   useSubsidieExplorer,
   type SubsidieExplorerItem,
@@ -19,6 +26,7 @@ import {
   type CuratedSubsidie,
   type SubsidieStatus,
 } from '@/lib/subsidies/curatedSubsidies'
+import { SectionInsightCard, SubCard } from '@/components/reports/components'
 
 /* ─── Curated landelijk subsidies ────────────────────────────── */
 
@@ -28,10 +36,25 @@ const LANDELIJK_SUBSIDIES = CURATED_SUBSIDIES.filter(
 
 /* ─── Status helpers ─────────────────────────────────────────── */
 
-const STATUS_CONFIG: Record<SubsidieStatus, { label: string; bg: string; text: string; dot: string }> = {
-  open: { label: 'Open', bg: 'bg-emerald-500/15', text: 'text-emerald-600', dot: 'bg-emerald-500' },
-  gesloten: { label: 'Gesloten', bg: 'bg-red-500/15', text: 'text-red-600', dot: 'bg-red-500' },
-  doorlopend: { label: 'Doorlopend', bg: 'bg-blue-500/15', text: 'text-blue-600', dot: 'bg-blue-500' },
+const STATUS_CONFIG: Record<
+  SubsidieStatus,
+  { label: string; pill: string; dot: string }
+> = {
+  open: {
+    label: 'Open',
+    pill: 'border border-emerald-200 bg-emerald-50 text-emerald-700',
+    dot: 'bg-emerald-500',
+  },
+  gesloten: {
+    label: 'Gesloten',
+    pill: 'border border-red-200 bg-red-50 text-red-700',
+    dot: 'bg-red-500',
+  },
+  doorlopend: {
+    label: 'Doorlopend',
+    pill: 'border border-slate-200 bg-slate-50 text-slate-600',
+    dot: 'bg-slate-400',
+  },
 }
 
 /* ─── Inline loading/error/empty state helpers ───────────────── */
@@ -54,7 +77,7 @@ function DetailError({ error }: { error: Error | null }) {
   )
 }
 
-/* ─── Summary stats bar ──────────────────────────────────────── */
+/* ─── Summary stats bar (contract-conform SectionInsightCard) ── */
 
 function StatusSummaryBar({ subsidies }: { subsidies: CuratedSubsidie[] }) {
   const counts = useMemo(() => {
@@ -64,74 +87,81 @@ function StatusSummaryBar({ subsidies }: { subsidies: CuratedSubsidie[] }) {
   }, [subsidies])
 
   return (
-    <div className="space-y-3 rounded-[16px] border border-[#EAEFEF] bg-white p-5">
-      <div className="flex items-center justify-between">
-        <p className="text-[12px] font-semibold uppercase tracking-wide text-slate-400">
-          Landelijke subsidies
-        </p>
-        <span className="text-[13px] font-medium text-[#0E1111]">
-          {subsidies.length} regelingen
-        </span>
-      </div>
+    <SectionInsightCard
+      kicker="Overzicht"
+      title="Landelijke subsidies"
+      Icon={Banknote}
+      badge={`${subsidies.length} regelingen`}
+    >
+      <div className="space-y-3">
+        {/* Stacked bar */}
+        <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
+          {(['open', 'gesloten', 'doorlopend'] as const).map((status) => {
+            const pct =
+              subsidies.length > 0 ? (counts[status] / subsidies.length) * 100 : 0
+            if (pct === 0) return null
+            return (
+              <div
+                key={status}
+                className={`${STATUS_CONFIG[status].dot} transition-all`}
+                style={{ width: `${pct}%` }}
+              />
+            )
+          })}
+        </div>
 
-      {/* Stacked bar */}
-      <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
-        {(['open', 'gesloten', 'doorlopend'] as const).map((status) => {
-          const pct = subsidies.length > 0 ? (counts[status] / subsidies.length) * 100 : 0
-          if (pct === 0) return null
-          return (
-            <div
-              key={status}
-              className={`${STATUS_CONFIG[status].dot} transition-all`}
-              style={{ width: `${pct}%` }}
-            />
-          )
-        })}
-      </div>
-
-      {/* Legend pills */}
-      <div className="flex flex-wrap gap-3">
-        {(['open', 'gesloten', 'doorlopend'] as const).map((status) => {
-          const cfg = STATUS_CONFIG[status]
-          return (
-            <div key={status} className="flex items-center gap-1.5">
-              <span className={`size-2 rounded-full ${cfg.dot}`} />
-              <span className={`text-[12px] font-medium ${cfg.text}`}>
-                {counts[status]} {cfg.label}
+        {/* Legend */}
+        <div className="flex flex-wrap gap-3">
+          {(['open', 'gesloten', 'doorlopend'] as const).map((status) => {
+            const cfg = STATUS_CONFIG[status]
+            return (
+              <span
+                key={status}
+                className="flex items-center gap-1.5 text-[11px]"
+              >
+                <span className={`size-2 rounded-full ${cfg.dot}`} />
+                <span className="font-semibold text-slate-500">
+                  {cfg.label}
+                </span>
+                <span className="tabular-nums text-slate-400">
+                  {counts[status]}
+                </span>
               </span>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
-    </div>
+    </SectionInsightCard>
   )
 }
 
-/* ─── Curated subsidie card ──────────────────────────────────── */
+/* ─── Curated subsidie card (SubCard-wrapped) ────────────────── */
 
 function CuratedSubsidieCard({ subsidie }: { subsidie: CuratedSubsidie }) {
   const cfg = STATUS_CONFIG[subsidie.status]
 
   return (
-    <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5 space-y-3">
+    <SubCard className="space-y-2.5">
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
-        <h4 className="text-[14px] font-semibold text-[#0E1111] leading-snug">
+        <h4 className="text-[13px] font-semibold leading-snug text-[#0E1111]">
           {subsidie.title}
         </h4>
-        <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${cfg.bg} ${cfg.text}`}>
+        <span
+          className={`inline-block shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${cfg.pill}`}
+        >
           {cfg.label}
         </span>
       </div>
 
       {/* Beschrijving */}
-      <p className="text-[13px] leading-relaxed text-slate-500 line-clamp-3">
+      <p className="text-[12px] leading-relaxed text-slate-500 line-clamp-3">
         {subsidie.beschrijving}
       </p>
 
-      {/* Meta row */}
+      {/* Meta row — neutral type-pills per §5 */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-[#F2F6F3] px-2.5 py-0.5 text-[11px] font-medium text-[#0E1111]">
+        <span className="rounded-full border border-[#EAEFEF] bg-white px-2 py-0.5 text-[10px] font-medium text-[#0E1111]">
           {subsidie.doelgroep}
         </span>
         {subsidie.budget && (
@@ -153,64 +183,66 @@ function CuratedSubsidieCard({ subsidie }: { subsidie: CuratedSubsidie }) {
       </div>
 
       {/* Voorwaarden */}
-      <p className="text-[12px] leading-relaxed text-slate-400 line-clamp-2">
-        <span className="font-medium text-slate-500">Voorwaarden: </span>
+      <p className="text-[11px] leading-relaxed text-slate-400 line-clamp-2">
+        <span className="font-semibold text-slate-500">Voorwaarden: </span>
         {subsidie.voorwaarden}
       </p>
 
-      {/* External link */}
+      {/* External link — §11 pattern */}
       {subsidie.url && (
         <a
           href={subsidie.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-[12px] font-medium text-blue-600 hover:text-blue-700 transition-colors"
+          className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#B07D18] hover:underline"
         >
           Bekijk op RVO.nl
-          <ExternalLink className="size-3" />
+          <ExternalLink size={12} />
         </a>
       )}
-    </div>
+    </SubCard>
   )
 }
 
-/* ─── Live RVO subsidie card (inline, no coupling to SubsidieCard) ── */
+/* ─── Live RVO subsidie item (SubCard-wrapped) ───────────────── */
 
 function RvoSubsidieItem({ item }: { item: SubsidieExplorerItem }) {
   return (
-    <div className="rounded-[12px] border border-[#EAEFEF] bg-white p-4 space-y-2">
-      <h5 className="text-[13px] font-semibold text-[#0E1111] leading-snug line-clamp-2">
+    <SubCard className="space-y-2">
+      <h5 className="line-clamp-2 text-[13px] font-semibold leading-snug text-[#0E1111]">
         {item.title}
       </h5>
       {item.intro && (
-        <p className="text-[12px] leading-relaxed text-slate-500 line-clamp-2">
+        <p className="line-clamp-2 text-[12px] leading-relaxed text-slate-500">
           {item.intro}
         </p>
       )}
-      <div className="flex flex-wrap gap-1.5">
-        {item.sectors.map((s) => (
-          <span key={s} className="rounded-full bg-[#F2F6F3] px-2 py-0.5 text-[10px] font-medium text-[#0E1111]">
-            {s}
-          </span>
-        ))}
-        {item.targets.map((t) => (
-          <span key={t} className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600">
-            {t}
-          </span>
-        ))}
-      </div>
+      {/* Doelgroep pills only — sectors dropped (RVO's own taxonomy
+          adds noise; results are already pre-filtered to vastgoed). */}
+      {item.targets.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {item.targets.map((t) => (
+            <span
+              key={t}
+              className="rounded-full border border-[#EAEFEF] bg-white px-2 py-0.5 text-[10px] font-medium text-slate-500"
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
       {item.url && (
         <a
           href={item.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-700 transition-colors"
+          className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#B07D18] hover:underline"
         >
           Meer info
-          <ExternalLink className="size-3" />
+          <ExternalLink size={11} />
         </a>
       )}
-    </div>
+    </SubCard>
   )
 }
 
@@ -245,78 +277,74 @@ function FacetPill({
 /* ─── Live RVO Subsidies section ─────────────────────────────── */
 
 function LiveRvoSection() {
-  const [sectorFilter, setSectorFilter] = useState<string | undefined>()
   const [targetFilter, setTargetFilter] = useState<string | undefined>()
 
   const { data, allCount, isLoading, error } = useSubsidieExplorer({
-    sector: sectorFilter,
     target: targetFilter,
   })
 
   if (isLoading) return <DetailLoading />
   if (error) return <DetailError error={error} />
+
   if (!data || data.results.length === 0) {
     return (
-      <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-6 text-center">
-        <p className="text-[13px] text-slate-400">Geen live RVO subsidies gevonden.</p>
-      </div>
+      <SectionInsightCard
+        kicker="Live"
+        title="Actuele RVO regelingen"
+        Icon={Search}
+      >
+        <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+          <p className="text-[13px] font-semibold text-[#0E1111]">
+            Geen live RVO subsidies gevonden
+          </p>
+          <p className="mx-auto mt-2 max-w-sm text-[12px] text-slate-400">
+            Probeer andere filters of raadpleeg rvo.nl direct.
+          </p>
+        </div>
+      </SectionInsightCard>
     )
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-[14px] font-semibold text-[#0E1111]">
-          Live RVO subsidies
-        </h3>
-        <span className="text-[12px] text-slate-400">
-          {data.total_count} van {allCount} resultaten
-        </span>
-      </div>
-
-      {/* Sector facets */}
-      {data.facets.sectors.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Sector</p>
-          <div className="flex flex-wrap gap-1.5">
-            {data.facets.sectors.map((f) => (
-              <FacetPill
-                key={f.value}
-                label={f.value}
-                count={f.count}
-                active={sectorFilter === f.value}
-                onClick={() => setSectorFilter(sectorFilter === f.value ? undefined : f.value)}
-              />
-            ))}
+    <SectionInsightCard
+      kicker="Live"
+      title="Actuele RVO regelingen"
+      Icon={Search}
+      badge={`${data.total_count}/${allCount}`}
+    >
+      <div className="space-y-4">
+        {/* Target facets (doelgroep) — sector facet dropped: RVO's own
+            taxonomy adds noise since backend already pre-filters all
+            results to vastgoed/development-relevant subsidies. */}
+        {data.facets.targets.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
+              Doelgroep
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {data.facets.targets.map((f) => (
+                <FacetPill
+                  key={f.value}
+                  label={f.value}
+                  count={f.count}
+                  active={targetFilter === f.value}
+                  onClick={() =>
+                    setTargetFilter(targetFilter === f.value ? undefined : f.value)
+                  }
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Target facets */}
-      {data.facets.targets.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Doelgroep</p>
-          <div className="flex flex-wrap gap-1.5">
-            {data.facets.targets.map((f) => (
-              <FacetPill
-                key={f.value}
-                label={f.value}
-                count={f.count}
-                active={targetFilter === f.value}
-                onClick={() => setTargetFilter(targetFilter === f.value ? undefined : f.value)}
-              />
-            ))}
-          </div>
+        {/* Results grid */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          {data.results.map((item) => (
+            <RvoSubsidieItem key={item.id} item={item} />
+          ))}
         </div>
-      )}
-
-      {/* Results grid */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        {data.results.map((item) => (
-          <RvoSubsidieItem key={item.id} item={item} />
-        ))}
       </div>
-    </div>
+    </SectionInsightCard>
   )
 }
 
@@ -324,42 +352,47 @@ function LiveRvoSection() {
 
 export default function RvoSubsidiesDetailEnriched() {
   return (
-    <div className="space-y-6">
+    <div
+      className="space-y-6"
+      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+    >
       {/* Summary stats bar */}
       <StatusSummaryBar subsidies={LANDELIJK_SUBSIDIES} />
 
-      {/* Curated landelijk subsidies */}
-      <div className="space-y-3">
-        <h3 className="text-[14px] font-semibold text-[#0E1111]">
-          Landelijke woningbouwsubsidies
-        </h3>
+      {/* Curated landelijk subsidies — wrapped in SectionInsightCard */}
+      <SectionInsightCard
+        kicker="Subsidies"
+        title="Landelijke woningbouwsubsidies"
+        Icon={Building2}
+      >
         <div className="grid gap-3">
           {LANDELIJK_SUBSIDIES.map((s) => (
             <CuratedSubsidieCard key={s.id} subsidie={s} />
           ))}
         </div>
-      </div>
+      </SectionInsightCard>
 
       {/* Live RVO subsidies section */}
       <LiveRvoSection />
 
-      {/* Footer link to RVO.nl */}
-      <a
-        href="https://www.rvo.nl/subsidies-financiering"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center justify-between rounded-[16px] border border-[#EAEFEF] bg-white p-5 transition-colors hover:border-blue-200 hover:bg-blue-50/30"
-      >
-        <div className="space-y-0.5">
-          <p className="text-[13px] font-medium text-[#0E1111]">
-            Alle subsidies & financiering op RVO.nl
+      {/* Footer — §11 external link pattern inside a neutral container */}
+      <SectionInsightCard kicker="Bron" title="RVO.nl" Icon={ExternalLink}>
+        <div className="flex items-start justify-between gap-4">
+          <p className="text-[12px] leading-relaxed text-slate-500">
+            Bekijk het volledige overzicht van rijkssubsidies en
+            financieringsregelingen voor vastgoed en woningbouw op rvo.nl.
           </p>
-          <p className="text-[12px] text-slate-400">
-            Bekijk het volledige overzicht van rijkssubsidies
-          </p>
+          <a
+            href="https://www.rvo.nl/subsidies-financiering"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex shrink-0 items-center gap-2 text-[13px] font-semibold text-[#B07D18] hover:underline"
+          >
+            Open RVO.nl
+            <ExternalLink size={14} />
+          </a>
         </div>
-        <ExternalLink className="size-4 shrink-0 text-blue-500" />
-      </a>
+      </SectionInsightCard>
     </div>
   )
 }

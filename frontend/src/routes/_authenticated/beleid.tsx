@@ -1477,9 +1477,11 @@ function CompactGemeenteGrid({
 function ProvincieDetail({
   provincieCode,
   onBack,
+  initialCategory,
 }: {
   provincieCode: string;
   onBack: () => void;
+  initialCategory?: string;
 }) {
   const { data: geojson } = useProvincieGeoJSON();
 
@@ -1515,6 +1517,7 @@ function ProvincieDetail({
       svgData={svgData}
       sources={PROVINCIE_DATA_SOURCES}
       onBack={onBack}
+      initialCategory={initialCategory}
     />
   );
 }
@@ -1600,12 +1603,17 @@ function CompactProvincieGrid({
 
 /* ─── Landelijk content (curated subsidies, compact) ────────── */
 
-function LandelijkContent() {
+function LandelijkContent({
+  initialCategory,
+}: {
+  initialCategory?: string;
+}) {
   return (
     <CategoryTabbedSources
       sources={LANDELIJK_DATA_SOURCES}
       entityType="landelijk"
       entityCode="NL"
+      initialCategory={initialCategory}
     />
   );
 }
@@ -2084,7 +2092,10 @@ function ConfiguratiePage() {
             onBack={() =>
               navigate({
                 to: "/beleid",
-                search: { provincie: activeProvincie },
+                search: {
+                  provincie: activeProvincie,
+                  category: activeCategory,
+                },
               })
             }
           />
@@ -2116,6 +2127,7 @@ function ConfiguratiePage() {
           <ProvincieDetail
             provincieCode={activeProvincie}
             onBack={handleBackToMain}
+            initialCategory={activeCategory}
           />
         </div>
       </ResultsShell>
@@ -2129,7 +2141,12 @@ function ConfiguratiePage() {
         <div className="mx-auto max-w-4xl">
           <LandelijkSourceDetail
             sourceKey={activeSource}
-            onBack={handleBackToMain}
+            onBack={() =>
+              navigate({
+                to: "/beleid",
+                search: { category: activeCategory },
+              })
+            }
           />
         </div>
       </ResultsShell>
@@ -2179,7 +2196,9 @@ function ConfiguratiePage() {
                 isOpen={openNiveau === config.key}
                 onToggle={() => handleToggle(config.key)}
               >
-                {config.key === "landelijk" && <LandelijkContent />}
+                {config.key === "landelijk" && (
+                  <LandelijkContent initialCategory={activeCategory} />
+                )}
                 {config.key === "provinciaal" && (
                   <CompactProvincieGrid
                     onSelectProvincie={handleSelectProvincie}
