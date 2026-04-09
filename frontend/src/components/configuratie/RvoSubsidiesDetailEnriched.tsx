@@ -204,27 +204,34 @@ function CuratedSubsidieCard({ subsidie }: { subsidie: CuratedSubsidie }) {
   )
 }
 
-/* ─── Live RVO subsidie card (inline, no coupling to SubsidieCard) ── */
+/* ─── Live RVO subsidie item (SubCard-wrapped) ───────────────── */
 
 function RvoSubsidieItem({ item }: { item: SubsidieExplorerItem }) {
   return (
-    <div className="rounded-[12px] border border-[#EAEFEF] bg-white p-4 space-y-2">
-      <h5 className="text-[13px] font-semibold text-[#0E1111] leading-snug line-clamp-2">
+    <SubCard className="space-y-2">
+      <h5 className="line-clamp-2 text-[13px] font-semibold leading-snug text-[#0E1111]">
         {item.title}
       </h5>
       {item.intro && (
-        <p className="text-[12px] leading-relaxed text-slate-500 line-clamp-2">
+        <p className="line-clamp-2 text-[12px] leading-relaxed text-slate-500">
           {item.intro}
         </p>
       )}
+      {/* Neutral type-pills per §5 — no semantic color for sectors/targets */}
       <div className="flex flex-wrap gap-1.5">
         {item.sectors.map((s) => (
-          <span key={s} className="rounded-full bg-[#F2F6F3] px-2 py-0.5 text-[10px] font-medium text-[#0E1111]">
+          <span
+            key={s}
+            className="rounded-full border border-[#EAEFEF] bg-white px-2 py-0.5 text-[10px] font-medium text-[#0E1111]"
+          >
             {s}
           </span>
         ))}
         {item.targets.map((t) => (
-          <span key={t} className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600">
+          <span
+            key={t}
+            className="rounded-full border border-[#EAEFEF] bg-white px-2 py-0.5 text-[10px] font-medium text-slate-500"
+          >
             {t}
           </span>
         ))}
@@ -234,13 +241,13 @@ function RvoSubsidieItem({ item }: { item: SubsidieExplorerItem }) {
           href={item.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-700 transition-colors"
+          className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#B07D18] hover:underline"
         >
           Meer info
-          <ExternalLink className="size-3" />
+          <ExternalLink size={11} />
         </a>
       )}
-    </div>
+    </SubCard>
   )
 }
 
@@ -285,68 +292,86 @@ function LiveRvoSection() {
 
   if (isLoading) return <DetailLoading />
   if (error) return <DetailError error={error} />
+
   if (!data || data.results.length === 0) {
     return (
-      <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-6 text-center">
-        <p className="text-[13px] text-slate-400">Geen live RVO subsidies gevonden.</p>
-      </div>
+      <SectionInsightCard
+        kicker="Live"
+        title="Actuele RVO regelingen"
+        Icon={Search}
+      >
+        <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+          <p className="text-[13px] font-semibold text-[#0E1111]">
+            Geen live RVO subsidies gevonden
+          </p>
+          <p className="mx-auto mt-2 max-w-sm text-[12px] text-slate-400">
+            Probeer andere filters of raadpleeg rvo.nl direct.
+          </p>
+        </div>
+      </SectionInsightCard>
     )
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-[14px] font-semibold text-[#0E1111]">
-          Live RVO subsidies
-        </h3>
-        <span className="text-[12px] text-slate-400">
-          {data.total_count} van {allCount} resultaten
-        </span>
-      </div>
-
-      {/* Sector facets */}
-      {data.facets.sectors.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Sector</p>
-          <div className="flex flex-wrap gap-1.5">
-            {data.facets.sectors.map((f) => (
-              <FacetPill
-                key={f.value}
-                label={f.value}
-                count={f.count}
-                active={sectorFilter === f.value}
-                onClick={() => setSectorFilter(sectorFilter === f.value ? undefined : f.value)}
-              />
-            ))}
+    <SectionInsightCard
+      kicker="Live"
+      title="Actuele RVO regelingen"
+      Icon={Search}
+      badge={`${data.total_count}/${allCount}`}
+    >
+      <div className="space-y-4">
+        {/* Sector facets */}
+        {data.facets.sectors.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
+              Sector
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {data.facets.sectors.map((f) => (
+                <FacetPill
+                  key={f.value}
+                  label={f.value}
+                  count={f.count}
+                  active={sectorFilter === f.value}
+                  onClick={() =>
+                    setSectorFilter(sectorFilter === f.value ? undefined : f.value)
+                  }
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Target facets */}
-      {data.facets.targets.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Doelgroep</p>
-          <div className="flex flex-wrap gap-1.5">
-            {data.facets.targets.map((f) => (
-              <FacetPill
-                key={f.value}
-                label={f.value}
-                count={f.count}
-                active={targetFilter === f.value}
-                onClick={() => setTargetFilter(targetFilter === f.value ? undefined : f.value)}
-              />
-            ))}
+        {/* Target facets */}
+        {data.facets.targets.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
+              Doelgroep
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {data.facets.targets.map((f) => (
+                <FacetPill
+                  key={f.value}
+                  label={f.value}
+                  count={f.count}
+                  active={targetFilter === f.value}
+                  onClick={() =>
+                    setTargetFilter(targetFilter === f.value ? undefined : f.value)
+                  }
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Results grid */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        {data.results.map((item) => (
-          <RvoSubsidieItem key={item.id} item={item} />
-        ))}
+        {/* Results grid */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          {data.results.map((item) => (
+            <RvoSubsidieItem key={item.id} item={item} />
+          ))}
+        </div>
       </div>
-    </div>
+    </SectionInsightCard>
   )
 }
 
