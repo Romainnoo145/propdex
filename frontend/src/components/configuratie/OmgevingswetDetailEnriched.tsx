@@ -9,12 +9,12 @@
  *  - External links to authoritative sources
  *
  * Static curated content — no API calls.
+ * Contract-conform: SectionInsightCard + SubCard throughout, §11 external links.
  */
 
 import {
   ExternalLink,
   Scale,
-  Building2,
   FileText,
   ShieldCheck,
   CheckCircle2,
@@ -22,11 +22,13 @@ import {
   BookOpen,
   HardHat,
 } from 'lucide-react'
+import { SectionInsightCard, SubCard } from '@/components/reports/components'
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
 interface ReferenceSection {
   id: string
+  kicker: string
   title: string
   icon: React.ElementType
   intro: string
@@ -51,6 +53,7 @@ interface ExternalLinkEntry {
 const SECTIONS: ReferenceSection[] = [
   {
     id: 'vergunningvrij',
+    kicker: 'Vergunning',
     title: 'Vergunningvrij bouwen',
     icon: CheckCircle2,
     intro:
@@ -96,6 +99,7 @@ const SECTIONS: ReferenceSection[] = [
   },
   {
     id: 'meldingsplicht',
+    kicker: 'Melding',
     title: 'Meldingsplicht',
     icon: FileText,
     intro:
@@ -132,6 +136,7 @@ const SECTIONS: ReferenceSection[] = [
   },
   {
     id: 'opa',
+    kicker: 'Procedure',
     title: 'Omgevingsplanactiviteit (OPA)',
     icon: Scale,
     intro:
@@ -173,6 +178,7 @@ const SECTIONS: ReferenceSection[] = [
   },
   {
     id: 'bbl',
+    kicker: 'Techniek',
     title: 'Bbl vereisten',
     icon: HardHat,
     intro:
@@ -238,7 +244,8 @@ const EXTERNAL_LINKS: ExternalLinkEntry[] = [
   },
   {
     title: 'Wetten.nl — Omgevingswet',
-    description: 'De volledige wettekst van de Omgevingswet en bijbehorende besluiten (Bbl, Bkl, Bal).',
+    description:
+      'De volledige wettekst van de Omgevingswet en bijbehorende besluiten (Bbl, Bkl, Bal).',
     url: 'https://wetten.overheid.nl/BWBR0037885',
   },
   {
@@ -249,46 +256,25 @@ const EXTERNAL_LINKS: ExternalLinkEntry[] = [
   },
 ]
 
-/* ─── Section card component ─────────────────────────────────── */
+/* ─── Reference item (rendered inside each section) ──────────── */
 
-function SectionCard({ section }: { section: ReferenceSection }) {
-  const Icon = section.icon
-
+function ReferenceItemBlock({ item }: { item: ReferenceItem }) {
   return (
-    <div className="space-y-4 rounded-[16px] border border-[#EAEFEF] bg-white p-5">
-      {/* Section header */}
-      <div className="flex items-center gap-2.5">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-[#F2F6F3]">
-          <Icon className="size-4 text-[#0E1111]" />
-        </div>
-        <h3 className="text-[14px] font-semibold text-[#0E1111]">{section.title}</h3>
-      </div>
-
-      {/* Section intro */}
-      <p className="text-[13px] leading-relaxed text-slate-500">{section.intro}</p>
-
-      {/* Reference items */}
-      <div className="space-y-3">
-        {section.items.map((item) => (
-          <ReferenceCard key={item.title} item={item} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/* ─── Individual reference card ──────────────────────────────── */
-
-function ReferenceCard({ item }: { item: ReferenceItem }) {
-  return (
-    <div className="rounded-[12px] border border-[#EAEFEF] bg-[#FAFCFA] p-4 space-y-2.5">
-      <h4 className="text-[13px] font-semibold text-[#0E1111]">{item.title}</h4>
-      <p className="text-[12px] leading-relaxed text-slate-500">{item.description}</p>
+    <SubCard>
+      <h4 className="text-[13px] font-semibold leading-snug text-[#0E1111]">
+        {item.title}
+      </h4>
+      <p className="mt-1 text-[12px] leading-relaxed text-slate-500">
+        {item.description}
+      </p>
 
       {item.bullets && item.bullets.length > 0 && (
-        <ul className="space-y-1 pl-0.5">
+        <ul className="mt-2 space-y-1">
           {item.bullets.map((b) => (
-            <li key={b} className="flex items-start gap-2 text-[12px] leading-relaxed text-slate-500">
+            <li
+              key={b}
+              className="flex items-start gap-2 text-[12px] leading-relaxed text-slate-500"
+            >
               <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-slate-300" />
               {b}
             </li>
@@ -297,72 +283,14 @@ function ReferenceCard({ item }: { item: ReferenceItem }) {
       )}
 
       {item.caveat && (
-        <div className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2">
-          <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-500" />
-          <p className="text-[11px] leading-relaxed text-amber-700">{item.caveat}</p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/* ─── External links section ─────────────────────────────────── */
-
-function ExternalLinksSection() {
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <BookOpen className="size-4 text-slate-400" />
-        <p className="text-[12px] font-semibold uppercase tracking-wide text-slate-400">
-          Nuttige bronnen
-        </p>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        {EXTERNAL_LINKS.map((link) => (
-          <a
-            key={link.url}
-            href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-start justify-between gap-3 rounded-[16px] border border-[#EAEFEF] bg-white p-4 transition-colors hover:border-blue-200 hover:bg-blue-50/30"
-          >
-            <div className="space-y-1">
-              <p className="text-[13px] font-medium text-[#0E1111]">{link.title}</p>
-              <p className="text-[12px] leading-relaxed text-slate-400">{link.description}</p>
-            </div>
-            <ExternalLink className="mt-0.5 size-4 shrink-0 text-blue-500" />
-          </a>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/* ─── Header banner ──────────────────────────────────────────── */
-
-function HeaderBanner() {
-  return (
-    <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5 space-y-2">
-      <div className="flex items-center gap-2.5">
-        <div className="flex size-9 items-center justify-center rounded-xl bg-[#F2F6F3]">
-          <ShieldCheck className="size-5 text-[#0E1111]" />
-        </div>
-        <div>
-          <h2 className="text-[15px] font-semibold text-[#0E1111]">
-            Omgevingswet & Besluit bouwwerken leefomgeving
-          </h2>
-          <p className="text-[12px] text-slate-400">
-            In werking getreden op 1 januari 2024 — vervangt Wabo, Wro, Bouwbesluit 2012
+        <div className="mt-3 flex items-start gap-2 rounded-[16px] border border-aura-amber/30 bg-aura-amber/[0.08] px-4 py-3">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-aura-amber" />
+          <p className="text-[11px] leading-relaxed text-[#0E1111]">
+            {item.caveat}
           </p>
         </div>
-      </div>
-      <p className="text-[13px] leading-relaxed text-slate-500">
-        De Omgevingswet bundelt 26 wetten voor de fysieke leefomgeving in één wet. Het Besluit
-        bouwwerken leefomgeving (Bbl) bevat de technische bouwvoorschriften. Hieronder vindt u de
-        belangrijkste concepten voor vastgoedontwikkeling.
-      </p>
-    </div>
+      )}
+    </SubCard>
   )
 }
 
@@ -370,14 +298,75 @@ function HeaderBanner() {
 
 export default function OmgevingswetDetailEnriched() {
   return (
-    <div className="space-y-6">
-      <HeaderBanner />
+    <div
+      className="space-y-6"
+      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+    >
+      {/* Header SectionInsightCard */}
+      <SectionInsightCard
+        kicker="Wetgeving"
+        title="Omgevingswet & Bbl"
+        Icon={ShieldCheck}
+      >
+        <p className="text-[13px] leading-relaxed text-slate-500">
+          In werking getreden op <span className="font-semibold text-[#0E1111]">1 januari 2024</span>
+          {' '}— vervangt Wabo, Wro, Bouwbesluit 2012. De Omgevingswet bundelt 26 wetten
+          voor de fysieke leefomgeving in één wet. Het Besluit bouwwerken leefomgeving
+          (Bbl) bevat de technische bouwvoorschriften. Hieronder de belangrijkste concepten
+          voor vastgoedontwikkeling.
+        </p>
+      </SectionInsightCard>
 
+      {/* Content sections */}
       {SECTIONS.map((section) => (
-        <SectionCard key={section.id} section={section} />
+        <SectionInsightCard
+          key={section.id}
+          kicker={section.kicker}
+          title={section.title}
+          Icon={section.icon}
+        >
+          <p className="mb-4 text-[13px] leading-relaxed text-slate-500">
+            {section.intro}
+          </p>
+          <div className="space-y-3">
+            {section.items.map((item) => (
+              <ReferenceItemBlock key={item.title} item={item} />
+            ))}
+          </div>
+        </SectionInsightCard>
       ))}
 
-      <ExternalLinksSection />
+      {/* External links section */}
+      <SectionInsightCard kicker="Bronnen" title="Nuttige referenties" Icon={BookOpen}>
+        <div className="space-y-0">
+          {EXTERNAL_LINKS.map((link, idx) => (
+            <div
+              key={link.url}
+              className={`flex items-start justify-between gap-4 py-3 ${
+                idx < EXTERNAL_LINKS.length - 1 ? 'border-b border-[#EAEFEF]' : ''
+              }`}
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-semibold text-[#0E1111]">
+                  {link.title}
+                </p>
+                <p className="mt-0.5 text-[12px] leading-relaxed text-slate-400">
+                  {link.description}
+                </p>
+              </div>
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex shrink-0 items-center gap-2 text-[13px] font-semibold text-[#B07D18] hover:underline"
+              >
+                Open
+                <ExternalLink size={14} />
+              </a>
+            </div>
+          ))}
+        </div>
+      </SectionInsightCard>
     </div>
   )
 }
