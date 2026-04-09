@@ -217,25 +217,20 @@ function RvoSubsidieItem({ item }: { item: SubsidieExplorerItem }) {
           {item.intro}
         </p>
       )}
-      {/* Neutral type-pills per §5 — no semantic color for sectors/targets */}
-      <div className="flex flex-wrap gap-1.5">
-        {item.sectors.map((s) => (
-          <span
-            key={s}
-            className="rounded-full border border-[#EAEFEF] bg-white px-2 py-0.5 text-[10px] font-medium text-[#0E1111]"
-          >
-            {s}
-          </span>
-        ))}
-        {item.targets.map((t) => (
-          <span
-            key={t}
-            className="rounded-full border border-[#EAEFEF] bg-white px-2 py-0.5 text-[10px] font-medium text-slate-500"
-          >
-            {t}
-          </span>
-        ))}
-      </div>
+      {/* Doelgroep pills only — sectors dropped (RVO's own taxonomy
+          adds noise; results are already pre-filtered to vastgoed). */}
+      {item.targets.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {item.targets.map((t) => (
+            <span
+              key={t}
+              className="rounded-full border border-[#EAEFEF] bg-white px-2 py-0.5 text-[10px] font-medium text-slate-500"
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
       {item.url && (
         <a
           href={item.url}
@@ -282,11 +277,9 @@ function FacetPill({
 /* ─── Live RVO Subsidies section ─────────────────────────────── */
 
 function LiveRvoSection() {
-  const [sectorFilter, setSectorFilter] = useState<string | undefined>()
   const [targetFilter, setTargetFilter] = useState<string | undefined>()
 
   const { data, allCount, isLoading, error } = useSubsidieExplorer({
-    sector: sectorFilter,
     target: targetFilter,
   })
 
@@ -320,29 +313,9 @@ function LiveRvoSection() {
       badge={`${data.total_count}/${allCount}`}
     >
       <div className="space-y-4">
-        {/* Sector facets */}
-        {data.facets.sectors.length > 0 && (
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
-              Sector
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {data.facets.sectors.map((f) => (
-                <FacetPill
-                  key={f.value}
-                  label={f.value}
-                  count={f.count}
-                  active={sectorFilter === f.value}
-                  onClick={() =>
-                    setSectorFilter(sectorFilter === f.value ? undefined : f.value)
-                  }
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Target facets */}
+        {/* Target facets (doelgroep) — sector facet dropped: RVO's own
+            taxonomy adds noise since backend already pre-filters all
+            results to vastgoed/development-relevant subsidies. */}
         {data.facets.targets.length > 0 && (
           <div className="space-y-1.5">
             <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
