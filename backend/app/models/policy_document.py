@@ -80,6 +80,18 @@ class PolicyDocument(Base, TenantMixin, TimestampMixin):
         server_default=text("true"),  # DB-level column default; also ensures raw INSERTs (fixtures, test seeds) get is_global=true.
         comment="True if this document is visible across all customer organizations (vendor-uploaded global policy)",
     )
+    version_number: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,  # Application-layer default. Service layer (T07) computes the
+                    # actual next version number via MAX(version_number) + 1 for
+                    # the same (entity_type, entity_code, source_key) triple.
+        server_default=text("1"),  # DB-level default; ensures raw INSERTs (fixtures,
+                                   # test seeds) get version_number=1.
+        comment="Version number for this policy document. Re-uploads of the same "
+                "source create new rows with incremented version_number; cascade "
+                "query uses DISTINCT ON to return only the latest version per source.",
+    )
     ai_summary: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
