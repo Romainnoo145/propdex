@@ -70,9 +70,13 @@ def upgrade() -> None:
     # Now lock NOT NULL — pre-flight guaranteed every row has a value
     op.alter_column("parcel_documents", "organization_id", nullable=False)
 
-    # Indexes for tenant-scoped queries
+    # Indexes for tenant-scoped queries.
+    # ix_parcel_documents_organization_id matches SQLAlchemy's default naming
+    # convention for single-column indexes (ix_{tablename}_{columnname}), which
+    # TenantMixin's index=True on organization_id will auto-generate at the model
+    # metadata level. Naming them consistently prevents autogenerate drift.
     op.create_index(
-        "ix_parcel_documents_organization",
+        "ix_parcel_documents_organization_id",
         "parcel_documents",
         ["organization_id"],
     )
@@ -85,5 +89,5 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("ix_parcel_documents_org_parcel", table_name="parcel_documents")
-    op.drop_index("ix_parcel_documents_organization", table_name="parcel_documents")
+    op.drop_index("ix_parcel_documents_organization_id", table_name="parcel_documents")
     op.drop_column("parcel_documents", "organization_id")

@@ -71,6 +71,5 @@ class ParcelDocument(Base, TenantMixin, TimestampMixin):
             "parcel_id",
             "document_type",
         ),
-        Index("ix_parcel_documents_organization", "organization_id"),
         Index("ix_parcel_documents_org_parcel", "organization_id", "parcel_id"),
     )

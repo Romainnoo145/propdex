@@ -81,6 +81,10 @@ def _parcel_documents_insert_sql(include_organization_id: bool) -> str:
     """
 
 
+# Transitional: retained for rollback safety during M045/S01 deployment.
+# Once the T03 migration is confirmed on all environments (production,
+# staging, local), this guard can be removed entirely and store_document
+# can unconditionally include organization_id in the INSERT.
 async def _parcel_documents_has_organization_column(db: AsyncSession) -> bool:
     result = await db.execute(
         text(
@@ -118,7 +122,7 @@ async def store_document(
     content_type: str,
     file_bytes: bytes,
     user_id: uuid.UUID,
-    organization_id: uuid.UUID | None,
+    organization_id: uuid.UUID,
     db: AsyncSession,
 ) -> ParcelDocument:
     """Insert document via raw SQL (migration-aware) and return ORM instance."""
