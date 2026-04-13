@@ -24,6 +24,7 @@ import httpx
 CBS_TABLE_ID = "85385NED"
 CBS_BASE_URL = f"https://opendata.cbs.nl/ODataApi/odata/{CBS_TABLE_ID}"
 OUTPUT_PATH = Path(__file__).parent / "gemeente_provincie_map.json"
+MAX_PAGES = 100  # safety guard against runaway pagination
 
 
 def fetch_raw_rows() -> list[dict[str, object]]:
@@ -31,10 +32,17 @@ def fetch_raw_rows() -> list[dict[str, object]]:
     url = f"{CBS_BASE_URL}/TypedDataSet"
     rows: list[dict[str, object]] = []
     next_url: str | None = url
+    page_count = 0
 
     # CBS OData paginates — follow @odata.nextLink until exhausted.
     with httpx.Client(timeout=60.0) as client:
         while next_url:
+            page_count += 1
+            if page_count > MAX_PAGES:
+                raise RuntimeError(
+                    f"CBS pagination exceeded {MAX_PAGES} pages — "
+                    "possible runaway loop or API change. Aborting."
+                )
             response = client.get(next_url)
             response.raise_for_status()
             payload = response.json()
@@ -84,7 +92,7 @@ def main() -> int:
     print(f"Fetching CBS table {CBS_TABLE_ID}...", file=sys.stderr)
     try:
         raw_rows = fetch_raw_rows()
-    except httpx.HTTPError as exc:
+    except (httpx.HTTPError, json.JSONDecodeError, RuntimeError) as exc:
         print(f"FAILED: CBS fetch error: {exc}", file=sys.stderr)
         return 1
 
@@ -98,10 +106,12 @@ def main() -> int:
 
     if len(mapping) < 300:
         print(
-            f"WARNING: expected ~350 rows, got {len(mapping)}. "
-            "Verify the CBS table hasn't changed schema.",
+            f"FAILED: expected ~340 rows, got {len(mapping)}. "
+            "CBS API likely changed schema — verify column names via the "
+            "/DataProperties endpoint and update the script.",
             file=sys.stderr,
         )
+        return 1
 
     # Sanity checks: a few known gemeentes must be present
     sanity_checks = {
