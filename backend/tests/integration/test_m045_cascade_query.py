@@ -18,10 +18,11 @@ import pytest
 from geoalchemy2 import WKTElement
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.documents.cascade_service import for_parcel
+from app.documents.cascade_service import _resolve_ancestor_chain, for_parcel
 from app.models.gemeente_provincie_map import GemeenteProvincieMap
 from app.models.organization import Organization
 from app.models.parcel_cache import ParcelCache
+from app.models.parcel_document import ParcelDocument
 from app.models.policy_document import PolicyDocument
 from app.models.user import User
 
@@ -355,3 +356,152 @@ async def test_cascade_landelijk_only_for_null_gemeente_parcel(test_db: AsyncSes
     assert cascade.landelijk[0].source_key == "beng"
     assert cascade.provincie == [], "no provincie for null-gemeente parcel"
     assert cascade.gemeente == [], "no gemeente for null-gemeente parcel"
+
+
+# ---------------------------------------------------------------------------
+# Test 6 — peer_docs org isolation
+# ---------------------------------------------------------------------------
+
+
+async def _make_tenant_user(
+    db: AsyncSession,
+    email: str,
+    org_name: str,
+) -> tuple[User, Organization]:
+    """Create a minimal org + user for a tenant (non-vendor) context."""
+    org = Organization(name=org_name)
+    db.add(org)
+    await db.flush()
+
+    user = User(
+        email=email,
+        hashed_password="hashed_dummy",
+        full_name="Test User",
+        organization_id=org.id,
+        email_verified=True,
+        auth_provider="email",
+        is_active=True,
+    )
+    db.add(user)
+    await db.flush()
+    return user, org
+
+
+async def test_peer_docs_org_scoped(test_db: AsyncSession) -> None:
+    """peer_docs must be strictly org-scoped: org_a sees only alice's doc, org_b only bob's."""
+    alice, org_a = await _make_tenant_user(test_db, "alice@orgA.example", "Org A")
+    bob, org_b = await _make_tenant_user(test_db, "bob@orgB.example", "Org B")
+
+    # Single shared parcel in GM0983
+    test_db.add(GemeenteProvincieMap(gemeente_code="GM0983", provincie_code="PV31"))
+    test_db.add(
+        ParcelCache(
+            id=uuid.uuid4(),
+            parcel_id="NL.IMKAD.PEER001",
+            geometry=_DUMMY_GEOMETRY,
+            gemeente_code="GM0983",
+        )
+    )
+    await test_db.flush()
+
+    alice_filename = "alice_bodem.pdf"
+    bob_filename = "bob_bodem.pdf"
+
+    test_db.add(
+        ParcelDocument(
+            parcel_id="NL.IMKAD.PEER001",
+            organization_id=org_a.id,
+            uploaded_by_user_id=alice.id,
+            document_type="bodem",
+            filename=alice_filename,
+            content_type="application/pdf",
+            file_data=b"alice content",
+            file_size=13,
+        )
+    )
+    test_db.add(
+        ParcelDocument(
+            parcel_id="NL.IMKAD.PEER001",
+            organization_id=org_b.id,
+            uploaded_by_user_id=bob.id,
+            document_type="bodem",
+            filename=bob_filename,
+            content_type="application/pdf",
+            file_data=b"bob content",
+            file_size=11,
+        )
+    )
+    await test_db.commit()
+
+    # org_a sees only alice's doc
+    bundle_a = await for_parcel("NL.IMKAD.PEER001", org_a.id, test_db)
+    assert len(bundle_a.peer_docs) == 1, "org_a must see exactly 1 peer_doc"
+    assert bundle_a.peer_docs[0].filename == alice_filename, (
+        "org_a peer_doc must be alice's document"
+    )
+
+    # org_b sees only bob's doc
+    bundle_b = await for_parcel("NL.IMKAD.PEER001", org_b.id, test_db)
+    assert len(bundle_b.peer_docs) == 1, "org_b must see exactly 1 peer_doc"
+    assert bundle_b.peer_docs[0].filename == bob_filename, (
+        "org_b peer_doc must be bob's document"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 7 — cascade is org-agnostic (global policy docs visible to any org)
+# ---------------------------------------------------------------------------
+
+
+async def test_cascade_same_regardless_of_org(
+    test_db: AsyncSession,
+    seeded_cascade_world: Any,
+) -> None:
+    """cascade_policy_docs must be identical for any org — it is global, not org-scoped."""
+    world = seeded_cascade_world
+
+    # Create a second org (org_b) that has no policy_documents of its own
+    _, org_b = await _make_tenant_user(test_db, "other@orgB.example", "Other Org B")
+    await test_db.commit()
+
+    bundle_a = await for_parcel(world.venlo_parcel_id, world.org_id, test_db)
+    bundle_b = await for_parcel(world.venlo_parcel_id, org_b.id, test_db)
+
+    cascade_a = bundle_a.cascade_policy_docs
+    cascade_b = bundle_b.cascade_policy_docs
+
+    assert cascade_a.model_dump() == cascade_b.model_dump(), (
+        "cascade_policy_docs must be identical regardless of requesting org"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 8 — gemeente_code GM-prefix format contract (trip-wire)
+# ---------------------------------------------------------------------------
+
+
+async def test_gemeente_code_format_contract(test_db: AsyncSession) -> None:
+    """_resolve_ancestor_chain must resolve provincie when gemeente_code uses GM-prefix.
+
+    This is a trip-wire: if the seed ever changes to bare '0983' (no GM-prefix),
+    the JOIN against gemeente_provincie_map fails and this test catches it.
+    """
+    # Seed parcel with explicit GM-prefixed gemeente_code
+    test_db.add(
+        ParcelCache(
+            id=uuid.uuid4(),
+            parcel_id="NL.IMKAD.VENLO-FMT",
+            geometry=_DUMMY_GEOMETRY,
+            gemeente_code="GM0983",
+        )
+    )
+    # Seed map with matching GM-prefixed key
+    test_db.add(GemeenteProvincieMap(gemeente_code="GM0983", provincie_code="PV31"))
+    await test_db.commit()
+
+    chain = await _resolve_ancestor_chain("NL.IMKAD.VENLO-FMT", test_db)
+
+    assert chain.get("provincie") == "PV31", (
+        "provincie must resolve to PV31 when gemeente_code='GM0983' and map has 'GM0983' key; "
+        "if this fails, check that parcel_cache.gemeente_code uses the GM-prefix format"
+    )
