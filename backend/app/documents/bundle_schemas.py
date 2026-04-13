@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class PolicyDocumentRead(BaseModel):
     """Read DTO for a policy document. Excludes file_data bytes."""
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: UUID
     entity_type: str
@@ -26,7 +26,7 @@ class PolicyDocumentRead(BaseModel):
 class ParcelDocumentRead(BaseModel):
     """Read DTO for a parcel document. Excludes file_data bytes."""
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: UUID
     parcel_id: str
@@ -41,8 +41,6 @@ class ParcelDocumentRead(BaseModel):
 class CascadePolicyDocs(BaseModel):
     """Policy documents cascaded from landelijk → provincie → gemeente."""
 
-    model_config = ConfigDict(from_attributes=True)
-
     landelijk: list[PolicyDocumentRead] = []
     provincie: list[PolicyDocumentRead] = []
     gemeente: list[PolicyDocumentRead] = []
@@ -50,8 +48,6 @@ class CascadePolicyDocs(BaseModel):
 
 class ParcelDocumentBundle(BaseModel):
     """Full document bundle for a parcel: peer docs + cascaded policy docs + checklist links."""
-
-    model_config = ConfigDict(from_attributes=True)
 
     peer_docs: list[ParcelDocumentRead]
     cascade_policy_docs: CascadePolicyDocs
