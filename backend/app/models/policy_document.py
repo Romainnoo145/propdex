@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import ForeignKey, Index, Integer, LargeBinary, String, Text, text
+from sqlalchemy import Boolean, ForeignKey, Index, Integer, LargeBinary, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TenantMixin, TimestampMixin
@@ -70,6 +70,15 @@ class PolicyDocument(Base, TenantMixin, TimestampMixin):
         server_default=text("'uploaded'"),
         nullable=False,
         comment="Processing status: uploaded, parsing, parsed, error",
+    )
+    is_global: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,  # Application-layer default. Service layer MUST explicitly set
+                        # is_global=True on vendor uploads. Defense in depth — this default
+                        # forces explicit intent and prevents accidental customer-org leaks.
+        server_default=text("true"),  # DB column default for the migration column add.
+        comment="True if this document is visible across all customer organizations (vendor-uploaded global policy)",
     )
     ai_summary: Mapped[str | None] = mapped_column(
         Text,
