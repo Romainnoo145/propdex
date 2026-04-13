@@ -40,14 +40,17 @@ _DUMMY_GEOMETRY = WKTElement(
 # ---------------------------------------------------------------------------
 
 
-async def _make_vendor_user(db: AsyncSession) -> tuple[User, Organization]:
+async def _make_vendor_user(
+    db: AsyncSession,
+    email: str = "vendor@fixture.example",
+) -> tuple[User, Organization]:
     """Create a minimal vendor org + user for FK satisfaction on policy_documents."""
     org = Organization(name="Vendor Org")
     db.add(org)
     await db.flush()
 
     user = User(
-        email="vendor@fixture.example",
+        email=email,
         hashed_password="hashed_dummy",
         full_name="Vendor User",
         organization_id=org.id,
@@ -264,16 +267,27 @@ async def test_cascade_returns_latest_version_per_source(
 
 
 # ---------------------------------------------------------------------------
-# Test 4 — empty cascade for parcel with no matching policy_documents
+# Test 4 — cascade filters ancestor chain when parcel has no matching gemeente
 # ---------------------------------------------------------------------------
 
 
-async def test_cascade_empty_for_parcel_without_matches(test_db: AsyncSession) -> None:
-    """Parcel in a gemeente with no policy_documents → all cascade lists are empty.
+async def test_cascade_filters_ancestor_chain_when_parcel_has_no_matching_gemeente(
+    test_db: AsyncSession,
+    seeded_cascade_world: Any,
+) -> None:
+    """Cascade actively filters rows — does NOT return empty just because table is empty.
 
-    Uses a fresh minimal world (no policy_documents at all) so landelijk is also empty.
+    Adds a parcel in GM0017 (not present in gemeente_provincie_map) alongside the
+    existing seeded_cascade_world docs (GM0983/PV31 rows, landelijk beng v1+v2, etc.).
+    The cascade query must:
+    - Return beng v2 for landelijk (entity_code='NL' always matches).
+    - Return nothing for provincie (GM0017 has no provincie mapping → param is None).
+    - Return nothing for gemeente (no policy_document has entity_code='GM0017').
+    This proves the filter path is exercised against a non-empty table.
     """
-    # Seed only a parcel in GM0017 — no gemeente_provincie_map, no policy_documents
+    world = seeded_cascade_world
+
+    # Add a parcel in GM0017 — NOT in gemeente_provincie_map, so no provincie in chain
     test_db.add(
         ParcelCache(
             id=uuid.uuid4(),
@@ -284,13 +298,25 @@ async def test_cascade_empty_for_parcel_without_matches(test_db: AsyncSession) -
     )
     await test_db.commit()
 
-    some_org_id = uuid.uuid4()
-    bundle = await for_parcel("NL.IMKAD.EMPTY001", some_org_id, test_db)
+    bundle = await for_parcel("NL.IMKAD.EMPTY001", world.org_id, test_db)
     cascade = bundle.cascade_policy_docs
 
-    assert cascade.landelijk == [], "no landelijk docs seeded → landelijk must be empty"
-    assert cascade.provincie == [], "no provincie mapping or docs → provincie must be empty"
-    assert cascade.gemeente == [], "no gemeente docs seeded → gemeente must be empty"
+    # landelijk: beng v2 still returned — entity_code='NL' always matches
+    assert len(cascade.landelijk) == 1, (
+        "landelijk beng v2 must appear even for a non-Venlo parcel"
+    )
+    assert cascade.landelijk[0].source_key == "beng"
+    assert cascade.landelijk[0].version_number == 2
+
+    # provincie: GM0017 has no entry in gemeente_provincie_map → param is None → no match
+    assert cascade.provincie == [], (
+        "GM0017 has no provincie mapping → provincie must be empty"
+    )
+
+    # gemeente: no policy_document row has entity_code='GM0017' → filter returns nothing
+    assert cascade.gemeente == [], (
+        "no policy_documents seeded for GM0017 → gemeente must be empty"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -300,7 +326,7 @@ async def test_cascade_empty_for_parcel_without_matches(test_db: AsyncSession) -
 
 async def test_cascade_landelijk_only_for_null_gemeente_parcel(test_db: AsyncSession) -> None:
     """Parcel with gemeente_code=None → only landelijk docs returned; provincie+gemeente empty."""
-    user, org = await _make_vendor_user(test_db)
+    user, org = await _make_vendor_user(test_db, email="vendor-null@fixture.example")
 
     # Parcel with no gemeente_code
     test_db.add(
