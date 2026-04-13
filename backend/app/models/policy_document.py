@@ -77,7 +77,7 @@ class PolicyDocument(Base, TenantMixin, TimestampMixin):
         default=False,  # Application-layer default. Service layer MUST explicitly set
                         # is_global=True on vendor uploads. Defense in depth — this default
                         # forces explicit intent and prevents accidental customer-org leaks.
-        server_default=text("true"),  # DB column default for the migration column add.
+        server_default=text("true"),  # DB-level column default; also ensures raw INSERTs (fixtures, test seeds) get is_global=true.
         comment="True if this document is visible across all customer organizations (vendor-uploaded global policy)",
     )
     ai_summary: Mapped[str | None] = mapped_column(

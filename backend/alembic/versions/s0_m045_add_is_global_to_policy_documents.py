@@ -19,9 +19,11 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    # Add column with server_default='true' so the column is non-null from the start.
-    # Existing rows get is_global=true by default (correct for the single-admin scenario:
-    # all pre-M045 policy_documents were uploaded by the Propdex vendor org).
+    # Add column with server_default='true' so every pre-M045 row gets is_global=true.
+    # The single-admin scenario (Propdex vendor is the only org with policy_documents
+    # upload rights) means all pre-M045 uploads were made by the vendor and are therefore
+    # global by definition. The application-layer default in the model is False — service
+    # layer must explicitly set is_global=True on new vendor uploads (defense in depth).
     op.add_column(
         "policy_documents",
         sa.Column(
@@ -31,10 +33,6 @@ def upgrade() -> None:
             server_default=sa.text("true"),
         ),
     )
-    # Defense-in-depth: explicitly UPDATE all existing rows even though server_default
-    # already set them to true. This makes the intent explicit and survives any future
-    # migration cleanup that might change the server_default.
-    op.execute("UPDATE policy_documents SET is_global = true WHERE is_global IS NULL OR is_global = false")
 
 
 def downgrade() -> None:
