@@ -1,5 +1,6 @@
 """Gemeente API endpoints — municipality-level intelligence."""
 
+import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -9,17 +10,25 @@ from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
 from app.middleware.rate_limit import limiter
 from app.schemas.gemeente import (
+    BeleidsdocumentItem,
+    BeleidsdocumentenIngestResponse,
+    BeleidsdocumentenResponse,
     BeschermdGezichtResponse,
     ChecklistResponse,
     ErfgoedResponse,
     GemeenteProfile,
     HuisvestingsverordeningResponse,
+    IngestedDocumentItem,
     RaadsinformatieResponse,
     SubsidieResponse,
     SubsidiesResponse,
 )
 from app.services.gemeente_profile import build_gemeente_profile
-from app.services.koop_sru_client import search_huisvestingsverordening
+from app.services.koop_sru_client import (
+    BELEID_DOCUMENT_TYPES,
+    search_beleidsdocument,
+    search_huisvestingsverordening,
+)
 from app.services.raadsinformatie import get_raadsinformatie
 from app.services.rce_erfgoed_client import get_beschermde_gezichten
 from app.services.rvo_client import fetch_development_subsidies
@@ -160,6 +169,106 @@ async def get_huisvestingsverordening(
         modified=result.modified,
         subject=result.subject,
         url=result.url,
+    )
+
+
+@router.get("/{gemeente_naam}/beleidsdocumenten", response_model=BeleidsdocumentenResponse)
+@limiter.limit("60/minute")
+async def get_beleidsdocumenten(
+    request: Request,
+    gemeente_naam: str,
+    current_user=Depends(get_current_active_user),
+) -> BeleidsdocumentenResponse:
+    """Fetch all available beleidsdocumenten for a municipality.
+
+    Searches KOOP SRU (CVDR) in parallel for: omgevingsvisie, woonvisie,
+    welstandsnota, parkeernormen, grondbeleid, and huisvestingsverordening.
+    Returns metadata + links for each document type found. Cached 1 hour.
+
+    Args:
+        gemeente_naam: Municipality display name (e.g., "Amsterdam", "Venlo")
+    """
+    # Search all beleidsdocument types + huisvestingsverordening in parallel
+    all_types = {**BELEID_DOCUMENT_TYPES, "huisvestingsverordening": ["huisvestingsverordening"]}
+
+    search_tasks = {
+        doc_type: search_beleidsdocument(gemeente_naam, title_terms)
+        for doc_type, title_terms in all_types.items()
+    }
+
+    results = await asyncio.gather(*search_tasks.values(), return_exceptions=True)
+
+    documenten: list[BeleidsdocumentItem] = []
+    for doc_type, result in zip(search_tasks.keys(), results):
+        if isinstance(result, Exception):
+            logger.warning("Beleidsdocument search failed for %s/%s: %s", gemeente_naam, doc_type, result)
+            result = None
+
+        if result is not None:
+            documenten.append(
+                BeleidsdocumentItem(
+                    document_type=doc_type,
+                    gevonden=True,
+                    title=result.title,
+                    identifier=result.identifier,
+                    modified=result.modified,
+                    subject=result.subject,
+                    url=result.url,
+                )
+            )
+        else:
+            documenten.append(
+                BeleidsdocumentItem(document_type=doc_type, gevonden=False)
+            )
+
+    total_gevonden = sum(1 for d in documenten if d.gevonden)
+    return BeleidsdocumentenResponse(
+        gemeente_naam=gemeente_naam,
+        documenten=documenten,
+        total_gevonden=total_gevonden,
+        total_types=len(all_types),
+    )
+
+
+@router.post("/{gemeente_naam}/beleidsdocumenten/ingest", response_model=BeleidsdocumentenIngestResponse)
+@limiter.limit("5/minute")
+async def ingest_beleidsdocumenten(
+    request: Request,
+    gemeente_naam: str,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_active_user),
+) -> BeleidsdocumentenIngestResponse:
+    """Download and store all beleidsdocumenten for a municipality.
+
+    Searches KOOP SRU for all document types, downloads PDFs from
+    officielebekendmakingen.nl, stores them in gemeente_documents,
+    and triggers AI summarization. Skips already-ingested documents.
+
+    Rate limited to 5/minute due to external downloads.
+
+    Args:
+        gemeente_naam: Municipality display name (e.g., "Amsterdam", "Venlo")
+    """
+    from app.services.beleid_ingest import ingest_all_beleidsdocumenten
+
+    docs = await ingest_all_beleidsdocumenten(gemeente_naam, db)
+    return BeleidsdocumentenIngestResponse(
+        gemeente_naam=gemeente_naam,
+        ingested=[
+            IngestedDocumentItem(
+                id=str(doc.id),
+                gemeente_naam=doc.gemeente_naam,
+                document_type=doc.document_type,
+                filename=doc.filename,
+                content_type=doc.content_type,
+                file_size=doc.file_size,
+                source_url=doc.source_url,
+                koop_identifier=doc.koop_identifier,
+                ai_summary=doc.ai_summary,
+            )
+            for doc in docs
+        ],
+        total_ingested=len(docs),
     )
 
 

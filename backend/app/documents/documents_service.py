@@ -44,6 +44,13 @@ VALID_DOCUMENT_TYPES: set[str] = {
     "vergunningen",
     "risicoprofiel",
     "haalbaarheid",
+    # Gemeente-level beleidsdocumenten (auto-ingested via KOOP SRU)
+    "omgevingsvisie",
+    "woonvisie",
+    "welstandsnota",
+    "parkeernormen",
+    "grondbeleid",
+    "huisvestingsverordening",
 }
 
 ALLOWED_CONTENT_TYPES: set[str] = {

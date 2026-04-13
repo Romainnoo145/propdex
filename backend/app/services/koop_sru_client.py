@@ -39,9 +39,18 @@ class VerordeningResult:
     url: str  # link to officielebekendmakingen.nl
 
 
-# In-memory cache: gemeente_naam → (timestamp, result | None)
+# In-memory cache: cache_key → (timestamp, result | None)
 _cache: dict[str, tuple[datetime, VerordeningResult | None]] = {}
 _CACHE_TTL_SECONDS = 3600
+
+# Beleidsdocument type → search title terms
+BELEID_DOCUMENT_TYPES: dict[str, list[str]] = {
+    "omgevingsvisie": ["omgevingsvisie"],
+    "woonvisie": ["woonvisie"],
+    "welstandsnota": ["welstandsnota"],
+    "parkeernormen": ["parkeernormen", "parkeerbeleid"],
+    "grondbeleid": ["grondbeleid", "nota grondbeleid"],
+}
 
 
 def _build_url(identifier: str) -> str:
@@ -157,3 +166,109 @@ async def search_huisvestingsverordening(
     except Exception:
         logger.exception("KOOP SRU error for %s", gemeente_naam)
         return None
+
+
+async def search_beleidsdocument(
+    gemeente_naam: str,
+    title_terms: list[str],
+    *,
+    timeout: float = 15.0,
+) -> VerordeningResult | None:
+    """Search KOOP SRU for a beleidsdocument matching any of the title terms.
+
+    Builds a CQL query: (title="term1" OR title="term2") AND creator="{gemeente}"
+    Returns the most recent matching result, or None.
+
+    Args:
+        gemeente_naam: Municipality display name (e.g., "Amsterdam")
+        title_terms: List of title search terms (OR-combined)
+        timeout: HTTP timeout in seconds
+    """
+    cache_key = f"beleid:{gemeente_naam}:{','.join(sorted(title_terms))}"
+
+    cached = _cache.get(cache_key)
+    if cached is not None:
+        cached_at, result = cached
+        if (datetime.utcnow() - cached_at).total_seconds() < _CACHE_TTL_SECONDS:
+            return result
+
+    # Build CQL: (title="term1" OR title="term2") AND creator="{gemeente}"
+    if len(title_terms) == 1:
+        title_clause = f'title="{title_terms[0]}"'
+    else:
+        parts = " OR ".join(f'title="{t}"' for t in title_terms)
+        title_clause = f"({parts})"
+
+    query = f'{title_clause} AND creator="{gemeente_naam}"'
+
+    params = {
+        "version": "1.2",
+        "operation": "searchRetrieve",
+        "x-connection": "cvdr",
+        "query": query,
+        "maximumRecords": "5",
+        "sortKeys": "modified,,0",  # most recent first
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.get(KOOP_SRU_URL, params=params)
+
+        if resp.status_code != 200:
+            logger.warning(
+                "KOOP SRU beleid search failed for %s (%s): HTTP %d",
+                gemeente_naam,
+                title_terms,
+                resp.status_code,
+            )
+            _cache[cache_key] = (datetime.utcnow(), None)
+            return None
+
+        results = _parse_sru_response(resp.text)
+
+        if not results:
+            logger.info("No beleidsdocument found for %s (%s)", gemeente_naam, title_terms)
+            _cache[cache_key] = (datetime.utcnow(), None)
+            return None
+
+        best = results[0]
+        logger.info(
+            "Found beleidsdocument for %s: %s (%s)",
+            gemeente_naam,
+            best.title,
+            best.modified,
+        )
+        _cache[cache_key] = (datetime.utcnow(), best)
+        return best
+
+    except httpx.TimeoutException:
+        logger.warning("KOOP SRU beleid timed out for %s (%s)", gemeente_naam, title_terms)
+        return None
+    except Exception:
+        logger.exception("KOOP SRU beleid error for %s (%s)", gemeente_naam, title_terms)
+        return None
+
+
+async def search_omgevingsvisie(gemeente_naam: str) -> VerordeningResult | None:
+    """Search for the most recent omgevingsvisie of a gemeente."""
+    return await search_beleidsdocument(gemeente_naam, ["omgevingsvisie"])
+
+
+async def search_woonvisie(gemeente_naam: str) -> VerordeningResult | None:
+    """Search for the most recent woonvisie of a gemeente."""
+    return await search_beleidsdocument(gemeente_naam, ["woonvisie"])
+
+
+async def search_welstandsnota(gemeente_naam: str) -> VerordeningResult | None:
+    """Search for the most recent welstandsnota of a gemeente."""
+    return await search_beleidsdocument(gemeente_naam, ["welstandsnota"])
+
+
+async def search_parkeernormen(gemeente_naam: str) -> VerordeningResult | None:
+    """Search for parkeernormen or parkeerbeleid of a gemeente."""
+    return await search_beleidsdocument(gemeente_naam, ["parkeernormen", "parkeerbeleid"])
+
+
+async def search_grondbeleid(gemeente_naam: str) -> VerordeningResult | None:
+    """Search for grondbeleid or nota grondbeleid of a gemeente."""
+    return await search_beleidsdocument(gemeente_naam, ["grondbeleid", "nota grondbeleid"])

@@ -106,6 +106,55 @@ class ErfgoedResponse(BaseModel):
     total: int = Field(default=0)
 
 
+class IngestedDocumentItem(BaseModel):
+    """A single ingested gemeente document."""
+
+    id: str = Field(description="Document UUID")
+    gemeente_naam: str = Field(description="Municipality name")
+    document_type: str = Field(description="Document type key")
+    filename: str = Field(description="Stored filename")
+    content_type: str = Field(description="MIME type")
+    file_size: int = Field(description="File size in bytes")
+    source_url: str | None = Field(default=None, description="Source URL")
+    koop_identifier: str | None = Field(default=None, description="KOOP identifier")
+    ai_summary: str | None = Field(default=None, description="AI summary")
+
+
+class BeleidsdocumentenIngestResponse(BaseModel):
+    """Result of beleidsdocumenten ingest for a municipality."""
+
+    gemeente_naam: str = Field(description="Municipality name")
+    ingested: list[IngestedDocumentItem] = Field(
+        default_factory=list,
+        description="Newly ingested documents",
+    )
+    total_ingested: int = Field(default=0, description="Number of newly ingested documents")
+
+
+class BeleidsdocumentItem(BaseModel):
+    """A single beleidsdocument search result."""
+
+    document_type: str = Field(description="Document type key (e.g. omgevingsvisie, woonvisie)")
+    gevonden: bool = Field(description="Whether a document was found for this type")
+    title: str | None = Field(default=None, description="Document title")
+    identifier: str | None = Field(default=None, description="KOOP document identifier")
+    modified: str | None = Field(default=None, description="Last modified date")
+    subject: str | None = Field(default=None, description="Subject classification")
+    url: str | None = Field(default=None, description="Link to officielebekendmakingen.nl")
+
+
+class BeleidsdocumentenResponse(BaseModel):
+    """All beleidsdocumenten for a municipality."""
+
+    gemeente_naam: str = Field(description="Municipality name")
+    documenten: list[BeleidsdocumentItem] = Field(
+        default_factory=list,
+        description="List of beleidsdocument search results per type",
+    )
+    total_gevonden: int = Field(default=0, description="Number of document types found")
+    total_types: int = Field(default=0, description="Total number of document types searched")
+
+
 class ChecklistItemResponse(BaseModel):
     """A single checklist item in the response."""
 

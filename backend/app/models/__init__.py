@@ -13,6 +13,7 @@ from app.models.checklist_progress import ChecklistProgress  # noqa: F401
 from app.models.change_record import ChangeRecord  # noqa: F401
 from app.models.favorite_note import FavoriteNote  # noqa: F401
 from app.models.funda_listing_snapshot import FundaListingSnapshot  # noqa: F401
+from app.models.gemeente_document import GemeenteDocument  # noqa: F401
 from app.models.generated_dossier import GeneratedDossier  # noqa: F401
 from app.models.jurisprudence_job import JuridischAnalyseJob  # noqa: F401
 from app.models.organization import Organization
@@ -55,6 +56,7 @@ __all__ = [
     "ChecklistProgress",
     "UserNotificationState",
     "FundaListingSnapshot",
+    "GemeenteDocument",
     "GeneratedDossier",
     "JuridischAnalyseJob",
     "RulingCache",
