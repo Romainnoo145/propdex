@@ -84,8 +84,21 @@ async def for_parcel(
     #    Raw SQL because SQLAlchemy 2.x ORM DISTINCT ON support is limited.
     #    Named parameters for safety.
     cascade_stmt = text("""
-        SELECT DISTINCT ON (entity_type, entity_code, source_key) *
+        SELECT DISTINCT ON (entity_type, entity_code, source_key)
+            id,
+            entity_type,
+            entity_code,
+            source_key,
+            filename,
+            content_type,
+            file_size,
+            created_at,
+            version_number,
+            ai_summary
         FROM policy_documents
+        -- When a chain level is absent (e.g. parcel in a gemeente without a provincie
+        -- mapping), the corresponding param is None. `col = NULL` in PostgreSQL
+        -- evaluates to NULL (not TRUE), so the OR branch contributes no rows — intended.
         WHERE is_global = true
           AND (
             (entity_type = 'landelijk' AND entity_code = :landelijk)
