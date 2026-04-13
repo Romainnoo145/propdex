@@ -3,9 +3,11 @@
 import logging
 import uuid
 
-from sqlalchemy import select, func
+from fastapi import HTTPException, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.models.policy_document import PolicyDocument
 
 logger = logging.getLogger(__name__)
@@ -41,6 +43,47 @@ def validate_upload(
     return None
 
 
+def _assert_vendor_org(organization_id: uuid.UUID) -> None:
+    """Enforce that only the Propdex vendor organization can write policy_documents.
+
+    M045/S01 T07 introduces cross-org visibility for policy_documents via
+    is_global=true. Only the vendor org (Klarifai) can upload — customer
+    orgs get HTTP 403. In development/test environments where
+    VENDOR_ORG_ID is None, this guard is a no-op.
+    """
+    if settings.VENDOR_ORG_ID is None:
+        # Dev/test: no vendor org configured, skip the guard
+        return
+    if organization_id != settings.VENDOR_ORG_ID:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only vendor admins can upload policy documents",
+        )
+
+
+async def _next_version_number(
+    entity_type: str,
+    entity_code: str,
+    source_key: str,
+    db: AsyncSession,
+) -> int:
+    """Return MAX(version_number) + 1 for the given source triple.
+
+    M045/S01 T07 versioning: re-uploading a document for the same
+    (entity_type, entity_code, source_key) triple creates a new row with
+    an incremented version_number instead of overwriting the previous
+    version. The cascade query in S02 uses DISTINCT ON to return only
+    the latest version per triple.
+    """
+    stmt = select(func.coalesce(func.max(PolicyDocument.version_number), 0)).where(
+        PolicyDocument.entity_type == entity_type,
+        PolicyDocument.entity_code == entity_code,
+        PolicyDocument.source_key == source_key,
+    )
+    current_max = (await db.execute(stmt)).scalar_one()
+    return int(current_max) + 1
+
+
 async def store_document(
     *,
     entity_type: str,
@@ -53,7 +96,21 @@ async def store_document(
     organization_id: uuid.UUID,
     db: AsyncSession,
 ) -> PolicyDocument:
-    """Store a policy document in the database."""
+    """Store a policy document in the database.
+
+    M045/S01 T07: enforces vendor-org-only writes and auto-increments
+    version_number for re-uploads. Sets is_global=True unconditionally
+    since only the vendor org reaches this point.
+    """
+    _assert_vendor_org(organization_id)
+
+    version_number = await _next_version_number(
+        entity_type=entity_type,
+        entity_code=entity_code,
+        source_key=source_key,
+        db=db,
+    )
+
     doc = PolicyDocument(
         entity_type=entity_type,
         entity_code=entity_code,
@@ -64,6 +121,8 @@ async def store_document(
         file_size=len(file_bytes),
         uploaded_by_user_id=user_id,
         organization_id=organization_id,
+        is_global=True,
+        version_number=version_number,
     )
     db.add(doc)
     await db.commit()
@@ -157,7 +216,12 @@ async def delete_document(
     organization_id: uuid.UUID,
     db: AsyncSession,
 ) -> bool:
-    """Delete a policy document. Returns True if found and deleted."""
+    """Delete a policy document. Returns True if found and deleted.
+
+    M045/S01 T07: only the vendor org can delete policy_documents.
+    Customer orgs get HTTP 403 before the lookup even runs.
+    """
+    _assert_vendor_org(organization_id)
     doc = await get_document_for_download(document_id, organization_id, db)
     if doc is None:
         return False

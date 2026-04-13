@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from urllib.parse import urlparse
+from uuid import UUID
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -230,6 +231,19 @@ class Settings(BaseSettings):
         ),
     )
 
+    # M045 — Document model configuration
+    VENDOR_ORG_ID: UUID | None = Field(
+        default=None,
+        description=(
+            "Organization UUID of the Propdex vendor (Klarifai). Only users "
+            "belonging to this org can upload policy_documents; the service "
+            "layer auto-sets is_global=true on their uploads. Bootstrap: "
+            "SELECT id FROM organizations WHERE name = 'Klarifai' LIMIT 1 "
+            "and set VENDOR_ORG_ID=<uuid> in backend/.env. Required in "
+            "non-development environments."
+        ),
+    )
+
     @property
     def cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS string into a list."""
@@ -245,6 +259,24 @@ class Settings(BaseSettings):
             raise ValueError(
                 f"SECRET_KEY must be changed from the default value in "
                 f"'{self.ENVIRONMENT}' environment"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _require_vendor_org_id_in_production(self) -> "Settings":
+        """Require VENDOR_ORG_ID outside development/test.
+
+        M045 introduces policy_documents upload restricted to the vendor org.
+        Missing this in production means the service layer guard cannot
+        distinguish vendor uploads from customer uploads — fail loud instead.
+        """
+        if (
+            self.VENDOR_ORG_ID is None
+            and self.ENVIRONMENT not in ("development", "test", "testing")
+        ):
+            raise ValueError(
+                f"VENDOR_ORG_ID must be set in '{self.ENVIRONMENT}' environment. "
+                f"Run: SELECT id FROM organizations WHERE name = 'Klarifai' LIMIT 1"
             )
         return self
 

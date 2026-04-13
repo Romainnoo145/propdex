@@ -5,10 +5,10 @@ import uuid
 from sqlalchemy import ForeignKey, Index, Integer, LargeBinary, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.models.base import Base, TenantMixin, TimestampMixin
 
 
-class ParcelDocument(Base, TimestampMixin):
+class ParcelDocument(Base, TenantMixin, TimestampMixin):
     """
     Document attached to a specific parcel within a dossier category.
 
@@ -71,4 +71,5 @@ class ParcelDocument(Base, TimestampMixin):
             "parcel_id",
             "document_type",
         ),
+        Index("ix_parcel_documents_org_parcel", "organization_id", "parcel_id"),
     )

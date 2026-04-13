@@ -25,6 +25,8 @@ Thumbs.db
 
 # Local database storage (bind mount)
 data/
+# Exception: Python package data directories under backend/app
+!backend/app/data/
 
 # ── GSD baseline (auto-generated) ──
 .gsd/activity/
