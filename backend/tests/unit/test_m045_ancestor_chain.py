@@ -4,7 +4,7 @@ Tests cover the four branches of the ancestor chain resolver:
 - Full chain (parcel with gemeente + provincie)
 - Parcel with NULL gemeente_code (landelijk only)
 - Parcel with gemeente_code not in gemeente_provincie_map (gemeente, no provincie)
-- Parcel UUID not found in parcel_cache (landelijk only)
+- Kadaster parcel_id not found in parcel_cache (landelijk only)
 
 The test_db fixture drops and recreates all tables per test, so the
 migration-seeded gemeente_provincie_map rows are NOT present — each test
@@ -80,7 +80,7 @@ async def test_venlo_parcel_returns_full_chain(test_db: AsyncSession) -> None:
     await _seed_gemeente_map(test_db, gemeente_code="GM0983", provincie_code="PV31")
     await test_db.commit()
 
-    result = await _resolve_ancestor_chain(str(parcel_uuid), test_db)
+    result = await _resolve_ancestor_chain("NL.IMKAD.0983test", test_db)
 
     assert result == {"landelijk": "NL", "gemeente": "GM0983", "provincie": "PV31"}
 
@@ -96,7 +96,7 @@ async def test_null_gemeente_code_returns_landelijk_only(test_db: AsyncSession) 
     )
     await test_db.commit()
 
-    result = await _resolve_ancestor_chain(str(parcel_uuid), test_db)
+    result = await _resolve_ancestor_chain("NL.IMKAD.nullgemeente", test_db)
 
     assert result == {"landelijk": "NL"}
 
@@ -113,16 +113,14 @@ async def test_unknown_gemeente_missing_from_map(test_db: AsyncSession) -> None:
     # Deliberately NOT seeding GM9999 in gemeente_provincie_map
     await test_db.commit()
 
-    result = await _resolve_ancestor_chain(str(parcel_uuid), test_db)
+    result = await _resolve_ancestor_chain("NL.IMKAD.9999test", test_db)
 
     assert result == {"landelijk": "NL", "gemeente": "GM9999"}
     assert "provincie" not in result
 
 
 async def test_nonexistent_parcel_id_returns_landelijk_only(test_db: AsyncSession) -> None:
-    """UUID that doesn't exist in parcel_cache → only landelijk returned."""
-    fake_uuid = str(uuid.uuid4())
-
-    result = await _resolve_ancestor_chain(fake_uuid, test_db)
+    """Kadaster parcel_id that doesn't exist in parcel_cache → only landelijk returned."""
+    result = await _resolve_ancestor_chain("NL.IMKAD.does-not-exist", test_db)
 
     assert result == {"landelijk": "NL"}
