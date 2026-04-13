@@ -83,9 +83,12 @@ class PolicyDocument(Base, TenantMixin, TimestampMixin):
     version_number: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
-        default=1,  # Application-layer default. Service layer (T07) computes the
-                    # actual next version number via MAX(version_number) + 1 for
-                    # the same (entity_type, entity_code, source_key) triple.
+        default=1,  # Application-layer default. T07 service layer always overwrites
+                    # this with MAX(version_number) + 1 for real uploads (computed per
+                    # entity_type + entity_code + source_key triple). default=1 only
+                    # applies to fixtures, test seeds, or raw INSERTs that bypass the
+                    # service layer — those get version 1 and behave as a fresh first
+                    # upload.
         server_default=text("1"),  # DB-level default; ensures raw INSERTs (fixtures,
                                    # test seeds) get version_number=1.
         comment="Version number for this policy document. Re-uploads of the same "
@@ -102,4 +105,11 @@ class PolicyDocument(Base, TenantMixin, TimestampMixin):
         Index("ix_policy_documents_entity", "entity_type", "entity_code"),
         Index("ix_policy_documents_org_entity", "organization_id", "entity_type", "entity_code"),
         Index("ix_policy_documents_source", "entity_type", "entity_code", "source_key"),
+        Index(
+            "ix_policy_documents_versioning",
+            "entity_type",
+            "entity_code",
+            "source_key",
+            text("version_number DESC"),
+        ),
     )
