@@ -1,0 +1,1370 @@
+[
+  {
+    "gemeente_code": "GM0014",
+    "provincie_code": "PV20"
+  },
+  {
+    "gemeente_code": "GM0034",
+    "provincie_code": "PV24"
+  },
+  {
+    "gemeente_code": "GM0037",
+    "provincie_code": "PV20"
+  },
+  {
+    "gemeente_code": "GM0047",
+    "provincie_code": "PV20"
+  },
+  {
+    "gemeente_code": "GM0050",
+    "provincie_code": "PV24"
+  },
+  {
+    "gemeente_code": "GM0059",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM0060",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM0072",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM0074",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM0080",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM0085",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM0086",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM0088",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM0090",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM0093",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM0096",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM0098",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM0106",
+    "provincie_code": "PV22"
+  },
+  {
+    "gemeente_code": "GM0109",
+    "provincie_code": "PV22"
+  },
+  {
+    "gemeente_code": "GM0114",
+    "provincie_code": "PV22"
+  },
+  {
+    "gemeente_code": "GM0118",
+    "provincie_code": "PV22"
+  },
+  {
+    "gemeente_code": "GM0119",
+    "provincie_code": "PV22"
+  },
+  {
+    "gemeente_code": "GM0141",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0147",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0148",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0150",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0153",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0158",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0160",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0163",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0164",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0166",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0168",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0171",
+    "provincie_code": "PV24"
+  },
+  {
+    "gemeente_code": "GM0173",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0175",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0177",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0180",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0183",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0184",
+    "provincie_code": "PV24"
+  },
+  {
+    "gemeente_code": "GM0189",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0193",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM0197",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0200",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0202",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0203",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0209",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0213",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0214",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0216",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0221",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0222",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0225",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0226",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0228",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0230",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0232",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0233",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0243",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0244",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0246",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0252",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0262",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0263",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0267",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0268",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0269",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0273",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0274",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0275",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0277",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0279",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0281",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0285",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0289",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0293",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0294",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0296",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0297",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0299",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0301",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0302",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0303",
+    "provincie_code": "PV24"
+  },
+  {
+    "gemeente_code": "GM0307",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0308",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0310",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0312",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0313",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0317",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0321",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0327",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0331",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0335",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0339",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0340",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0342",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0344",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0345",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0351",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0352",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0353",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0355",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0356",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0358",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0361",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0362",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0363",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0373",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0375",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0376",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0377",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0383",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0384",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0385",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0388",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0392",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0394",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0396",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0397",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0399",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0400",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0402",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0405",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0406",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0415",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0417",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0420",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0431",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0432",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0437",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0439",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0441",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0448",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0450",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0451",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0453",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0473",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0479",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0482",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0484",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0489",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0498",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0502",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0503",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0505",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0512",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0513",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0518",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0523",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0531",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0532",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0534",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0537",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0542",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0546",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0547",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0553",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0556",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0569",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0575",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0579",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0589",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0590",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0597",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0599",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0603",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0606",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0610",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0613",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0622",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0626",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0627",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0629",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0632",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0637",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0638",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0642",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM0654",
+    "provincie_code": "PV29"
+  },
+  {
+    "gemeente_code": "GM0664",
+    "provincie_code": "PV29"
+  },
+  {
+    "gemeente_code": "GM0668",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM0677",
+    "provincie_code": "PV29"
+  },
+  {
+    "gemeente_code": "GM0678",
+    "provincie_code": "PV29"
+  },
+  {
+    "gemeente_code": "GM0687",
+    "provincie_code": "PV29"
+  },
+  {
+    "gemeente_code": "GM0703",
+    "provincie_code": "PV29"
+  },
+  {
+    "gemeente_code": "GM0715",
+    "provincie_code": "PV29"
+  },
+  {
+    "gemeente_code": "GM0716",
+    "provincie_code": "PV29"
+  },
+  {
+    "gemeente_code": "GM0717",
+    "provincie_code": "PV29"
+  },
+  {
+    "gemeente_code": "GM0718",
+    "provincie_code": "PV29"
+  },
+  {
+    "gemeente_code": "GM0736",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM0737",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM0743",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0744",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0748",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0753",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0755",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0757",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0758",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0762",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0765",
+    "provincie_code": "PV20"
+  },
+  {
+    "gemeente_code": "GM0766",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0770",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0772",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0777",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0779",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0784",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0785",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0794",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0796",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0797",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0798",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0809",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0820",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0823",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0824",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0826",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0828",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0840",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0845",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0847",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0848",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0851",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0852",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0855",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0858",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0861",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0865",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0866",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0867",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0873",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0879",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM0880",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM0882",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0888",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0889",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0893",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0899",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0907",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0917",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0928",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0935",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0938",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0944",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0946",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0957",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0965",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0971",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0981",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0983",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0984",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0986",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0988",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0994",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM0995",
+    "provincie_code": "PV24"
+  },
+  {
+    "gemeente_code": "GM1507",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM1509",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM1525",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM1581",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM1586",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM1598",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM1621",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM1640",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM1641",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM1652",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1655",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1658",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1659",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1667",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1669",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM1674",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1676",
+    "provincie_code": "PV29"
+  },
+  {
+    "gemeente_code": "GM1680",
+    "provincie_code": "PV22"
+  },
+  {
+    "gemeente_code": "GM1681",
+    "provincie_code": "PV22"
+  },
+  {
+    "gemeente_code": "GM1690",
+    "provincie_code": "PV22"
+  },
+  {
+    "gemeente_code": "GM1695",
+    "provincie_code": "PV29"
+  },
+  {
+    "gemeente_code": "GM1696",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM1699",
+    "provincie_code": "PV22"
+  },
+  {
+    "gemeente_code": "GM1700",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM1701",
+    "provincie_code": "PV22"
+  },
+  {
+    "gemeente_code": "GM1705",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM1706",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1708",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM1709",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1711",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM1714",
+    "provincie_code": "PV29"
+  },
+  {
+    "gemeente_code": "GM1719",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1721",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1723",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1724",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1728",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1729",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM1730",
+    "provincie_code": "PV22"
+  },
+  {
+    "gemeente_code": "GM1731",
+    "provincie_code": "PV22"
+  },
+  {
+    "gemeente_code": "GM1734",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM1735",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM1740",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM1742",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM1771",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1773",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM1774",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM1783",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM1842",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM1859",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM1876",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM1883",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM1884",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM1891",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM1892",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM1894",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM1895",
+    "provincie_code": "PV20"
+  },
+  {
+    "gemeente_code": "GM1896",
+    "provincie_code": "PV23"
+  },
+  {
+    "gemeente_code": "GM1900",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM1901",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM1903",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM1904",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM1911",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM1916",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM1924",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM1926",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM1930",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM1931",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM1940",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM1942",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM1945",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM1948",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1949",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM1950",
+    "provincie_code": "PV20"
+  },
+  {
+    "gemeente_code": "GM1952",
+    "provincie_code": "PV20"
+  },
+  {
+    "gemeente_code": "GM1954",
+    "provincie_code": "PV31"
+  },
+  {
+    "gemeente_code": "GM1955",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM1959",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1960",
+    "provincie_code": "PV25"
+  },
+  {
+    "gemeente_code": "GM1961",
+    "provincie_code": "PV26"
+  },
+  {
+    "gemeente_code": "GM1963",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM1966",
+    "provincie_code": "PV20"
+  },
+  {
+    "gemeente_code": "GM1969",
+    "provincie_code": "PV20"
+  },
+  {
+    "gemeente_code": "GM1970",
+    "provincie_code": "PV21"
+  },
+  {
+    "gemeente_code": "GM1978",
+    "provincie_code": "PV28"
+  },
+  {
+    "gemeente_code": "GM1979",
+    "provincie_code": "PV20"
+  },
+  {
+    "gemeente_code": "GM1980",
+    "provincie_code": "PV27"
+  },
+  {
+    "gemeente_code": "GM1982",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1991",
+    "provincie_code": "PV30"
+  },
+  {
+    "gemeente_code": "GM1992",
+    "provincie_code": "PV28"
+  }
+]
