@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from contextlib import AbstractContextManager
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy import select
@@ -305,3 +305,119 @@ async def test_ingest_increments_version_when_identifier_changes(
     assert await _count_policy_docs(
         test_db, entity_code="GM0983", source_key="huisvestingsverordening"
     ) == 2
+
+
+# ---------------------------------------------------------------------------
+# M045/S03 T04 — arq_pool enqueue tests
+# ---------------------------------------------------------------------------
+
+
+async def test_ingest_enqueues_summary_job_per_stored_doc(
+    test_db: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Happy path with arq_pool: 2 docs stored → 2 document_summary_job enqueues."""
+    _user, vendor_org = await _make_vendor_user(
+        test_db, email="vendor6@auto-ingest.example"
+    )
+    monkeypatch.setattr(settings, "VENDOR_ORG_ID", vendor_org.id)
+    await test_db.commit()
+
+    sru_results = {
+        "omgevingsvisie": _verordening("gmb-2025-ENQ-OV", "Omgevingsvisie Venlo"),
+        "huisvestingsverordening": _verordening("gmb-2025-ENQ-HV", "Huisvestingsverordening Venlo"),
+    }
+    fake_pdf = b"%PDF-1.4 fake bytes"
+
+    mock_pool = MagicMock()
+    mock_pool.enqueue_job = AsyncMock()
+
+    patches = _patch_external_dependencies(sru_results=sru_results, pdf_bytes=fake_pdf)
+    with patches[0], patches[1]:
+        summary = await ingest_gemeente_policies(
+            gemeente_code="GM0983",
+            gemeente_naam="Venlo",
+            db=test_db,
+            arq_pool=mock_pool,
+        )
+
+    assert summary == {"omgevingsvisie": 1, "huisvestingsverordening": 1}
+    assert mock_pool.enqueue_job.call_count == 2
+
+    # Both calls must use "document_summary_job" as the job name and a str doc id
+    for call in mock_pool.enqueue_job.call_args_list:
+        args, _kwargs = call
+        assert args[0] == "document_summary_job"
+        assert isinstance(args[1], str)
+
+
+async def test_ingest_skips_enqueue_on_failed_download(
+    test_db: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When all PDF downloads fail, no docs are stored and no enqueues happen."""
+    _user, vendor_org = await _make_vendor_user(
+        test_db, email="vendor7@auto-ingest.example"
+    )
+    monkeypatch.setattr(settings, "VENDOR_ORG_ID", vendor_org.id)
+    await test_db.commit()
+
+    sru_results = {
+        "omgevingsvisie": _verordening("gmb-2025-FAIL-OV"),
+        "huisvestingsverordening": _verordening("gmb-2025-FAIL-HV"),
+    }
+
+    mock_pool = MagicMock()
+    mock_pool.enqueue_job = AsyncMock()
+
+    patches = _patch_external_dependencies(sru_results=sru_results, pdf_bytes=None)
+    with patches[0], patches[1]:
+        summary = await ingest_gemeente_policies(
+            gemeente_code="GM0983",
+            gemeente_naam="Venlo",
+            db=test_db,
+            arq_pool=mock_pool,
+        )
+
+    assert summary == {"omgevingsvisie": None, "huisvestingsverordening": None}
+    assert mock_pool.enqueue_job.call_count == 0
+
+
+async def test_ingest_skips_enqueue_gracefully_when_arq_pool_is_none(
+    test_db: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When arq_pool=None, docs are written but no enqueue is attempted — no exception."""
+    _user, vendor_org = await _make_vendor_user(
+        test_db, email="vendor8@auto-ingest.example"
+    )
+    monkeypatch.setattr(settings, "VENDOR_ORG_ID", vendor_org.id)
+    await test_db.commit()
+
+    sru_results = {
+        "omgevingsvisie": _verordening("gmb-2025-NONE-OV", "Omgevingsvisie Venlo"),
+        "huisvestingsverordening": _verordening("gmb-2025-NONE-HV", "Huisvestingsverordening Venlo"),
+    }
+    fake_pdf = b"%PDF-1.4 fake bytes"
+
+    patches = _patch_external_dependencies(sru_results=sru_results, pdf_bytes=fake_pdf)
+    with patches[0], patches[1]:
+        # Must not raise even without arq_pool
+        summary = await ingest_gemeente_policies(
+            gemeente_code="GM0983",
+            gemeente_naam="Venlo",
+            db=test_db,
+            arq_pool=None,
+        )
+
+    # Docs were written
+    assert summary == {"omgevingsvisie": 1, "huisvestingsverordening": 1}
+
+    # Verify at least 1 row was inserted with is_global=True
+    stmt = select(PolicyDocument).where(
+        PolicyDocument.entity_type == "gemeente",
+        PolicyDocument.entity_code == "GM0983",
+        PolicyDocument.is_global.is_(True),
+    )
+    rows = list((await test_db.execute(stmt)).scalars().all())
+    assert len(rows) >= 1

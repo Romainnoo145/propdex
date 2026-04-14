@@ -221,6 +221,7 @@ async def delete_policy_document(
 @router.post("/auto-ingest", response_model=AutoIngestResponse)
 async def auto_ingest_policies(
     payload: AutoIngestRequest,
+    request: Request,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> AutoIngestResponse:
@@ -235,10 +236,12 @@ async def auto_ingest_policies(
     matches an existing row's filename prefix.
     """
     _assert_vendor_org(current_user.organization_id)
+    arq_pool = getattr(request.app.state, "arq_pool", None)
     summary = await ingest_gemeente_policies(
         gemeente_code=payload.gemeente_code,
         gemeente_naam=payload.gemeente_naam,
         db=db,
+        arq_pool=arq_pool,
     )
     return AutoIngestResponse(
         gemeente_code=payload.gemeente_code,

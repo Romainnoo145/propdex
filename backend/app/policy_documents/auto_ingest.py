@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,6 +27,9 @@ from app.models.policy_document import PolicyDocument
 from app.models.user import User
 from app.policy_documents.service import store_document
 from app.services.koop_sru_client import download_cvdr_pdf, search_policy_document
+
+if TYPE_CHECKING:
+    from arq.connections import ArqRedis
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +140,7 @@ async def ingest_gemeente_policies(
     gemeente_code: str,
     gemeente_naam: str,
     db: AsyncSession,
+    arq_pool: ArqRedis | None = None,
 ) -> dict[str, int | None]:
     """Auto-ingest all known CVDR-fetchable policy documents for a gemeente.
 
@@ -155,6 +160,10 @@ async def ingest_gemeente_policies(
         gemeente_naam: Display name (e.g. "Venlo") — used as the SRU
             creator= search field.
         db: Async SQLAlchemy session.
+        arq_pool: Optional ARQ Redis pool for enqueueing document_summary_job
+            after each successful store_document call. When None (default),
+            no summarization is enqueued — backwards-compatible with existing
+            callers.
 
     Returns:
         Summary dict keyed by source_key:
@@ -242,6 +251,21 @@ async def ingest_gemeente_policies(
             doc.version_number,
             result.identifier,
         )
+
+        # M045/S03: enqueue AI summary job for the auto-ingested PDF
+        if arq_pool is not None and doc.content_type == "application/pdf":
+            try:
+                await arq_pool.enqueue_job("document_summary_job", str(doc.id))
+                logger.info(
+                    "Enqueued document_summary_job for auto-ingested %s (%s)",
+                    source_key, doc.id,
+                )
+            except Exception as enqueue_err:
+                logger.warning(
+                    "Failed to enqueue document_summary_job for %s: %s",
+                    doc.id, enqueue_err,
+                )
+
         summary[source_key] = doc.version_number
 
     return summary
