@@ -76,3 +76,15 @@ async def test_download_cvdr_pdf_returns_none_on_non_pdf_content_type() -> None:
         result = await download_cvdr_pdf("gmb-2025-552274")
 
     assert result is None
+
+
+async def test_download_cvdr_pdf_returns_none_on_timeout() -> None:
+    """A httpx.TimeoutException during the GET returns None and does not raise."""
+    mock_cm = MagicMock()
+    mock_cm.__aenter__ = AsyncMock(side_effect=httpx.TimeoutException("simulated timeout"))
+    mock_cm.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("httpx.AsyncClient", return_value=mock_cm):
+        result = await download_cvdr_pdf("gmb-2025-552274")
+
+    assert result is None
