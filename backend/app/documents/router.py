@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
 from app.documents import documents_service as svc
+from app.documents.bundle_schemas import ParcelDocumentBundle
+from app.documents.cascade_service import for_parcel as cascade_for_parcel
 from app.documents.documents_service import VALID_DOCUMENT_TYPES  # noqa: F401 — re-export for tests
 from app.documents.schemas import ChecklistStatusResponse, DocumentListResponse, DocumentResponse
 from app.middleware.rate_limit import limiter
@@ -18,6 +20,7 @@ from app.models.user import User
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/documents", tags=["Documents"])
+parcels_router = APIRouter(prefix="/api/parcels", tags=["Documents"])
 
 
 @router.post(
@@ -112,3 +115,29 @@ async def delete_document(
     """Delete a document."""
     if not await svc.delete_document(parcel_id, document_id, current_user.id, db):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+
+
+@parcels_router.get(
+    "/{parcel_id}/documents/bundle",
+    response_model=ParcelDocumentBundle,
+)
+async def get_parcel_document_bundle(
+    parcel_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> ParcelDocumentBundle:
+    """Return the unified document bundle for a parcel.
+
+    Includes:
+    - peer_docs: current organization's parcel_documents for this parcel
+    - cascade_policy_docs: vendor-global policy documents cascading from
+      landelijk (NL) → provincie → gemeente based on the parcel's location
+      (resolved via parcel_cache.gemeente_code + gemeente_provincie_map).
+    - checklist_links: explicit-link markers (currently empty — S04 wires
+      this up with ChecklistProgress aggregation across users).
+    """
+    return await cascade_for_parcel(
+        parcel_id=parcel_id,
+        org_id=current_user.organization_id,
+        db=db,
+    )
