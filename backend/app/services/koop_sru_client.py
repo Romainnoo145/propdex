@@ -183,3 +183,53 @@ async def search_huisvestingsverordening(
         gemeente_naam,
         timeout=timeout,
     )
+
+
+async def download_cvdr_pdf(
+    identifier: str,
+    *,
+    timeout: float = 30.0,
+) -> bytes | None:
+    """Download the PDF representation of a KOOP gemeenteblad publication.
+
+    The CVDR SRU search returns identifiers like `gmb-2025-552274`. The PDF for
+    that publication lives at `https://zoek.officielebekendmakingen.nl/{identifier}.pdf`
+    (verified live via curl: HTTP 200, Content-Type application/pdf).
+
+    Args:
+        identifier: Gemeenteblad publication identifier (e.g. "gmb-2025-552274").
+        timeout: HTTP timeout in seconds (default 30 — PDFs can be ~1MB).
+
+    Returns:
+        PDF bytes on success; None on HTTP error, timeout, non-PDF content type, or
+        any unexpected exception. Errors are logged but never raised — caller decides
+        whether to retry.
+    """
+    url = f"https://zoek.officielebekendmakingen.nl/{identifier}.pdf"
+
+    try:
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+            resp = await client.get(url)
+    except httpx.TimeoutException:
+        logger.warning("CVDR PDF download timed out for %s", identifier)
+        return None
+    except Exception:
+        logger.exception("CVDR PDF download error for %s", identifier)
+        return None
+
+    if resp.status_code != 200:
+        logger.warning(
+            "CVDR PDF download failed for %s: HTTP %d", identifier, resp.status_code
+        )
+        return None
+
+    content_type = resp.headers.get("content-type", "")
+    if "pdf" not in content_type.lower():
+        logger.warning(
+            "CVDR PDF download for %s returned unexpected content-type %r",
+            identifier,
+            content_type,
+        )
+        return None
+
+    return resp.content
