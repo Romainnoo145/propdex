@@ -12,14 +12,15 @@ from arq.worker import Worker, get_kwargs
 
 from app.core.config import settings
 from app.jobs.area_scan import area_scan_job
+from app.jobs.auto_ingest_job import weekly_policy_auto_ingest_job
 from app.jobs.change_monitor import daily_change_monitor_job
+from app.jobs.document_summary import document_summary_job
 from app.jobs.funda_snapshot import funda_snapshot_job
 from app.jobs.jurisprudence_analysis import (
     rechtsgrond_backfill_job,
     ruling_analysis_job,
     tegenstander_backfill_job,
 )
-from app.jobs.document_summary import document_summary_job
 from app.jobs.pdf_parsing import pdf_parsing_job
 from app.jobs.rescore_weights import rescore_weights_job
 from app.jobs.ruling_ingestion import ruling_ingestion_job
@@ -61,6 +62,7 @@ class WorkerSettings:
         ruling_ingestion_job,
         tegenstander_backfill_job,
         rescore_weights_job,
+        weekly_policy_auto_ingest_job,
     ]
     redis_settings = get_redis_settings()
     max_jobs = 5  # Max concurrent jobs
@@ -69,7 +71,14 @@ class WorkerSettings:
     allow_abort_jobs = True  # Enable job cancellation for area scans
     health_check_interval = 30  # Seconds between health checks
     cron_jobs = [
-        cron(daily_change_monitor_job, hour=3, minute=0, unique=True)
+        cron(daily_change_monitor_job, hour=3, minute=0, unique=True),
+        cron(
+            weekly_policy_auto_ingest_job,
+            weekday="mon",
+            hour=4,
+            minute=0,
+            unique=True,
+        ),
     ]
 
 

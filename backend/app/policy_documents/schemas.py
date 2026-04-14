@@ -35,3 +35,22 @@ class PolicySummariesResponse(BaseModel):
     """Map of source_key → ai_summary for an entity's policy documents."""
 
     summaries: dict[str, str]
+
+
+class AutoIngestRequest(BaseModel):
+    """Request body for the on-demand auto-ingest endpoint."""
+
+    gemeente_code: str  # e.g. "GM0983"
+    gemeente_naam: str  # e.g. "Venlo"
+
+
+class AutoIngestResponse(BaseModel):
+    """Response body for the auto-ingest endpoint.
+
+    summary maps source_key → version_number written, or None when
+    skipped (no SRU result, already ingested, or PDF download failed).
+    """
+
+    gemeente_code: str
+    gemeente_naam: str
+    summary: dict[str, int | None]
