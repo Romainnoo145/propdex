@@ -95,7 +95,7 @@ async def download_document(
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     """Download/preview a document file."""
-    doc = await svc.get_document_for_download(parcel_id, document_id, current_user.id, db)
+    doc = await svc.get_document_for_download(parcel_id, document_id, current_user.organization_id, db)
     if doc is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
     return Response(

@@ -229,3 +229,81 @@ async def test_document_type_filter_still_works(
         f"document_type=bodem filter must return exactly 1 result, got {len(body['documents'])}"
     )
     assert body["documents"][0]["document_type"] == "bodem"
+
+
+# ---------------------------------------------------------------------------
+# Test 5 — same-org user can download another user's upload
+# ---------------------------------------------------------------------------
+
+
+async def test_bob_can_download_alice_upload_same_org(
+    async_client: AsyncClient,
+    test_db: AsyncSession,
+) -> None:
+    """Bob in the same org as Alice can download her uploaded document."""
+    org_a = await _make_org(test_db, name="Shared Org T01-E")
+    alice = await _make_user(test_db, email="alice-t01e@example.com", org=org_a)
+    bob = await _make_user(test_db, email="bob-t01e@example.com", org=org_a)
+
+    parcel_id = "NL.IMKAD.T01-E"
+    doc = ParcelDocument(
+        parcel_id=parcel_id,
+        organization_id=org_a.id,
+        uploaded_by_user_id=alice.id,
+        document_type="bodem",
+        filename="alice_download.pdf",
+        content_type="application/pdf",
+        file_data=b"alice's pdf bytes",
+        file_size=17,
+    )
+    test_db.add(doc)
+    await test_db.commit()
+    await test_db.refresh(doc)
+
+    response = await async_client.get(
+        f"/api/documents/{parcel_id}/documents/{doc.id}",
+        headers=_auth_headers(bob, org_a),
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.content == b"alice's pdf bytes"
+
+
+# ---------------------------------------------------------------------------
+# Test 6 — cross-org user cannot download another org's upload
+# ---------------------------------------------------------------------------
+
+
+async def test_org_b_user_cannot_download_org_a_upload(
+    async_client: AsyncClient,
+    test_db: AsyncSession,
+) -> None:
+    """Carol in Org B cannot download Alice's document from Org A — returns 404."""
+    org_a = await _make_org(test_db, name="Org A T01-F")
+    org_b = await _make_org(test_db, name="Org B T01-F")
+    alice = await _make_user(test_db, email="alice-t01f@example.com", org=org_a)
+    carol = await _make_user(test_db, email="carol-t01f@example.com", org=org_b)
+
+    parcel_id = "NL.IMKAD.T01-F"
+    doc = ParcelDocument(
+        parcel_id=parcel_id,
+        organization_id=org_a.id,
+        uploaded_by_user_id=alice.id,
+        document_type="bodem",
+        filename="alice_org_a_download.pdf",
+        content_type="application/pdf",
+        file_data=b"org a secret bytes",
+        file_size=18,
+    )
+    test_db.add(doc)
+    await test_db.commit()
+    await test_db.refresh(doc)
+
+    response = await async_client.get(
+        f"/api/documents/{parcel_id}/documents/{doc.id}",
+        headers=_auth_headers(carol, org_b),
+    )
+
+    assert response.status_code == 404, (
+        f"org B user must not download org A document, got {response.status_code}"
+    )
