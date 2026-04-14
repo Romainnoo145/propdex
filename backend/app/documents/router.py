@@ -73,7 +73,7 @@ async def list_documents(
     db: AsyncSession = Depends(get_db),
 ) -> DocumentListResponse:
     """List document metadata for a parcel (without file bytes)."""
-    documents, total = await svc.list_documents(parcel_id, current_user.id, document_type, db)
+    documents, total = await svc.list_documents(parcel_id, current_user.organization_id, document_type, db)
     return DocumentListResponse(documents=documents, total=total)
 
 

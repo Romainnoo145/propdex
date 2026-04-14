@@ -163,7 +163,7 @@ async def try_ai_summarize(doc: ParcelDocument, file_bytes: bytes, content_type:
 
 async def list_documents(
     parcel_id: str,
-    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
     document_type: str | None,
     db: AsyncSession,
 ) -> tuple[list[DocumentResponse], int]:
@@ -172,7 +172,7 @@ async def list_documents(
         select(ParcelDocument)
         .options(defer(ParcelDocument.file_data))
         .where(
-            ParcelDocument.uploaded_by_user_id == user_id,
+            ParcelDocument.organization_id == organization_id,
             ParcelDocument.parcel_id == parcel_id,
         )
         .order_by(ParcelDocument.created_at.desc())
@@ -184,7 +184,7 @@ async def list_documents(
     documents = [DocumentResponse.model_validate(d) for d in result.scalars().all()]
 
     count_query = select(func.count(ParcelDocument.id)).where(
-        ParcelDocument.uploaded_by_user_id == user_id,
+        ParcelDocument.organization_id == organization_id,
         ParcelDocument.parcel_id == parcel_id,
     )
     if document_type is not None:
