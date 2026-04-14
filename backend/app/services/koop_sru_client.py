@@ -39,8 +39,8 @@ class VerordeningResult:
     url: str  # link to officielebekendmakingen.nl
 
 
-# In-memory cache: gemeente_naam → (timestamp, result | None)
-_cache: dict[str, tuple[datetime, VerordeningResult | None]] = {}
+# In-memory cache: (title, gemeente_naam) → (timestamp, result | None)
+_cache: dict[tuple[str, str], tuple[datetime, VerordeningResult | None]] = {}
 _CACHE_TTL_SECONDS = 3600
 
 
@@ -89,29 +89,33 @@ def _parse_sru_response(xml_text: str) -> list[VerordeningResult]:
     return results
 
 
-async def search_huisvestingsverordening(
+async def search_policy_document(
+    title: str,
     gemeente_naam: str,
     *,
     timeout: float = 15.0,
 ) -> VerordeningResult | None:
-    """Search KOOP SRU for the most recent huisvestingsverordening of a gemeente.
+    """Search KOOP SRU CVDR for the most recent local regulation matching a title.
 
     Args:
-        gemeente_naam: Municipality display name (e.g., "Amsterdam", "Venlo")
+        title: CVDR document title search term (e.g. "huisvestingsverordening", "omgevingsvisie")
+        gemeente_naam: Municipality display name (e.g. "Amsterdam", "Venlo")
         timeout: HTTP timeout in seconds
 
     Returns:
-        Most recent VerordeningResult, or None if not found.
+        Most recent VerordeningResult, or None if not found / HTTP error / parse failure.
     """
+    cache_key = (title, gemeente_naam)
+
     # Check cache
-    cached = _cache.get(gemeente_naam)
+    cached = _cache.get(cache_key)
     if cached is not None:
         cached_at, result = cached
         if (datetime.utcnow() - cached_at).total_seconds() < _CACHE_TTL_SECONDS:
             return result
 
-    # SRU query: title="huisvestingsverordening" AND creator="{gemeente}"
-    query = f'title="huisvestingsverordening" AND creator="{gemeente_naam}"'
+    # SRU query: title="{title}" AND creator="{gemeente}"
+    query = f'title="{title}" AND creator="{gemeente_naam}"'
 
     params = {
         "version": "1.2",
@@ -128,32 +132,49 @@ async def search_huisvestingsverordening(
 
         if resp.status_code != 200:
             logger.warning(
-                "KOOP SRU failed for %s: HTTP %d", gemeente_naam, resp.status_code
+                "KOOP SRU failed for %s/%s: HTTP %d", title, gemeente_naam, resp.status_code
             )
-            _cache[gemeente_naam] = (datetime.utcnow(), None)
+            _cache[cache_key] = (datetime.utcnow(), None)
             return None
 
         results = _parse_sru_response(resp.text)
 
         if not results:
-            logger.info("No huisvestingsverordening found for %s", gemeente_naam)
-            _cache[gemeente_naam] = (datetime.utcnow(), None)
+            logger.info("No %s found for %s", title, gemeente_naam)
+            _cache[cache_key] = (datetime.utcnow(), None)
             return None
 
         # Return the most recent one
         best = results[0]
         logger.info(
-            "Found huisvestingsverordening for %s: %s (%s)",
+            "Found %s for %s: %s (%s)",
+            title,
             gemeente_naam,
             best.title,
             best.modified,
         )
-        _cache[gemeente_naam] = (datetime.utcnow(), best)
+        _cache[cache_key] = (datetime.utcnow(), best)
         return best
 
     except httpx.TimeoutException:
-        logger.warning("KOOP SRU timed out for %s", gemeente_naam)
+        logger.warning("KOOP SRU timed out for %s/%s", title, gemeente_naam)
         return None
     except Exception:
-        logger.exception("KOOP SRU error for %s", gemeente_naam)
+        logger.exception("KOOP SRU error for %s/%s", title, gemeente_naam)
         return None
+
+
+async def search_huisvestingsverordening(
+    gemeente_naam: str,
+    *,
+    timeout: float = 15.0,
+) -> VerordeningResult | None:
+    """Backwards-compatible wrapper for huisvestingsverordening lookups.
+
+    New callers should use `search_policy_document(title, gemeente_naam)` directly.
+    """
+    return await search_policy_document(
+        "huisvestingsverordening",
+        gemeente_naam,
+        timeout=timeout,
+    )
