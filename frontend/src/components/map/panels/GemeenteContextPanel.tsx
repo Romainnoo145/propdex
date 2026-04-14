@@ -179,7 +179,7 @@ export function GemeenteContextPanel({
                 )}
                 {/* Beleid & Nieuws — raadsinformatie + subsidies */}
                 {activeLayer === 'beleid' && (
-                  <BeleidNieuwsLayer gemeenteNaam={naam} />
+                  <BeleidNieuwsLayer gemeenteNaam={naam} gemeenteCode={code} />
                 )}
                 {/* Mijn Activiteit — notificaties, favorieten */}
                 {activeLayer === 'activiteit' && (
