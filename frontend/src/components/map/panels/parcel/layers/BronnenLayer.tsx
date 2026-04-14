@@ -58,6 +58,35 @@ import type { ScanResultItem } from '@/lib/types/scan'
 import type { ParcelDocumentMeta } from '@/lib/types/document'
 import { TruncatedText } from '../TruncatedText'
 
+/* ── Dutch relative date formatter — M045/S03 T07 ─────────── */
+
+/**
+ * Format an ISO timestamp as a Dutch relative date label.
+ *
+ * Examples: "zojuist", "3 minuten geleden", "2 uur geleden", "3 dagen geleden",
+ * "vorige week", "2 maanden geleden".
+ *
+ * Uses Intl.RelativeTimeFormat('nl') with numeric:'auto' for natural phrasing.
+ */
+function formatRelativeNL(iso: string): string {
+  const date = new Date(iso)
+  const diffMs = Date.now() - date.getTime()
+  const diffSec = Math.floor(diffMs / 1000)
+  const diffMin = Math.floor(diffSec / 60)
+  const diffHour = Math.floor(diffMin / 60)
+  const diffDay = Math.floor(diffHour / 24)
+  const diffWeek = Math.floor(diffDay / 7)
+  const diffMonth = Math.floor(diffDay / 30)
+
+  const rtf = new Intl.RelativeTimeFormat('nl', { numeric: 'auto' })
+  if (diffMonth >= 1) return rtf.format(-diffMonth, 'month')
+  if (diffWeek >= 1) return rtf.format(-diffWeek, 'week')
+  if (diffDay >= 1) return rtf.format(-diffDay, 'day')
+  if (diffHour >= 1) return rtf.format(-diffHour, 'hour')
+  if (diffMin >= 1) return rtf.format(-diffMin, 'minute')
+  return 'zojuist'
+}
+
 /* ── Ghost icons per document type ────────────────────────── */
 
 const GHOST_ICONS: Record<string, LucideIcon> = {
@@ -438,33 +467,45 @@ function DropzoneCard({
     return (
       <div className="space-y-0.5">
         {visible.map((doc) => (
-          <div key={doc.id} className="flex items-center gap-1 min-w-0">
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onDownload(doc.id, doc.filename) }}
-              className={`text-[9px] font-medium truncate hover:text-amber-400 cursor-pointer flex-1 text-left transition-colors ${
-                isDark ? 'text-white/50' : 'text-slate-500'
-              }`}
-              title={doc.filename}
-            >
-              {doc.filename}
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onDownload(doc.id, doc.filename) }}
-              className={`shrink-0 transition-colors hover:text-amber-400 ${isDark ? 'text-white/30' : 'text-slate-300'}`}
-              title="Download"
-            >
-              <Download className="size-3" />
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onDelete(doc.id) }}
-              className={`shrink-0 transition-colors hover:text-red-400 ${isDark ? 'text-white/30' : 'text-slate-300'}`}
-              title="Verwijderen"
-            >
-              <Trash2 className="size-3" />
-            </button>
+          <div key={doc.id} className="min-w-0">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onDownload(doc.id, doc.filename) }}
+                className={`text-[9px] font-medium truncate hover:text-amber-400 cursor-pointer flex-1 text-left transition-colors ${
+                  isDark ? 'text-white/50' : 'text-slate-500'
+                }`}
+                title={doc.filename}
+              >
+                {doc.filename}
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onDownload(doc.id, doc.filename) }}
+                className={`shrink-0 transition-colors hover:text-amber-400 ${isDark ? 'text-white/30' : 'text-slate-300'}`}
+                title="Download"
+              >
+                <Download className="size-3" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onDelete(doc.id) }}
+                className={`shrink-0 transition-colors hover:text-red-400 ${isDark ? 'text-white/30' : 'text-slate-300'}`}
+                title="Verwijderen"
+              >
+                <Trash2 className="size-3" />
+              </button>
+            </div>
+            {/* NEW: uploaded_at relative label — M045/S03 T07 */}
+            <div className="text-[10px] text-slate-400 mt-1">
+              {formatRelativeNL(doc.uploaded_at)}
+            </div>
+            {/* NEW: ai_summary preview with 2-line clamp — M045/S03 T07 */}
+            {doc.ai_summary && (
+              <p className="text-[11px] text-slate-500 mt-2 line-clamp-2 leading-snug">
+                {doc.ai_summary}
+              </p>
+            )}
           </div>
         ))}
         {remaining > 0 && (
