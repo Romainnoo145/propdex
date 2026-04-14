@@ -10,6 +10,7 @@ Verifies the FastAPI endpoint contract end-to-end via httpx ASGITransport:
 import json
 import uuid
 
+import pytest
 from geoalchemy2 import WKTElement
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -285,3 +286,245 @@ async def test_endpoint_bundle_serializes_cleanly_no_file_data(
     raw = json.dumps(body)
     assert "peer bytes that must not leak" not in raw
     assert "policy bytes that must not leak" not in raw
+
+
+# ---------------------------------------------------------------------------
+# T03 Tests — GET /api/policy-documents/cascade/{gemeente_code}
+# ---------------------------------------------------------------------------
+
+
+async def test_gemeente_cascade_endpoint_vendor_200(
+    async_client: AsyncClient,
+    test_db: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Vendor user gets 200 + correct 3-level structure from cascade endpoint."""
+    from app.core.config import settings
+
+    vendor_user, vendor_org = await _make_user(
+        test_db, email="vendor-t03-1@example.com", org_name="Vendor Org T03-1"
+    )
+    monkeypatch.setattr(settings, "VENDOR_ORG_ID", str(vendor_org.id))
+
+    test_db.add(GemeenteProvincieMap(gemeente_code="GM0983", provincie_code="PV31"))
+    await test_db.flush()
+
+    test_db.add(
+        PolicyDocument(
+            entity_type="landelijk",
+            entity_code="NL",
+            source_key="beng",
+            filename="beng_v1.pdf",
+            content_type="application/pdf",
+            file_data=b"landelijk bytes",
+            file_size=15,
+            uploaded_by_user_id=vendor_user.id,
+            organization_id=vendor_org.id,
+            status="uploaded",
+            is_global=True,
+            version_number=1,
+        )
+    )
+    test_db.add(
+        PolicyDocument(
+            entity_type="provincie",
+            entity_code="PV31",
+            source_key="povi",
+            filename="povi_v1.pdf",
+            content_type="application/pdf",
+            file_data=b"provincie bytes",
+            file_size=15,
+            uploaded_by_user_id=vendor_user.id,
+            organization_id=vendor_org.id,
+            status="uploaded",
+            is_global=True,
+            version_number=1,
+        )
+    )
+    test_db.add(
+        PolicyDocument(
+            entity_type="gemeente",
+            entity_code="GM0983",
+            source_key="welstand",
+            filename="welstand_v1.pdf",
+            content_type="application/pdf",
+            file_data=b"gemeente bytes",
+            file_size=14,
+            uploaded_by_user_id=vendor_user.id,
+            organization_id=vendor_org.id,
+            status="uploaded",
+            is_global=True,
+            version_number=1,
+        )
+    )
+    await test_db.commit()
+
+    response = await async_client.get(
+        "/api/policy-documents/cascade/GM0983",
+        headers=_auth_headers(vendor_user, vendor_org),
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert set(body.keys()) == {"landelijk", "provincie", "gemeente"}
+    assert isinstance(body["landelijk"], list)
+    assert isinstance(body["provincie"], list)
+    assert isinstance(body["gemeente"], list)
+    assert len(body["landelijk"]) == 1
+    assert len(body["provincie"]) == 1
+    assert len(body["gemeente"]) == 1
+
+
+async def test_gemeente_cascade_endpoint_customer_200(
+    async_client: AsyncClient,
+    test_db: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Customer user sees identical cascade docs as vendor — is_global, not org-based."""
+    from app.core.config import settings
+
+    vendor_user, vendor_org = await _make_user(
+        test_db, email="vendor-t03-2@example.com", org_name="Vendor Org T03-2"
+    )
+    monkeypatch.setattr(settings, "VENDOR_ORG_ID", str(vendor_org.id))
+
+    customer_user, customer_org = await _make_user(
+        test_db, email="customer-t03-2@example.com", org_name="Customer Org T03-2"
+    )
+
+    test_db.add(GemeenteProvincieMap(gemeente_code="GM0983", provincie_code="PV31"))
+    await test_db.flush()
+
+    test_db.add(
+        PolicyDocument(
+            entity_type="landelijk",
+            entity_code="NL",
+            source_key="beng_t03_2",
+            filename="beng_t03_2_v1.pdf",
+            content_type="application/pdf",
+            file_data=b"landelijk bytes t03-2",
+            file_size=21,
+            uploaded_by_user_id=vendor_user.id,
+            organization_id=vendor_org.id,
+            status="uploaded",
+            is_global=True,
+            version_number=1,
+        )
+    )
+    test_db.add(
+        PolicyDocument(
+            entity_type="provincie",
+            entity_code="PV31",
+            source_key="povi_t03_2",
+            filename="povi_t03_2_v1.pdf",
+            content_type="application/pdf",
+            file_data=b"provincie bytes t03-2",
+            file_size=21,
+            uploaded_by_user_id=vendor_user.id,
+            organization_id=vendor_org.id,
+            status="uploaded",
+            is_global=True,
+            version_number=1,
+        )
+    )
+    test_db.add(
+        PolicyDocument(
+            entity_type="gemeente",
+            entity_code="GM0983",
+            source_key="welstand_t03_2",
+            filename="welstand_t03_2_v1.pdf",
+            content_type="application/pdf",
+            file_data=b"gemeente bytes t03-2",
+            file_size=20,
+            uploaded_by_user_id=vendor_user.id,
+            organization_id=vendor_org.id,
+            status="uploaded",
+            is_global=True,
+            version_number=1,
+        )
+    )
+    await test_db.commit()
+
+    vendor_response = await async_client.get(
+        "/api/policy-documents/cascade/GM0983",
+        headers=_auth_headers(vendor_user, vendor_org),
+    )
+    customer_response = await async_client.get(
+        "/api/policy-documents/cascade/GM0983",
+        headers=_auth_headers(customer_user, customer_org),
+    )
+
+    assert vendor_response.status_code == 200, vendor_response.text
+    assert customer_response.status_code == 200, customer_response.text
+
+    vendor_body = vendor_response.json()
+    customer_body = customer_response.json()
+
+    # Both responses must be identical — is_global visibility not org-dependent
+    assert len(customer_body["landelijk"]) == len(vendor_body["landelijk"])
+    assert len(customer_body["provincie"]) == len(vendor_body["provincie"])
+    assert len(customer_body["gemeente"]) == len(vendor_body["gemeente"])
+
+    # Verify source_key matches for first entry in each level
+    assert customer_body["landelijk"][0]["source_key"] == vendor_body["landelijk"][0]["source_key"]
+    assert customer_body["provincie"][0]["source_key"] == vendor_body["provincie"][0]["source_key"]
+    assert customer_body["gemeente"][0]["source_key"] == vendor_body["gemeente"][0]["source_key"]
+
+
+async def test_gemeente_cascade_endpoint_no_auth_401(
+    async_client: AsyncClient,
+    test_db: AsyncSession,  # noqa: ARG001 — fixture ensures clean schema
+) -> None:
+    """GET without Authorization header returns 401."""
+    response = await async_client.get("/api/policy-documents/cascade/GM0983")
+    assert response.status_code == 401
+
+
+async def test_gemeente_cascade_endpoint_no_file_data_leak(
+    async_client: AsyncClient,
+    test_db: AsyncSession,
+) -> None:
+    """Response body must not contain file_data key or bytes at any depth."""
+    vendor_user, vendor_org = await _make_user(
+        test_db, email="vendor-t03-4@example.com", org_name="Vendor Org T03-4"
+    )
+
+    test_db.add(GemeenteProvincieMap(gemeente_code="GM0983", provincie_code="PV31"))
+    await test_db.flush()
+
+    test_db.add(
+        PolicyDocument(
+            entity_type="gemeente",
+            entity_code="GM0983",
+            source_key="welstand_leak",
+            filename="welstand_leak_v1.pdf",
+            content_type="application/pdf",
+            file_data=b"SECRET_CASCADE_BYTES_DO_NOT_LEAK",
+            file_size=32,
+            uploaded_by_user_id=vendor_user.id,
+            organization_id=vendor_org.id,
+            status="uploaded",
+            is_global=True,
+            version_number=1,
+        )
+    )
+    await test_db.commit()
+
+    response = await async_client.get(
+        "/api/policy-documents/cascade/GM0983",
+        headers=_auth_headers(vendor_user, vendor_org),
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    # Sanity: the gemeente list is populated so the assertion is not vacuous
+    assert len(body["gemeente"]) >= 1
+
+    all_keys = _walk(body)
+    assert "file_data" not in all_keys, (
+        f"file_data leaked into response body. Keys present: {sorted(set(all_keys))}"
+    )
+
+    raw = json.dumps(body)
+    assert "SECRET_CASCADE_BYTES_DO_NOT_LEAK" not in raw

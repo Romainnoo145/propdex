@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user, get_current_superuser
 from app.core.database import get_db
+from app.documents.bundle_schemas import CascadePolicyDocs, PolicyDocumentRead
 from app.middleware.rate_limit import limiter
 from app.models.user import User
 from app.policy_documents import service as svc
@@ -20,7 +21,7 @@ from app.policy_documents.schemas import (
     PolicyDocumentResponse,
     PolicySummariesResponse,
 )
-from app.policy_documents.service import _assert_vendor_org
+from app.policy_documents.service import _assert_vendor_org, _resolve_ancestor_chain_by_gemeente
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +101,61 @@ async def get_policy_summaries(
         db=db,
     )
     return PolicySummariesResponse(summaries=summaries)
+
+
+@router.get(
+    "/cascade/{gemeente_code}",
+    response_model=CascadePolicyDocs,
+)
+async def get_gemeente_cascade(
+    gemeente_code: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> CascadePolicyDocs:
+    """Return the full cascade policy documents for a gemeente.
+
+    Accessible to any authenticated user regardless of organization — cascade
+    documents are vendor-global (is_global=true), enforced via the query filter
+    not via calling org. Returns landelijk + provincie + gemeente documents
+    grouped by level, latest version per (entity_type, entity_code, source_key).
+
+    M045/S03: this is the primary data source for the gemeente card's new
+    Beleidsdocumenten section (frontend: useGemeenteCascadeDocuments hook).
+    """
+    from sqlalchemy import text
+
+    chain = await _resolve_ancestor_chain_by_gemeente(gemeente_code, db)
+
+    stmt = text("""
+        SELECT DISTINCT ON (entity_type, entity_code, source_key)
+            id, entity_type, entity_code, source_key, filename, content_type,
+            file_size, created_at, version_number, ai_summary
+        FROM policy_documents
+        WHERE is_global = true
+          AND (
+            (entity_type = 'landelijk' AND entity_code = :landelijk)
+            OR (entity_type = 'provincie' AND entity_code = :provincie)
+            OR (entity_type = 'gemeente'  AND entity_code = :gemeente)
+          )
+        ORDER BY entity_type, entity_code, source_key, version_number DESC
+    """)
+    params = {
+        "landelijk": chain.get("landelijk"),
+        "provincie": chain.get("provincie"),
+        "gemeente": chain.get("gemeente"),
+    }
+    rows = (await db.execute(stmt, params)).mappings().all()
+
+    grouped = CascadePolicyDocs()
+    for row in rows:
+        dto = PolicyDocumentRead.model_validate(dict(row))
+        if row["entity_type"] == "landelijk":
+            grouped.landelijk.append(dto)
+        elif row["entity_type"] == "provincie":
+            grouped.provincie.append(dto)
+        elif row["entity_type"] == "gemeente":
+            grouped.gemeente.append(dto)
+    return grouped
 
 
 @router.get(
