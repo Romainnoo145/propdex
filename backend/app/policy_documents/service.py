@@ -4,10 +4,11 @@ import logging
 import uuid
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.models.gemeente_provincie_map import GemeenteProvincieMap
 from app.models.policy_document import PolicyDocument
 
 logger = logging.getLogger(__name__)
@@ -167,31 +168,84 @@ async def list_documents(
     return docs, total
 
 
+async def _resolve_ancestor_chain_by_gemeente(
+    gemeente_code: str,
+    db: AsyncSession,
+) -> dict[str, str]:
+    """Resolve a gemeente_code directly into its {landelijk, provincie, gemeente} chain.
+
+    Mirror of cascade_service._resolve_ancestor_chain, but accepts a gemeente_code
+    directly (no parcel_id lookup). Used for surfaces without parcel context
+    (gemeente card cascade section, rapport via woonplaats lookup).
+
+    Returns a dict that always contains 'landelijk' and 'gemeente' keys, plus
+    'provincie' if the gemeente is mapped to one in gemeente_provincie_map.
+    """
+    chain: dict[str, str] = {"landelijk": "NL", "gemeente": gemeente_code}
+    stmt = select(GemeenteProvincieMap.provincie_code).where(
+        GemeenteProvincieMap.gemeente_code == gemeente_code
+    )
+    provincie_code = (await db.execute(stmt)).scalar_one_or_none()
+    if provincie_code:
+        chain["provincie"] = provincie_code
+    return chain
+
+
 async def get_summaries(
     entity_type: str,
     entity_code: str,
-    organization_id: uuid.UUID,
+    organization_id: uuid.UUID,  # noqa: ARG001 — kept for backwards compat, unused
     db: AsyncSession,
 ) -> dict[str, str]:
-    """Return {source_key: ai_summary} for all docs with non-null summaries."""
-    stmt = (
-        select(PolicyDocument.source_key, PolicyDocument.ai_summary)
-        .where(
-            PolicyDocument.organization_id == organization_id,
-            PolicyDocument.entity_type == entity_type,
-            PolicyDocument.entity_code == entity_code,
-            PolicyDocument.ai_summary.isnot(None),
-            PolicyDocument.ai_summary != "",
-        )
-        .order_by(PolicyDocument.created_at.desc())
-    )
-    result = await db.execute(stmt)
-    # Latest document per source_key wins (ordered desc, first seen kept)
-    summaries: dict[str, str] = {}
-    for source_key, ai_summary in result.all():
-        if source_key not in summaries:
-            summaries[source_key] = ai_summary
-    return summaries
+    """Return {source_key: ai_summary} for all cascade policy docs of a gemeente.
+
+    M045/S03: was previously filtered by organization_id which returned empty
+    results for customer orgs (only vendor-org owns policy_documents rows).
+    Now cascade-aware with is_global filter — returns the full landelijk/
+    provincie/gemeente chain. On source_key conflict across levels, most
+    specific wins (gemeente > provincie > landelijk).
+
+    The entity_type parameter is retained but only 'gemeente' is meaningfully
+    supported. Non-gemeente callers receive an empty dict.
+    """
+    if entity_type != "gemeente":
+        return {}
+
+    chain = await _resolve_ancestor_chain_by_gemeente(entity_code, db)
+
+    cascade_stmt = text("""
+        SELECT DISTINCT ON (entity_type, entity_code, source_key)
+            entity_type, source_key, ai_summary
+        FROM policy_documents
+        WHERE is_global = true
+          AND ai_summary IS NOT NULL
+          AND ai_summary != ''
+          AND (
+            (entity_type = 'landelijk' AND entity_code = :landelijk)
+            OR (entity_type = 'provincie' AND entity_code = :provincie)
+            OR (entity_type = 'gemeente'  AND entity_code = :gemeente)
+          )
+        ORDER BY entity_type, entity_code, source_key, version_number DESC
+    """)
+    params = {
+        "landelijk": chain.get("landelijk"),
+        "provincie": chain.get("provincie"),
+        "gemeente": chain.get("gemeente"),
+    }
+    rows = (await db.execute(cascade_stmt, params)).mappings().all()
+
+    # Precedence: gemeente > provincie > landelijk on same source_key conflict
+    PRECEDENCE = {"gemeente": 3, "provincie": 2, "landelijk": 1}
+    out: dict[str, str] = {}
+    out_priority: dict[str, int] = {}
+    for row in rows:
+        source_key = row["source_key"]
+        level = row["entity_type"]
+        priority = PRECEDENCE[level]
+        if source_key not in out or priority > out_priority[source_key]:
+            out[source_key] = row["ai_summary"]
+            out_priority[source_key] = priority
+    return out
 
 
 

@@ -15,11 +15,13 @@ import {
 } from 'lucide-react'
 import { VerdictHero } from './VerdictHero'
 import { staggerContainer, fadeUp } from './animations'
+import { BeleidsdocumentenSection } from './BeleidsdocumentenSection'
 import { useRaadsinformatie, type RaadsstukResponse } from '@/hooks/useRaadsinformatie'
 import { useSubsidies, type SubsidieResponse } from '@/hooks/useSubsidies'
 
 interface BeleidNieuwsLayerProps {
   gemeenteNaam: string
+  gemeenteCode: string
 }
 
 /* ── Verdict ───────────────────────────────────────────────── */
@@ -277,7 +279,7 @@ function NoOriCoverage() {
 
 /* ── Main component ────────────────────────────────────────── */
 
-export function BeleidNieuwsLayer({ gemeenteNaam }: BeleidNieuwsLayerProps) {
+export function BeleidNieuwsLayer({ gemeenteNaam, gemeenteCode }: BeleidNieuwsLayerProps) {
   const { data: raadsData, isLoading: raadsLoading } = useRaadsinformatie(gemeenteNaam)
   const { data: subsidieData, isLoading: subsidieLoading } = useSubsidies()
   const [showAllRaads, setShowAllRaads] = useState(false)
@@ -320,6 +322,10 @@ export function BeleidNieuwsLayer({ gemeenteNaam }: BeleidNieuwsLayerProps) {
 
   return (
     <div className="flex flex-col flex-1 pt-4 px-6 pb-4">
+      <BeleidsdocumentenSection
+        gemeenteCode={gemeenteCode}
+        gemeenteNaam={gemeenteNaam}
+      />
       <VerdictHero
         score={isLoading ? null : verdict.score}
         label={isLoading ? 'LADEN...' : verdict.label}

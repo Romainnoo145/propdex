@@ -27,14 +27,21 @@ async def weekly_policy_auto_ingest_job(ctx: dict[str, Any]) -> dict[str, Any]:
     abort the whole batch. Per-gemeente results are aggregated into the
     returned dict for ARQ result inspection.
 
+    M045/S03: now also enqueues document_summary_job for each stored doc via
+    the ARQ Redis pool (ctx["redis"]).
+
     Args:
-        ctx: ARQ context dict (unused — required by ARQ function signature).
+        ctx: ARQ context dict. ARQ passes the worker's Redis pool as
+            ctx["redis"] — used to enqueue document_summary_job per doc.
 
     Returns:
         dict with keys:
             - gemeentes_processed (int): how many entries were attempted
             - results (dict[str, dict[str, int | None]]): per-gemeente_code summary
     """
+    # ARQ passes the worker's Redis pool via ctx["redis"] — it's the ArqRedis instance
+    arq_pool = ctx.get("redis")
+
     results: dict[str, dict[str, int | None]] = {}
 
     async with async_session_factory() as db:
@@ -46,6 +53,7 @@ async def weekly_policy_auto_ingest_job(ctx: dict[str, Any]) -> dict[str, Any]:
                     gemeente_code=gemeente_code,
                     gemeente_naam=gemeente_naam,
                     db=db,
+                    arq_pool=arq_pool,
                 )
                 results[gemeente_code] = summary
                 logger.info(

@@ -7,6 +7,7 @@ export interface ParcelDocumentMeta {
   file_size: number
   uploaded_at: string
   uploaded_by_user_id: string | null
+  ai_summary: string | null // NEW — M045/S03: nullable until document_summary_job finishes
 }
 
 export interface ParcelDocumentListResponse {

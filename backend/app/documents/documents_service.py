@@ -163,7 +163,7 @@ async def try_ai_summarize(doc: ParcelDocument, file_bytes: bytes, content_type:
 
 async def list_documents(
     parcel_id: str,
-    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
     document_type: str | None,
     db: AsyncSession,
 ) -> tuple[list[DocumentResponse], int]:
@@ -172,7 +172,7 @@ async def list_documents(
         select(ParcelDocument)
         .options(defer(ParcelDocument.file_data))
         .where(
-            ParcelDocument.uploaded_by_user_id == user_id,
+            ParcelDocument.organization_id == organization_id,
             ParcelDocument.parcel_id == parcel_id,
         )
         .order_by(ParcelDocument.created_at.desc())
@@ -184,7 +184,7 @@ async def list_documents(
     documents = [DocumentResponse.model_validate(d) for d in result.scalars().all()]
 
     count_query = select(func.count(ParcelDocument.id)).where(
-        ParcelDocument.uploaded_by_user_id == user_id,
+        ParcelDocument.organization_id == organization_id,
         ParcelDocument.parcel_id == parcel_id,
     )
     if document_type is not None:
@@ -197,14 +197,19 @@ async def list_documents(
 async def get_document_for_download(
     parcel_id: str,
     document_id: uuid.UUID,
-    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
     db: AsyncSession,
 ) -> ParcelDocument | None:
-    """Get full document (with file_data) for download."""
+    """Get full document (with file_data) for download.
+
+    M045/S03: org-scoped — any user in the same organization as the uploader
+    can download the document. Matches list_documents semantics so the Dossiers
+    tab listing and download affordance are consistent.
+    """
     result = await db.execute(
         select(ParcelDocument).where(
             ParcelDocument.id == document_id,
-            ParcelDocument.uploaded_by_user_id == user_id,
+            ParcelDocument.organization_id == organization_id,
             ParcelDocument.parcel_id == parcel_id,
         )
     )

@@ -71,3 +71,6 @@ backend/.venv
 
 # ── GSD baseline (auto-generated) ──
 .bg-shell/
+
+# Superpowers brainstorming visual companion (mockups persist across sessions)
+.superpowers/
