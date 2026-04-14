@@ -12,7 +12,15 @@ from app.core.database import get_db
 from app.middleware.rate_limit import limiter
 from app.models.user import User
 from app.policy_documents import service as svc
-from app.policy_documents.schemas import PolicyDocumentListResponse, PolicyDocumentResponse, PolicySummariesResponse
+from app.policy_documents.auto_ingest import ingest_gemeente_policies
+from app.policy_documents.schemas import (
+    AutoIngestRequest,
+    AutoIngestResponse,
+    PolicyDocumentListResponse,
+    PolicyDocumentResponse,
+    PolicySummariesResponse,
+)
+from app.policy_documents.service import _assert_vendor_org
 
 logger = logging.getLogger(__name__)
 
@@ -152,3 +160,32 @@ async def delete_policy_document(
     """Delete a policy document. Superuser only."""
     if not await svc.delete_document(document_id, current_user.organization_id, db):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+
+
+@router.post("/auto-ingest", response_model=AutoIngestResponse)
+async def auto_ingest_policies(
+    payload: AutoIngestRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> AutoIngestResponse:
+    """Vendor-only endpoint: auto-ingest CVDR policy documents for a gemeente.
+
+    Looks up `omgevingsvisie` and `huisvestingsverordening` (and any other
+    configured types) via KOOP SRU CVDR, downloads the PDFs, and writes them
+    as policy_documents rows with is_global=true via the same vendor-guarded
+    store_document codepath as manual admin uploads.
+
+    Idempotent: returns None for source_keys whose latest CVDR identifier
+    matches an existing row's filename prefix.
+    """
+    _assert_vendor_org(current_user.organization_id)
+    summary = await ingest_gemeente_policies(
+        gemeente_code=payload.gemeente_code,
+        gemeente_naam=payload.gemeente_naam,
+        db=db,
+    )
+    return AutoIngestResponse(
+        gemeente_code=payload.gemeente_code,
+        gemeente_naam=payload.gemeente_naam,
+        summary=summary,
+    )
