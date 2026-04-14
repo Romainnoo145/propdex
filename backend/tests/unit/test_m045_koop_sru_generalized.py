@@ -101,3 +101,19 @@ async def test_huisvestingsverordening_wrapper_uses_correct_title() -> None:
         "Amsterdam",
         timeout=15.0,
     )
+
+
+async def test_search_policy_document_returns_none_on_timeout() -> None:
+    """A httpx.TimeoutException during the SRU request returns None and does not raise."""
+    koop._cache.clear()
+
+    # Make the AsyncClient context manager raise TimeoutException on entry
+    mock_client_cm = MagicMock()
+    mock_client_cm.__aenter__ = AsyncMock(side_effect=httpx.TimeoutException("simulated timeout"))
+    mock_client_cm.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("httpx.AsyncClient", return_value=mock_client_cm):
+        result = await search_policy_document("omgevingsvisie", "Amsterdam")
+
+    assert result is None
+    assert ("omgevingsvisie", "Amsterdam") not in koop._cache

@@ -49,6 +49,11 @@ def _build_url(identifier: str) -> str:
     return f"https://zoek.officielebekendmakingen.nl/{identifier}"
 
 
+def _cql_escape(value: str) -> str:
+    """Escape CQL special characters (`\\` and `"`) in a search term value."""
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
 def _parse_sru_response(xml_text: str) -> list[VerordeningResult]:
     """Parse SRU XML response into VerordeningResult list."""
     try:
@@ -115,7 +120,7 @@ async def search_policy_document(
             return result
 
     # SRU query: title="{title}" AND creator="{gemeente}"
-    query = f'title="{title}" AND creator="{gemeente_naam}"'
+    query = f'title="{_cql_escape(title)}" AND creator="{_cql_escape(gemeente_naam)}"'
 
     params = {
         "version": "1.2",
