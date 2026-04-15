@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
+from app.documents.bundle_schemas import ChecklistLinksBundle
+from app.documents.cascade_service import _aggregate_checklist_links
 from app.models.checklist_progress import ChecklistProgress
 from app.models.user import User
 from app.services.checklists import CHECKLISTS
@@ -29,6 +31,26 @@ class ChecklistProgressResponse(BaseModel):
 class ChecklistProgressUpdate(BaseModel):
     checked_items: list[str]
     uploaded_documents: dict[str, str] = {}
+
+
+@router.get("/{parcel_id}/org", response_model=ChecklistLinksBundle)
+async def get_org_checklist_links(
+    parcel_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> ChecklistLinksBundle:
+    """Org-aggregated checklist activity across all 4 use cases.
+
+    Returns ChecklistLinksBundle with per-item attribution (who checked
+    what, which documents are linked). Used by the checklist UI to
+    render team-wide 'Alice checked opt-03' badges. Per-user state for
+    writes still goes through GET/PUT /{parcel_id}/{use_case}.
+    """
+    return await _aggregate_checklist_links(
+        parcel_id=parcel_id,
+        organization_id=current_user.organization_id,
+        db=db,
+    )
 
 
 @router.get("/{parcel_id}/{use_case}", response_model=ChecklistProgressResponse)

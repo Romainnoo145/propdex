@@ -29,3 +29,30 @@ export interface ChecklistProgressResponse {
   checked_items: string[]
   uploaded_documents: Record<string, string>
 }
+
+// M045/S04 — org-aggregated checklist view types (mirror backend Pydantic)
+
+export interface ChecklistCheck {
+  user_id: string
+  user_name: string
+  updated_at: string
+}
+
+export interface ChecklistLinkedDocument {
+  document_id: string
+  user_id: string
+  user_name: string
+  updated_at: string
+}
+
+export interface ChecklistItemLinks {
+  checked_by: ChecklistCheck[]
+  linked_documents: ChecklistLinkedDocument[]
+}
+
+export interface ChecklistLinksBundle {
+  optoppen: Record<string, ChecklistItemLinks>
+  splitsen: Record<string, ChecklistItemLinks>
+  transformatie: Record<string, ChecklistItemLinks>
+  nieuwbouw: Record<string, ChecklistItemLinks>
+}

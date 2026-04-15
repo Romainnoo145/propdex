@@ -114,6 +114,11 @@ async def test_endpoint_returns_bundle_shape(
     assert isinstance(body["cascade_policy_docs"], dict)
     assert isinstance(body["checklist_links"], dict)
 
+    # M045/S04: checklist_links now has the rich ChecklistLinksBundle shape
+    assert set(body["checklist_links"].keys()) == {"optoppen", "splitsen", "transformatie", "nieuwbouw"}
+    for use_case in ("optoppen", "splitsen", "transformatie", "nieuwbouw"):
+        assert isinstance(body["checklist_links"][use_case], dict)
+
     # cascade_policy_docs always exposes the three level keys (even when empty)
     cascade = body["cascade_policy_docs"]
     assert set(cascade.keys()) == {"landelijk", "provincie", "gemeente"}
