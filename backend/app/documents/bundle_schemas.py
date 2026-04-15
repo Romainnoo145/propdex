@@ -46,9 +46,52 @@ class CascadePolicyDocs(BaseModel):
     gemeente: list[PolicyDocumentRead] = []
 
 
+class ChecklistCheck(BaseModel):
+    """One org user's checked state for a specific item.
+
+    NOTE: updated_at is the ChecklistProgress row's row-level timestamp,
+    not per-item. "Alice checked opt-03 on X" means "Alice's optoppen-
+    progress row was last modified on X and currently contains opt-03".
+    Per-item timestamps would require a schema change — skipped in S04.
+    """
+
+    user_id: UUID
+    user_name: str
+    updated_at: datetime
+
+
+class ChecklistLinkedDocument(BaseModel):
+    """One org user's parcel_document linked to a specific checklist item."""
+
+    document_id: UUID
+    user_id: UUID
+    user_name: str
+    updated_at: datetime
+
+
+class ChecklistItemLinks(BaseModel):
+    """Aggregated org-wide state for a single item_id in one use_case."""
+
+    checked_by: list[ChecklistCheck] = []
+    linked_documents: list[ChecklistLinkedDocument] = []
+
+
+class ChecklistLinksBundle(BaseModel):
+    """Org-aggregated checklist state across all 4 use cases.
+
+    Always exposes all 4 use_case keys (empty dict when no activity) —
+    consistent with CascadePolicyDocs.landelijk/provincie/gemeente pattern.
+    """
+
+    optoppen: dict[str, ChecklistItemLinks] = {}
+    splitsen: dict[str, ChecklistItemLinks] = {}
+    transformatie: dict[str, ChecklistItemLinks] = {}
+    nieuwbouw: dict[str, ChecklistItemLinks] = {}
+
+
 class ParcelDocumentBundle(BaseModel):
     """Full document bundle for a parcel: peer docs + cascaded policy docs + checklist links."""
 
     peer_docs: list[ParcelDocumentRead]
     cascade_policy_docs: CascadePolicyDocs
-    checklist_links: dict[str, str]
+    checklist_links: ChecklistLinksBundle

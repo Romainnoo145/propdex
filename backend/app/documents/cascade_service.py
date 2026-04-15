@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.documents.bundle_schemas import (
     CascadePolicyDocs,
+    ChecklistLinksBundle,
     ParcelDocumentBundle,
     ParcelDocumentRead,
     PolicyDocumentRead,
@@ -142,7 +143,7 @@ async def for_parcel(
     ]
 
     # 5. Checklist links placeholder — S04 wires this with ChecklistProgress aggregation
-    checklist_links: dict[str, str] = {}
+    checklist_links = ChecklistLinksBundle()
 
     return ParcelDocumentBundle(
         peer_docs=peer_docs,
