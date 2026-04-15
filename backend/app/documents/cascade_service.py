@@ -107,10 +107,14 @@ async def _aggregate_checklist_links(
             links = use_case_dict.setdefault(item_id, ChecklistItemLinks())
             links.checked_by.append(check)
         for item_id, document_id in (row.uploaded_documents or {}).items():
+            try:
+                doc_uuid = UUID(document_id) if isinstance(document_id, str) else document_id
+            except (ValueError, TypeError):
+                continue  # skip malformed document_id — defensive against legacy/corrupted rows
             links = use_case_dict.setdefault(item_id, ChecklistItemLinks())
             links.linked_documents.append(
                 ChecklistLinkedDocument(
-                    document_id=UUID(document_id) if isinstance(document_id, str) else document_id,
+                    document_id=doc_uuid,
                     user_id=row.user_id,
                     user_name=display_name,
                     updated_at=row.updated_at,

@@ -334,3 +334,39 @@ async def test_unknown_use_case_defensive_skip(test_db: AsyncSession) -> None:
     assert result.splitsen == {}
     assert result.transformatie == {}
     assert result.nieuwbouw == {}
+
+
+# ---------------------------------------------------------------------------
+# Test 10 — malformed document_id in uploaded_documents is silently skipped
+# ---------------------------------------------------------------------------
+
+
+async def test_malformed_document_id_skipped(test_db: AsyncSession) -> None:
+    """Defensive: if uploaded_documents contains a non-UUID string, that
+    item is silently skipped (not a 500). Rest of the aggregation proceeds."""
+    org = await _make_org(test_db, name="Org T02-10")
+    alice = await _make_user(
+        test_db, email="alice@t02-10.example", org=org, full_name="Alice van Dijk"
+    )
+    valid_doc_id = uuid.uuid4()
+
+    test_db.add(
+        _make_progress(
+            user_id=alice.id,
+            use_case="optoppen",
+            uploaded_documents={
+                "opt-03": "not-a-uuid",
+                "opt-05": str(valid_doc_id),
+            },
+        )
+    )
+    await test_db.commit()
+
+    result = await _aggregate_checklist_links(PARCEL_ID, org.id, test_db)
+
+    # Malformed opt-03 should produce NO linked_documents entry
+    assert "opt-03" not in result.optoppen or len(result.optoppen["opt-03"].linked_documents) == 0
+    # Valid opt-05 should succeed
+    assert "opt-05" in result.optoppen
+    assert len(result.optoppen["opt-05"].linked_documents) == 1
+    assert result.optoppen["opt-05"].linked_documents[0].document_id == valid_doc_id
