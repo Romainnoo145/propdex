@@ -38,14 +38,23 @@ export function TeamAttributionBadge({ itemLinks, currentUserId }: Props) {
 
   const firstCheck = foreignChecks[0]
   const extraChecks = foreignChecks.length - 1
-  const firstName = firstCheck ? firstCheck.user_name.split(' ')[0] : null
+  const rawFirst = firstCheck?.user_name.trim().split(' ')[0] ?? ''
+  const firstName = rawFirst || 'Collega'
 
   return (
     <div className="flex items-center gap-1.5 ml-2">
       {foreignChecks.length > 0 && firstCheck && (
         <div className="group relative inline-flex">
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 cursor-default">
-            <Check className="h-3 w-3" />
+          <span
+            className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 cursor-default"
+            role="img"
+            aria-label={
+              extraChecks > 0
+                ? `Afgevinkt door ${firstCheck.user_name} en ${extraChecks} ander${extraChecks === 1 ? '' : 'en'}`
+                : `Afgevinkt door ${firstCheck.user_name}`
+            }
+          >
+            <Check className="h-3 w-3" aria-hidden="true" />
             {firstName}
             {extraChecks > 0 ? ` +${extraChecks}` : ''}
           </span>
@@ -67,8 +76,12 @@ export function TeamAttributionBadge({ itemLinks, currentUserId }: Props) {
       )}
       {foreignDocs.length > 0 && (
         <div className="group relative inline-flex">
-          <span className="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-slate-500 cursor-default">
-            <FileText className="h-3 w-3" />
+          <span
+            className="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-slate-500 cursor-default"
+            role="img"
+            aria-label={`${foreignDocs.length} document${foreignDocs.length === 1 ? '' : 'en'} gekoppeld door collega's`}
+          >
+            <FileText className="h-3 w-3" aria-hidden="true" />
           </span>
           <div className="absolute bottom-full left-0 mb-1.5 hidden group-hover:block z-50">
             <div className="bg-aura-canvas border border-neutral-200 rounded-lg px-2.5 py-2 shadow-xl min-w-[160px]">
