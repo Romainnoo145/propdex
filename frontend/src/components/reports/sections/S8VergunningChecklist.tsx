@@ -29,13 +29,15 @@ import {
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import type { PropertyReportResponse } from '@/lib/types/property'
-import type { ChecklistItem, ChecklistResponse } from '@/lib/types/checklist'
+import type { ChecklistItem, ChecklistItemLinks, ChecklistLinksBundle, ChecklistResponse } from '@/lib/types/checklist'
 import { apiFetch } from '@/lib/api'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useChecklistProgress, useUpdateChecklistProgress } from '@/hooks/useChecklistProgress'
+import { useOrgChecklistLinks } from '@/hooks/useOrgChecklistLinks'
 import { useUploadDocument } from '@/hooks/useDocuments'
 import { SectionInsightCard } from '../components/SectionInsightCard'
 import { PDFViewerModal } from '@/components/ui/PDFViewerModal'
+import { TeamAttributionBadge } from '@/components/checklist/TeamAttributionBadge'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -411,9 +413,11 @@ interface CompactRowProps {
   parcelId?: string | null
   onToggle: (id: string) => void
   onOpen: (item: ChecklistItem) => void
+  itemLinks?: ChecklistItemLinks
+  currentUserId?: string
 }
 
-function CompactItemRow({ item, checked, docStatus, uploadedDocId, parcelId, onToggle, onOpen }: CompactRowProps) {
+function CompactItemRow({ item, checked, docStatus, uploadedDocId, parcelId, onToggle, onOpen, itemLinks, currentUserId }: CompactRowProps) {
   const isGenerated = docStatus?.status === 'generated'
   const hasDocument = isGenerated || !!uploadedDocId
   const documentId = docStatus?.document_id ?? uploadedDocId
@@ -504,6 +508,7 @@ function CompactItemRow({ item, checked, docStatus, uploadedDocId, parcelId, onT
           )}
         </div>
       </button>
+      <TeamAttributionBadge itemLinks={itemLinks} currentUserId={currentUserId} />
       {pdfViewer && (
         <PDFViewerModal
           url={pdfViewer.url}
@@ -525,8 +530,10 @@ export function S8VergunningChecklist({ data, sourceParcelId }: S8VergunningChec
   // Default to top use case
   const activeUseCase = selectedUseCase ?? useCases[0]?.id ?? null
 
+  const { user } = useAuth()
   const { data: checklist, isLoading, error } = useChecklist(activeUseCase)
   const { data: progress } = useChecklistProgress(sourceParcelId ?? undefined, activeUseCase)
+  const { data: orgLinks } = useOrgChecklistLinks(sourceParcelId ?? undefined)
   const { data: docStatus } = useChecklistDocuments(sourceParcelId)
   const updateProgress = useUpdateChecklistProgress()
   const uploadDoc = useUploadDocument()
@@ -711,6 +718,8 @@ export function S8VergunningChecklist({ data, sourceParcelId }: S8VergunningChec
                   parcelId={sourceParcelId}
                   onToggle={handleToggle}
                   onOpen={setActiveItem}
+                  itemLinks={activeUseCase ? orgLinks?.[activeUseCase as keyof ChecklistLinksBundle]?.[item.id] : undefined}
+                  currentUserId={user?.id}
                 />
               ))}
             </div>

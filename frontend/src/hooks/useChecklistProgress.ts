@@ -69,6 +69,10 @@ export function useUpdateChecklistProgress() {
       queryClient.invalidateQueries({
         queryKey: ['checklist-progress', vars.parcelId, vars.useCase],
       })
+      // M045/S04: refresh org-view so teammates see Bob's new vinkje
+      queryClient.invalidateQueries({
+        queryKey: ['checklist-org-links', vars.parcelId],
+      })
     },
   })
 }
