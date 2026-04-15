@@ -133,8 +133,9 @@ async def get_parcel_document_bundle(
     - cascade_policy_docs: vendor-global policy documents cascading from
       landelijk (NL) → provincie → gemeente based on the parcel's location
       (resolved via parcel_cache.gemeente_code + gemeente_provincie_map).
-    - checklist_links: explicit-link markers (currently empty — S04 wires
-      this up with ChecklistProgress aggregation across users).
+    - checklist_links: ChecklistLinksBundle with per-item org-wide attribution
+      (checked_by + linked_documents for each item, aggregated across org
+      users via _aggregate_checklist_links).
     """
     return await cascade_for_parcel(
         parcel_id=parcel_id,
