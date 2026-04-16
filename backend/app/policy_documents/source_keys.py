@@ -9,14 +9,20 @@ the existing usePolicyDocuments callers and production DB values.
 """
 
 from dataclasses import dataclass
+from typing import Literal
+
+SourceCategory = Literal[
+    "ruimtelijk", "juridisch", "financieel", "duurzaamheid", "monitoring"
+]
+SourceStatus = Literal["live", "roadmap"]
 
 
 @dataclass(frozen=True)
 class SourceKeyEntry:
     key: str
     label: str
-    category: str  # 'ruimtelijk' | 'juridisch' | 'financieel' | 'duurzaamheid' | 'monitoring'
-    status: str  # 'live' | 'roadmap'
+    category: SourceCategory
+    status: SourceStatus
 
 
 LANDELIJK_DATA_SOURCES: list[SourceKeyEntry] = [
