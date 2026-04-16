@@ -17,6 +17,8 @@ from app.policy_documents.admin_schemas import (
     AdminPolicyOverviewResponse,
     AdminPolicyOverviewRow,
     AdminPolicyOverviewTotals,
+    AdminPolicyVersionRow,
+    AdminPolicyVersionsResponse,
 )
 from app.policy_documents.source_keys import (
     get_source_key_label,
@@ -508,4 +510,60 @@ async def fetch_admin_overview(db: AsyncSession) -> AdminPolicyOverviewResponse:
         provinciaal=buckets["provincie"],
         gemeentelijk=buckets["gemeente"],
         totals=totals,
+    )
+
+
+async def fetch_admin_versions(
+    entity_type: str,
+    entity_code: str,
+    source_key: str,
+    db: AsyncSession,
+) -> AdminPolicyVersionsResponse:
+    """Return all versions of a single (entity_type, entity_code, source_key) slot.
+
+    Newest first. Used by the admin UI when a row is expanded.
+    """
+    stmt = (
+        select(
+            PolicyDocument.id,
+            PolicyDocument.version_number,
+            PolicyDocument.filename,
+            PolicyDocument.file_size,
+            PolicyDocument.content_type,
+            PolicyDocument.created_at,
+            User.full_name,
+            User.email,
+        )
+        .join(User, User.id == PolicyDocument.uploaded_by_user_id)
+        .where(
+            PolicyDocument.entity_type == entity_type,
+            PolicyDocument.entity_code == entity_code,
+            PolicyDocument.source_key == source_key,
+            PolicyDocument.is_global.is_(True),
+        )
+        .order_by(PolicyDocument.version_number.desc())
+    )
+
+    rows = (await db.execute(stmt)).all()
+    versions = [
+        AdminPolicyVersionRow(
+            id=r.id,
+            version_number=r.version_number,
+            filename=r.filename,
+            file_size=r.file_size,
+            content_type=r.content_type,
+            uploaded_at=r.created_at,
+            uploader_name=r.full_name or r.email,
+        )
+        for r in rows
+    ]
+
+    source_label = get_source_key_label(entity_type, source_key) or source_key
+
+    return AdminPolicyVersionsResponse(
+        entity_type=entity_type,
+        entity_code=entity_code,
+        source_key=source_key,
+        source_key_label=source_label,
+        versions=versions,
     )
