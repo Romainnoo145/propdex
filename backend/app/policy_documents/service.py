@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.models.gemeente_provincie_map import GemeenteProvincieMap
 from app.models.policy_document import PolicyDocument
+from app.policy_documents.source_keys import is_valid_source_key
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,8 @@ def validate_upload(
         return f"Invalid entity_type: {entity_type}. Must be one of: {', '.join(sorted(VALID_ENTITY_TYPES))}"
     if not source_key or len(source_key) > 50:
         return "source_key is required and must be <= 50 characters"
+    if not is_valid_source_key(entity_type, source_key):
+        return f"source_key '{source_key}' is niet toegestaan voor niveau '{entity_type}'"
     if content_type not in ALLOWED_CONTENT_TYPES:
         return f"Unsupported file type: {content_type}. Allowed: PDF, DOCX, XLSX, JPEG, PNG"
     if file_size > MAX_FILE_SIZE:
