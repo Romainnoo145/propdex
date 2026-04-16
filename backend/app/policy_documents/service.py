@@ -2,15 +2,26 @@
 
 import logging
 import uuid
+from datetime import datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.models.area_scan import AreaScan
 from app.models.gemeente_provincie_map import GemeenteProvincieMap
 from app.models.policy_document import PolicyDocument
-from app.policy_documents.source_keys import is_valid_source_key
+from app.models.user import User
+from app.policy_documents.admin_schemas import (
+    AdminPolicyOverviewResponse,
+    AdminPolicyOverviewRow,
+    AdminPolicyOverviewTotals,
+)
+from app.policy_documents.source_keys import (
+    get_source_key_label,
+    is_valid_source_key,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -285,3 +296,216 @@ async def delete_document(
     await db.delete(doc)
     await db.commit()
     return True
+
+
+# ---------------------------------------------------------------------------
+# M045/S05: Admin overview (vendor-only policy document catalog)
+# ---------------------------------------------------------------------------
+
+# Provincie lookup — CBS PV codes → names. Seeded from the fixed set of 12 NL
+# provinces. NOT queried from DB because there is no provincie table (only
+# gemeente_provincie_map, which maps code → code).
+_PROVINCIE_NAMES: dict[str, str] = {
+    "PV20": "Groningen",
+    "PV21": "Fryslân",
+    "PV22": "Drenthe",
+    "PV23": "Overijssel",
+    "PV24": "Flevoland",
+    "PV25": "Gelderland",
+    "PV26": "Utrecht",
+    "PV27": "Noord-Holland",
+    "PV28": "Zuid-Holland",
+    "PV29": "Zeeland",
+    "PV30": "Noord-Brabant",
+    "PV31": "Limburg",
+}
+
+
+def _is_auto_ingested(filename: str) -> bool:
+    """True iff filename matches S06 KOOP/CVDR auto-ingest prefix."""
+    return filename.startswith("koop-cvdr-")
+
+
+async def _gemeente_name_map(db: AsyncSession) -> dict[str, str]:
+    """Return a best-effort {gemeente_code: gemeente_naam} map.
+
+    There is no canonical gemeente-code→name reference table in this
+    codebase — `gemeente_provincie_map` only stores code↔code. The
+    `area_scans` table stores the gemeente_naam alongside gemeente_code
+    for every scan run, so we derive names from there for any gemeente
+    that has ever been scanned. Gemeenten that have policy docs uploaded
+    but no scan yet fall back to their raw code (e.g. 'GM0983').
+
+    Single query — not N+1. Returns at most ~342 rows.
+    """
+    stmt = (
+        select(AreaScan.gemeente_code, AreaScan.gemeente_naam)
+        .distinct()
+        .where(AreaScan.gemeente_code.is_not(None))
+    )
+    rows = (await db.execute(stmt)).all()
+    return {row.gemeente_code: row.gemeente_naam for row in rows}
+
+
+def _resolve_entity_display_name(
+    entity_type: str,
+    entity_code: str,
+    gemeente_names: dict[str, str],
+) -> str:
+    """Resolve human-readable name for an (entity_type, entity_code) pair.
+
+    - 'landelijk' → always 'Nederland'
+    - 'provincie' → _PROVINCIE_NAMES lookup (unknown PV codes fall back to entity_code)
+    - 'gemeente' → best-effort gemeente_names map (sourced from area_scans);
+      falls back to entity_code when the gemeente has never been scanned.
+    """
+    if entity_type == "landelijk":
+        return "Nederland"
+    if entity_type == "provincie":
+        return _PROVINCIE_NAMES.get(entity_code, entity_code)
+    if entity_type == "gemeente":
+        return gemeente_names.get(entity_code, entity_code)
+    return entity_code
+
+
+async def fetch_admin_overview(db: AsyncSession) -> AdminPolicyOverviewResponse:
+    """Return admin overview grouped by cascade level. Latest version per slot.
+
+    M045/S05 T03. Vendor-only data fetch (caller enforces the vendor guard).
+
+    Strategy:
+      1. DISTINCT ON (entity_type, entity_code, source_key) picks the newest
+         version per slot (Postgres-specific, matches S02 cascade_service).
+      2. A separate count subquery provides total-versions-per-slot.
+      3. Uploader name comes from an INNER JOIN with users.
+      4. Display names are resolved in-process from two cheap lookups:
+         hardcoded provincie dict + one-shot area_scans name map.
+      5. In-process grouping by entity_type (landelijk / provincie / gemeente).
+    """
+    # 1. DISTINCT ON latest versions (CTE)
+    latest_cte = (
+        select(
+            PolicyDocument.id.label("latest_id"),
+            PolicyDocument.entity_type,
+            PolicyDocument.entity_code,
+            PolicyDocument.source_key,
+            PolicyDocument.version_number.label("latest_version_number"),
+            PolicyDocument.filename.label("latest_filename"),
+            PolicyDocument.created_at.label("latest_uploaded_at"),
+            PolicyDocument.uploaded_by_user_id.label("uploaded_by_user_id"),
+        )
+        .distinct(
+            PolicyDocument.entity_type,
+            PolicyDocument.entity_code,
+            PolicyDocument.source_key,
+        )
+        .where(PolicyDocument.is_global.is_(True))
+        .order_by(
+            PolicyDocument.entity_type,
+            PolicyDocument.entity_code,
+            PolicyDocument.source_key,
+            PolicyDocument.version_number.desc(),
+        )
+        .cte("latest_policy_docs")
+    )
+
+    # 2. Count subquery — versions per slot
+    count_subq = (
+        select(
+            PolicyDocument.entity_type.label("entity_type"),
+            PolicyDocument.entity_code.label("entity_code"),
+            PolicyDocument.source_key.label("source_key"),
+            func.count(PolicyDocument.id).label("version_count"),
+        )
+        .where(PolicyDocument.is_global.is_(True))
+        .group_by(
+            PolicyDocument.entity_type,
+            PolicyDocument.entity_code,
+            PolicyDocument.source_key,
+        )
+        .subquery()
+    )
+
+    # 3. Join latest with user + version count
+    stmt = (
+        select(
+            latest_cte.c.latest_id,
+            latest_cte.c.entity_type,
+            latest_cte.c.entity_code,
+            latest_cte.c.source_key,
+            latest_cte.c.latest_version_number,
+            latest_cte.c.latest_filename,
+            latest_cte.c.latest_uploaded_at,
+            User.full_name,
+            User.email,
+            count_subq.c.version_count,
+        )
+        .join(User, User.id == latest_cte.c.uploaded_by_user_id)
+        .join(
+            count_subq,
+            (count_subq.c.entity_type == latest_cte.c.entity_type)
+            & (count_subq.c.entity_code == latest_cte.c.entity_code)
+            & (count_subq.c.source_key == latest_cte.c.source_key),
+        )
+    )
+
+    rows = (await db.execute(stmt)).all()
+
+    # Resolve gemeente names once (cheap single query), not per row.
+    gemeente_names = await _gemeente_name_map(db)
+
+    buckets: dict[str, list[AdminPolicyOverviewRow]] = {
+        "landelijk": [],
+        "provincie": [],
+        "gemeente": [],
+    }
+    latest_any: datetime | None = None
+
+    for row in rows:
+        display_name = _resolve_entity_display_name(
+            row.entity_type, row.entity_code, gemeente_names,
+        )
+        source_label = (
+            get_source_key_label(row.entity_type, row.source_key)
+            or row.source_key
+        )
+        uploader_name = row.full_name or row.email
+
+        admin_row = AdminPolicyOverviewRow(
+            entity_type=row.entity_type,
+            entity_code=row.entity_code,
+            entity_display_name=display_name,
+            source_key=row.source_key,
+            source_key_label=source_label,
+            latest_version_id=row.latest_id,
+            latest_version_number=row.latest_version_number,
+            latest_filename=row.latest_filename,
+            latest_uploaded_at=row.latest_uploaded_at,
+            latest_uploader_name=uploader_name,
+            version_count=row.version_count,
+            auto_ingest=_is_auto_ingested(row.latest_filename),
+        )
+        if row.entity_type in buckets:
+            buckets[row.entity_type].append(admin_row)
+
+        if latest_any is None or row.latest_uploaded_at > latest_any:
+            latest_any = row.latest_uploaded_at
+
+    gemeente_count = len({r.entity_code for r in buckets["gemeente"]})
+    totals = AdminPolicyOverviewTotals(
+        total_docs=sum(
+            r.version_count
+            for r in (
+                buckets["landelijk"] + buckets["provincie"] + buckets["gemeente"]
+            )
+        ),
+        total_gemeenten=gemeente_count,
+        latest_upload_at=latest_any,
+    )
+
+    return AdminPolicyOverviewResponse(
+        landelijk=buckets["landelijk"],
+        provinciaal=buckets["provincie"],
+        gemeentelijk=buckets["gemeente"],
+        totals=totals,
+    )
