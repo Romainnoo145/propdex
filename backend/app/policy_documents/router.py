@@ -13,6 +13,10 @@ from app.documents.bundle_schemas import CascadePolicyDocs, PolicyDocumentRead
 from app.middleware.rate_limit import limiter
 from app.models.user import User
 from app.policy_documents import service as svc
+from app.policy_documents.admin_schemas import (
+    AdminPolicyOverviewResponse,
+    AdminPolicyVersionsResponse,
+)
 from app.policy_documents.auto_ingest import ingest_gemeente_policies
 from app.policy_documents.schemas import (
     AutoIngestRequest,
@@ -26,6 +30,37 @@ from app.policy_documents.service import _assert_vendor_org, _resolve_ancestor_c
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/policy-documents", tags=["PolicyDocuments"])
+
+
+# MUST remain above POST /{entity_type}/{entity_code} — FastAPI resolves
+# first-match-wins; 'admin' would otherwise bind to entity_type.
+@router.get(
+    "/admin/overview",
+    response_model=AdminPolicyOverviewResponse,
+)
+async def get_admin_overview(
+    current_user: User = Depends(get_current_superuser),
+    db: AsyncSession = Depends(get_db),
+) -> AdminPolicyOverviewResponse:
+    """Vendor-only admin overview of cascade docs. Grouped by level, latest version per slot."""
+    _assert_vendor_org(current_user.organization_id)
+    return await svc.fetch_admin_overview(db)
+
+
+@router.get(
+    "/admin/versions",
+    response_model=AdminPolicyVersionsResponse,
+)
+async def get_admin_versions(
+    entity_type: str = Query(..., description="landelijk | provincie | gemeente"),
+    entity_code: str = Query(..., description="NL | PV?? | GM????"),
+    source_key: str = Query(..., description="One of SOURCE_KEY_CATALOG entries"),
+    current_user: User = Depends(get_current_superuser),
+    db: AsyncSession = Depends(get_db),
+) -> AdminPolicyVersionsResponse:
+    """Vendor-only full version history for one (entity_type, entity_code, source_key) slot."""
+    _assert_vendor_org(current_user.organization_id)
+    return await svc.fetch_admin_versions(entity_type, entity_code, source_key, db)
 
 
 @router.post(
