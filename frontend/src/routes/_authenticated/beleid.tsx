@@ -69,6 +69,14 @@ import { RaadsinformatieDetailEnriched } from "@/components/configuratie/Raadsin
 import { HuisvestingsverordeningDetailEnriched } from "@/components/configuratie/HuisvestingsverordeningDetailEnriched";
 import { BeschermdErfgoedDetailEnriched } from "@/components/configuratie/BeschermdErfgoedDetailEnriched";
 import { DocumentSourceDetailView } from "@/components/configuratie/DocumentSourceDetailView";
+import {
+  GEMEENTE_DATA_SOURCES as _GEMEENTE,
+  PROVINCIE_DATA_SOURCES as _PROVINCIE,
+  LANDELIJK_DATA_SOURCES as _LANDELIJK,
+  CATEGORY_CONFIG,
+  type DataSourceEntry,
+  type DataSourceCategory,
+} from "@/lib/constants/dataSources";
 
 import type { LucideIcon } from "lucide-react";
 
@@ -142,353 +150,78 @@ const NIVEAU_CONFIGS: NiveauConfig[] = [
   },
 ];
 
-/* ─── Gemeente data source catalog ──────────────────────────── */
+/* ─── Data source icon mapping ──────────────────────────────── */
+/* Shared catalog data lives in @/lib/constants/dataSources; icons are */
+/* local to this surface because they pull from lucide-react. */
 
-/* ─── Shared data source type ───────────────────────────────── */
-
-type DataSourceCategory =
-  | "ruimtelijk"
-  | "juridisch"
-  | "financieel"
-  | "duurzaamheid"
-  | "monitoring";
-
-interface DataSource {
-  key: string;
-  label: string;
-  category: DataSourceCategory;
-  status: "live" | "roadmap";
+interface DataSource extends DataSourceEntry {
   icon: LucideIcon;
-  description: string;
 }
 
-const CATEGORY_CONFIG: { key: DataSourceCategory; label: string }[] = [
-  { key: "ruimtelijk", label: "Ruimtelijk" },
-  { key: "juridisch", label: "Juridisch" },
-  { key: "financieel", label: "Financieel" },
-  { key: "duurzaamheid", label: "Duurzaamheid" },
-  { key: "monitoring", label: "Monitoring" },
-];
+const SOURCE_ICONS: Record<string, LucideIcon> = {
+  // Gemeente — Ruimtelijk
+  omgevingsvisie: TreePine,
+  welstandsnota: Eye,
+  woonvisie: Home,
+  parkeerbeleid: Car,
+  huisvestingsverordening: Home,
+  // Gemeente — Juridisch
+  "vergunning-klimaat": Shield,
+  jurisprudentie: Scale,
+  raadsinformatie: Building2,
+  leegstandsverordening: DoorOpen,
+  // Gemeente — Financieel
+  "gemeentelijke-subsidies": Banknote,
+  grondprijsbeleid: FileText,
+  // Gemeente — Duurzaamheid
+  duurzaamheidsbeleid: Leaf,
+  "beschermd-erfgoed": Landmark,
+  erfgoedverordening: Church,
+  // Gemeente — Monitoring
+  bekendmakingen: Bell,
+  "nieuws-monitoring": Newspaper,
+  // Provincie — Ruimtelijk
+  omgevingsverordening: FileText,
+  "ruimtelijke-visie": TreePine,
+  woondeals: Home,
+  // Provincie — Financieel
+  "provinciale-subsidies": Banknote,
+  // Provincie — Duurzaamheid
+  "natuur-stikstof": Leaf,
+  "erfgoed-provinciaal": Church,
+  "energie-transitie": Leaf,
+  // Provincie — Monitoring
+  mobiliteit: Car,
+  // Landelijk — Ruimtelijk
+  omgevingswet: FileText,
+  "ladder-verstedelijking": TreePine,
+  "nationale-woonagenda": Home,
+  // Landelijk — Juridisch
+  woningwet: Scale,
+  "asbest-sloop": Shield,
+  // Landelijk — Financieel
+  "rvo-subsidies": Banknote,
+  // Landelijk — Duurzaamheid
+  "beng-energieprestatie": Leaf,
+  "stikstof-nationaal": TreePine,
+  // Landelijk — Monitoring
+  "rijksbeleid-monitoring": Bell,
+};
 
-/* ─── Gemeente data source catalog ──────────────────────────── */
+const GEMEENTE_DATA_SOURCES: DataSource[] = _GEMEENTE.map((s) => ({
+  ...s,
+  icon: SOURCE_ICONS[s.key] ?? FileText,
+}));
 
-const GEMEENTE_DATA_SOURCES: DataSource[] = [
-  // Ruimtelijk
-  {
-    key: "omgevingsvisie",
-    label: "Omgevingsvisie",
-    category: "ruimtelijk",
-    status: "roadmap",
-    icon: TreePine,
-    description:
-      "Langetermijnvisie op de leefomgeving — ontwikkelrichting, verdichtingsgebieden.",
-  },
-  {
-    key: "welstandsnota",
-    label: "Welstandsnota",
-    category: "ruimtelijk",
-    status: "roadmap",
-    icon: Eye,
-    description:
-      "Welstandseisen per gebied: materiaalgebruik, kleurschema, bouwhoogte.",
-  },
-  {
-    key: "woonvisie",
-    label: "Woonvisie",
-    category: "ruimtelijk",
-    status: "roadmap",
-    icon: Home,
-    description:
-      "Woningbouwprogramma: aantallen per segment, doelgroepen, prioriteitsgebieden.",
-  },
-  {
-    key: "parkeerbeleid",
-    label: "Parkeerbeleid",
-    category: "ruimtelijk",
-    status: "roadmap",
-    icon: Car,
-    description: "Parkeernormen per woningtype en stedelijkheidszone.",
-  },
-  {
-    key: "huisvestingsverordening",
-    label: "Huisvestingsverordening",
-    category: "ruimtelijk",
-    status: "live",
-    icon: Home,
-    description: "Regels voor woningvorming, splitsing en onttrekking.",
-  },
-  // Juridisch
-  {
-    key: "vergunning-klimaat",
-    label: "Vergunning-klimaat",
-    category: "juridisch",
-    status: "live",
-    icon: Shield,
-    description:
-      "Vergunningsaanvragen en besluiten — tempo, goedkeuringspercentage en trends.",
-  },
-  {
-    key: "jurisprudentie",
-    label: "Jurisprudentie & AI-analyse",
-    category: "juridisch",
-    status: "live",
-    icon: Scale,
-    description: "Relevante rechtszaken met AI-analyse van uitspraken.",
-  },
-  {
-    key: "raadsinformatie",
-    label: "Raadsinformatie",
-    category: "juridisch",
-    status: "live",
-    icon: Building2,
-    description:
-      "Gemeenteraadsvergaderingen, moties en besluiten over ruimtelijke ordening.",
-  },
-  {
-    key: "leegstandsverordening",
-    label: "Leegstandsverordening",
-    category: "juridisch",
-    status: "roadmap",
-    icon: DoorOpen,
-    description:
-      "Regels voor leegstandsmeldplicht — indicator voor transformatiekansen.",
-  },
-  // Financieel
-  {
-    key: "gemeentelijke-subsidies",
-    label: "Gemeentelijke subsidies",
-    category: "financieel",
-    status: "roadmap",
-    icon: Banknote,
-    description:
-      "Gemeente-specifieke subsidies voor woningbouw en verduurzaming.",
-  },
-  {
-    key: "grondprijsbeleid",
-    label: "Grondprijsbeleid",
-    category: "financieel",
-    status: "roadmap",
-    icon: FileText,
-    description:
-      "Gemeentelijke grondprijzen per bestemming uit de grondprijzenbrief.",
-  },
-  // Duurzaamheid
-  {
-    key: "duurzaamheidsbeleid",
-    label: "Duurzaamheidsbeleid",
-    category: "duurzaamheid",
-    status: "roadmap",
-    icon: Leaf,
-    description: "Aanvullende duurzaamheidseisen: gasloos, BENG, groene daken.",
-  },
-  {
-    key: "beschermd-erfgoed",
-    label: "Beschermd erfgoed",
-    category: "duurzaamheid",
-    status: "live",
-    icon: Landmark,
-    description:
-      "Rijksmonumenten en beschermde stadsgezichten via het RCE-register.",
-  },
-  {
-    key: "erfgoedverordening",
-    label: "Erfgoedverordening",
-    category: "duurzaamheid",
-    status: "roadmap",
-    icon: Church,
-    description: "Lokale gemeentelijke monumenten — eigen beschermingsregime.",
-  },
-  // Monitoring
-  {
-    key: "bekendmakingen",
-    label: "Bekendmakingen monitoring",
-    category: "monitoring",
-    status: "live",
-    icon: Bell,
-    description: "Automatische monitoring van officiële bekendmakingen.",
-  },
-  {
-    key: "nieuws-monitoring",
-    label: "Nieuws & beleidsmonitoring",
-    category: "monitoring",
-    status: "roadmap",
-    icon: Newspaper,
-    description:
-      "Automatische signalering van beleidswijzigingen en raadsbesluiten.",
-  },
-];
+const PROVINCIE_DATA_SOURCES: DataSource[] = _PROVINCIE.map((s) => ({
+  ...s,
+  icon: SOURCE_ICONS[s.key] ?? FileText,
+}));
 
-/* ─── Province data source catalog ──────────────────────────── */
-
-const PROVINCIE_DATA_SOURCES: DataSource[] = [
-  // Ruimtelijk
-  {
-    key: "omgevingsverordening",
-    label: "Omgevingsverordening",
-    category: "ruimtelijk",
-    status: "roadmap",
-    icon: FileText,
-    description:
-      "Provinciale regels voor ruimtegebruik, bouwhoogtes, beschermde gebieden.",
-  },
-  {
-    key: "ruimtelijke-visie",
-    label: "Provinciale omgevingsvisie",
-    category: "ruimtelijk",
-    status: "roadmap",
-    icon: TreePine,
-    description:
-      "Langetermijnvisie op ruimtelijke ontwikkeling, verstedelijking en landschap.",
-  },
-  {
-    key: "woondeals",
-    label: "Woondeals & woningbouwafspraken",
-    category: "ruimtelijk",
-    status: "roadmap",
-    icon: Home,
-    description:
-      "Afspraken over woningbouwaantallen en versnellingslocaties per regio.",
-  },
-  // Financieel
-  {
-    key: "provinciale-subsidies",
-    label: "Provinciale subsidies",
-    category: "financieel",
-    status: "roadmap",
-    icon: Banknote,
-    description:
-      "Subsidies voor verduurzaming, transformatie en woningbouw vanuit de provincie.",
-  },
-  // Duurzaamheid
-  {
-    key: "natuur-stikstof",
-    label: "Natuur & stikstof",
-    category: "duurzaamheid",
-    status: "roadmap",
-    icon: Leaf,
-    description:
-      "Natura 2000, stikstofbeleid en beperkingen voor bouw nabij natuurgebieden.",
-  },
-  {
-    key: "erfgoed-provinciaal",
-    label: "Provinciaal erfgoed",
-    category: "duurzaamheid",
-    status: "roadmap",
-    icon: Church,
-    description:
-      "Provinciale monumentenlijst en cultuurhistorische waardenkaart.",
-  },
-  {
-    key: "energie-transitie",
-    label: "Energietransitie",
-    category: "duurzaamheid",
-    status: "roadmap",
-    icon: Leaf,
-    description:
-      "Regionale energiestrategie (RES), zoekgebieden wind/zon, warmtenetten.",
-  },
-  // Monitoring
-  {
-    key: "mobiliteit",
-    label: "Mobiliteitsbeleid",
-    category: "monitoring",
-    status: "roadmap",
-    icon: Car,
-    description:
-      "OV-knooppunten, bereikbaarheid en mobiliteitstransitie per regio.",
-  },
-];
-
-/* ─── Landelijk data source catalog ─────────────────────────── */
-
-const LANDELIJK_DATA_SOURCES: DataSource[] = [
-  // Ruimtelijk
-  {
-    key: "omgevingswet",
-    label: "Omgevingswet & Bbl",
-    category: "ruimtelijk",
-    status: "live",
-    icon: FileText,
-    description:
-      "Bouwbesluit, vergunningvrij bouwen, procedures onder de Omgevingswet.",
-  },
-  {
-    key: "ladder-verstedelijking",
-    label: "Ladder duurzame verstedelijking",
-    category: "ruimtelijk",
-    status: "roadmap",
-    icon: TreePine,
-    description:
-      "Verplichte onderbouwing bij nieuwe woningbouwplannen buiten bestaand stedelijk gebied.",
-  },
-  {
-    key: "nationale-woonagenda",
-    label: "Nationale Woonagenda",
-    category: "ruimtelijk",
-    status: "roadmap",
-    icon: Home,
-    description:
-      "Volkshuisvestingsprogramma, woningbouwtargets en versnellingsafspraken.",
-  },
-  // Juridisch
-  {
-    key: "woningwet",
-    label: "Woningwet & corporatieregels",
-    category: "juridisch",
-    status: "roadmap",
-    icon: Scale,
-    description:
-      "Regels voor sociale huur, DAEB/niet-DAEB scheiding, markttoets.",
-  },
-  {
-    key: "asbest-sloop",
-    label: "Asbest & sloopregels",
-    category: "juridisch",
-    status: "roadmap",
-    icon: Shield,
-    description:
-      "Inventarisatieplicht, saneringsregels bij renovatie en transformatie.",
-  },
-  // Financieel
-  {
-    key: "rvo-subsidies",
-    label: "RVO subsidies & financiering",
-    category: "financieel",
-    status: "live",
-    icon: Banknote,
-    description:
-      "Woningbouwimpuls, SSEB, volkshuisvestingsfonds en andere rijkssubsidies via RVO.",
-  },
-  // Duurzaamheid
-  {
-    key: "beng-energieprestatie",
-    label: "BENG & energieprestatie",
-    category: "duurzaamheid",
-    status: "roadmap",
-    icon: Leaf,
-    description:
-      "Eisen nieuwbouw energieprestatie, energielabel verplichting, EPBD-richtlijn.",
-  },
-  {
-    key: "stikstof-nationaal",
-    label: "Stikstof & Natura 2000",
-    category: "duurzaamheid",
-    status: "roadmap",
-    icon: TreePine,
-    description:
-      "PAS-melding, AERIUS-berekening, bouwvrijstelling status en procedures.",
-  },
-  // Monitoring
-  {
-    key: "rijksbeleid-monitoring",
-    label: "Rijksbeleid monitoring",
-    category: "monitoring",
-    status: "roadmap",
-    icon: Bell,
-    description:
-      "Automatische signalering van wijzigingen in nationale wet- en regelgeving.",
-  },
-];
+const LANDELIJK_DATA_SOURCES: DataSource[] = _LANDELIJK.map((s) => ({
+  ...s,
+  icon: SOURCE_ICONS[s.key] ?? FileText,
+}));
 
 /* ─── Processed types ───────────────────────────────────────── */
 
