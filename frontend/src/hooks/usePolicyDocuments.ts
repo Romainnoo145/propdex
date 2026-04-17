@@ -17,6 +17,7 @@ export interface PolicyDocument {
   content_type: string
   file_size: number
   status: string
+  version_number: number
   ai_summary: string | null
   created_at: string
   updated_at: string
