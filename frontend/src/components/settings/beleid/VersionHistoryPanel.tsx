@@ -14,8 +14,13 @@ interface Props {
   entityCode: string
   sourceKey: string
   latestVersionNumber: number
-  onView: (versionId: string) => void
-  onDownload: (versionId: string, filename: string) => void
+  onView: (versionId: string, entityType: string, entityCode: string) => void
+  onDownload: (
+    versionId: string,
+    filename: string,
+    entityType: string,
+    entityCode: string,
+  ) => void
 }
 
 const PANEL_BASE =
@@ -78,14 +83,14 @@ export function VersionHistoryPanel({
           <div className="flex gap-1 shrink-0">
             <button
               type="button"
-              onClick={() => onView(v.id)}
+              onClick={() => onView(v.id, entityType, entityCode)}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-[#EAEFEF] text-[10px] font-bold uppercase tracking-[0.05em] text-[#0E1111] hover:bg-[#F2F6F3]"
             >
               <Eye size={11} /> Bekijk
             </button>
             <button
               type="button"
-              onClick={() => onDownload(v.id, v.filename)}
+              onClick={() => onDownload(v.id, v.filename, entityType, entityCode)}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-[#EAEFEF] text-[10px] font-bold uppercase tracking-[0.05em] text-[#0E1111] hover:bg-[#F2F6F3]"
             >
               <Download size={11} /> Download

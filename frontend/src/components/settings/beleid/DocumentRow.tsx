@@ -17,8 +17,13 @@ interface Props {
   row: AdminPolicyOverviewRow
   isExpanded: boolean
   onToggle: () => void
-  onView: (versionId: string) => void
-  onDownload: (versionId: string, filename: string) => void
+  onView: (versionId: string, entityType: string, entityCode: string) => void
+  onDownload: (
+    versionId: string,
+    filename: string,
+    entityType: string,
+    entityCode: string,
+  ) => void
 }
 
 export function DocumentRow({ row, isExpanded, onToggle, onView, onDownload }: Props) {
@@ -52,7 +57,7 @@ export function DocumentRow({ row, isExpanded, onToggle, onView, onDownload }: P
           <span
             role="button"
             tabIndex={0}
-            onClick={stopAnd(() => onView(row.latest_version_id))}
+            onClick={stopAnd(() => onView(row.latest_version_id, row.entity_type, row.entity_code))}
             className="inline-flex items-center justify-center size-[26px] rounded-md text-slate-500 hover:bg-white hover:text-[#0E1111] cursor-pointer"
             title="Bekijk laatste versie"
           >
@@ -61,7 +66,14 @@ export function DocumentRow({ row, isExpanded, onToggle, onView, onDownload }: P
           <span
             role="button"
             tabIndex={0}
-            onClick={stopAnd(() => onDownload(row.latest_version_id, row.latest_filename))}
+            onClick={stopAnd(() =>
+              onDownload(
+                row.latest_version_id,
+                row.latest_filename,
+                row.entity_type,
+                row.entity_code,
+              ),
+            )}
             className="inline-flex items-center justify-center size-[26px] rounded-md text-slate-500 hover:bg-white hover:text-[#0E1111] cursor-pointer"
             title="Download laatste versie"
           >
