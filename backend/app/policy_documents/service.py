@@ -14,6 +14,7 @@ from app.models.gemeente_provincie_map import GemeenteProvincieMap
 from app.models.policy_document import PolicyDocument
 from app.models.user import User
 from app.policy_documents.admin_schemas import (
+    AdminGemeenteEntry,
     AdminPolicyOverviewResponse,
     AdminPolicyOverviewRow,
     AdminPolicyOverviewTotals,
@@ -567,3 +568,30 @@ async def fetch_admin_versions(
         source_key_label=source_label,
         versions=versions,
     )
+
+
+async def fetch_admin_gemeenten(db: AsyncSession) -> list[AdminGemeenteEntry]:
+    """Return all 342 gemeenten for the admin upload dropdown.
+
+    Names are resolved opportunistically from area_scans (same approach as
+    fetch_admin_overview). Gemeenten never scanned fall back to the raw
+    GM-code as their display name. Sorted by display name.
+    """
+    stmt = select(
+        GemeenteProvincieMap.gemeente_code,
+        GemeenteProvincieMap.provincie_code,
+    )
+    rows = (await db.execute(stmt)).all()
+
+    gemeente_names = await _gemeente_name_map(db)
+
+    entries = [
+        AdminGemeenteEntry(
+            code=row.gemeente_code,
+            naam=gemeente_names.get(row.gemeente_code, row.gemeente_code),
+            provincie_code=row.provincie_code,
+        )
+        for row in rows
+    ]
+    entries.sort(key=lambda e: e.naam.lower())
+    return entries

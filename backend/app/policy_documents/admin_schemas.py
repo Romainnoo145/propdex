@@ -56,3 +56,11 @@ class AdminPolicyVersionsResponse(BaseModel):
     source_key: str
     source_key_label: str
     versions: list[AdminPolicyVersionRow] = []  # newest first
+
+
+class AdminGemeenteEntry(BaseModel):
+    """One gemeente option for the admin upload dropdown."""
+
+    code: str  # e.g. "GM0983"
+    naam: str  # best-effort display name, falls back to code if never scanned
+    provincie_code: str  # e.g. "PV31"

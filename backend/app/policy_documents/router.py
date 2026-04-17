@@ -14,6 +14,7 @@ from app.middleware.rate_limit import limiter
 from app.models.user import User
 from app.policy_documents import service as svc
 from app.policy_documents.admin_schemas import (
+    AdminGemeenteEntry,
     AdminPolicyOverviewResponse,
     AdminPolicyVersionsResponse,
 )
@@ -61,6 +62,19 @@ async def get_admin_versions(
     """Vendor-only full version history for one (entity_type, entity_code, source_key) slot."""
     _assert_vendor_org(current_user.organization_id)
     return await svc.fetch_admin_versions(entity_type, entity_code, source_key, db)
+
+
+@router.get(
+    "/admin/gemeenten",
+    response_model=list[AdminGemeenteEntry],
+)
+async def get_admin_gemeenten(
+    current_user: User = Depends(get_current_superuser),
+    db: AsyncSession = Depends(get_db),
+) -> list[AdminGemeenteEntry]:
+    """Vendor-only dropdown source for the upload modal — all 342 gemeenten."""
+    _assert_vendor_org(current_user.organization_id)
+    return await svc.fetch_admin_gemeenten(db)
 
 
 @router.post(
