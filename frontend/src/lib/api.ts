@@ -92,6 +92,20 @@ function extractErrorMessage(error: Record<string, unknown>, fallback: string): 
   return fallback
 }
 
+/**
+ * API error that carries the HTTP status of the failing response, so hooks
+ * can make retry decisions without having to parse the error message. Used
+ * e.g. by usePolicyDocuments to fail fast on 404 empty-slot responses.
+ */
+export class ApiError extends Error {
+  readonly status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
 export async function apiFetch<T>(
   url: string,
   options: RequestInit & { accessToken: string | null }
@@ -127,7 +141,10 @@ export async function apiFetch<T>(
     const error = await response
       .json()
       .catch(() => ({ detail: `Request failed with status ${response.status}` }))
-    throw new Error(extractErrorMessage(error, `Request failed with status ${response.status}`))
+    throw new ApiError(
+      response.status,
+      extractErrorMessage(error, `Request failed with status ${response.status}`),
+    )
   }
 
   // 204 No Content — nothing to parse

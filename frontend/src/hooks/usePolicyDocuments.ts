@@ -3,7 +3,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { apiFetch } from '@/lib/api'
+import { ApiError, apiFetch } from '@/lib/api'
 import { useAuth } from '@/lib/auth/useAuth'
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -74,6 +74,13 @@ export function usePolicyDocuments(
     enabled: enabled && !!accessToken,
     staleTime: 30_000,
     refetchInterval,
+    // Empty policy slots legitimately return 404 on some deployments (older
+    // backend behaviour + per-slot enumeration on the Beleid page). Skip the
+    // default 3-retry storm so one 404 means one roundtrip, not four.
+    retry: (failureCount, error) => {
+      if (error instanceof ApiError && error.status === 404) return false
+      return failureCount < 3
+    },
   })
 }
 
