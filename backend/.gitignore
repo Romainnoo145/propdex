@@ -1,0 +1,13 @@
+# Backend-local overrides for Railway upload (root .gitignore excludes `data/`
+# which removes our gemeente_provincie_map fixture during `railway up`). The
+# negation below restores it when railway re-anchors paths under `./backend`.
+!app/data/
+!app/data/*
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+tests/__pycache__/
