@@ -19,6 +19,7 @@ class PolicyDocumentResponse(BaseModel):
     content_type: str
     file_size: int
     status: str
+    version_number: int
     ai_summary: str | None = None
     created_at: datetime
     updated_at: datetime
