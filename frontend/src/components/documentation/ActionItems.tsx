@@ -5,9 +5,9 @@
  * modal detail on click, no colored priority cards.
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ExternalLink, Plug, Phone, MapPin, AlertTriangle, X } from 'lucide-react'
+import { Check, ExternalLink, Plug, Phone, MapPin, AlertTriangle, X } from 'lucide-react'
 import { staggerContainer, fadeUp } from '@/lib/animations'
 
 /* ── Types ─────────────────────────────────────────────────── */
@@ -23,6 +23,8 @@ interface ActionItem {
   priority: Priority
   contact?: string
   url?: string
+  /** Shipped — show with a green Done badge, kept visible for history. */
+  done?: boolean
 }
 
 /* ── Config ────────────────────────────────────────────────── */
@@ -49,9 +51,10 @@ const ITEMS: ActionItem[] = [
   { id: 'von-prijs', title: 'VON-prijs voorspelling per wijk', description: 'Op basis van NVM transactiedata de verwachte verkoopprijs per woningtype voorspellen. Vereist NVM API access.', category: 'roadmap', priority: 'middel' },
   { id: 'wws-punten', title: 'WWS huurpunten calculator', description: 'Automatisch berekenen of een woning in het vrije of gereguleerde huursegment valt op basis van oppervlakte, energielabel, WOZ-waarde.', category: 'roadmap', priority: 'middel' },
   { id: 'rendement-calc', title: 'Rendementscalculator bouwen', description: 'Bruto/netto rendement, belastingdruk (Box 1/3/BV), terugverdientijd. Kan met huidige data + configureerbare aannames.', category: 'roadmap', priority: 'laag' },
-  { id: 'welstandsnota', title: 'Welstandsnota AI-parsing', description: 'Gemeentelijke welstandsnota\'s zijn alleen als PDF beschikbaar. AI-parsing om automatisch de belangrijkste eisen per gebied te extraheren.', category: 'roadmap', priority: 'laag' },
-  { id: 'omgevingsvisie', title: 'Omgevingsvisie per gemeente', description: 'Elke gemeente publiceert een omgevingsvisie (verplicht sinds Omgevingswet 2024). PDF-parsing of gestructureerde data extractie.', category: 'roadmap', priority: 'laag' },
-  { id: 'parkeerbeleid', title: 'Parkeernormen per gemeente', description: 'CROW-381 parkeernormen variëren per gemeente. Automatisch ophalen of handmatig invoeren. Impact op bouwkosten.', category: 'roadmap', priority: 'laag' },
+  { id: 'welstandsnota', title: 'Welstandsnota AI-parsing', description: 'Shipped in M045/S05. Welstandsnota PDFs worden via /instellingen/beleid-beheer geüpload en automatisch door Claude samengevat (document_summary_job). Samenvatting zichtbaar in rapport + parcel dossier.', category: 'roadmap', priority: 'laag', done: true },
+  { id: 'omgevingsvisie', title: 'Omgevingsvisie per gemeente', description: 'Shipped in M045/S05 + S06. Omgevingsvisies worden wekelijks auto-geïmporteerd uit KOOP/CVDR voor elke gemeente, plus handmatige upload via admin. AI-summary + cascade-zichtbaarheid op alle relevante surfaces.', category: 'roadmap', priority: 'laag', done: true },
+  { id: 'parkeerbeleid', title: 'Parkeerbeleid — CROW-381 calculator', description: 'PDF-upload van gemeentelijk parkeerbeleid werkt al (source_key parkeerbeleid in admin). Nog te doen: CROW-381 parkeernorm-calculator die op basis van projecttype + wijktype een parkeereis voorspelt. Impact op bouwkosten.', category: 'roadmap', priority: 'laag' },
+  { id: 'raadsinformatie-cache', title: 'Raadsinformatie DB-cache', description: 'De raadsinformatie service gebruikt nu een in-memory dict als cache die bij elke Railway restart verdampt. Migreren naar cache_manager (DB-backed) zodat de eerste hit per gemeente goedkoop is en gedeeld wordt tussen workers. Bundled scope M045/S05, gedeferreerd.', category: 'roadmap', priority: 'laag' },
   { id: 'funda-enrichment', title: 'Funda enrichment draaien', description: 'Het funda-summary endpoint bestaat en de wijkkaart toont de data, maar alle waarden zijn null omdat de funda-enrichment nog niet is uitgevoerd voor enige scan. Enrichment moet handmatig getriggerd worden om looptijd- en prijsmutatiedata te vullen.', category: 'api-config', priority: 'middel' },
   { id: 'chat-model-upgrade', title: 'Verkenner chat model upgrade', description: 'De AI-chat in de Verkenner gebruikt momenteel Haiku, wat matige Nederlandse antwoorden oplevert. Upgrade naar Sonnet voor betere kwaliteit, of vereenvoudig de intent-classificatie om verwarring te verminderen.', category: 'roadmap', priority: 'middel' },
 ]
@@ -76,7 +79,14 @@ function ActionDetailModal({ item, onClose }: { item: ActionItem; onClose: () =>
           <X size={14} />
         </button>
 
-        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#F9A826] mb-1.5">{cat.label}</p>
+        <div className="flex items-center gap-2 mb-1.5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#F9A826]">{cat.label}</p>
+          {item.done && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[#15803d]">
+              <Check size={10} strokeWidth={3} /> Done
+            </span>
+          )}
+        </div>
         <h3 className="text-[18px] font-bold text-[#0E1111] leading-snug pr-10" style={{ textWrap: 'balance' }}>{item.title}</h3>
 
         <p className="mt-3 text-[13px] text-slate-600 leading-relaxed">{item.description}</p>
@@ -175,14 +185,24 @@ export function ActionItems() {
                     key={item.id}
                     onClick={() => setSelected(item)}
                     className={`flex h-full flex-col rounded-[24px] border bg-white px-6 py-5 transition-shadow hover:shadow-md cursor-pointer ${
-                      item.priority === 'hoog' ? 'border-l-[3px] border-l-red-400 border-[#EAEFEF]' : 'border-[#EAEFEF]'
+                      item.done
+                        ? 'border-l-[3px] border-l-[#22c55e] border-[#EAEFEF] opacity-80'
+                        : item.priority === 'hoog'
+                          ? 'border-l-[3px] border-l-red-400 border-[#EAEFEF]'
+                          : 'border-[#EAEFEF]'
                     }`}
                   >
-                    <p className={`text-[10px] font-bold uppercase tracking-[0.12em] mb-1.5 line-clamp-1 ${
-                      item.priority === 'hoog' ? 'text-red-500' : item.priority === 'middel' ? 'text-[#F9A826]' : 'text-slate-400'
-                    }`}>
-                      {item.priority}
-                    </p>
+                    {item.done ? (
+                      <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] mb-1.5 text-[#22c55e]">
+                        <Check size={11} strokeWidth={3} /> Done
+                      </p>
+                    ) : (
+                      <p className={`text-[10px] font-bold uppercase tracking-[0.12em] mb-1.5 line-clamp-1 ${
+                        item.priority === 'hoog' ? 'text-red-500' : item.priority === 'middel' ? 'text-[#F9A826]' : 'text-slate-400'
+                      }`}>
+                        {item.priority}
+                      </p>
+                    )}
                     <h3 className="text-[14px] font-semibold text-[#0E1111] leading-snug">{item.title}</h3>
                     <p className="mt-1.5 text-[13px] text-slate-500 leading-relaxed line-clamp-3">{item.description}</p>
                   </div>
