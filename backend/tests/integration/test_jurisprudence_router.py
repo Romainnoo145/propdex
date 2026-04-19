@@ -338,10 +338,16 @@ async def test_trend_success_empty(async_client: AsyncClient, create_test_user):
 # developer-relevant vergunningstypen (nieuwbouw/sloop/bestemmingswijziging/
 # uitbreiding) feed the succeskans + juridisch_klimaat_score fields.
 #
-# Fixture pattern (from T01.3): 11 rulings = 3 nieuwbouw (2T/1A) + 5 dakopbouw
-# (1T/4A) + 2 milieu (0T/2A) + 1 bestemmingswijziging (1T/0A). Unfiltered this
-# yields succeskans=36 (4 of 11 toegewezen); dev-filtered yields succeskans=75
-# (3 of 4 dev-relevante toegewezen). 39-point delta proves the filter applied.
+# Fixture mirrors the canonical unit test fixture in tests/unit/test_ruling_aggregator.py
+# (test_aggregate_filters_dev_types_only): 13 rulings = 5 nieuwbouw (3T/2A) +
+# 5 dakopbouw (1T/4A) + 2 milieu (0T/2A) + 1 bestemmingswijziging (1T/0A).
+# - Dev-filtered: 6 dev-rulings (4T/2A) → succeskans=67, klimaat=67
+# - Unfiltered:   13 rulings (5T/8A)    → succeskans=38, klimaat=38
+# 29-point delta proves the dev-type filter applied.
+# Plan-divergence note: S01-PLAN.md T01.3 originally specified 11 rulings with
+# 4 dev-types; below MIN_DEV_RULINGS_FOR_AGGREGATION=5 that yields missing=True
+# not succeskans=75. Unit test was corrected during T02 GREEN; integration test
+# now mirrors that canonical fixture.
 
 
 def _make_ruling(
@@ -373,17 +379,19 @@ def _make_ruling(
     )
 
 
-async def _seed_mixed_11_rulings(db: AsyncSession, gemeente: str) -> None:
-    """Seed the canonical 11-ruling mixed fixture from S01-PLAN.md T01.3.
+async def _seed_canonical_mixed_rulings(db: AsyncSession, gemeente: str) -> None:
+    """Seed the canonical 13-ruling mixed fixture (matches unit test fixture).
 
-    3 nieuwbouw (2T/1A) + 5 dakopbouw (1T/4A) + 2 milieu (0T/2A) + 1 bestemmingswijziging (1T/0A)
-    → unfiltered: 4T/11 = 36; dev-filtered: 3T/4 = 75.
+    5 nieuwbouw (3T/2A) + 5 dakopbouw (1T/4A) + 2 milieu (0T/2A) + 1 bestemmingswijziging (1T/0A)
+    → dev-filtered: 4T/6 dev-rulings = 67; unfiltered: 5T/13 = 38.
     """
     rulings = [
-        # 3 nieuwbouw: 2 toegewezen, 1 afgewezen
+        # 5 nieuwbouw: 3 toegewezen, 2 afgewezen
         _make_ruling("ECLI:NL:TEST:2024:N1", gemeente, "toegewezen", "nieuwbouw"),
         _make_ruling("ECLI:NL:TEST:2024:N2", gemeente, "toegewezen", "nieuwbouw"),
-        _make_ruling("ECLI:NL:TEST:2024:N3", gemeente, "afgewezen", "nieuwbouw"),
+        _make_ruling("ECLI:NL:TEST:2024:N3", gemeente, "toegewezen", "nieuwbouw"),
+        _make_ruling("ECLI:NL:TEST:2024:N4", gemeente, "afgewezen", "nieuwbouw"),
+        _make_ruling("ECLI:NL:TEST:2024:N5", gemeente, "afgewezen", "nieuwbouw"),
         # 5 dakopbouw: 1 toegewezen, 4 afgewezen
         _make_ruling("ECLI:NL:TEST:2024:D1", gemeente, "toegewezen", "dakopbouw"),
         _make_ruling("ECLI:NL:TEST:2024:D2", gemeente, "afgewezen", "dakopbouw"),
@@ -407,13 +415,13 @@ async def test_analyze_trigger_uses_dev_type_filter(
 ):
     """POST /api/jurisprudence/analyze/{gemeente} must dev-filter the aggregation.
 
-    On the canonical mixed-11 fixture, unfiltered succeskans = 36 (4/11) but
-    dev-filtered succeskans = 75 (3/4). This test asserts the dev-filtered
-    value, which will RED until T04 wires aggregate_dev_type_rulings().
+    On the canonical 13-ruling fixture, unfiltered succeskans=38 (5/13) but
+    dev-filtered succeskans=67 (4/6). Test asserts the dev-filtered value —
+    RED until T04 wires aggregate_dev_type_rulings().
     """
     await create_test_user(email="jur_rm1_trig@example.com")
     token = await _get_auth_token(async_client, "jur_rm1_trig@example.com")
-    await _seed_mixed_11_rulings(test_db, "TestDorp")
+    await _seed_canonical_mixed_rulings(test_db, "TestDorp")
 
     response = await async_client.post(
         "/api/jurisprudence/analyze/TestDorp",
@@ -422,17 +430,17 @@ async def test_analyze_trigger_uses_dev_type_filter(
 
     assert response.status_code == 200
     data = response.json()
-    assert data["vergunnings_succeskans"] == 75, (
-        f"Expected dev-filtered succeskans=75, got {data['vergunnings_succeskans']}. "
-        "If this is 36, the unfiltered aggregation is still in place."
+    assert data["vergunnings_succeskans"] == 67, (
+        f"Expected dev-filtered succeskans=67, got {data['vergunnings_succeskans']}. "
+        "If this is 38, the unfiltered aggregation is still in place."
     )
-    assert data["juridisch_klimaat_score"] == 75, (
-        f"Expected dev-filtered klimaat=75, got {data['juridisch_klimaat_score']}."
+    assert data["juridisch_klimaat_score"] == 67, (
+        f"Expected dev-filtered klimaat=67, got {data['juridisch_klimaat_score']}."
     )
     # analyzed_count counts ALL analyzed rulings; aggregation uses only dev-subset
-    assert data["analyzed_count"] == 11
-    assert data["dev_type_ruling_count"] == 4
-    assert data["total_ruling_count"] == 11
+    assert data["analyzed_count"] == 13
+    assert data["dev_type_ruling_count"] == 6
+    assert data["total_ruling_count"] == 13
     assert data["succeskans_missing"] is False
 
 
@@ -447,7 +455,7 @@ async def test_analyze_status_poll_uses_dev_type_filter(
     """
     await create_test_user(email="jur_rm1_poll@example.com")
     token = await _get_auth_token(async_client, "jur_rm1_poll@example.com")
-    await _seed_mixed_11_rulings(test_db, "TestDorp")
+    await _seed_canonical_mixed_rulings(test_db, "TestDorp")
 
     response = await async_client.get(
         "/api/jurisprudence/analyze/status/TestDorp",
@@ -456,10 +464,10 @@ async def test_analyze_status_poll_uses_dev_type_filter(
 
     assert response.status_code == 200
     data = response.json()
-    assert data["vergunnings_succeskans"] == 75
-    assert data["juridisch_klimaat_score"] == 75
-    assert data["dev_type_ruling_count"] == 4
-    assert data["total_ruling_count"] == 11
+    assert data["vergunnings_succeskans"] == 67
+    assert data["juridisch_klimaat_score"] == 67
+    assert data["dev_type_ruling_count"] == 6
+    assert data["total_ruling_count"] == 13
     assert data["succeskans_missing"] is False
 
 
