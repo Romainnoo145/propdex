@@ -396,6 +396,28 @@ def score_vergunning_succeskans(neighborhood_metrics: dict | None) -> FactorResu
             missing=True,
         )
 
+    # M046/S01 RM-1: sparse-data signaal uit aggregator. Wanneer < 5 developer-
+    # relevante uitspraken in de dataset zitten behandelt de factor dit als
+    # missing — voorkomt dat 1-2 toevallige dev-rulings de 13-gewicht-factor
+    # domineren.
+    if jk.get("missing") is True:
+        dev_count = jk.get("ruling_count_dev_types", 0)
+        total_count = jk.get("ruling_count", 0)
+        return FactorResult(
+            waarde=None, genormaliseerde_score=0.5, gewicht=13,
+            bijdrage=round(0.5 * 13, 4), categorie="potentie",
+            toelichting_kort=f"Onvoldoende developer-relevante uitspraken ({dev_count} van 5 vereist)",
+            toelichting_lang=(
+                f"Op basis van {dev_count} developer-relevante uitspraken (nieuwbouw/"
+                f"sloop/bestemmingswijziging/uitbreiding) uit {total_count} totaal "
+                f"geanalyseerde uitspraken voor deze gemeente. Voor een betrouwbare "
+                f"succeskans-inschatting zijn minimaal 5 developer-relevante uitspraken "
+                f"nodig. De score is op neutraal gezet."
+            ),
+            data_bronnen=["Rechtspraak.nl"],
+            missing=True,
+        )
+
     approval_rate = jk.get("approval_rate", 0.5)
     score = normalize_linear(approval_rate, 0.2, 0.9)
 
@@ -729,6 +751,25 @@ def score_juridisch_klimaat(neighborhood_metrics: dict | None) -> FactorResult:
             bijdrage=round(0.5 * 8, 4), categorie="risico",
             toelichting_kort="Juridisch klimaat onbekend \u2014 onvoldoende data",
             toelichting_lang="Er zijn onvoldoende gegevens om het juridisch klimaat te beoordelen. De risicoscore is op neutraal gezet.",
+            data_bronnen=["Rechtspraak.nl"],
+            missing=True,
+        )
+
+    # M046/S01 RM-1: parallel pad aan score_vergunning_succeskans — sparse
+    # dev-type sample (< 5) degradeert ook de inverse-risico-factor naar neutraal.
+    if jk.get("missing") is True:
+        dev_count = jk.get("ruling_count_dev_types", 0)
+        total_count = jk.get("ruling_count", 0)
+        return FactorResult(
+            waarde=None, genormaliseerde_score=0.5, gewicht=8,
+            bijdrage=round(0.5 * 8, 4), categorie="risico",
+            toelichting_kort=f"Onvoldoende developer-relevante uitspraken voor risicobeoordeling ({dev_count} van 5 vereist)",
+            toelichting_lang=(
+                f"Op basis van {dev_count} developer-relevante uitspraken uit {total_count} "
+                f"totaal geanalyseerde uitspraken voor deze gemeente. Voor een betrouwbare "
+                f"risico-inschatting zijn minimaal 5 developer-relevante uitspraken nodig. "
+                f"De risicoscore is op neutraal gezet."
+            ),
             data_bronnen=["Rechtspraak.nl"],
             missing=True,
         )
