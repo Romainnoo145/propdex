@@ -11,6 +11,7 @@ import anthropic
 from app.ai.prompts import BESTEMMINGSPLAN_PARSING_PROMPT, JURIDISCH_ANALYSE_PROMPT_V2
 from app.ai.schemas import BestemmingsplanParsed, JuridischAnalysisResult
 from app.services.doorlooptijd import extract_relevant_sections
+from app.services.ruling_aggregator import aggregate_dev_type_rulings
 
 logger = logging.getLogger(__name__)
 
@@ -340,27 +341,30 @@ class ClaudeClient:
                 # Parse with placeholder scores — we compute them below
                 partial = json.loads(json_text)
 
-                # Compute vergunnings_succeskans in Python
+                # Dev-type filtered aggregation (M046/S01 RM-1).
+                # ruling_analyses is list[dict] from Claude; each contains both
+                # 'uitkomst' and 'vergunningstype'. None values propagate when
+                # the dev-type sample size is below threshold — consumers check
+                # succeskans_missing before trusting the scores.
                 ruling_analyses = partial.get("ruling_analyses", [])
-                total = max(len(ruling_analyses), 1)
-                toegewezen = sum(
-                    1 for r in ruling_analyses if r.get("uitkomst") == "toegewezen"
-                )
-                afgewezen = sum(
-                    1 for r in ruling_analyses if r.get("uitkomst") == "afgewezen"
-                )
+                aggregation = aggregate_dev_type_rulings(ruling_analyses)
 
-                partial["vergunnings_succeskans"] = round(100 * toegewezen / total)
-                partial["juridisch_klimaat_score"] = round(100 - (100 * afgewezen / total))
+                partial["vergunnings_succeskans"] = aggregation.succeskans
+                partial["juridisch_klimaat_score"] = aggregation.klimaat_score
+                partial["succeskans_missing"] = aggregation.missing
+                partial["succeskans_reason"] = aggregation.reason
+                partial["dev_type_ruling_count"] = aggregation.ruling_count_dev_types
                 partial["analyzed_at"] = datetime.utcnow().isoformat()
 
                 result = JuridischAnalysisResult.model_validate(partial)
                 logger.info(
-                    "Successfully analyzed %d rulings for %s: klimaat=%d, succeskans=%d",
+                    "Successfully analyzed %d rulings for %s: klimaat=%s, succeskans=%s, dev_count=%d, missing=%s",
                     len(result.ruling_analyses),
                     gemeente_naam,
                     result.juridisch_klimaat_score,
                     result.vergunnings_succeskans,
+                    result.dev_type_ruling_count,
+                    result.succeskans_missing,
                 )
                 return result
 
