@@ -49,20 +49,62 @@ def _get(d: dict | None, *keys: str, default: Any = None) -> Any:
 
 
 def _best_bestemming_type(parcel_data: dict) -> str:
-    """Return the most favorable bestemming type string (lowercase)."""
+    """Return primary bestemming type via count-voting + priority tie-breaker.
+
+    M046/S04 BUG-1: previously "meest gunstige keyword-match" — any wonen-
+    match in a mixed [verkeer, wonen] or [agrarisch, wonen] parcel dominated
+    regardless of proportion. Systematisch optimistisch: een perceel met 2×
+    verkeer + 1× wonen werd als "wonen" geklasseerd.
+
+    Now: type that occurs most often wins. Ties broken by the existing
+    priority list so transformatie-signaal blijft behouden — een 1× bedrijf
+    + 1× wonen mapping blijft naar wonen gaan (developer-relevant).
+
+    Normalizatie: types die een priority-keyword bevatten (bv. "wonen - 2",
+    "verkeer - verblijfsgebied") worden genormaliseerd naar het keyword zodat
+    "wonen" en "wonen - 2" samen tellen als 2× wonen.
+
+    Fallback: zonder priority-match returns the type literally (niet "onbekend")
+    zodat factors die types als "water"/"agrarisch" lezen correct geclassificeerd
+    worden.
+    """
     bestemmingen = parcel_data.get("bestemmingen") or []
     priority = {"wonen": 4, "centrum": 3, "gemengd": 3, "maatschappelijk": 2}
-    best_type = ""
-    best_score = -1
+
+    counts: dict[str, int] = {}
     for b in bestemmingen:
         if not isinstance(b, dict):
             continue
         btype = str(b.get("type") or "").lower()
-        for keyword, score in priority.items():
-            if keyword in btype and score > best_score:
-                best_score = score
-                best_type = btype
-    return best_type or "onbekend"
+        if not btype:
+            continue
+
+        # Normalize:
+        # 1. Priority keyword contained in btype → use the keyword ("wonen - 2" → "wonen")
+        # 2. Else: strip suffix after " - " ("verkeer - verblijfsgebied" → "verkeer")
+        #    Zo tellen "verkeer" + "verkeer - verblijfsgebied" als 2× verkeer.
+        matched_key = None
+        for keyword in priority:
+            if keyword in btype:
+                matched_key = keyword
+                break
+        if matched_key:
+            key = matched_key
+        else:
+            key = btype.split(" - ", 1)[0].strip()
+        counts[key] = counts.get(key, 0) + 1
+
+    if not counts:
+        return "onbekend"
+
+    max_count = max(counts.values())
+    candidates = [k for k, v in counts.items() if v == max_count]
+
+    if len(candidates) == 1:
+        return candidates[0]
+
+    # Tie-breaker: highest priority among tied candidates (transformatie-favorable)
+    return max(candidates, key=lambda k: priority.get(k, -1))
 
 
 # ---------------------------------------------------------------------------
