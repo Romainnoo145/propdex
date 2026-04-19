@@ -266,6 +266,20 @@ def test_funda_frictie_missing_when_no_signals():
     assert r.genormaliseerde_score == 0.5
 
 
+def test_funda_frictie_missing_narrative_mentions_pilot_phase():
+    """M046/S03: narrative must communicate this is a platform-wide state,
+    not a parcel-specific data gap. Protects against users/reports
+    interpreting the neutral score as a legitimate Funda-derived signal.
+    """
+    r = score_funda_frictie({})
+    assert r.missing
+    lang = r.toelichting_lang.lower()
+    assert "pilot" in lang or "nog niet productief" in lang or "uitgeschakeld" in lang, (
+        f"Narrative should explicitly state Funda data pipeline is in pilot/inactive state, "
+        f"got: {r.toelichting_lang!r}"
+    )
+
+
 def test_perceelgrootte_large_parcel():
     r = score_perceelgrootte({"area_m2": 5000})
     assert r.categorie == "potentie"
