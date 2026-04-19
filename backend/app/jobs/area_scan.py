@@ -907,14 +907,22 @@ async def area_scan_job(
                     for sr in batch:
                         flags = dict(sr.flags) if sr.flags else {}
 
-                        # Build parcel_data from accumulated flags + parcel_cache
-                        pc_stmt = select(ParcelCache).where(ParcelCache.id == sr.parcel_id)
+                        # Build parcel_data from accumulated flags + parcel_cache.
+                        # M046/S02: also fetch ST_Perimeter so score_vrije_grond
+                        # can detect road-strip shapes (perimeter/sqrt(area) > 10).
+                        pc_stmt = select(
+                            ParcelCache,
+                            func.ST_Perimeter(ParcelCache.geometry).label("perimeter_m"),
+                        ).where(ParcelCache.id == sr.parcel_id)
                         pc_result = await session.execute(pc_stmt)
-                        pc = pc_result.scalar_one_or_none()
+                        pc_row = pc_result.one_or_none()
+                        pc = pc_row[0] if pc_row else None
+                        perimeter_m = pc_row[1] if pc_row else None
 
                         parcel_data: dict = {}
                         if pc:
                             parcel_data["area_m2"] = pc.area_m2
+                            parcel_data["perimeter_m"] = float(perimeter_m) if perimeter_m is not None else None
                             parcel_data["has_pand"] = pc.has_pand
                             parcel_data["bouwjaar"] = pc.bouwjaar
                             parcel_data["pand_status"] = pc.pand_status

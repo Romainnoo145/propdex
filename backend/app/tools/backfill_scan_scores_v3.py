@@ -19,7 +19,7 @@ import time
 import uuid
 from dataclasses import asdict
 
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 
 from app.core.database import async_session_factory
 from app.models.area_scan import AreaScan
@@ -67,13 +67,16 @@ async def _load_neighborhood_metrics(
     return {row[0]: row[1] for row in rows if row[1] is not None}
 
 
-def _build_parcel_data(pc: ParcelCache, flags: dict) -> dict:
+def _build_parcel_data(
+    pc: ParcelCache, flags: dict, perimeter_m: float | None = None
+) -> dict:
     """Build parcel_data dict matching area_scan.py Phase 6 assembly exactly."""
     parcel_data: dict = {}
 
     # From ParcelCache columns
     if pc:
         parcel_data["area_m2"] = pc.area_m2
+        parcel_data["perimeter_m"] = perimeter_m  # M046/S02 shape-ratio guard input
         parcel_data["has_pand"] = pc.has_pand
         parcel_data["bouwjaar"] = pc.bouwjaar
         parcel_data["pand_status"] = pc.pand_status
@@ -120,7 +123,11 @@ async def _backfill_org(
             batch_num += 1
 
             stmt = (
-                select(ScanResult, ParcelCache)
+                select(
+                    ScanResult,
+                    ParcelCache,
+                    func.ST_Perimeter(ParcelCache.geometry).label("perimeter_m"),
+                )
                 .join(ParcelCache, ParcelCache.id == ScanResult.parcel_id)
                 .where(
                 )
@@ -137,15 +144,16 @@ async def _backfill_org(
                 break
 
             # Load neighborhood_metrics for unique scan_ids in this batch
-            unique_scan_ids = {sr.scan_id for sr, _pc in rows}
+            unique_scan_ids = {sr.scan_id for sr, _pc, _perim in rows}
             nbhd_map = await _load_neighborhood_metrics(session, unique_scan_ids)
 
             batch_updated = 0
-            for sr, pc in rows:
+            for sr, pc, perimeter_m in rows:
                 processed += 1
                 flags = dict(sr.flags) if sr.flags else {}
 
-                parcel_data = _build_parcel_data(pc, flags)
+                perim_float = float(perimeter_m) if perimeter_m is not None else None
+                parcel_data = _build_parcel_data(pc, flags, perim_float)
                 nbhd = nbhd_map.get(sr.scan_id)
 
                 v3_result = compute_score_v3(parcel_data, nbhd)
