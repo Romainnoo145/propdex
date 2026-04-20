@@ -4,6 +4,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import { ParcelPanelShell } from './parcel/ParcelPanelShell'
 import { HeartButton } from './parcel/HeartButton'
+import { MissingDataBadge } from './parcel/MissingDataBadge'
+import { countMissingFactors } from './parcel/ScoreBreakdownModal'
 import {
   ParcelBentoOverview,
   type CategoryKey,
@@ -159,11 +161,16 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
                 <span className="truncate">{splitAddress(parcel.address)[0]}</span>
                 <span className="shrink-0">{splitAddress(parcel.address)[1]}</span>
               </h2>
-              <p className="text-xs text-slate-400 font-medium uppercase tracking-widest truncate mt-1">
-                {view.kind !== 'overview'
-                  ? VIEW_LABELS[view.kind]
-                  : parcel.parcel_code || null}
-              </p>
+              <div className="flex items-center gap-2 mt-1 min-w-0">
+                <p className="text-xs text-slate-400 font-medium uppercase tracking-widest truncate">
+                  {view.kind !== 'overview'
+                    ? VIEW_LABELS[view.kind]
+                    : parcel.parcel_code || null}
+                </p>
+                {view.kind === 'overview' && (
+                  <MissingDataBadge count={countMissingFactors(parcel.score_breakdown)} />
+                )}
+              </div>
             </div>
           </div>
 
