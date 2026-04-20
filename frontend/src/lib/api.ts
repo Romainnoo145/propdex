@@ -1563,8 +1563,13 @@ export interface DoorlooptijdStats {
 
 export interface JuridischAnalysisResult {
   gemeente_naam: string
-  juridisch_klimaat_score: number
-  vergunnings_succeskans: number
+  // M046/S01 RM-1: scores are null when dev-type sample is below threshold.
+  // Callers must check succeskans_missing before rendering a number.
+  juridisch_klimaat_score: number | null
+  vergunnings_succeskans: number | null
+  succeskans_missing?: boolean
+  succeskans_reason?: string | null
+  dev_type_ruling_count?: number
   risico_samenvatting: string
   top_risico_factoren: string[]
   ruling_analyses: RulingAnalysis[]
@@ -1617,8 +1622,13 @@ export async function pollJurisprudenceAnalysis(
 export interface AnalyzeGemeenteResponse {
   status: 'complete' | 'partial' | 'in_progress' | 'not_found'
   gemeente_naam: string
-  juridisch_klimaat_score: number
-  vergunnings_succeskans: number
+  // M046/S01 RM-1: scores are null when dev-type sample is below threshold (< 5).
+  juridisch_klimaat_score: number | null
+  vergunnings_succeskans: number | null
+  succeskans_missing?: boolean
+  succeskans_reason?: string | null
+  dev_type_ruling_count?: number
+  total_ruling_count?: number
   ruling_analyses: RulingAnalysis[]
   analyzed_count: number
   pending_count: number

@@ -6,7 +6,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # ── Search ────────────────────────────────────────────────────────
 
 
@@ -71,12 +70,21 @@ class JurisprudenceDocResponse(BaseModel):
 
 
 class AnalysisTriggerResponse(BaseModel):
-    """Response after triggering ruling analysis for a gemeente."""
+    """Response after triggering ruling analysis for a gemeente.
+
+    M046/S01 RM-1: score fields are nullable — None when the dev-type
+    filtered sample size is below threshold (see ruling_aggregator).
+    Callers must check succeskans_missing before trusting the scores.
+    """
 
     status: str  # "complete" | "partial"
     gemeente_naam: str
-    juridisch_klimaat_score: int
-    vergunnings_succeskans: int
+    juridisch_klimaat_score: int | None = None
+    vergunnings_succeskans: int | None = None
+    succeskans_missing: bool = False
+    succeskans_reason: str | None = None
+    dev_type_ruling_count: int = 0
+    total_ruling_count: int = 0
     ruling_analyses: list[dict[str, Any]]
     analyzed_count: int
     pending_count: int
@@ -86,12 +94,20 @@ class AnalysisTriggerResponse(BaseModel):
 
 
 class AnalysisStatusResponse(BaseModel):
-    """Polling status of ruling analysis for a gemeente."""
+    """Polling status of ruling analysis for a gemeente.
+
+    M046/S01 RM-1: mirrors AnalysisTriggerResponse — score fields nullable
+    with missing/reason/dev_type_ruling_count signals.
+    """
 
     status: str  # "complete" | "in_progress" | "not_found"
     gemeente_naam: str
     juridisch_klimaat_score: int | None = None
     vergunnings_succeskans: int | None = None
+    succeskans_missing: bool = False
+    succeskans_reason: str | None = None
+    dev_type_ruling_count: int = 0
+    total_ruling_count: int = 0
     ruling_analyses: list[dict[str, Any]] | None = None
     analyzed_count: int | None = None
     pending_count: int | None = None

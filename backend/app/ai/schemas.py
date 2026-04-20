@@ -195,11 +195,20 @@ class DoorlooptijdStats(BaseModel):
 
 
 class JuridischAnalysisResult(BaseModel):
-    """Aggregated AI analysis of court rulings for a municipality."""
+    """Aggregated AI analysis of court rulings for a municipality.
+
+    M046/S01 RM-1: scores are nullable — None when the dev-type filtered
+    sample is below MIN_DEV_RULINGS_FOR_AGGREGATION. Previously defaulted
+    to 50, which collided with the legitimate "50% success rate" semantics.
+    Callers must check succeskans_missing before trusting the scores.
+    """
 
     gemeente_naam: str
-    juridisch_klimaat_score: int = Field(ge=0, le=100, default=50)
-    vergunnings_succeskans: int = Field(ge=0, le=100, default=50)
+    juridisch_klimaat_score: int | None = Field(default=None, ge=0, le=100)
+    vergunnings_succeskans: int | None = Field(default=None, ge=0, le=100)
+    succeskans_missing: bool = Field(default=False)
+    succeskans_reason: str | None = Field(default=None)
+    dev_type_ruling_count: int = Field(default=0, ge=0)
     risico_samenvatting: str = ""
     top_risico_factoren: list[str] = Field(default_factory=list)
     ruling_analyses: list[RulingAnalysis] = Field(default_factory=list)

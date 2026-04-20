@@ -350,6 +350,63 @@ def test_juridisch_klimaat_missing():
     assert r.missing
 
 
+# ---------------------------------------------------------------------------
+# M046/S01 RM-1: sparse-dev-types signal (missing=True in juridisch_klimaat)
+# ---------------------------------------------------------------------------
+
+
+def test_vergunning_succeskans_missing_when_sparse_dev_types():
+    """Aggregator signals missing=True → factor degrades to neutral 0.5."""
+    nm = {
+        "juridisch_klimaat": {
+            "approval_rate": 0.8,
+            "missing": True,
+            "ruling_count": 11,
+            "ruling_count_dev_types": 2,
+            "reason": "insufficient_dev_type_rulings",
+        }
+    }
+    r = score_vergunning_succeskans(nm)
+    assert r.missing is True
+    assert r.genormaliseerde_score == 0.5
+    assert r.gewicht == 13
+    assert r.categorie == "potentie"
+    assert "2 van 5" in r.toelichting_kort
+
+
+def test_juridisch_klimaat_missing_when_sparse_dev_types():
+    """Risico-inverse path honors the same missing signal."""
+    nm = {
+        "juridisch_klimaat": {
+            "approval_rate": 0.3,
+            "missing": True,
+            "ruling_count": 8,
+            "ruling_count_dev_types": 1,
+            "reason": "insufficient_dev_type_rulings",
+        }
+    }
+    r = score_juridisch_klimaat(nm)
+    assert r.missing is True
+    assert r.genormaliseerde_score == 0.5
+    assert r.gewicht == 8
+    assert r.categorie == "risico"
+
+
+def test_vergunning_succeskans_uses_approval_rate_when_not_missing():
+    """Regression guard: existing behavior preserved when missing=False."""
+    nm = {
+        "juridisch_klimaat": {
+            "approval_rate": 0.75,
+            "missing": False,
+            "ruling_count": 12,
+            "ruling_count_dev_types": 8,
+        }
+    }
+    r = score_vergunning_succeskans(nm)
+    assert r.missing is False
+    assert r.genormaliseerde_score > 0.7
+
+
 def test_criminaliteit_high():
     r = score_criminaliteit({"criminaliteit": {"per_1000_inwoners": 90}})
     assert r.categorie == "risico"

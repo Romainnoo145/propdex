@@ -32,6 +32,7 @@ from app.government_apis.rechtspraak import rechtspraak_client, validate_ecli
 from app.middleware.rate_limit import limiter
 from app.models.ruling_cache import RulingCache
 from app.services.doorlooptijd import get_doorlooptijd_stats
+from app.services.ruling_aggregator import aggregate_dev_type_rulings
 
 logger = logging.getLogger(__name__)
 
@@ -280,16 +281,10 @@ async def trigger_ruling_analysis(
         if analysis:
             ruling_analyses.append(analysis)
 
-    # Compute scores from analyzed rulings
-    total = max(len(ruling_analyses), 1)
-    toegewezen = sum(
-        1 for ra in ruling_analyses if ra.get("uitkomst") == "toegewezen"
-    )
-    afgewezen = sum(
-        1 for ra in ruling_analyses if ra.get("uitkomst") == "afgewezen"
-    )
-    klimaat_score = round(100 - (100 * afgewezen / total))
-    succeskans = round(100 * toegewezen / total)
+    # Dev-type filter: only aggregate over rulings that match developer-relevant
+    # vergunningstypen (nieuwbouw, sloop, bestemmingswijziging, uitbreiding).
+    # See app.services.ruling_aggregator and M046/S01 for rationale.
+    aggregation = aggregate_dev_type_rulings(ruling_analyses)
 
     job_id = None
     if needs_analysis:
@@ -322,8 +317,12 @@ async def trigger_ruling_analysis(
     return {
         "status": "complete" if not needs_analysis else "partial",
         "gemeente_naam": gemeente_naam,
-        "juridisch_klimaat_score": klimaat_score,
-        "vergunnings_succeskans": succeskans,
+        "juridisch_klimaat_score": aggregation.klimaat_score,
+        "vergunnings_succeskans": aggregation.succeskans,
+        "succeskans_missing": aggregation.missing,
+        "succeskans_reason": aggregation.reason,
+        "dev_type_ruling_count": aggregation.ruling_count_dev_types,
+        "total_ruling_count": aggregation.ruling_count_total,
         "ruling_analyses": ruling_analyses,
         "analyzed_count": len(analyzed),
         "pending_count": len(needs_analysis),
@@ -362,19 +361,18 @@ async def poll_ruling_analysis(
 
     ruling_analyses = [r.ai_analysis for r in analyzed if r.ai_analysis]
 
-    total = max(len(ruling_analyses), 1)
-    toegewezen = sum(
-        1 for ra in ruling_analyses if ra.get("uitkomst") == "toegewezen"
-    )
-    afgewezen = sum(
-        1 for ra in ruling_analyses if ra.get("uitkomst") == "afgewezen"
-    )
+    # Dev-type filter: same aggregator as trigger endpoint — single source of truth.
+    aggregation = aggregate_dev_type_rulings(ruling_analyses)
 
     return {
         "status": "complete" if not pending else "in_progress",
         "gemeente_naam": gemeente_naam,
-        "juridisch_klimaat_score": round(100 - (100 * afgewezen / total)),
-        "vergunnings_succeskans": round(100 * toegewezen / total),
+        "juridisch_klimaat_score": aggregation.klimaat_score,
+        "vergunnings_succeskans": aggregation.succeskans,
+        "succeskans_missing": aggregation.missing,
+        "succeskans_reason": aggregation.reason,
+        "dev_type_ruling_count": aggregation.ruling_count_dev_types,
+        "total_ruling_count": aggregation.ruling_count_total,
         "ruling_analyses": ruling_analyses,
         "analyzed_count": len(analyzed),
         "pending_count": len(pending),
