@@ -472,6 +472,10 @@ def score_vergunning_succeskans(neighborhood_metrics: dict | None) -> FactorResu
             toelichting_lang="Er zijn onvoldoende geanalyseerde uitspraken beschikbaar om het juridisch klimaat voor vergunningverlening te beoordelen. De score is op neutraal gezet.",
             data_bronnen=["Rechtspraak.nl"],
             missing=True,
+            succeskans_missing=True,
+            succeskans_reason="no_juridisch_klimaat_data",
+            dev_type_ruling_count=0,
+            total_ruling_count=0,
         )
 
     # M046/S01 RM-1: sparse-data signaal uit aggregator. Wanneer < 5 developer-
@@ -494,15 +498,21 @@ def score_vergunning_succeskans(neighborhood_metrics: dict | None) -> FactorResu
             ),
             data_bronnen=["Rechtspraak.nl"],
             missing=True,
+            succeskans_missing=True,
+            succeskans_reason="insufficient_dev_type_rulings",
+            dev_type_ruling_count=dev_count,
+            total_ruling_count=total_count,
         )
 
     approval_rate = jk.get("approval_rate", 0.5)
     score = normalize_linear(approval_rate, 0.2, 0.9)
 
+    dev_count = jk.get("ruling_count_dev_types", 0)
+    total_count = jk.get("ruling_count", 0)
     pct = round(approval_rate * 100)
     kort = f"Vergunnings-succeskans {pct}% in deze gemeente"
     lang = (
-        f"Op basis van {jk.get('ruling_count', 0)} geanalyseerde uitspraken heeft deze gemeente "
+        f"Op basis van {total_count} geanalyseerde uitspraken heeft deze gemeente "
         f"een vergunnings-goedkeuringspercentage van {pct}%. "
         + (
             "Dit wijst op een gunstig juridisch klimaat voor bouw- en verbouwplannen."
@@ -520,6 +530,10 @@ def score_vergunning_succeskans(neighborhood_metrics: dict | None) -> FactorResu
         toelichting_kort=kort, toelichting_lang=lang,
         data_bronnen=["Rechtspraak.nl"],
         missing=False,
+        succeskans_missing=False,
+        succeskans_reason=None,
+        dev_type_ruling_count=dev_count,
+        total_ruling_count=total_count,
     )
 
 
@@ -831,6 +845,10 @@ def score_juridisch_klimaat(neighborhood_metrics: dict | None) -> FactorResult:
             toelichting_lang="Er zijn onvoldoende gegevens om het juridisch klimaat te beoordelen. De risicoscore is op neutraal gezet.",
             data_bronnen=["Rechtspraak.nl"],
             missing=True,
+            succeskans_missing=True,
+            succeskans_reason="no_juridisch_klimaat_data",
+            dev_type_ruling_count=0,
+            total_ruling_count=0,
         )
 
     # M046/S01 RM-1: parallel pad aan score_vergunning_succeskans — sparse
@@ -850,12 +868,18 @@ def score_juridisch_klimaat(neighborhood_metrics: dict | None) -> FactorResult:
             ),
             data_bronnen=["Rechtspraak.nl"],
             missing=True,
+            succeskans_missing=True,
+            succeskans_reason="insufficient_dev_type_rulings",
+            dev_type_ruling_count=dev_count,
+            total_ruling_count=total_count,
         )
 
     approval_rate = jk.get("approval_rate", 0.5)
     # Inverse: low approval = high risk
     score = 1.0 - normalize_linear(approval_rate, 0.2, 0.9)
 
+    dev_count = jk.get("ruling_count_dev_types", 0)
+    total_count = jk.get("ruling_count", 0)
     risk_label = "Hoog" if score >= 0.6 else "Gemiddeld" if score >= 0.3 else "Laag"
     pct = round(approval_rate * 100)
     kort = f"{risk_label} juridisch risico \u2014 {pct}% goedkeuring in gemeente"
@@ -875,6 +899,10 @@ def score_juridisch_klimaat(neighborhood_metrics: dict | None) -> FactorResult:
         toelichting_kort=kort, toelichting_lang=lang,
         data_bronnen=["Rechtspraak.nl"],
         missing=False,
+        succeskans_missing=False,
+        succeskans_reason=None,
+        dev_type_ruling_count=dev_count,
+        total_ruling_count=total_count,
     )
 
 
