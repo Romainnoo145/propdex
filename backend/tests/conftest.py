@@ -177,6 +177,21 @@ async def async_client(test_db: AsyncSession) -> AsyncGenerator[AsyncClient, Non
 
 
 @pytest.fixture
+async def auth_headers(create_test_user):
+    """JWT bearer headers for an authenticated user in a fresh test org.
+
+    Uses create_access_token directly (bypasses HTTP /auth/login) — sneller,
+    geen afhankelijkheid van auth router URL-conventie. Pattern uit
+    test_multi_tenant.py.
+    """
+    from app.auth.jwt import create_access_token
+
+    user, org = await create_test_user()
+    token = create_access_token(str(user.id), str(org.id))
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
 async def create_test_user(test_db: AsyncSession):
     """
     Factory fixture for creating test users with organizations.
