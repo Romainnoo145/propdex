@@ -671,7 +671,7 @@ async def area_scan_job(
                     if bodem_enrichment.get("bodemtype"):
                         flags_dict["bodemtype"] = bodem_enrichment["bodemtype"]
                     # Environmental risk data
-                    for env_key in ("natura2000", "overstromingsrisico", "geluid", "luchtkwaliteit"):
+                    for env_key in ("natura2000", "overstromingsrisico", "geluid", "luchtkwaliteit", "rijksmonument"):
                         if env_enrichment.get(env_key):
                             flags_dict[env_key] = env_enrichment[env_key]
 
@@ -941,6 +941,7 @@ async def area_scan_job(
                         parcel_data["overstromingsrisico"] = flags.get("overstromingsrisico")
                         parcel_data["geluid"] = flags.get("geluid")
                         parcel_data["luchtkwaliteit"] = flags.get("luchtkwaliteit")
+                        parcel_data["rijksmonument"] = flags.get("rijksmonument")
                         parcel_data["woz"] = flags.get("woz")
 
                         v3_result = compute_score_v3(parcel_data, nbhd_metrics)
