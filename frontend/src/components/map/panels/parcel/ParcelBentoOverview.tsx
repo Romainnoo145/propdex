@@ -9,7 +9,8 @@ import { EigendomModal } from './EigendomModal'
 import { VergunningenModal } from './VergunningenModal'
 import { BestemmingModal } from './BestemmingModal'
 import { OnbebouwdModal } from './OnbebouwdModal'
-import { ScoreBreakdownModal } from './ScoreBreakdownModal'
+import { ScoreBreakdownModal, countMissingFactors } from './ScoreBreakdownModal'
+import { MissingDataBadge } from './MissingDataBadge'
 import { UseCaseScoreCards } from './UseCaseScoreCards'
 import { BeleidscontextCard } from './BeleidscontextCard'
 import { useOrgScoreWeights } from '@/hooks/useScoreWeights'
@@ -131,6 +132,7 @@ export function ParcelBentoOverview({
   const [showOnbebouwd, setShowOnbebouwd] = useState(false)
   const [showScoreBreakdown, setShowScoreBreakdown] = useState(false)
   const { data: weightsData } = useOrgScoreWeights()
+  const missingFactorCount = countMissingFactors(parcel.score_breakdown)
   const category = deriveBestemmingCategory(parcel.bestemmingen)
   const bm = parcel.building_metrics
   const vrijPct =
@@ -231,6 +233,13 @@ export function ParcelBentoOverview({
           <span className="text-[10px] font-semibold tracking-wider uppercase text-neutral-500 bg-[#F2F6F3] rounded-full px-2 py-0.5">
             Custom profiel
           </span>
+        </motion.div>
+      )}
+
+      {/* Missing-data waarschuwing (M046/S06 OBS-2): >2 factoren ontbreken → score onbetrouwbaar */}
+      {missingFactorCount > 2 && (
+        <motion.div variants={fadeUp} className="mt-2 flex justify-center">
+          <MissingDataBadge count={missingFactorCount} />
         </motion.div>
       )}
 
