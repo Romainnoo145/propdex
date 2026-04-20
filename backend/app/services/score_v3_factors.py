@@ -276,15 +276,28 @@ def score_leegstand(parcel_data: dict) -> FactorResult:
 
 
 def score_funda_frictie(parcel_data: dict) -> FactorResult:
-    """Factor P5: Funda-frictie / gemotiveerde verkoper. Gewicht=5."""
+    """Factor P5: Funda-frictie / gemotiveerde verkoper. Gewicht=5.
+
+    M046/S03: Funda-integratie is nog niet productief — `funda_snapshot.py`
+    is alleen als PoC gedraaid (5 listings, 2026-02-27). Totdat de ingestion
+    wordt opgeschaald blijft deze factor voor ~100% van scans missing=True.
+    Narrative vermeldt expliciet de pilot-state zodat rapporten niet de
+    neutrale 0.5 als legitiem Funda-signaal interpreteren.
+    """
     ms = parcel_data.get("market_signals")
     if not ms or not isinstance(ms, dict):
         return FactorResult(
             waarde=None, genormaliseerde_score=0.5, gewicht=5,
             bijdrage=round(0.5 * 5, 4), categorie="potentie",
-            toelichting_kort="Geen marktgegevens beschikbaar",
-            toelichting_lang="Er zijn geen Funda-gegevens beschikbaar voor dit perceel. De score is op neutraal gezet.",
-            data_bronnen=["Funda"],
+            toelichting_kort="Funda-data niet beschikbaar (pilot-fase)",
+            toelichting_lang=(
+                "De Funda-integratie is nog niet productief — de listing-ingestion "
+                "draait alleen als proof-of-concept. Er zijn voor dit perceel geen "
+                "marktgegevens (advertentieduur, prijswijzigingen) beschikbaar. "
+                "De score is op neutraal gezet en telt niet als legitiem Funda-signaal; "
+                "zodra de ingestion-pipeline wordt opgeschaald, activeert deze factor vanzelf."
+            ),
+            data_bronnen=["Funda (pilot)"],
             missing=True,
         )
 
