@@ -5,9 +5,10 @@
  * from score_breakdown data (v3.0 format).
  */
 
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, TrendingUp, ShieldAlert, Info } from 'lucide-react'
+import { X, TrendingUp, ShieldAlert, Info, ChevronDown, MapPin } from 'lucide-react'
 
 /* ── Types ───────────────────────────────────────────────────── */
 
@@ -20,6 +21,31 @@ interface ScoreFactor {
   toelichting_kort: string | null
   toelichting_lang: string | null
   missing: boolean
+  data_bronnen: string[] | null
+  succeskans_missing: boolean | null
+  succeskans_reason: string | null
+  dev_type_ruling_count: number | null
+  total_ruling_count: number | null
+}
+
+/* ── Helpers (exported for reuse) ────────────────────────────── */
+
+export function countMissingFactors(
+  breakdown: Record<string, unknown> | null | undefined,
+): number {
+  if (!breakdown) return 0
+  let count = 0
+  for (const value of Object.values(breakdown)) {
+    if (!value || typeof value !== 'object') continue
+    const f = value as Record<string, unknown>
+    if (f.missing === true) count++
+  }
+  return count
+}
+
+export function isWijkBreed(dataBronnen: string[] | null): boolean {
+  if (!dataBronnen) return false
+  return dataBronnen.some((src) => /CBS/i.test(src))
 }
 
 /* ── Props ────────────────────────────────────────────────────── */
@@ -59,6 +85,13 @@ function parseFactors(breakdown: Record<string, unknown> | null): {
       toelichting_kort: typeof f.toelichting_kort === 'string' ? f.toelichting_kort : null,
       toelichting_lang: typeof f.toelichting_lang === 'string' ? f.toelichting_lang : null,
       missing: f.missing === true,
+      data_bronnen: Array.isArray(f.data_bronnen)
+        ? (f.data_bronnen.filter((x) => typeof x === 'string') as string[])
+        : null,
+      succeskans_missing: typeof f.succeskans_missing === 'boolean' ? f.succeskans_missing : null,
+      succeskans_reason: typeof f.succeskans_reason === 'string' ? f.succeskans_reason : null,
+      dev_type_ruling_count: typeof f.dev_type_ruling_count === 'number' ? f.dev_type_ruling_count : null,
+      total_ruling_count: typeof f.total_ruling_count === 'number' ? f.total_ruling_count : null,
     }
 
     if (factor.categorie === 'risico') {
