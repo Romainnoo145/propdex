@@ -489,3 +489,160 @@ class TestAPIEndpointIsolation:
         data = response.json()
         assert data["total"] == 0
         assert len(data["reports"]) == 0
+
+
+# --- M047/S01 parcel_project_type isolatie ---
+
+
+@pytest.fixture
+async def two_orgs_with_authed_clients(async_client, create_test_user):
+    """Produceert 2 async HTTP clients met JWT auth-headers voor 2 aparte orgs.
+
+    Neemt `async_client` als param zodat dep-override (get_db → test_db) actief is
+    op het moment dat deze fixture z'n clients maakt. Zonder die dep-inheritance
+    zouden de nieuwe clients direct tegen de prod DB praten.
+
+    Auth via create_access_token ipv HTTP /auth/login — geen URL-drift, geen
+    password-hashing round-trip. Pattern uit test_multi_tenant.py.
+    """
+    from httpx import ASGITransport, AsyncClient
+
+    from app.main import app
+
+    user_a, org_a = await create_test_user(
+        email="a-auth@test.com", org_name="Org A"
+    )
+    user_b, org_b = await create_test_user(
+        email="b-auth@test.com", org_name="Org B"
+    )
+
+    token_a = create_access_token(str(user_a.id), str(org_a.id))
+    token_b = create_access_token(str(user_b.id), str(org_b.id))
+
+    # app.dependency_overrides is al gezet door async_client-fixture —
+    # nieuwe clients erven dat via de gedeelde `app`-instance.
+    client_a = AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": f"Bearer {token_a}"},
+    )
+    client_b = AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    try:
+        yield (client_a, user_a, org_a), (client_b, user_b, org_b)
+    finally:
+        await client_a.aclose()
+        await client_b.aclose()
+
+
+class TestParcelProjectTypeIsolation:
+    """Cross-org isolatie op /api/parcels/{id}/project-type endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_org_a_put_does_not_leak_to_org_b_get(
+        self,
+        async_client,
+        two_orgs_with_authed_clients,
+    ):
+        """Org A zet 'nieuwbouw_wonen' op parcel X; Org B GET op zelfde parcel
+        retourneert 'onbepaald' (default) — NIET Org A's waarde."""
+        (client_a, _user_a, _org_a), (client_b, _user_b, _org_b) = (
+            two_orgs_with_authed_clients
+        )
+        parcel = "NL.IMBAG.Pand.0983100000000020"
+
+        # Org A zet nieuwbouw_wonen
+        put_a = await client_a.put(
+            f"/api/parcels/{parcel}/project-type",
+            json={"project_type": "nieuwbouw_wonen"},
+        )
+        assert put_a.status_code == 200
+
+        # Org B leest zelfde parcel → 'onbepaald' (default, NIET Org A's waarde)
+        get_b = await client_b.get(f"/api/parcels/{parcel}/project-type")
+        assert get_b.status_code == 200
+        assert get_b.json()["project_type"] == "onbepaald"
+        assert get_b.json()["set_by_user_id"] is None
+
+    @pytest.mark.asyncio
+    async def test_two_orgs_can_set_different_types_on_same_parcel(
+        self,
+        async_client,
+        two_orgs_with_authed_clients,
+    ):
+        """Org A en Org B kunnen elk onafhankelijk een projecttype zetten
+        op hetzelfde parcel — eigen rij per org."""
+        (client_a, _user_a, _org_a), (client_b, _user_b, _org_b) = (
+            two_orgs_with_authed_clients
+        )
+        parcel = "NL.IMBAG.Pand.0983100000000021"
+
+        put_a = await client_a.put(
+            f"/api/parcels/{parcel}/project-type",
+            json={"project_type": "nieuwbouw_wonen"},
+        )
+        put_b = await client_b.put(
+            f"/api/parcels/{parcel}/project-type",
+            json={"project_type": "optoppen"},
+        )
+        assert put_a.status_code == 200
+        assert put_b.status_code == 200
+
+        get_a = await client_a.get(f"/api/parcels/{parcel}/project-type")
+        get_b = await client_b.get(f"/api/parcels/{parcel}/project-type")
+        assert get_a.json()["project_type"] == "nieuwbouw_wonen"
+        assert get_b.json()["project_type"] == "optoppen"
+
+    @pytest.mark.asyncio
+    async def test_org_a_update_does_not_touch_org_b_row(
+        self,
+        test_db,
+        two_orgs_with_authed_clients,
+    ):
+        """Org A's tweede PUT overschrijft Org A's rij; Org B's rij blijft."""
+        (client_a, _user_a, _org_a), (client_b, _user_b, _org_b) = (
+            two_orgs_with_authed_clients
+        )
+        parcel = "NL.IMBAG.Pand.0983100000000022"
+
+        await client_a.put(
+            f"/api/parcels/{parcel}/project-type",
+            json={"project_type": "nieuwbouw_wonen"},
+        )
+        await client_b.put(
+            f"/api/parcels/{parcel}/project-type",
+            json={"project_type": "splitsen"},
+        )
+        # Org A wijzigt nogmaals
+        await client_a.put(
+            f"/api/parcels/{parcel}/project-type",
+            json={"project_type": "transformatie_wonen"},
+        )
+
+        # Org A = transformatie_wonen, Org B ongewijzigd = splitsen
+        get_a = (
+            await client_a.get(f"/api/parcels/{parcel}/project-type")
+        ).json()
+        get_b = (
+            await client_b.get(f"/api/parcels/{parcel}/project-type")
+        ).json()
+        assert get_a["project_type"] == "transformatie_wonen"
+        assert get_b["project_type"] == "splitsen"
+
+        # DB-level: exact 2 rijen voor dit parcel
+        from sqlalchemy import func, select
+
+        from app.models.parcel_project_type import ParcelProjectType
+
+        count_stmt = (
+            select(func.count())
+            .select_from(ParcelProjectType)
+            .where(
+                ParcelProjectType.parcel_id == parcel,
+            )
+        )
+        count = (await test_db.execute(count_stmt)).scalar()
+        assert count == 2
