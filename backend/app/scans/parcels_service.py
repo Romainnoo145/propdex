@@ -44,6 +44,7 @@ from app.scans.schemas import (
 )
 from app.services.bekendmaking_matcher import find_parcel_at_point
 from app.services.parcel_addressing import reverse_geocode_rd_point
+from app.services.score_v3_factors import _best_bestemming_type
 from app.services.parcel_scoring import (
     compute_vacancy_confidence,
     extract_building_metrics,
@@ -920,6 +921,11 @@ async def get_parcel_at_point(
         opportunity_signals=opportunity_signals,
         building_metrics=building_metrics,
         bestemmingen=row["bestemmingen"] if isinstance(row["bestemmingen"], list) else None,
+        primary_bestemming_type=(
+            _best_bestemming_type({"bestemmingen": row["bestemmingen"]})
+            if isinstance(row["bestemmingen"], list) and row["bestemmingen"]
+            else None
+        ),
         has_report=bool(row["has_report"]),
         uses_custom_weights=uses_custom_weights,
         geometry=geometry,

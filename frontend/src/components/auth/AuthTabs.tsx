@@ -13,6 +13,9 @@ interface AuthTabsProps {
   onRegister: (data: RegisterData) => Promise<void>
   onLoginSuccess: () => void
   onRegisterSuccess: () => void
+  onDemoLogin: () => void | Promise<void>
+  demoLoading: boolean
+  demoError: string | null
 }
 
 export function AuthTabs({
@@ -20,6 +23,9 @@ export function AuthTabs({
   onRegister,
   onLoginSuccess,
   onRegisterSuccess,
+  onDemoLogin,
+  demoLoading,
+  demoError,
 }: AuthTabsProps) {
   const [activeTab, setActiveTab] = useState<TabType>('login')
 
@@ -53,7 +59,7 @@ export function AuthTabs({
                 />
               )}
               <span className={`relative z-10 ${isActive ? 'text-white' : ''}`}>
-                {tab === 'login' ? 'Log in' : 'Register'}
+                {tab === 'login' ? 'Log in' : 'Registreren'}
               </span>
             </button>
           )
@@ -77,6 +83,24 @@ export function AuthTabs({
 
       {/* Google */}
       <GoogleButton />
+
+      {/* Demo login — inline text link */}
+      <div className="text-center text-[12px] text-[#6b7680]">
+        Nog geen account?{' '}
+        <button
+          type="button"
+          onClick={() => onDemoLogin()}
+          disabled={demoLoading}
+          className="font-bold text-[#0E1111] underline underline-offset-[3px] decoration-[1.5px] hover:text-[#F9A826] hover:decoration-[#F9A826] disabled:opacity-60 disabled:cursor-wait"
+        >
+          {demoLoading ? 'Bezig met inloggen…' : 'Bekijk eerst de demo'}
+        </button>
+      </div>
+      {demoError && (
+        <p role="alert" className="text-center text-[12px] text-red-500">
+          {demoError}
+        </p>
+      )}
     </div>
   )
 }

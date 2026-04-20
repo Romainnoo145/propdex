@@ -30,6 +30,14 @@ class FactorResult:
     toelichting_lang: str
     data_bronnen: list[str] = field(default_factory=list)
     missing: bool = False
+    # M046/S01 RM-1: structured access naar dev-type filtering metadata
+    # voor factoren die op jurisprudence-aggregation leunen. Nullable
+    # — alleen gevuld voor vergunnings_succeskans + juridisch_klimaat.
+    # Surface in frontend expanded view (M046/S06 OBS-2).
+    succeskans_missing: bool | None = None
+    succeskans_reason: str | None = None
+    dev_type_ruling_count: int | None = None
+    total_ruling_count: int | None = None
 
 
 @dataclass

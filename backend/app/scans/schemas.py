@@ -413,6 +413,14 @@ class ParcelAtPointResponse(BaseModel):
         default=None,
         description="Bestemmingsplan designations from DSO/PLU",
     )
+    primary_bestemming_type: str | None = Field(
+        default=None,
+        description=(
+            "Primary bestemming type via M046/S04 count-voting + priority tie-breaker. "
+            "Single source of truth for UI bestemming-tile — avoids frontend re-computing "
+            "with divergent logic (see M046/S06 F3 post-plan fix)."
+        ),
+    )
     has_report: bool = Field(description="True when at least one saved report exists")
     uses_custom_weights: bool = Field(
         default=False,

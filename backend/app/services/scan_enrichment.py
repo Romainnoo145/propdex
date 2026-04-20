@@ -20,6 +20,7 @@ from app.government_apis.bro_bodemkaart import bro_bodemkaart_client
 from app.government_apis.ep_online import ep_online_client
 from app.government_apis.pdok_funderingsrisico import pdok_funderingsrisico_client
 from app.government_apis.pdok_natura2000 import pdok_natura2000_client
+from app.government_apis.rce_monuments import _rce_client
 from app.government_apis.rivm_geluid import rivm_geluid_client
 from app.government_apis.rivm_luchtkwaliteit import rivm_luchtkwaliteit_client
 from app.government_apis.rws_overstromingen import rws_overstromingen_client
@@ -43,6 +44,7 @@ _NATURA2000_CONCURRENCY: int = 5
 _OVERSTROMINGEN_CONCURRENCY: int = 5
 _GELUID_CONCURRENCY: int = 5
 _LUCHT_CONCURRENCY: int = 5
+_RCE_CONCURRENCY: int = 4
 # Rounding for environmental WMS queries (same resolution as BRO 1:50000)
 _ENV_ROUND_M: int = 50
 
@@ -211,11 +213,16 @@ async def batch_fetch_environmental_data(
     overstroming_results: dict[tuple[int, int], dict[str, Any] | None] = {}
     geluid_results: dict[tuple[int, int], dict[str, Any] | None] = {}
     lucht_results: dict[tuple[int, int], dict[str, Any] | None] = {}
+    # M046/S05: rijksmonument results. Note: we deliberately store {"is_monument": False}
+    # (explicit 'checked, not a monument') vs None ('fetch error') to allow
+    # score_monument to distinguish 'data-present-but-negative' from 'data-missing'.
+    rijksmonument_results: dict[tuple[int, int], dict[str, Any] | None] = {}
 
     nat_sem = asyncio.Semaphore(_NATURA2000_CONCURRENCY)
     ov_sem = asyncio.Semaphore(_OVERSTROMINGEN_CONCURRENCY)
     gel_sem = asyncio.Semaphore(_GELUID_CONCURRENCY)
     lu_sem = asyncio.Semaphore(_LUCHT_CONCURRENCY)
+    rce_sem = asyncio.Semaphore(_RCE_CONCURRENCY)
 
     async def _fetch_natura2000(key: tuple[int, int], x: float, y: float) -> None:
         async with nat_sem:
@@ -253,13 +260,33 @@ async def batch_fetch_environmental_data(
                 logger.warning("RIVM Luchtkwaliteit error at (%.0f, %.0f): %s", x, y, exc)
                 lucht_results[key] = None
 
-    # Run all 4 sources in parallel across all unique coordinates
+    async def _fetch_rijksmonument(key: tuple[int, int], x: float, y: float) -> None:
+        """M046/S05: query RCE API for rijksmonument status at (x, y) RD coords."""
+        async with rce_sem:
+            try:
+                docs = await _rce_client.query_by_location(x, y, client)
+                if docs:
+                    first = docs[0]
+                    rijksmonument_results[key] = {
+                        "is_monument": True,
+                        "rce_objrijksnr": first.get("rce_objrijksnr"),
+                        "rce_objnaam": first.get("rce_objnaam"),
+                        "beschrijving": first.get("abc_beschrijving"),
+                    }
+                else:
+                    rijksmonument_results[key] = {"is_monument": False}
+            except Exception as exc:
+                logger.warning("RCE rijksmonument error at (%.0f, %.0f): %s", x, y, exc)
+                rijksmonument_results[key] = None
+
+    # Run all 5 sources in parallel across all unique coordinates
     keys_coords = [(k, *env_key_to_coord[k]) for k in env_key_to_parcels]
     await asyncio.gather(
         asyncio.gather(*[_fetch_natura2000(k, x, y) for k, x, y in keys_coords], return_exceptions=True),
         asyncio.gather(*[_fetch_overstroming(k, x, y) for k, x, y in keys_coords], return_exceptions=True),
         asyncio.gather(*[_fetch_geluid(k, x, y) for k, x, y in keys_coords], return_exceptions=True),
         asyncio.gather(*[_fetch_lucht(k, x, y) for k, x, y in keys_coords], return_exceptions=True),
+        asyncio.gather(*[_fetch_rijksmonument(k, x, y) for k, x, y in keys_coords], return_exceptions=True),
     )
 
     # Fan out results to all parcels sharing same coordinate bucket
@@ -284,18 +311,24 @@ async def batch_fetch_environmental_data(
         if lu_val is not None:
             entry["luchtkwaliteit"] = lu_val
 
-        if entry:
-            results[parcel_id] = entry
+        # M046/S05: rijksmonument key ALWAYS included (None on error, dict otherwise).
+        # score_monument relies on distinguishing 'key absent' (pre-S05 scans,
+        # legacy data) from 'key None' (fetched but failed) from 'key dict'
+        # (fetched successfully).
+        entry["rijksmonument"] = rijksmonument_results.get(key)
+
+        results[parcel_id] = entry
 
     logger.info(
         "Environmental batch complete: %d/%d parcels enriched "
-        "(N2K: %d, Flood: %d, Noise: %d, Air: %d)",
+        "(N2K: %d, Flood: %d, Noise: %d, Air: %d, RCE: %d)",
         len(results),
         len(centroids),
         sum(1 for v in natura2000_results.values() if v is not None),
         sum(1 for v in overstroming_results.values() if v is not None),
         sum(1 for v in geluid_results.values() if v is not None),
         sum(1 for v in lucht_results.values() if v is not None),
+        sum(1 for v in rijksmonument_results.values() if v is not None),
     )
     return results
 

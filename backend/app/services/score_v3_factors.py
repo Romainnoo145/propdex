@@ -472,6 +472,10 @@ def score_vergunning_succeskans(neighborhood_metrics: dict | None) -> FactorResu
             toelichting_lang="Er zijn onvoldoende geanalyseerde uitspraken beschikbaar om het juridisch klimaat voor vergunningverlening te beoordelen. De score is op neutraal gezet.",
             data_bronnen=["Rechtspraak.nl"],
             missing=True,
+            succeskans_missing=True,
+            succeskans_reason="no_juridisch_klimaat_data",
+            dev_type_ruling_count=0,
+            total_ruling_count=0,
         )
 
     # M046/S01 RM-1: sparse-data signaal uit aggregator. Wanneer < 5 developer-
@@ -494,15 +498,21 @@ def score_vergunning_succeskans(neighborhood_metrics: dict | None) -> FactorResu
             ),
             data_bronnen=["Rechtspraak.nl"],
             missing=True,
+            succeskans_missing=True,
+            succeskans_reason="insufficient_dev_type_rulings",
+            dev_type_ruling_count=dev_count,
+            total_ruling_count=total_count,
         )
 
     approval_rate = jk.get("approval_rate", 0.5)
     score = normalize_linear(approval_rate, 0.2, 0.9)
 
+    dev_count = jk.get("ruling_count_dev_types", 0)
+    total_count = jk.get("ruling_count", 0)
     pct = round(approval_rate * 100)
     kort = f"Vergunnings-succeskans {pct}% in deze gemeente"
     lang = (
-        f"Op basis van {jk.get('ruling_count', 0)} geanalyseerde uitspraken heeft deze gemeente "
+        f"Op basis van {total_count} geanalyseerde uitspraken heeft deze gemeente "
         f"een vergunnings-goedkeuringspercentage van {pct}%. "
         + (
             "Dit wijst op een gunstig juridisch klimaat voor bouw- en verbouwplannen."
@@ -520,6 +530,10 @@ def score_vergunning_succeskans(neighborhood_metrics: dict | None) -> FactorResu
         toelichting_kort=kort, toelichting_lang=lang,
         data_bronnen=["Rechtspraak.nl"],
         missing=False,
+        succeskans_missing=False,
+        succeskans_reason=None,
+        dev_type_ruling_count=dev_count,
+        total_ruling_count=total_count,
     )
 
 
@@ -697,7 +711,54 @@ def score_bodemverontreiniging(parcel_data: dict) -> FactorResult:
 
 
 def score_monument(parcel_data: dict) -> FactorResult:
-    """Factor R4: Monument-/erfgoedstatus. Gewicht=5."""
+    """Factor R4: Monument-/erfgoedstatus. Gewicht=5.
+
+    M046/S05 BUG-3: RCE API structured data primair, bestemmingsplan keyword-match
+    secundair (fallback wanneer RCE niet beschikbaar). Pre-S05 was alleen
+    keyword-match, dat miste 30-40% rijksmonumenten die buiten erfgoed-bestemmingen
+    staan. RCE is authoritatief voor rijksmonumenten (data.rijksmonumenten.info).
+
+    Scope: alleen rijksmonumenten. Gemeentelijke monumenten (GEM-14) blijven
+    buiten scope — die vereisen per-gemeente erfgoedverordening-data.
+    """
+    rce = parcel_data.get("rijksmonument")
+
+    # Path 1: RCE structured data available (authoritative)
+    if isinstance(rce, dict) and "is_monument" in rce:
+        is_monument = bool(rce.get("is_monument"))
+        score = normalize_binary(is_monument)
+        if is_monument:
+            naam = rce.get("rce_objnaam") or "onbekend monument"
+            nr = rce.get("rce_objrijksnr")
+            nr_txt = f" (rijksmonumentnummer {nr})" if nr else ""
+            kort = f"Rijksmonument gedetecteerd: {naam}"
+            lang = (
+                f"Het perceel is onderdeel van het rijksmonument '{naam}'{nr_txt}. "
+                f"Verbouw, renovatie of sloop zijn aan strikte regels gebonden "
+                f"(Erfgoedwet + Omgevingswet) en vereisen een omgevingsvergunning "
+                f"met monumenten-advies van de RCE of gemeente. Dit beperkt de "
+                f"ontwikkelmogelijkheden aanzienlijk."
+            )
+        else:
+            kort = "Geen rijksmonument-status"
+            lang = (
+                "Het perceel valt niet onder het rijksmonumenten-register (RCE). "
+                "Eventuele gemeentelijke monumenten-status is buiten scope van "
+                "deze check — raadpleeg de gemeentelijke erfgoedverordening."
+            )
+        return FactorResult(
+            waarde=is_monument,
+            genormaliseerde_score=round(score, 4),
+            gewicht=5,
+            bijdrage=round(score * 5, 4),
+            categorie="risico",
+            toelichting_kort=kort,
+            toelichting_lang=lang,
+            data_bronnen=["RCE API", "Bestemmingsplan"],
+            missing=False,
+        )
+
+    # Path 2: RCE unavailable → fall back to bestemmingsplan keyword-match (legacy)
     bestemmingen = parcel_data.get("bestemmingen") or []
     is_monument = False
     for b in bestemmingen:
@@ -710,20 +771,31 @@ def score_monument(parcel_data: dict) -> FactorResult:
             break
 
     score = normalize_binary(is_monument)
-
     if is_monument:
-        kort = "Monument-/erfgoedstatus gedetecteerd \u2014 beperkingen bij verbouw"
-        lang = "Het perceel valt (deels) onder een beschermde waardebestemming, wat wijst op monument- of erfgoedstatus. Verbouw en sloop zijn aan strikte regels gebonden en vereisen doorgaans een omgevingsvergunning. Dit beperkt de ontwikkelmogelijkheden aanzienlijk."
+        kort = "Mogelijk monument-/erfgoedstatus (bestemmingsplan-indicator)"
+        lang = (
+            "Het perceel valt (deels) onder een beschermde waardebestemming. "
+            "RCE-data was niet beschikbaar tijdens deze scan \u2014 status is "
+            "gebaseerd op bestemmingsplan-keywords. Verbouw en sloop zijn "
+            "mogelijk aan regels gebonden."
+        )
     else:
         kort = "Geen monument-/erfgoedstatus gedetecteerd"
-        lang = "Er zijn geen aanwijzingen voor monument- of erfgoedstatus in de bestemmingsplangegevens. Verbouw en sloop zijn in principe mogelijk binnen de reguliere vergunningsregels."
-
+        lang = (
+            "Er zijn geen aanwijzingen voor monument- of erfgoedstatus in de "
+            "bestemmingsplangegevens. RCE-data was niet beschikbaar voor "
+            "aanvullende check."
+        )
     return FactorResult(
-        waarde=is_monument, genormaliseerde_score=round(score, 4),
-        gewicht=5, bijdrage=round(score * 5, 4), categorie="risico",
-        toelichting_kort=kort, toelichting_lang=lang,
-        data_bronnen=["Bestemmingsplan", "Ruimtelijkeplannen.nl"],
-        missing=False,
+        waarde=is_monument,
+        genormaliseerde_score=round(score, 4),
+        gewicht=5,
+        bijdrage=round(score * 5, 4),
+        categorie="risico",
+        toelichting_kort=kort,
+        toelichting_lang=lang,
+        data_bronnen=["Bestemmingsplan"],
+        missing=True,
     )
 
 
@@ -831,6 +903,10 @@ def score_juridisch_klimaat(neighborhood_metrics: dict | None) -> FactorResult:
             toelichting_lang="Er zijn onvoldoende gegevens om het juridisch klimaat te beoordelen. De risicoscore is op neutraal gezet.",
             data_bronnen=["Rechtspraak.nl"],
             missing=True,
+            succeskans_missing=True,
+            succeskans_reason="no_juridisch_klimaat_data",
+            dev_type_ruling_count=0,
+            total_ruling_count=0,
         )
 
     # M046/S01 RM-1: parallel pad aan score_vergunning_succeskans — sparse
@@ -850,12 +926,18 @@ def score_juridisch_klimaat(neighborhood_metrics: dict | None) -> FactorResult:
             ),
             data_bronnen=["Rechtspraak.nl"],
             missing=True,
+            succeskans_missing=True,
+            succeskans_reason="insufficient_dev_type_rulings",
+            dev_type_ruling_count=dev_count,
+            total_ruling_count=total_count,
         )
 
     approval_rate = jk.get("approval_rate", 0.5)
     # Inverse: low approval = high risk
     score = 1.0 - normalize_linear(approval_rate, 0.2, 0.9)
 
+    dev_count = jk.get("ruling_count_dev_types", 0)
+    total_count = jk.get("ruling_count", 0)
     risk_label = "Hoog" if score >= 0.6 else "Gemiddeld" if score >= 0.3 else "Laag"
     pct = round(approval_rate * 100)
     kort = f"{risk_label} juridisch risico \u2014 {pct}% goedkeuring in gemeente"
@@ -875,6 +957,10 @@ def score_juridisch_klimaat(neighborhood_metrics: dict | None) -> FactorResult:
         toelichting_kort=kort, toelichting_lang=lang,
         data_bronnen=["Rechtspraak.nl"],
         missing=False,
+        succeskans_missing=False,
+        succeskans_reason=None,
+        dev_type_ruling_count=dev_count,
+        total_ruling_count=total_count,
     )
 
 

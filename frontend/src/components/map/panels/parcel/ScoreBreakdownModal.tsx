@@ -5,9 +5,10 @@
  * from score_breakdown data (v3.0 format).
  */
 
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, TrendingUp, ShieldAlert, Info } from 'lucide-react'
+import { X, TrendingUp, ShieldAlert, Info, ChevronDown, MapPin } from 'lucide-react'
 
 /* ── Types ───────────────────────────────────────────────────── */
 
@@ -20,6 +21,31 @@ interface ScoreFactor {
   toelichting_kort: string | null
   toelichting_lang: string | null
   missing: boolean
+  data_bronnen: string[] | null
+  succeskans_missing: boolean | null
+  succeskans_reason: string | null
+  dev_type_ruling_count: number | null
+  total_ruling_count: number | null
+}
+
+/* ── Helpers (exported for reuse) ────────────────────────────── */
+
+export function countMissingFactors(
+  breakdown: Record<string, unknown> | null | undefined,
+): number {
+  if (!breakdown) return 0
+  let count = 0
+  for (const value of Object.values(breakdown)) {
+    if (!value || typeof value !== 'object') continue
+    const f = value as Record<string, unknown>
+    if (f.missing === true) count++
+  }
+  return count
+}
+
+export function isWijkBreed(dataBronnen: string[] | null): boolean {
+  if (!dataBronnen) return false
+  return dataBronnen.some((src) => /CBS/i.test(src))
 }
 
 /* ── Props ────────────────────────────────────────────────────── */
@@ -59,6 +85,13 @@ function parseFactors(breakdown: Record<string, unknown> | null): {
       toelichting_kort: typeof f.toelichting_kort === 'string' ? f.toelichting_kort : null,
       toelichting_lang: typeof f.toelichting_lang === 'string' ? f.toelichting_lang : null,
       missing: f.missing === true,
+      data_bronnen: Array.isArray(f.data_bronnen)
+        ? (f.data_bronnen.filter((x) => typeof x === 'string') as string[])
+        : null,
+      succeskans_missing: typeof f.succeskans_missing === 'boolean' ? f.succeskans_missing : null,
+      succeskans_reason: typeof f.succeskans_reason === 'string' ? f.succeskans_reason : null,
+      dev_type_ruling_count: typeof f.dev_type_ruling_count === 'number' ? f.dev_type_ruling_count : null,
+      total_ruling_count: typeof f.total_ruling_count === 'number' ? f.total_ruling_count : null,
     }
 
     if (factor.categorie === 'risico') {
@@ -302,16 +335,16 @@ function FactorSection({
       </div>
       <div className="space-y-1.5">
         {factors.map(({ name, factor }) => (
-          <FactorRow key={name} name={name} factor={factor} color={color} />
+          <FactorCard key={name} name={name} factor={factor} color={color} />
         ))}
       </div>
     </div>
   )
 }
 
-/* ── FactorRow ───────────────────────────────────────────────── */
+/* ── FactorCard (expandable) ─────────────────────────────────── */
 
-function FactorRow({
+function FactorCard({
   name,
   factor,
   color,
@@ -320,54 +353,136 @@ function FactorRow({
   factor: ScoreFactor
   color: string
 }) {
+  const [expanded, setExpanded] = useState(false)
   const score = factor.genormaliseerde_score
   const barWidth = score !== null ? Math.min(100, Math.max(0, score)) : 0
 
+  const hasExpandableContent =
+    Boolean(factor.toelichting_lang) ||
+    (factor.data_bronnen !== null && factor.data_bronnen.length > 0) ||
+    (factor.dev_type_ruling_count !== null && factor.total_ruling_count !== null)
+
+  // Missing-factor copy: use succeskans_reason (S01) when available, else "Ontbreekt"
+  const missingLabel = factor.succeskans_reason ?? 'Ontbreekt'
+
   return (
-    <div className="rounded-[12px] bg-[#F2F6F3] p-3 transition-colors hover:bg-[#ECF1ED]">
-      <div className="flex items-center justify-between mb-1.5">
-        <div className="flex items-center gap-2 min-w-0">
-          <span
-            className="text-[12px] font-semibold text-[#0E1111] truncate"
-          >
-            {formatFactorName(name)}
-          </span>
-          {factor.missing && (
-            <span className="text-[9px] font-semibold text-[#94a3b8] bg-[#E8EDEB] rounded-full px-1.5 py-0.5 shrink-0">
-              Ontbreekt
+    <div className="rounded-[12px] bg-[#F2F6F3] transition-colors hover:bg-[#ECF1ED]">
+      <button
+        type="button"
+        onClick={() => hasExpandableContent && setExpanded((e) => !e)}
+        disabled={!hasExpandableContent}
+        className="w-full text-left p-3 disabled:cursor-default"
+        aria-expanded={expanded}
+      >
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[12px] font-semibold text-[#0E1111] truncate">
+              {formatFactorName(name)}
             </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {factor.gewicht !== null && (
-            <span className="text-[10px] text-[#94a3b8] tabular-nums">
-              ×{factor.gewicht}
+            {factor.missing && (
+              <span
+                className="text-[9px] font-semibold text-[#94a3b8] bg-[#E8EDEB] rounded-full px-1.5 py-0.5 shrink-0"
+                title={missingLabel}
+              >
+                {factor.succeskans_reason ? 'Reden →' : 'Ontbreekt'}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {factor.gewicht !== null && (
+              <span className="text-[10px] text-[#94a3b8] tabular-nums">
+                ×{factor.gewicht}
+              </span>
+            )}
+            <span
+              className="text-[13px] font-bold tabular-nums"
+              style={{ color: factor.missing ? '#cbd5e1' : color }}
+            >
+              {score !== null ? Math.round(score) : '—'}
             </span>
-          )}
-          <span
-            className="text-[13px] font-bold tabular-nums"
-            style={{ color: factor.missing ? '#cbd5e1' : color }}
-          >
-            {score !== null ? Math.round(score) : '—'}
-          </span>
+            {hasExpandableContent && (
+              <ChevronDown
+                size={14}
+                strokeWidth={2}
+                className="text-[#94a3b8] transition-transform"
+                style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+              />
+            )}
+          </div>
         </div>
-      </div>
-      {/* Progress bar */}
-      <div className="h-1.5 rounded-full bg-[#E8EDEB] overflow-hidden">
-        <motion.div
-          className="h-full rounded-full"
-          style={{ background: factor.missing ? '#cbd5e1' : color }}
-          initial={{ width: 0 }}
-          animate={{ width: `${barWidth}%` }}
-          transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1], delay: 0.2 }}
-        />
-      </div>
-      {/* Short explanation */}
-      {factor.toelichting_kort && !factor.missing && (
-        <p className="mt-1.5 text-[11px] text-[#6B7280] leading-snug">
-          {factor.toelichting_kort}
-        </p>
-      )}
+        {/* Progress bar */}
+        <div className="h-1.5 rounded-full bg-[#E8EDEB] overflow-hidden">
+          <motion.div
+            className="h-full rounded-full"
+            style={{ background: factor.missing ? '#cbd5e1' : color }}
+            initial={{ width: 0 }}
+            animate={{ width: `${barWidth}%` }}
+            transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1], delay: 0.2 }}
+          />
+        </div>
+        {/* Short explanation (always visible, non-missing only) */}
+        {factor.toelichting_kort && !factor.missing && (
+          <p className="mt-1.5 text-[11px] text-[#6B7280] leading-snug">
+            {factor.toelichting_kort}
+          </p>
+        )}
+        {/* Missing-factor reason inline (S01: succeskans_reason) */}
+        {factor.missing && factor.succeskans_reason && (
+          <p className="mt-1.5 text-[11px] text-[#94a3b8] leading-snug italic">
+            {factor.succeskans_reason}
+          </p>
+        )}
+      </button>
+
+      {/* Expanded metadata */}
+      <AnimatePresence initial={false}>
+        {expanded && hasExpandableContent && (
+          <motion.div
+            key="expanded"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+            className="overflow-hidden"
+          >
+            <div className="px-3 pb-3 pt-1 space-y-2 border-t border-[#E8EDEB]">
+              {factor.toelichting_lang && (
+                <p className="text-[11px] text-[#475569] leading-relaxed pt-2">
+                  {factor.toelichting_lang}
+                </p>
+              )}
+              {/* S01 metadata: ruling-count for vergunning_succeskans / juridisch_klimaat */}
+              {factor.dev_type_ruling_count !== null && factor.total_ruling_count !== null && (
+                <p className="text-[10px] text-[#6B7280] italic">
+                  Gebaseerd op {factor.dev_type_ruling_count} van {factor.total_ruling_count} uitspraken na filtering op dev-types.
+                </p>
+              )}
+              {/* Data-bronnen + wijk-breed tag */}
+              {factor.data_bronnen && factor.data_bronnen.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[9px] font-extrabold uppercase tracking-[0.15em] text-[#94a3b8]">
+                    Bronnen
+                  </span>
+                  {factor.data_bronnen.map((bron) => (
+                    <span
+                      key={bron}
+                      className="text-[10px] text-[#475569] bg-white rounded-full px-2 py-0.5 border border-[#E8EDEB]"
+                    >
+                      {bron}
+                    </span>
+                  ))}
+                  {isWijkBreed(factor.data_bronnen) && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#2D5F4C] bg-[#D1E2D8] rounded-full px-2 py-0.5">
+                      <MapPin size={10} strokeWidth={2} />
+                      wijk-breed
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
