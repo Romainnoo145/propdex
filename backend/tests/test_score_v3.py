@@ -148,6 +148,69 @@ def test_vrije_grond_with_large_unbuilt_area(full_parcel_data):
     assert r.genormaliseerde_score > 0.7
 
 
+# ---------------------------------------------------------------------------
+# M046/S02 BUG-2: shape-ratio guard tegen road-strip valse positieven
+# ---------------------------------------------------------------------------
+
+
+def test_vrije_grond_strip_guard_triggers_when_shape_ratio_above_10():
+    """Strookperceel (2m × 100m): area=200, perimeter=204 → shape_ratio=14.4."""
+    pd = {
+        "area_m2": 200,
+        "perimeter_m": 204,
+        "building_metrics": {"pand_oppervlakte_m2": 0},
+    }
+    r = score_vrije_grond(pd)
+    assert r.missing is True
+    assert r.genormaliseerde_score == 0.0
+    assert "strook" in r.toelichting_kort.lower()
+
+
+def test_vrije_grond_no_guard_on_normal_parcel():
+    """Normaal perceel (30m × 40m): area=1200, perimeter=140 → shape_ratio=4.04."""
+    pd = {
+        "area_m2": 1200,
+        "perimeter_m": 140,
+        "building_metrics": {"pand_oppervlakte_m2": 0},
+    }
+    r = score_vrije_grond(pd)
+    assert r.missing is False
+    # 100% vrije grond op normaal perceel → hoge score verwacht
+    assert r.genormaliseerde_score > 0.5
+
+
+def test_vrije_grond_backward_compat_without_perimeter():
+    """Legacy parcel_data zonder perimeter_m key → guard fires NIET, normale score."""
+    pd = {
+        "area_m2": 200,
+        "building_metrics": {"pand_oppervlakte_m2": 0},
+    }
+    r = score_vrije_grond(pd)
+    assert r.missing is False
+    assert r.genormaliseerde_score > 0
+
+
+def test_vrije_grond_guard_threshold_strict_at_10():
+    """Strict >: shape_ratio == 10.0 exact → geen guard; shape_ratio > 10 → guard fires."""
+    # Exact op threshold: area=100, perimeter=100 → shape_ratio = 100 / sqrt(100) = 10.0
+    pd_at_threshold = {
+        "area_m2": 100,
+        "perimeter_m": 100,
+        "building_metrics": {"pand_oppervlakte_m2": 0},
+    }
+    r_at = score_vrije_grond(pd_at_threshold)
+    assert r_at.missing is False, "shape_ratio == 10.0 mag GEEN guard triggeren (strict >)"
+
+    # Net boven threshold: area=100, perimeter=100.1 → shape_ratio = 10.01
+    pd_above_threshold = {
+        "area_m2": 100,
+        "perimeter_m": 100.1,
+        "building_metrics": {"pand_oppervlakte_m2": 0},
+    }
+    r_above = score_vrije_grond(pd_above_threshold)
+    assert r_above.missing is True, "shape_ratio > 10 MOET guard triggeren"
+
+
 def test_optoppotentie_with_headroom(full_parcel_data):
     r = score_optoppotentie(full_parcel_data)
     assert r.categorie == "potentie"

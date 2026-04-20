@@ -75,6 +75,29 @@ def score_vrije_grond(parcel_data: dict) -> FactorResult:
     bm = parcel_data.get("building_metrics") or {}
     pand_opp = bm.get("pand_oppervlakte_m2") or 0
 
+    # M046/S02 BUG-2: shape-ratio guard. Langwerpige strook/wegvormige percelen
+    # (shape_ratio = perimeter / sqrt(area) > 10) zijn in de praktijk niet
+    # bebouwbaar — 2m brede stroken langs wegen, greppels, plantsoenen krijgen
+    # anders 100% vrije-grond-score wat semantisch onzin is.
+    # Legacy scans zonder perimeter_m key vallen door backward-compat pad.
+    perimeter = parcel_data.get("perimeter_m")
+    if area > 0 and perimeter is not None and perimeter > 0:
+        shape_ratio = perimeter / math.sqrt(area)
+        if shape_ratio > 10:
+            return FactorResult(
+                waarde=None, genormaliseerde_score=0.0, gewicht=12,
+                bijdrage=0.0, categorie="potentie",
+                toelichting_kort="Perceel lijkt strook/wegvorm — niet bebouwbaar",
+                toelichting_lang=(
+                    f"Shape-ratio {shape_ratio:.1f} (perimeter {perimeter:.0f}m / "
+                    f"sqrt(area {area:.0f}m\u00b2)) wijst op een langwerpig strook- of "
+                    f"wegvormig perceel. Deze vorm is in de praktijk ongeschikt voor "
+                    f"zelfstandige bebouwing. De ontwikkelpotentie is op 0 gezet."
+                ),
+                data_bronnen=["Kadaster"],
+                missing=True,
+            )
+
     if area <= 0:
         ratio = 0.0
     else:
