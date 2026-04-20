@@ -63,7 +63,7 @@ def test_rce_not_monument_clean_zero() -> None:
     assert result.waarde is False
     assert result.genormaliseerde_score == 0.0
     assert result.bijdrage == 0.0
-    assert "Geen rijksmonument" in result.toelichting_lang
+    assert "Geen rijksmonument" in result.toelichting_kort
     assert "RCE API" in result.data_bronnen
 
 

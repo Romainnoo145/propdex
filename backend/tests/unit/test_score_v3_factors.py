@@ -434,11 +434,14 @@ class TestScoreAsbest:
 
 class TestScoreMonument:
     def test_monument_detected(self):
+        """Pre-S05 alle keyword-hits waren missing=False. Post-S05: keyword-path
+        is fallback (RCE ontbreekt), dus missing=True signaleert data-provenance
+        voor frontend. genormaliseerde_score blijft 1.0 (detection correct)."""
         data = {"bestemmingen": [{"type": "Waarde - Cultuurhistorie", "naam": "monument"}]}
         result = score_monument(data)
         assert result.categorie == "risico"
         assert result.genormaliseerde_score == pytest.approx(1.0)
-        assert result.missing is False
+        assert result.missing is True, "M046/S05: fallback path → missing=True"
 
     def test_no_monument(self):
         data = {"bestemmingen": [{"type": "Wonen", "naam": "Wonen - 1"}]}
