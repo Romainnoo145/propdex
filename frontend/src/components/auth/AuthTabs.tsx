@@ -59,7 +59,7 @@ export function AuthTabs({
                 />
               )}
               <span className={`relative z-10 ${isActive ? 'text-white' : ''}`}>
-                {tab === 'login' ? 'Log in' : 'Register'}
+                {tab === 'login' ? 'Log in' : 'Registreren'}
               </span>
             </button>
           )
