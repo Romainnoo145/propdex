@@ -11,6 +11,7 @@ from app.models.change_record import ChangeRecord  # noqa: F401
 from app.models.chat_conversation import ChatConversation  # noqa: F401
 from app.models.chat_message import ChatMessage  # noqa: F401
 from app.models.checklist_progress import ChecklistProgress  # noqa: F401
+from app.models.factor_extraction_cache import FactorExtractionCache  # noqa: F401
 from app.models.favorite_note import FavoriteNote  # noqa: F401
 from app.models.funda_listing_snapshot import FundaListingSnapshot  # noqa: F401
 from app.models.gemeente_provincie_map import GemeenteProvincieMap  # noqa: F401
@@ -58,6 +59,7 @@ __all__ = [
     "ChangeRecord",
     "ChangeReadState",
     "ChecklistProgress",
+    "FactorExtractionCache",
     "UserNotificationState",
     "FundaListingSnapshot",
     "GeneratedDossier",
