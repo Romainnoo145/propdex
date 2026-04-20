@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
-import { Sparkles } from 'lucide-react'
 import { AuthTabs } from '@/components/auth/AuthTabs'
 import { useAuth } from '@/lib/auth/useAuth'
 
@@ -61,7 +60,7 @@ function AuthPage() {
           />
           {/* Brand */}
           <div className="relative z-[3] flex items-center gap-3.5">
-            <img src="/images/propdex-logo.svg" alt="Propdex" className="w-[38px] h-[38px] rounded-[10px]" />
+            <img src="/images/propdex-logo.svg" alt="" className="w-[38px] h-[38px] rounded-[10px]" />
             <span className="font-black text-[20px] tracking-tight">Propdex</span>
           </div>
 
@@ -83,15 +82,15 @@ function AuthPage() {
           <div className="relative z-[3] flex items-center gap-3.5 text-[12px] text-white/[0.38]">
             <span>© 2026 Propdex</span>
             <span className="text-white/20">·</span>
-            <a href="#" className="text-white/55 hover:text-[#F9A826] transition-colors no-underline">
+            <a href="#" onClick={(e) => e.preventDefault()} className="text-white/55 hover:text-[#F9A826] transition-colors no-underline">
               Privacybeleid
             </a>
             <span className="text-white/20">·</span>
-            <a href="#" className="text-white/55 hover:text-[#F9A826] transition-colors no-underline">
+            <a href="#" onClick={(e) => e.preventDefault()} className="text-white/55 hover:text-[#F9A826] transition-colors no-underline">
               Algemene voorwaarden
             </a>
             <span className="text-white/20">·</span>
-            <a href="#" className="text-white/55 hover:text-[#F9A826] transition-colors no-underline">
+            <a href="#" onClick={(e) => e.preventDefault()} className="text-white/55 hover:text-[#F9A826] transition-colors no-underline">
               Contact
             </a>
           </div>
@@ -116,27 +115,12 @@ function AuthPage() {
               onRegister={register}
               onLoginSuccess={handleSuccess}
               onRegisterSuccess={handleSuccess}
+              onDemoLogin={handleDemoLogin}
+              demoLoading={demoLoading}
+              demoError={demoError}
             />
           </div>
         </div>
-      </div>
-
-      {/* Demo pill — stays here for now, removed in Task 3 */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
-        <button
-          type="button"
-          onClick={handleDemoLogin}
-          disabled={demoLoading}
-          className="inline-flex items-center gap-2 rounded-full border border-[#EAEFEF] bg-white px-5 py-2.5 text-[13px] font-semibold text-[#0E1111] hover:bg-[#F2F6F3] disabled:opacity-50 transition-colors"
-        >
-          <Sparkles size={14} className="text-[#F9A826]" />
-          {demoLoading ? 'Bezig met inloggen…' : 'Probeer de demo'}
-        </button>
-        {demoError && (
-          <p role="alert" className="text-[12px] text-red-500">
-            {demoError}
-          </p>
-        )}
       </div>
     </div>
   )
