@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { motion, useSpring, useTransform } from 'framer-motion'
-import { Sparkles, TrendingUp, CircleHelp, type LucideIcon } from 'lucide-react'
+import { Flame, TrendingUp, CircleHelp, type LucideIcon } from 'lucide-react'
 import type { ScanResultItem, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/types/scan'
 import { isScoreV3 } from '@/lib/score'
 import { TruncatedText } from '../TruncatedText'
@@ -31,7 +31,7 @@ function deriveVerdict(potentieScore: number | null): Verdict {
       color: 'text-green-600',
       badgeColor: 'bg-green-500',
       barColor: 'bg-green-500',
-      Icon: Sparkles,
+      Icon: Flame,
     }
   if (potentieScore >= 35)
     return {
