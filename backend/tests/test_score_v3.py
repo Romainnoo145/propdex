@@ -211,6 +211,52 @@ def test_vrije_grond_guard_threshold_strict_at_10():
     assert r_above.missing is True, "shape_ratio > 10 MOET guard triggeren"
 
 
+# ---------------------------------------------------------------------------
+# M046/S04 BUG-1: _best_bestemming_type count-voting + priority tie-breaker
+# ---------------------------------------------------------------------------
+
+
+def test_best_bestemming_single_type_unchanged():
+    """Single-bestemming parcels blijven werken als voorheen."""
+    from app.services.score_v3_factors import _best_bestemming_type
+    assert _best_bestemming_type({"bestemmingen": [{"type": "wonen"}]}) == "wonen"
+
+
+def test_best_bestemming_count_wins_over_priority():
+    """BUG-1 regression: 2× verkeer + 1× wonen → verkeer (count wint).
+
+    Voorheen: wonen heeft priority=4 dus wint altijd ongeacht count.
+    Nu: count wint eerst, pas bij gelijkspel is priority de tie-breaker.
+    """
+    from app.services.score_v3_factors import _best_bestemming_type
+    pd = {
+        "bestemmingen": [
+            {"type": "verkeer"},
+            {"type": "verkeer - verblijfsgebied"},
+            {"type": "wonen"},
+        ]
+    }
+    assert _best_bestemming_type(pd) == "verkeer"
+
+
+def test_best_bestemming_priority_tiebreaker_on_equal_counts():
+    """1× bedrijf + 1× wonen (tie) → wonen (transformatie-kans behouden).
+
+    Bij count-tie behoudt de helper de bestaande priority-lijst zodat
+    transformatie-signaal niet verdwijnt: een gemengd bedrijf+wonen
+    perceel wordt nog steeds als wonen geklasseerd (ontwikkelpotentieel).
+    """
+    from app.services.score_v3_factors import _best_bestemming_type
+    pd = {"bestemmingen": [{"type": "bedrijf"}, {"type": "wonen"}]}
+    assert _best_bestemming_type(pd) == "wonen"
+
+
+def test_best_bestemming_fallback_to_type_when_no_priority_match():
+    """Geen priority-match + geen mixed → return type zelf (niet 'onbekend')."""
+    from app.services.score_v3_factors import _best_bestemming_type
+    assert _best_bestemming_type({"bestemmingen": [{"type": "water"}]}) == "water"
+
+
 def test_optoppotentie_with_headroom(full_parcel_data):
     r = score_optoppotentie(full_parcel_data)
     assert r.categorie == "potentie"
