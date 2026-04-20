@@ -59,7 +59,42 @@ function AuthPage() {
             className="absolute w-[460px] h-[460px] rounded-full pointer-events-none"
             style={{ background: 'rgba(249,168,38,0.08)', filter: 'blur(120px)', top: '-100px', left: '-80px' }}
           />
-          {/* Brand, mid, legal go here in later tasks */}
+          {/* Brand */}
+          <div className="relative z-[3] flex items-center gap-3.5">
+            <img src="/images/propdex-logo.svg" alt="Propdex" className="w-[38px] h-[38px] rounded-[10px]" />
+            <span className="font-black text-[20px] tracking-tight">Propdex</span>
+          </div>
+
+          {/* Pitch — vertically centered */}
+          <div className="relative z-[3] max-w-[500px] my-auto">
+            <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-white/65 mb-[22px]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#F9A826]" />
+              Voor ontwikkelaars &amp; kwaliteitsborgers
+            </div>
+            <h1 className="text-[46px] font-black leading-[1.03] tracking-[-0.042em] mb-5">
+              Van grondpositie tot go/no-go in één platform.
+            </h1>
+            <p className="text-[16px] text-white/65 leading-[1.5] max-w-[420px]">
+              Weet in twee minuten of een grondpositie de moeite waard is.
+            </p>
+          </div>
+
+          {/* Legal footer */}
+          <div className="relative z-[3] flex items-center gap-3.5 text-[12px] text-white/[0.38]">
+            <span>© 2026 Propdex</span>
+            <span className="text-white/20">·</span>
+            <a href="#" className="text-white/55 hover:text-[#F9A826] transition-colors no-underline">
+              Privacybeleid
+            </a>
+            <span className="text-white/20">·</span>
+            <a href="#" className="text-white/55 hover:text-[#F9A826] transition-colors no-underline">
+              Algemene voorwaarden
+            </a>
+            <span className="text-white/20">·</span>
+            <a href="#" className="text-white/55 hover:text-[#F9A826] transition-colors no-underline">
+              Contact
+            </a>
+          </div>
         </div>
 
         {/* RIGHT · form panel */}
