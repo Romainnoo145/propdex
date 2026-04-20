@@ -274,6 +274,8 @@ export interface ScanResultItem {
   pand_status: string | null
   /** Zoning designations from DSO */
   bestemmingen: Record<string, unknown>[] | null
+  /** Primary bestemming type via backend S04 count-voting — single source of truth for UI tile */
+  primary_bestemming_type?: string | null
   /** Development opportunity score (0-100) */
   score: number | null
   /** Score category: High | Medium | Low */

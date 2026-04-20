@@ -45,13 +45,39 @@ const BESTEMMING_META: Record<BestemmingCategory, { label: string; image: string
   gemengd: { label: 'Gemengd', image: '/images/bestemmingen/gemengd.jpg' },
 }
 
+/**
+ * Map backend primary_bestemming_type (M046/S04 count-voting) naar display-categorie.
+ * Single source of truth: backend beslist welk type domineert, frontend mapt naar visuele
+ * categorie (stock-image + label). Voorkomt parity-drift zoals vóór M046/S06 F3.
+ */
+function mapPrimaryTypeToCategory(primaryType: string): BestemmingCategory {
+  const t = primaryType.toLowerCase()
+  if (t.includes('maatschappelijk')) return 'maatschappelijk'
+  if (t.includes('groen') || t.includes('natuur') || t.includes('bos') || t.includes('agrarisch')) return 'groen'
+  if (t.includes('bedrijf') || t.includes('industrie')) return 'industrie'
+  if (t.includes('centrum')) return 'centrum'
+  if (t.includes('detailhandel') || t.includes('kantoor') || t.includes('horeca') || t.includes('commercieel')) return 'commercieel'
+  if (t.includes('gemengd')) return 'gemengd'
+  if (t.includes('wonen')) return 'wonen'
+  return 'gemengd'
+}
+
 function deriveBestemmingCategory(
   bestemmingen: ScanResultItem['bestemmingen'],
+  primaryType?: string | null,
 ): BestemmingCategory {
+  // Backend-provided primary type wins (M046/S06 F3 fix — single source of truth)
+  if (primaryType && primaryType !== 'onbekend') {
+    return mapPrimaryTypeToCategory(primaryType)
+  }
+
+  // Legacy fallback for scans/responses without primary_bestemming_type field.
+  // Kept for backward-compat during rollout. Uses pre-S06 substring matching
+  // which produces S04-divergent results for mixed bestemmingen — acceptable
+  // only for legacy data paths, never for fresh at-point responses.
   if (!bestemmingen || bestemmingen.length === 0) return 'gemengd'
   const text = JSON.stringify(bestemmingen).toLowerCase()
 
-  // Specific categories first (most precise match wins)
   if (text.includes('maatschappelijk')) return 'maatschappelijk'
   if (text.includes('groen') || text.includes('natuur') || text.includes('bos')) return 'groen'
   if (text.includes('bedrijf') || text.includes('bedrijventerrein')) return 'industrie'
@@ -133,7 +159,7 @@ export function ParcelBentoOverview({
   const [showScoreBreakdown, setShowScoreBreakdown] = useState(false)
   const { data: weightsData } = useOrgScoreWeights()
   const missingFactorCount = countMissingFactors(parcel.score_breakdown)
-  const category = deriveBestemmingCategory(parcel.bestemmingen)
+  const category = deriveBestemmingCategory(parcel.bestemmingen, parcel.primary_bestemming_type)
   const bm = parcel.building_metrics
   const vrijPct =
     parcel.area_m2 != null && parcel.area_m2 > 0 && bm?.pand_oppervlakte_m2 != null

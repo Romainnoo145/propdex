@@ -1063,6 +1063,7 @@ export async function fetchParcelAtPoint(
     opportunity_signals?: string[] | null
     building_metrics?: Record<string, unknown> | null
     bestemmingen?: Record<string, unknown>[] | null
+    primary_bestemming_type?: string | null
     has_report: boolean
     geometry?: GeoJSON.Geometry | null
   }>(
