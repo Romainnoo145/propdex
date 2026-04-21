@@ -91,3 +91,39 @@ async def get_cascade_payloads(
         )
 
     return payloads
+
+
+async def get_affected_parcel_ids(
+    db: AsyncSession,
+    *,
+    document_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> list[str]:
+    """Return Kadaster parcel_id strings for all parcels in the document's gemeente.
+
+    Multi-tenant: document must belong to organization_id.
+    Only gemeente-level documents are supported (entity_type == "gemeente").
+    Normalizes entity_code: "GM0983" → "0983" before querying parcel_cache.
+
+    Returns empty list if document not found, wrong org, or no parcels cached.
+    """
+    from app.models.parcel_cache import ParcelCache
+
+    stmt = select(PolicyDocument).where(
+        PolicyDocument.id == document_id,
+        PolicyDocument.organization_id == organization_id,
+    )
+    result = await db.execute(stmt)
+    doc = result.scalar_one_or_none()
+
+    if doc is None or doc.entity_type != "gemeente":
+        return []
+
+    # Normalize: remove GM prefix if present (parcel_cache stores bare codes e.g. "0983")
+    gemeente_code = doc.entity_code.removeprefix("GM")
+
+    parcel_stmt = select(ParcelCache.parcel_id).where(
+        ParcelCache.gemeente_code == gemeente_code,
+    )
+    parcel_result = await db.execute(parcel_stmt)
+    return list(parcel_result.scalars().all())
