@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
@@ -6,13 +7,17 @@ import { MapPanelShell } from '@/components/map/panels/MapPanelShell'
 import { ParcelEnrichmentCard } from './ParcelEnrichmentCard'
 import { FysiekRisicoprofielSection } from './FysiekRisicoprofielSection'
 import { MarketSignalsCards } from './MarketSignalsCards'
+import { ProjectTypePickerModal } from '@/components/parcel/ProjectTypePickerModal'
 import { useParcelEnrichment, useParcelRiskProfile } from '@/hooks/useScans'
 import { useGenerateReportFromParcel } from '@/hooks/useReports'
 import { useParcelChanges } from '@/hooks/useNotifications'
+import { useParcelProjectType } from '@/hooks/useParcelProjectType'
+import { useAuth } from '@/lib/auth/useAuth'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { toast } from 'sonner'
 import { FileText, MapPin } from 'lucide-react'
 import type { ScanResultItem, BuildingMetrics } from '@/lib/types/scan'
+import { PROJECT_TYPE_LABELS } from '@/lib/types/projectType'
 
 const VACANCY_LABELS: Record<string, string> = {
   leeg_perceel: 'Leeg perceel',
@@ -345,6 +350,30 @@ export function ParcelDetailModal({
 }: ParcelDetailModalProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  // Project type — query + first-open modal trigger
+  const parcelId = parcel?.parcel_id
+  const { data: projectTypeData } = useParcelProjectType(parcelId)
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  useEffect(() => {
+    if (!parcelId || !projectTypeData || !user) return
+    const hasAssignment =
+      projectTypeData.project_type !== 'onbepaald' && projectTypeData.set_at !== null
+    const skipKey = `parcelProjectTypeSkipped:${user.id}:${parcelId}`
+    const hasSkipped = localStorage.getItem(skipKey) === 'true'
+    if (!hasAssignment && !hasSkipped) {
+      setPickerOpen(true)
+    }
+  }, [parcelId, projectTypeData, user])
+
+  const handleSkip = () => {
+    if (user && parcelId) {
+      localStorage.setItem(`parcelProjectTypeSkipped:${user.id}:${parcelId}`, 'true')
+    }
+  }
+
   // Fetch enrichment only when modal is open
   const enrichment = useParcelEnrichment(parcel?.parcel_id ?? null, {
     enabled: isOpen && !!parcel?.parcel_id,
@@ -459,6 +488,18 @@ export function ParcelDetailModal({
                 >
                   Potentie {Math.round(parcel.score)}
                 </span>
+              )}
+              {projectTypeData && projectTypeData.project_type !== 'onbepaald' && (
+                <button
+                  type="button"
+                  onClick={() => setPickerOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                             bg-[#F9A826]/15 text-[#0E1111] text-xs font-bold tracking-wide
+                             hover:bg-[#F9A826]/25 transition"
+                >
+                  {PROJECT_TYPE_LABELS[projectTypeData.project_type]}
+                  <span className="text-neutral-500 font-normal">· wijzigen</span>
+                </button>
               )}
             </div>
           </div>
@@ -754,6 +795,17 @@ export function ParcelDetailModal({
                 : 'Genereer rapport'}
           </button>
         </div>
+
+        {/* Project type picker modal — first-open trigger + wijzigen */}
+        {parcelId && (
+          <ProjectTypePickerModal
+            open={pickerOpen}
+            onClose={() => setPickerOpen(false)}
+            parcelId={parcelId}
+            currentType={projectTypeData?.project_type ?? null}
+            onSkip={handleSkip}
+          />
+        )}
     </div>
   )
 
