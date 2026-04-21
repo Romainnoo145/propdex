@@ -74,3 +74,4 @@ backend/.venv
 
 # Superpowers brainstorming visual companion (mockups persist across sessions)
 .superpowers/
+.worktrees/

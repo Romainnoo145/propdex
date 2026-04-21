@@ -678,8 +678,9 @@ def test_total_weights_preserved_after_redistribution():
 
     if missing_count / len(potentie_factors) > 0.2:
         # Total weight of present factors should approximate original total
+        # Updated for M047/S03 weight normalization (old: 80, new: 100)
         total_weight = sum(v.gewicht for v in potentie_factors.values())
-        assert total_weight == pytest.approx(80, abs=1)
+        assert total_weight == pytest.approx(100, abs=1)
 
 
 # ---------------------------------------------------------------------------
