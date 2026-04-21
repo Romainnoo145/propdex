@@ -7,9 +7,12 @@ All narrative templates are deterministic Dutch f-strings (no AI calls).
 from __future__ import annotations
 
 import math
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from app.services.score_v3 import FactorResult
+
+if TYPE_CHECKING:
+    from app.ai.factors.woonvisie_match import WoonvisiePayload
 
 # ---------------------------------------------------------------------------
 # Normalization helpers
@@ -1191,6 +1194,112 @@ def score_geluid(parcel_data: dict) -> FactorResult:
         bijdrage=round(score * 5, 4), categorie="risico",
         toelichting_kort=kort, toelichting_lang=lang,
         data_bronnen=["RIVM Geluidbelasting Lden WMS"],
+        missing=False,
+    )
+
+
+def score_woonvisie_match(
+    payload: WoonvisiePayload | None,
+    *,
+    wijk_naam: str | None,
+    project_type: str = "onbepaald",
+) -> FactorResult:
+    """Woonvisie-match factor (M047/S06 POC).
+
+    Scores hoe goed een perceel (via wijk) en projecttype aansluit bij de
+    gemeentelijke woonvisie. Vereist pre-extracted WoonvisiePayload.
+
+    Sparse factor: retourneert missing=True als payload=None.
+    Gewicht 0 bij missing → wordt niet meegewogen in score.
+    """
+    if payload is None:
+        return FactorResult(
+            waarde=None,
+            genormaliseerde_score=0.0,
+            gewicht=0,
+            bijdrage=0.0,
+            categorie="potentie",
+            toelichting_kort="Geen woonvisie beschikbaar voor deze gemeente (factor niet meegewogen).",
+            toelichting_lang="Geen gemeentelijke woonvisie beschikbaar. De factor wordt niet meegewogen in de score.",
+            data_bronnen=[],
+            missing=True,
+        )
+
+    score = 5.0  # neutraal startpunt
+    uitleg_parts: list[str] = []
+    document_label = f"Woonvisie {payload.periode_start}–{payload.periode_einde}"
+
+    # 1. Wijk-match: groei vs krimp
+    wijk_lower = (wijk_naam or "").lower()
+    growth_lowers = [w.lower() for w in payload.growth_wijken]
+    shrink_lowers = [w.lower() for w in payload.shrink_wijken]
+    herstr_lowers = [w.lower() for w in payload.herstructureringswijken]
+
+    in_growth = bool(
+        wijk_naam and any(g in wijk_lower or wijk_lower in g for g in growth_lowers)
+    )
+    in_shrink = bool(
+        wijk_naam and any(s in wijk_lower or wijk_lower in s for s in shrink_lowers)
+    )
+    in_herstr = bool(
+        wijk_naam and any(h in wijk_lower or wijk_lower in h for h in herstr_lowers)
+    )
+
+    if in_growth:
+        score += 3.0
+        matched_wijk = next(
+            g for g in payload.growth_wijken
+            if g.lower() in wijk_lower or wijk_lower in g.lower()
+        )
+        uitleg_parts.append(f"Wijk '{matched_wijk}' is aangewezen groeigebied in {document_label}")
+    elif in_herstr:
+        score += 1.5
+        uitleg_parts.append(f"Wijk staat als herstructureringslocatie in {document_label}")
+    elif in_shrink:
+        score -= 2.5
+        uitleg_parts.append(f"Wijk valt in krimpregio per {document_label}")
+
+    # 2. Projecttype vs excluded_project_types
+    if project_type in payload.excluded_project_types:
+        score -= 2.0
+        uitleg_parts.append(f"Projecttype '{project_type}' niet gewenst per {document_label}")
+
+    # 3. Segment-match: projecttype → gewenst segment proxy
+    _PROJECTTYPE_SEGMENT_MAP: dict[str, list[str]] = {
+        "nieuwbouw_wonen": ["sociaal", "midden"],
+        "transformatie_wonen": ["sociaal", "midden", "gemengd"],
+        "optoppen": ["midden", "duur"],
+        "splitsen": ["sociaal", "midden"],
+        "commercieel_naar_wonen": ["midden", "gemengd"],
+        "onbepaald": [],
+    }
+    preferred_segments = _PROJECTTYPE_SEGMENT_MAP.get(project_type, [])
+    if preferred_segments and payload.prioritized_segment in preferred_segments:
+        score += 1.5
+        uitleg_parts.append(
+            f"Prioritair segment '{payload.prioritized_segment}' matcht projecttype"
+        )
+
+    # 4. Confidence-gewogen clamp
+    score = score * payload.confidence + 5.0 * (1 - payload.confidence)
+    score = max(0.0, min(10.0, score))
+    normalized = score / 10.0
+
+    if not uitleg_parts:
+        uitleg_parts.append(f"Geen specifieke match gevonden in {document_label}")
+
+    toelichting_kort = "; ".join(uitleg_parts)
+    toelichting_lang = toelichting_kort + f" (confidence {payload.confidence:.0%})"
+
+    return FactorResult(
+        waarde=payload.prioritized_segment,
+        genormaliseerde_score=round(normalized, 4),
+        gewicht=0,  # gewicht via FACTOR_REGISTRY in compute_score_v3
+        bijdrage=0.0,  # herberekend na gewicht-toewijzing
+        categorie="potentie",
+        toelichting_kort=toelichting_kort,
+        toelichting_lang=toelichting_lang,
+        data_bronnen=["Gemeentelijke woonvisie (LLM-extracted)"],
         missing=False,
     )
 
