@@ -119,8 +119,7 @@ async def get_affected_parcel_ids(
     if doc is None or doc.entity_type != "gemeente":
         return []
 
-    # Normalize: remove GM prefix if present (parcel_cache stores bare codes e.g. "0983")
-    gemeente_code = doc.entity_code.removeprefix("GM")
+    gemeente_code = doc.entity_code  # parcel_cache stores "GM0983" format
 
     parcel_stmt = select(ParcelCache.parcel_id).where(
         ParcelCache.gemeente_code == gemeente_code,
