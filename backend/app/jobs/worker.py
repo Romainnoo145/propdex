@@ -22,6 +22,7 @@ from app.jobs.jurisprudence_analysis import (
     tegenstander_backfill_job,
 )
 from app.jobs.pdf_parsing import pdf_parsing_job
+from app.jobs.rescore_cascade_job import rescore_parcels_for_document
 from app.jobs.rescore_weights import rescore_weights_job
 from app.jobs.ruling_ingestion import ruling_ingestion_job
 
@@ -62,6 +63,7 @@ class WorkerSettings:
         ruling_ingestion_job,
         tegenstander_backfill_job,
         rescore_weights_job,
+        rescore_parcels_for_document,
         weekly_policy_auto_ingest_job,
     ]
     redis_settings = get_redis_settings()

@@ -42,7 +42,7 @@ async def weekly_policy_auto_ingest_job(ctx: dict[str, Any]) -> dict[str, Any]:
     # ARQ passes the worker's Redis pool via ctx["redis"] — it's the ArqRedis instance
     arq_pool = ctx.get("redis")
 
-    results: dict[str, dict[str, int | None]] = {}
+    results: dict[str, dict[str, int | list[str] | None]] = {}
 
     async with async_session_factory() as db:
         for entry in KNOWN_GEMEENTES_FOR_AUTO_INGEST:
@@ -60,6 +60,24 @@ async def weekly_policy_auto_ingest_job(ctx: dict[str, Any]) -> dict[str, Any]:
                     "Auto-ingest for %s (%s): %s",
                     gemeente_naam, gemeente_code, summary,
                 )
+
+                # M047/S05: enqueue cascade rescore for each newly stored document
+                stored_ids = summary.get("stored_document_ids") or []
+                if arq_pool is not None and isinstance(stored_ids, list):
+                    for doc_id in stored_ids:
+                        try:
+                            await arq_pool.enqueue_job(
+                                "rescore_parcels_for_document", document_id=str(doc_id)
+                            )
+                            logger.info(
+                                "Enqueued rescore_parcels_for_document for doc %s (%s)",
+                                doc_id, gemeente_code,
+                            )
+                        except Exception as enqueue_err:
+                            logger.warning(
+                                "Failed to enqueue rescore for doc %s: %s",
+                                doc_id, enqueue_err,
+                            )
             except Exception:
                 logger.exception(
                     "Auto-ingest failed for %s (%s)",

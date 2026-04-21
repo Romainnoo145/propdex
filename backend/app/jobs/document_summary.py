@@ -15,7 +15,7 @@ import anthropic
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.ai.claude_client import AIParsingError, create_claude_client
+from app.ai.claude_client import create_claude_client
 from app.ai.prompts import DOCUMENT_SUMMARY_PROMPT
 from app.core.config import settings
 from app.models.policy_document import PolicyDocument
@@ -196,6 +196,23 @@ async def document_summary_job(ctx: dict, document_id: str) -> dict:
                 len(summary_data.get("key_facts", [])),
                 len(summary_data.get("extracted_values", {})),
             )
+
+            # Enqueue cascade rescore now that the document is parsed
+            arq_pool = ctx.get("redis")
+            if arq_pool is not None:
+                try:
+                    await arq_pool.enqueue_job(
+                        "rescore_parcels_for_document", document_id=document_id
+                    )
+                    logger.info(
+                        "Enqueued rescore_parcels_for_document for document %s", document_id
+                    )
+                except Exception as enqueue_err:
+                    logger.warning(
+                        "Failed to enqueue rescore_parcels_for_document for %s: %s",
+                        document_id, enqueue_err,
+                    )
+
             return {"document_id": document_id, "status": "parsed"}
 
     except Exception as e:

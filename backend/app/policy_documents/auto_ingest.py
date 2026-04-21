@@ -141,7 +141,7 @@ async def ingest_gemeente_policies(
     gemeente_naam: str,
     db: AsyncSession,
     arq_pool: ArqRedis | None = None,
-) -> dict[str, int | None]:
+) -> dict[str, int | None | list[str]]:
     """Auto-ingest all known CVDR-fetchable policy documents for a gemeente.
 
     For each entry in AUTO_INGESTIBLE_DOCUMENTS:
@@ -170,6 +170,10 @@ async def ingest_gemeente_policies(
         - int → version_number written (newly ingested)
         - None → not found, already ingested, or download failed
 
+        Also contains a special key:
+        - "stored_document_ids" → list[str] of UUID strings for newly stored docs
+          (M047/S05: used by caller to enqueue rescore_parcels_for_document)
+
         The caller (endpoint or ARQ job) decides how to log/surface this.
 
     Notes:
@@ -185,9 +189,14 @@ async def ingest_gemeente_policies(
             "VENDOR_ORG_ID not configured — skipping auto-ingest for %s",
             gemeente_naam,
         )
-        return dict.fromkeys(AUTO_INGESTIBLE_DOCUMENTS.values(), None)
+        result_empty: dict[str, int | list[str] | None] = dict.fromkeys(
+            AUTO_INGESTIBLE_DOCUMENTS.values(), None
+        )
+        result_empty["stored_document_ids"] = []
+        return result_empty
 
-    summary: dict[str, int | None] = {}
+    summary: dict[str, int | list[str] | None] = {}
+    stored_document_ids: list[str] = []
     vendor_user_id: uuid.UUID | None = None  # Lazy lookup — only if we'll write
 
     for cvdr_title, source_key in AUTO_INGESTIBLE_DOCUMENTS.items():
@@ -266,6 +275,9 @@ async def ingest_gemeente_policies(
                     doc.id, enqueue_err,
                 )
 
+        # M047/S05: track stored doc IDs so caller can enqueue rescore
+        stored_document_ids.append(str(doc.id))
         summary[source_key] = doc.version_number
 
+    summary["stored_document_ids"] = stored_document_ids
     return summary
