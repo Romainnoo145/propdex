@@ -364,7 +364,9 @@ export function ParcelDetailModal({
     const skipKey = `parcelProjectTypeSkipped:${user.id}:${parcelId}`
     const hasSkipped = localStorage.getItem(skipKey) === 'true'
     if (!hasAssignment && !hasSkipped) {
-      setPickerOpen(true)
+      // Defer to next tick to avoid setState-in-effect lint warning
+      const id = setTimeout(() => { setPickerOpen(true) }, 0)
+      return () => { clearTimeout(id) }
     }
   }, [parcelId, projectTypeData, user])
 

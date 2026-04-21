@@ -49,7 +49,7 @@ export function useUpdateParcelProjectType() {
     },
     onError: (_err, _vars, context) => {
       // Rollback on error
-      if (context && 'previous' in context && 'key' in context) {
+      if (context && typeof context === 'object' && 'previous' in context && 'key' in context) {
         const ctx = context as { previous: ProjectTypeResponse | undefined; key: string[] }
         queryClient.setQueryData(ctx.key, ctx.previous)
       }
