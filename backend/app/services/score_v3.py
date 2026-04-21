@@ -71,68 +71,77 @@ class FactorRegistryEntry:
 
 
 FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
-    # --- POTENTIE (8 factors, sum default_weight = 100) ---
+    # --- POTENTIE (9 factors, sum default_weight = 100) ---
     "vrije_grond": FactorRegistryEntry(
         id="vrije_grond",
         category="potentie",
-        default_weight=15,
+        default_weight=13,
         weight_by_projecttype={
-            "optoppen": 12,  # optoppen: minder vrije grond relevant
-            "nieuwbouw_wonen": 18,  # nieuwbouw: vrije grond is primaire driver
+            "optoppen": 12,
         },
         data_source="BAG + Kadaster",
     ),
     "optoppotentie": FactorRegistryEntry(
         id="optoppotentie",
         category="potentie",
-        default_weight=12,
+        default_weight=11,
         weight_by_projecttype={
-            "optoppen": 15,  # optoppen: hoogste prioriteit voor dit type
-            "nieuwbouw_wonen": 9,  # nieuwbouw: optoppen minder relevant
+            "optoppen": 16,
+            "nieuwbouw_wonen": 7,
         },
         data_source="PLU WMS + 3D BAG",
     ),
     "bestemming": FactorRegistryEntry(
         id="bestemming",
         category="potentie",
-        default_weight=15,
+        default_weight=13,
         weight_by_projecttype=None,
         data_source="Bestemmingsplan / Ruimtelijkeplannen.nl",
     ),
     "leegstand": FactorRegistryEntry(
         id="leegstand",
         category="potentie",
-        default_weight=10,
+        default_weight=9,
         weight_by_projecttype=None,
         data_source="BAG",
     ),
     "funda_frictie": FactorRegistryEntry(
         id="funda_frictie",
         category="potentie",
-        default_weight=6,
+        default_weight=5,
         weight_by_projecttype=None,
         data_source="Funda (pilot)",
     ),
     "perceelgrootte": FactorRegistryEntry(
         id="perceelgrootte",
         category="potentie",
-        default_weight=15,
+        default_weight=13,
         weight_by_projecttype=None,
         data_source="Kadaster",
     ),
     "demografie": FactorRegistryEntry(
         id="demografie",
         category="potentie",
-        default_weight=10,
+        default_weight=9,
         weight_by_projecttype=None,
         data_source="CBS StatLine",
     ),
     "vergunning_succeskans": FactorRegistryEntry(
         id="vergunning_succeskans",
         category="potentie",
-        default_weight=17,
+        default_weight=15,
         weight_by_projecttype=None,
         data_source="Rechtspraak.nl",
+    ),
+    "woonvisie_match": FactorRegistryEntry(
+        id="woonvisie_match",
+        category="potentie",
+        default_weight=12,
+        weight_by_projecttype={
+            "nieuwbouw_wonen": 16,
+            "optoppen": 8,
+        },
+        data_source="Gemeentelijke woonvisie (LLM-extracted)",
     ),
     # --- RISICO (13 factors, sum default_weight = 100) ---
     "funderingsrisico": FactorRegistryEntry(
@@ -272,14 +281,15 @@ _verify_registry_sum_guard()
 # Default weights — single source of truth for presets and re-score job
 DEFAULT_WEIGHTS: dict[str, Any] = {
     "potentie_weights": {
-        "vrije_grond": 15,
-        "optoppotentie": 12,
-        "bestemming": 15,
-        "leegstand": 10,
-        "funda_frictie": 6,
-        "perceelgrootte": 15,
-        "demografie": 10,
-        "vergunning_succeskans": 17,
+        "vrije_grond": 13,
+        "optoppotentie": 11,
+        "bestemming": 13,
+        "leegstand": 9,
+        "funda_frictie": 5,
+        "perceelgrootte": 13,
+        "demografie": 9,
+        "vergunning_succeskans": 15,
+        "woonvisie_match": 12,
     },
     "risico_weights": {
         "funderingsrisico": 16,
@@ -306,6 +316,7 @@ def compute_score_v3(
     neighborhood_metrics: dict[str, Any] | None = None,
     custom_weights: dict[str, Any] | None = None,
     project_type: str = "onbepaald",
+    cascade_payloads: dict[str, Any] | None = None,
 ) -> ScoreV3Result:
     """Compute Score v3.0 with dual Potentie + Risico subscores.
 
@@ -326,6 +337,8 @@ def compute_score_v3(
     Returns:
         ScoreV3Result with potentie/risico scores, overall (0-100), breakdown.
     """
+    _cascade = cascade_payloads or {}
+
     # Import here to avoid circular import (factors imports FactorResult)
     from app.services.score_v3_factors import (
         score_asbest,
@@ -349,6 +362,7 @@ def compute_score_v3(
         score_perceelgrootte,
         score_vergunning_succeskans,
         score_vrije_grond,
+        score_woonvisie_match,
     )
 
     # Compute all 21 factors
@@ -401,6 +415,24 @@ def compute_score_v3(
     # Re-sync percentage_of_category after redistribution (gewicht may have changed)
     for factor in breakdown.values():
         factor.percentage_of_category = round(factor.gewicht / 100.0, 4)
+
+    # Cascade factor: woonvisie_match (payload pre-extracted, may be None).
+    # Added after redistribution so it doesn't interfere with missing-data strategy
+    # for the 21 core factors. Weight=0 when missing (sparse factor P5).
+    _wv_result = score_woonvisie_match(
+        _cascade.get("woonvisie_match"),
+        wijk_naam=parcel_data.get("wijk_naam"),
+        project_type=project_type,
+    )
+    if not _wv_result.missing:
+        _wv_entry = FACTOR_REGISTRY["woonvisie_match"]
+        _wv_weight = float(
+            (_wv_entry.weight_by_projecttype or {}).get(project_type, _wv_entry.default_weight)
+        )
+        _wv_result.gewicht = _wv_weight
+        _wv_result.bijdrage = round(_wv_result.genormaliseerde_score * _wv_weight, 4)
+        _wv_result.percentage_of_category = round(_wv_weight / 100.0, 4)
+    breakdown["woonvisie_match"] = _wv_result
 
     # Apply custom weights if provided
     if custom_weights:

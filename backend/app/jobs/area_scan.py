@@ -29,6 +29,7 @@ from app.models.parcel_cache import ParcelCache
 from app.models.project import Project
 from app.models.scan_result import ScanResult
 from app.services.bekendmaking_matcher import retro_match_changes_for_gemeente
+from app.services.cascade_enrichment_service import get_cascade_payloads
 from app.services.funda_listing_ingestion import build_funda_listing_signal_map
 from app.services.parcel_addressing import (
     MIN_BUILDING_OVERLAP_M2,
@@ -943,8 +944,32 @@ async def area_scan_job(
                         parcel_data["luchtkwaliteit"] = flags.get("luchtkwaliteit")
                         parcel_data["rijksmonument"] = flags.get("rijksmonument")
                         parcel_data["woz"] = flags.get("woz")
+                        parcel_data["wijk_naam"] = scan.wijk_naam
 
-                        v3_result = compute_score_v3(parcel_data, nbhd_metrics)
+                        # Cascade enrichment: LLM-extracted factors (M047/S06 POC)
+                        # Pre-fetches extracted payloads from cache (or Claude on first call).
+                        # Error-tolerant: failures logged, factors marked missing in score_breakdown.
+                        cascade_payloads: dict = {}
+                        _parcel_id_str = str(parcel_data.get("parcel_id") or "")
+                        if org_id is not None and _parcel_id_str:
+                            try:
+                                cascade_payloads = await get_cascade_payloads(
+                                    session,
+                                    parcel_id=_parcel_id_str,
+                                    gemeente_code=scan.gemeente_code,
+                                    organization_id=org_id,
+                                )
+                            except Exception:
+                                logger.exception(
+                                    "cascade_enrich failed for parcel %s — skipping", _parcel_id_str
+                                )
+
+                        v3_result = compute_score_v3(
+                            parcel_data,
+                            nbhd_metrics,
+                            project_type="onbepaald",  # S02 UI sets per-parcel projecttype later
+                            cascade_payloads=cascade_payloads,
+                        )
 
                         # Clamp overall to 0-100 for tile proxy compat
                         overall_clamped = max(0.0, min(100.0, v3_result.overall))
