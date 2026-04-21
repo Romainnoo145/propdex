@@ -368,6 +368,7 @@ export function ParcelDetailModal({
       const id = setTimeout(() => { setPickerOpen(true) }, 0)
       return () => { clearTimeout(id) }
     }
+    return undefined
   }, [parcelId, projectTypeData, user])
 
   const handleSkip = () => {
