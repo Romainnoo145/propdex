@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
-import { motion, useSpring, useTransform } from 'framer-motion'
-import { Flame, TrendingUp, CircleHelp, type LucideIcon } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { motion, useSpring, useTransform, AnimatePresence } from 'framer-motion'
+import { Flame, TrendingUp, CircleHelp, ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react'
 import type { ScanResultItem, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/types/scan'
 import { isScoreV3 } from '@/lib/score'
 import { TruncatedText } from '../TruncatedText'
@@ -112,6 +112,7 @@ const FACTOR_LABELS: Record<string, string> = {
   demografie: 'DEMOGRAFIE',
   vergunning_succeskans: 'LEGAL',
   capaciteit: 'CAPACITEIT',
+  woonvisie_match: 'WOONVISIE',
 }
 
 function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResultItem): { value: string; sub: string } {
@@ -195,6 +196,14 @@ function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResu
     }
     case 'capaciteit':
       return { value: capacityValue(parcel), sub: capacitySub(parcel) }
+    case 'woonvisie_match': {
+      if (factor.missing) return { value: '—', sub: 'Geen woonvisie beschikbaar' }
+      const s = factor.genormaliseerde_score
+      const label = s >= 0.7 ? 'PRIORITEIT' : s >= 0.4 ? 'PAST' : 'BEPERKT'
+      const w = factor.waarde as Record<string, unknown> | null
+      const segment = typeof w === 'object' && w !== null ? String(w.prioritized_segment ?? '') : ''
+      return { value: label, sub: segment ? `Segment: ${segment}` : factor.toelichting_kort.slice(0, 36) }
+    }
     default:
       return { value: '\u2014', sub: '' }
   }
@@ -281,56 +290,44 @@ interface PotentieLayerProps {
   parcel: ScanResultItem
 }
 
+const CARDS_PER_PAGE = 9
+
 export function PotentieLayer({ parcel }: PotentieLayerProps) {
+  const [page, setPage] = useState(0)
   const isV3 = isScoreV3(parcel.score_breakdown)
-  // Show potentie subscore when available, fallback to overall score for v2.1
   const potentieScore = parcel.potentie_score != null
     ? Math.round(parcel.potentie_score)
     : parcel.score != null ? Math.round(parcel.score) : null
   const verdict = deriveVerdict(potentieScore)
 
-  // Build cards — always show all 8 potentie factors
-  const POTENTIE_KEYS = ['vrije_grond', 'optoppotentie', 'bestemming', 'leegstand', 'funda_frictie', 'perceelgrootte', 'demografie', 'vergunning_succeskans', 'capaciteit'] as const
+  const POTENTIE_KEYS = [
+    'vrije_grond', 'optoppotentie', 'bestemming', 'leegstand',
+    'funda_frictie', 'perceelgrootte', 'demografie', 'vergunning_succeskans',
+    'capaciteit', 'woonvisie_match',
+  ] as const
 
-  const cards: CardDisplay[] = (() => {
+  const allCards: CardDisplay[] = (() => {
     if (isV3 && parcel.score_breakdown) {
       const breakdown = parcel.score_breakdown as ScoreBreakdownV3
       return POTENTIE_KEYS.map((key) => {
         const factor = breakdown[key]
         if (factor) {
           const { value, sub } = formatFactorValue(key, factor, parcel)
-          return {
-            label: FACTOR_LABELS[key] ?? key.toUpperCase(),
-            value,
-            sub,
-            pts: Math.round(factor.bijdrage * 10) / 10,
-          }
+          return { label: FACTOR_LABELS[key] ?? key.toUpperCase(), value, sub, pts: Math.round(factor.bijdrage * 10) / 10 }
         }
-        // Factor missing from breakdown — show placeholder
-        // Special case: capaciteit is computed client-side, not in backend breakdown
         if (key === 'capaciteit') {
-          return {
-            label: FACTOR_LABELS[key] ?? key.toUpperCase(),
-            value: capacityValue(parcel),
-            sub: capacitySub(parcel),
-            pts: 0,
-          }
+          return { label: FACTOR_LABELS[key] ?? key.toUpperCase(), value: capacityValue(parcel), sub: capacitySub(parcel), pts: 0 }
         }
-        return {
-          label: FACTOR_LABELS[key] ?? key.toUpperCase(),
-          value: '\u2014',
-          sub: 'Data niet beschikbaar',
-          pts: 0,
-        }
+        return { label: FACTOR_LABELS[key] ?? key.toUpperCase(), value: '—', sub: 'Data niet beschikbaar', pts: 0 }
       })
     }
     return deriveV21Cards(parcel)
   })()
 
-  // One-liner
-  const oneLiner = generateOneLiner(parcel, cards, isV3)
+  const totalPages = Math.ceil(allCards.length / CARDS_PER_PAGE)
+  const pageCards = allCards.slice(page * CARDS_PER_PAGE, (page + 1) * CARDS_PER_PAGE)
+  const oneLiner = generateOneLiner(parcel, allCards, isV3)
 
-  // Animated score bar
   const springVal = useSpring(0, { stiffness: 60, damping: 20 })
   useEffect(() => {
     const timer = setTimeout(() => springVal.set(potentieScore ?? 0), 300)
@@ -344,7 +341,7 @@ export function PotentieLayer({ parcel }: PotentieLayerProps) {
       <div className="bg-slate-50/50 border-b border-slate-100 px-6 py-5 rounded-[20px]">
         <div className="flex items-center justify-between">
           <span className="text-7xl font-black tracking-tighter text-slate-900 tabular-nums leading-none">
-            {potentieScore ?? '\u2014'}
+            {potentieScore ?? '—'}
           </span>
 
           <div className="flex-1 px-6 min-w-0">
@@ -354,54 +351,75 @@ export function PotentieLayer({ parcel }: PotentieLayerProps) {
             <TruncatedText text={oneLiner} className="text-[13px] text-slate-500 mt-0.5 truncate" />
           </div>
 
-          <div
-            className={`size-12 rounded-full flex items-center justify-center shrink-0 ${verdict.badgeColor}`}
-          >
+          <div className={`size-12 rounded-full flex items-center justify-center shrink-0 ${verdict.badgeColor}`}>
             <verdict.Icon className="size-6 text-white" strokeWidth={2.5} />
           </div>
         </div>
 
         <div className="mt-4 h-3 rounded-full bg-slate-100 overflow-hidden">
-          <motion.div
-            className={`h-full rounded-full ${verdict.barColor}`}
-            style={{ width: barWidth }}
-          />
+          <motion.div className={`h-full rounded-full ${verdict.barColor}`} style={{ width: barWidth }} />
         </div>
       </div>
 
-      {/* ── 3x3 Intelligence Grid ──────────────────────────── */}
-      <div className="grid grid-cols-3 gap-1.5 mt-4 flex-1 auto-rows-fr">
-        {cards.map((card) => (
-          <div
-            key={card.label}
-            className="bg-white border border-slate-100 rounded-[24px] p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+      {/* ── 3x3 Intelligence Grid with page transition ───── */}
+      <div className="flex-1 mt-4 relative">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={page}
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -40 }}
+            transition={{ duration: 0.2 }}
+            className="grid grid-cols-3 gap-1.5 auto-rows-fr h-full"
           >
-            {/* Top: label + pts badge */}
-            <div className="flex justify-between items-start gap-1">
-              <TruncatedText text={card.label} className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight truncate" />
-              <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0">
-                {card.pts > 0 ? `+${card.pts}` : '\u2014'}
-              </span>
-            </div>
+            {pageCards.map((card) => (
+              <div
+                key={card.label}
+                className="bg-white border border-slate-100 rounded-[24px] p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+              >
+                <div className="flex justify-between items-start gap-1">
+                  <TruncatedText text={card.label} className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight truncate" />
+                  <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0">
+                    {card.pts > 0 ? `+${card.pts}` : '—'}
+                  </span>
+                </div>
 
-            {/* Middle: value */}
-            <div className="flex-1 flex items-center min-w-0">
-              <TruncatedText text={card.value} className="text-2xl font-black text-slate-900 tracking-tighter leading-none truncate" />
-            </div>
+                <div className="flex-1 flex items-center min-w-0">
+                  <TruncatedText text={card.value} className="text-2xl font-black text-slate-900 tracking-tighter leading-none truncate" />
+                </div>
 
-            {/* Bottom: insight */}
-            <div className="border-t border-slate-50 pt-3 min-w-0">
-              <TruncatedText text={card.sub} className="text-[11px] font-bold text-slate-400 leading-tight truncate" />
-            </div>
-          </div>
-        ))}
+                <div className="border-t border-slate-50 pt-3 min-w-0">
+                  <TruncatedText text={card.sub} className="text-[11px] font-bold text-slate-400 leading-tight truncate" />
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* ── Pagination Footer ──────────────────────────────── */}
-      <div className="flex justify-center gap-4 mt-4">
-        <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest">
-          1 / 1
+      <div className="flex items-center justify-center gap-3 mt-4">
+        <button
+          type="button"
+          onClick={() => setPage((p) => Math.max(0, p - 1))}
+          disabled={page === 0}
+          className="p-1 rounded-full hover:bg-slate-100 disabled:opacity-20 transition-colors"
+          aria-label="Vorige pagina"
+        >
+          <ChevronLeft className="size-4 text-slate-400" />
+        </button>
+        <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest tabular-nums">
+          {page + 1} / {totalPages}
         </span>
+        <button
+          type="button"
+          onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+          disabled={page >= totalPages - 1}
+          className="p-1 rounded-full hover:bg-slate-100 disabled:opacity-20 transition-colors"
+          aria-label="Volgende pagina"
+        >
+          <ChevronRight className="size-4 text-slate-400" />
+        </button>
       </div>
     </div>
   )
