@@ -26,6 +26,7 @@ interface ScoreFactor {
   succeskans_reason: string | null
   dev_type_ruling_count: number | null
   total_ruling_count: number | null
+  percentage_of_category: number | null   // backend float 0.0-1.0, null for pre-M047 scans
 }
 
 /* ── Helpers (exported for reuse) ────────────────────────────── */
@@ -93,6 +94,9 @@ function parseFactors(breakdown: Record<string, unknown> | null): {
       succeskans_reason: typeof f.succeskans_reason === 'string' ? f.succeskans_reason : null,
       dev_type_ruling_count: typeof f.dev_type_ruling_count === 'number' ? f.dev_type_ruling_count : null,
       total_ruling_count: typeof f.total_ruling_count === 'number' ? f.total_ruling_count : null,
+      percentage_of_category: typeof f.percentage_of_category === 'number'
+        ? f.percentage_of_category
+        : null,
     }
 
     if (factor.categorie === 'risico') {
@@ -397,9 +401,9 @@ function FactorCard({
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {factor.gewicht !== null && (
+            {factor.percentage_of_category !== null && (
               <span className="text-[10px] text-[#94a3b8] tabular-nums">
-                ×{factor.gewicht}
+                {Math.round(factor.percentage_of_category * 100)}%
               </span>
             )}
             <span
