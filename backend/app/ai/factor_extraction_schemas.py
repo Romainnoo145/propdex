@@ -61,7 +61,7 @@ class ExtractedFactor(BaseModel, Generic[PayloadT]):
         )
     )
     schema_version: int = Field(
-        default=1,
+        default=2,
         description=(
             "Bump bij backwards-incompat schema-wijziging; cache-entries "
             "met lagere versie worden genegeerd (re-extract)."
@@ -111,7 +111,7 @@ ERROR_CODES: frozenset[str] = frozenset(
 """Iron-rule constant: uitbreiding vereist schema-versie-bump + S05-logging update."""
 
 
-SCHEMA_VERSION: int = 1
+SCHEMA_VERSION: int = 2
 """Current cache-schema versie. Bump bij: (a) payload-shape change in >=1 factor,
 (b) toevoeging nieuwe required metadata-veld, (c) cache-key component change.
 Oude cache-entries met lagere SCHEMA_VERSION worden bij read als miss behandeld."""
