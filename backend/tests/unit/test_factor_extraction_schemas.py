@@ -72,7 +72,7 @@ def test_extracted_factor_from_cache_flag_is_required_semantic() -> None:
         from_cache=False,
     )
     assert result.from_cache is False
-    assert result.schema_version == 1  # default
+    assert result.schema_version == 2  # default bumped in M048/Phase 1
 
 
 def test_factor_extraction_error_carries_error_code() -> None:
@@ -107,8 +107,9 @@ def test_error_codes_is_exactly_five() -> None:
     assert len(ERROR_CODES) == 5
 
 
-def test_schema_version_starts_at_one() -> None:
+def test_schema_version_is_two() -> None:
+    """SCHEMA_VERSION bumped 1→2 in M048/Phase 1 to invalidate M047 extraction cache entries."""
     from app.ai.factor_extraction_schemas import SCHEMA_VERSION
 
-    assert SCHEMA_VERSION == 1
+    assert SCHEMA_VERSION == 2
     assert isinstance(SCHEMA_VERSION, int)
