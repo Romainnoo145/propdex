@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 01-cache-sentinel/01-01-PLAN.md — SCHEMA_VERSION bump + cache rejection tests
-last_updated: "2026-04-22T17:15:57.251Z"
+stopped_at: Completed 02-score-ui-fix/02-01-PLAN.md — potentieRisicoBalance prop + percentage_of_category label
+last_updated: "2026-04-22T19:13:45.776Z"
 last_activity: 2026-04-22 — ROADMAP.md created, M048 roadmap approved
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  total_plans: 3
+  completed_plans: 2
   percent: 100
 ---
 
@@ -50,6 +50,7 @@ Progress: [██████████] 100%
 
 *Updated after each plan completion*
 | Phase 01-cache-sentinel P01 | 37m | 2 tasks | 3 files |
+| Phase 02-score-ui-fix P01 | 11m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -60,6 +61,9 @@ Progress: [██████████] 100%
 - [Pre-M048]: Woonvisie popup on kaart 10 click, not ScoreBreakdownModal rebuild — targeted fix, rebuild deferred post-M050
 - [Pre-M048]: percentage_of_category data-contract — backend exposes %, frontend never renders raw gewicht integer
 - [Phase 01-cache-sentinel]: SCHEMA_VERSION bumped 1→2 (M048/Phase 1) to invalidate pre-M047 extraction cache entries
+- [Phase 02-score-ui-fix]: potentieRisicoBalance as required prop on ScoreBreakdownModal — modal never reads org config internally
+- [Phase 02-score-ui-fix]: No fallback from percentage_of_category to gewicht/100 — pre-M047 scans render no label (null silently hides)
+- [Phase 02-score-ui-fix]: Dynamic flex via style={{ flex: N }} not Tailwind flex-[N] class (runtime values not purged by JIT)
 
 ### Pending Todos
 
@@ -71,6 +75,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-22T17:11:07.749Z
-Stopped at: Completed 01-cache-sentinel/01-01-PLAN.md — SCHEMA_VERSION bump + cache rejection tests
+Last session: 2026-04-22T19:13:45.774Z
+Stopped at: Completed 02-score-ui-fix/02-01-PLAN.md — potentieRisicoBalance prop + percentage_of_category label
 Resume file: None

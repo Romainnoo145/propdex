@@ -11,9 +11,9 @@
 
 ### Score UI
 
-- [ ] **SCORE-01**: ScoreBreakdownModal displays potentie/risico balance dynamically from org-profile (`potentie_risico_balance` prop via `useOrgScoreWeights`) — not hardcoded 60%/40%
-- [ ] **SCORE-02**: ScoreBreakdownModal displays `percentage_of_category` (0–100%) per factor instead of raw `×{gewicht}` integer label
-- [ ] **SCORE-03**: `potentie_risico_balance` is passed as prop to ScoreBreakdownModal from parent (not read from scan flags)
+- [x] **SCORE-01**: ScoreBreakdownModal displays potentie/risico balance dynamically from org-profile (`potentie_risico_balance` prop via `useOrgScoreWeights`) — not hardcoded 60%/40%
+- [x] **SCORE-02**: ScoreBreakdownModal displays `percentage_of_category` (0–100%) per factor instead of raw `×{gewicht}` integer label
+- [x] **SCORE-03**: `potentie_risico_balance` is passed as prop to ScoreBreakdownModal from parent (not read from scan flags)
 
 ### Woonvisie Kaart Popup
 
@@ -64,9 +64,9 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | CACHE-01 | Phase 1 | Complete |
-| SCORE-01 | Phase 2 | Pending |
-| SCORE-02 | Phase 2 | Pending |
-| SCORE-03 | Phase 2 | Pending |
+| SCORE-01 | Phase 2 | Complete |
+| SCORE-02 | Phase 2 | Complete |
+| SCORE-03 | Phase 2 | Complete |
 | WOON-01 | Phase 3 | Pending |
 | WOON-02 | Phase 3 | Pending |
 | WOON-03 | Phase 3 | Pending |
