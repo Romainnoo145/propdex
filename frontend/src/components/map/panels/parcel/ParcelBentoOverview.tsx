@@ -332,6 +332,7 @@ export function ParcelBentoOverview({
             scoreBreakdown={parcel.score_breakdown}
             address={parcel.address}
             isCustomProfile={weightsData?.is_custom ?? false}
+            potentieRisicoBalance={weightsData?.weights.potentie_risico_balance ?? 0.7}
             onClose={() => setShowScoreBreakdown(false)}
           />
         )}

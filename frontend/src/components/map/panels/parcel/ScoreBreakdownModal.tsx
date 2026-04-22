@@ -57,6 +57,7 @@ interface ScoreBreakdownModalProps {
   scoreBreakdown: Record<string, unknown> | null
   address: string | null
   isCustomProfile: boolean
+  potentieRisicoBalance: number   // 0.0–1.0 from useOrgScoreWeights
   onClose: () => void
 }
 
@@ -129,8 +130,11 @@ export function ScoreBreakdownModal({
   scoreBreakdown,
   address,
   isCustomProfile,
+  potentieRisicoBalance,
   onClose,
 }: ScoreBreakdownModalProps) {
+  const potentiePct = Math.round(potentieRisicoBalance * 100)
+  const risicoPct = 100 - potentiePct
   const { potentie, risico } = parseFactors(scoreBreakdown)
   const hasFactors = potentie.length > 0 || risico.length > 0
 
@@ -232,25 +236,29 @@ export function ScoreBreakdownModal({
             {/* Weight distribution blocks */}
             <div className="flex gap-2 mb-6">
               <div
-                className="flex-[6] rounded-[16px] p-4 flex items-center justify-between"
-                style={{ background: 'rgba(249, 168, 38, 0.08)', border: '1px solid rgba(249, 168, 38, 0.3)' }}
+                className="rounded-[16px] p-4 flex items-center justify-between"
+                style={{
+                  flex: potentiePct,
+                  background: 'rgba(249, 168, 38, 0.08)',
+                  border: '1px solid rgba(249, 168, 38, 0.3)'
+                }}
               >
                 <span className="text-[11px] font-extrabold uppercase tracking-[0.15em] text-[#F9A826]">
                   Potentie
                 </span>
                 <span className="text-2xl font-black tracking-tighter tabular-nums text-[#F9A826]">
-                  60%
+                  {potentiePct}%
                 </span>
               </div>
               <div
-                className="flex-[4] rounded-[16px] p-4 flex items-center justify-between"
-                style={{ background: '#F2F6F3', border: '1px solid #EAEFEF' }}
+                className="rounded-[16px] p-4 flex items-center justify-between"
+                style={{ flex: risicoPct, background: '#F2F6F3', border: '1px solid #EAEFEF' }}
               >
                 <span className="text-[11px] font-extrabold uppercase tracking-[0.15em] text-[#94a3b8]">
                   Risico
                 </span>
                 <span className="text-2xl font-black tracking-tighter tabular-nums text-[#94a3b8]">
-                  40%
+                  {risicoPct}%
                 </span>
               </div>
             </div>
