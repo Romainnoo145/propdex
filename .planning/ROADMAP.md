@@ -10,7 +10,7 @@ M048 closes the gap between the scoring engine refactored in M047 and what users
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Cache Sentinel** - Bump SCHEMA_VERSION 1→2, reject stale extraction cache entries, add unit tests
+- [x] **Phase 1: Cache Sentinel** - Bump SCHEMA_VERSION 1→2, reject stale extraction cache entries, add unit tests (completed 2026-04-22)
 - [ ] **Phase 2: Score UI Fix** - Wire potentie/risico balance + percentage_of_category dynamically from org-profile props
 - [ ] **Phase 3: Woonvisie Popup** - Clickable kaart 10 in Potentie grid with approved Aura-style popup
 - [ ] **Phase 4: KlimaatLayer Bug** - Correct gemeente verdict on map-switch, no stale data
@@ -70,7 +70,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Cache Sentinel | 0/1 | Planning complete | - |
+| 1. Cache Sentinel | 1/1 | Complete   | 2026-04-22 |
 | 2. Score UI Fix | 0/? | Not started | - |
 | 3. Woonvisie Popup | 0/? | Not started | - |
 | 4. KlimaatLayer Bug | 0/? | Not started | - |

@@ -7,7 +7,7 @@
 
 ### Cache Infrastructure
 
-- [ ] **CACHE-01**: System invalidates M047 extraction cache by bumping SCHEMA_VERSION from 1 to 2 in `backend/app/ai/factor_extraction_schemas.py`
+- [x] **CACHE-01**: System invalidates M047 extraction cache by bumping SCHEMA_VERSION from 1 to 2 in `backend/app/ai/factor_extraction_schemas.py`
 
 ### Score UI
 
@@ -27,7 +27,7 @@
 
 ### Tests
 
-- [ ] **TEST-01**: Unit tests cover SCHEMA_VERSION bump — old cache entries with version < 2 are rejected
+- [x] **TEST-01**: Unit tests cover SCHEMA_VERSION bump — old cache entries with version < 2 are rejected
 - [ ] **TEST-02**: Unit tests cover ScoreBreakdownModal balance display — percentage reflects `potentie_risico_balance` prop value (not hardcoded)
 - [ ] **TEST-03**: Unit tests cover `percentage_of_category` display — factor percentage shown correctly from scan data
 - [ ] **TEST-04**: Integration or component tests cover woonvisie popup — opens on click, shows correct wijk/prioriteit/segmentmatch data
@@ -63,7 +63,7 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CACHE-01 | Phase 1 | Pending |
+| CACHE-01 | Phase 1 | Complete |
 | SCORE-01 | Phase 2 | Pending |
 | SCORE-02 | Phase 2 | Pending |
 | SCORE-03 | Phase 2 | Pending |
@@ -71,7 +71,7 @@
 | WOON-02 | Phase 3 | Pending |
 | WOON-03 | Phase 3 | Pending |
 | BUG-01 | Phase 4 | Pending |
-| TEST-01 | Phase 1 | Pending |
+| TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 2 | Pending |
 | TEST-03 | Phase 2 | Pending |
 | TEST-04 | Phase 3 | Pending |
