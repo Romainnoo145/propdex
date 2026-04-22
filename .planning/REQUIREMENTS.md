@@ -28,8 +28,8 @@
 ### Tests
 
 - [x] **TEST-01**: Unit tests cover SCHEMA_VERSION bump — old cache entries with version < 2 are rejected
-- [ ] **TEST-02**: Unit tests cover ScoreBreakdownModal balance display — percentage reflects `potentie_risico_balance` prop value (not hardcoded)
-- [ ] **TEST-03**: Unit tests cover `percentage_of_category` display — factor percentage shown correctly from scan data
+- [x] **TEST-02**: Unit tests cover ScoreBreakdownModal balance display — percentage reflects `potentie_risico_balance` prop value (not hardcoded)
+- [x] **TEST-03**: Unit tests cover `percentage_of_category` display — factor percentage shown correctly from scan data
 - [ ] **TEST-04**: Integration or component tests cover woonvisie popup — opens on click, shows correct wijk/prioriteit/segmentmatch data
 
 ## Future Requirements (M049+)
@@ -72,8 +72,8 @@
 | WOON-03 | Phase 3 | Pending |
 | BUG-01 | Phase 4 | Pending |
 | TEST-01 | Phase 1 | Complete |
-| TEST-02 | Phase 2 | Pending |
-| TEST-03 | Phase 2 | Pending |
+| TEST-02 | Phase 2 | Complete |
+| TEST-03 | Phase 2 | Complete |
 | TEST-04 | Phase 3 | Pending |
 
 **Coverage:**
