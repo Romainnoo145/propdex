@@ -41,7 +41,11 @@ Plans:
   3. `potentie_risico_balance` is received as a prop from the parent component — no read from `scan.flags` inside the modal
   4. Unit tests assert balance display matches the prop value (not a hardcoded constant) and pass
   5. Unit tests assert factor percentage display reads `percentage_of_category` from scan data and pass
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Add potentieRisicoBalance prop to ScoreBreakdownModal, replace hardcoded balance + ×gewicht label
+- [ ] 02-02-PLAN.md — Create ScoreBreakdownModal.stories.tsx with Storybook play assertions (TEST-02, TEST-03)
 
 ### Phase 3: Woonvisie Popup
 **Goal**: Kaart 10 in the Potentie Intelligence Grid is interactive and reveals full woonvisie context for the wijk in approved Aura style
@@ -71,6 +75,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Cache Sentinel | 1/1 | Complete   | 2026-04-22 |
-| 2. Score UI Fix | 0/? | Not started | - |
+| 2. Score UI Fix | 0/2 | Not started | - |
 | 3. Woonvisie Popup | 0/? | Not started | - |
 | 4. KlimaatLayer Bug | 0/? | Not started | - |
