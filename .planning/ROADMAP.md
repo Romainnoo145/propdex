@@ -26,7 +26,10 @@ M048 closes the gap between the scoring engine refactored in M047 and what users
   2. A cache lookup for an entry created with version 1 returns a cache miss — the old entry is not served
   3. A cache lookup for an entry created with version 2 returns a cache hit
   4. Unit tests cover both scenarios (miss on v1 entry, hit on v2 entry) and pass in the 275-test suite
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 01-01-PLAN.md — Bump SCHEMA_VERSION 1→2, fix 2 breaking test assertions, add v1-miss/v2-hit tests
 
 ### Phase 2: Score UI Fix
 **Goal**: ScoreBreakdownModal displays live org-profile balance and per-factor percentages — no hardcoded values remain
@@ -67,7 +70,7 @@ M048 closes the gap between the scoring engine refactored in M047 and what users
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Cache Sentinel | 0/? | Not started | - |
+| 1. Cache Sentinel | 0/1 | Planning complete | - |
 | 2. Score UI Fix | 0/? | Not started | - |
 | 3. Woonvisie Popup | 0/? | Not started | - |
 | 4. KlimaatLayer Bug | 0/? | Not started | - |
