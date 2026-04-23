@@ -16,3 +16,4 @@ build/
 .dockerignore
 README.md
 RAILWAY_INFRA_NOTES.md
+*.log
