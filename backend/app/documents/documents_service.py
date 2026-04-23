@@ -242,31 +242,40 @@ async def delete_document(
 
 async def get_checklist_status(
     parcel_id: str,
+    organization_id: uuid.UUID,
     user_id: uuid.UUID,
     db: AsyncSession,
 ) -> ChecklistStatusResponse:
     """Get checklist completion status for a parcel.
 
-    Maps generated checklist documents back to their checklist item IDs.
-    Lazy generation: if no docs exist yet but parcel has a saved report,
-    generates them on the fly (backfill for pre-M020 reports).
+    Org-scoped: all members of the organization see the same document status.
+    Type expansion: dossier-uploaded docs satisfy matching checklist items via
+    the type registry (e.g. 'vergunninghistorie' counts as 'vergunningen').
+    Lazy generation still uses user_id to find the saved report for this user.
     """
+    from app.documents.type_registry import SLOT_TO_DOC_TYPES, slot_for_type
     from app.reports.checklist_pdf import CHECKLIST_DOC_CONFIGS
 
-    checklist_doc_types = set(CHECKLIST_DOC_CONFIGS.keys())
+    # Expand query types: for each checklist doc type, include all doc_types
+    # that map to the same dossier slot (catches dossier-uploaded equivalents).
+    expanded_types: set[str] = set()
+    for checklist_type in CHECKLIST_DOC_CONFIGS:
+        slot = slot_for_type(checklist_type)
+        expanded_types.update(SLOT_TO_DOC_TYPES.get(slot, [checklist_type]))
+
     query = (
         select(ParcelDocument)
         .options(defer(ParcelDocument.file_data))
         .where(
-            ParcelDocument.uploaded_by_user_id == user_id,
+            ParcelDocument.organization_id == organization_id,
             ParcelDocument.parcel_id == parcel_id,
-            ParcelDocument.document_type.in_(checklist_doc_types),
+            ParcelDocument.document_type.in_(expanded_types),
         )
     )
     result = await db.execute(query)
     docs = list(result.scalars().all())
 
-    # Lazy generation from saved report
+    # Lazy generation from saved report (user_id scoped — report belongs to user)
     if not docs:
         try:
             from app.reports import service as report_service
@@ -293,26 +302,33 @@ async def get_checklist_status(
         except Exception:
             logger.warning("Lazy checklist generation failed for parcel=%s", parcel_id, exc_info=True)
 
-    # Build doc_type → document mapping (latest per type)
-    doc_by_type: dict[str, ParcelDocument] = {}
+    # Build slot → best doc mapping using registry
+    doc_by_slot: dict[str, ParcelDocument] = {}
     for doc in docs:
-        if doc.document_type not in doc_by_type:
-            doc_by_type[doc.document_type] = doc
+        slot = slot_for_type(doc.document_type)
+        if slot not in doc_by_slot:
+            doc_by_slot[slot] = doc
 
+    # Map slot back to checklist item IDs
     items: dict[str, ChecklistItemStatus] = {}
-    for doc_type, config in CHECKLIST_DOC_CONFIGS.items():
-        doc = doc_by_type.get(doc_type)
+    for checklist_type, config in CHECKLIST_DOC_CONFIGS.items():
+        slot = slot_for_type(checklist_type)
+        doc = doc_by_slot.get(slot)
         for item_id in config.checklist_item_ids:
             if doc:
                 items[item_id] = ChecklistItemStatus(
-                    status="generated", document_id=doc.id,
-                    document_type=doc_type, filename=doc.filename,
+                    status="generated",
+                    document_id=doc.id,
+                    document_type=doc.document_type,
+                    filename=doc.filename,
                 )
-            else:
+            elif item_id not in items:
                 items[item_id] = ChecklistItemStatus(status="pending")
 
     generated_count = sum(1 for v in items.values() if v.status == "generated")
     return ChecklistStatusResponse(
-        parcel_id=parcel_id, items=items,
-        generated_count=generated_count, total_count=len(items),
+        parcel_id=parcel_id,
+        items=items,
+        generated_count=generated_count,
+        total_count=len(items),
     )

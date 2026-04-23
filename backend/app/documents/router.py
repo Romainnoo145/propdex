@@ -84,7 +84,9 @@ async def get_checklist_status(
     db: AsyncSession = Depends(get_db),
 ) -> ChecklistStatusResponse:
     """Get checklist completion status for a parcel."""
-    return await svc.get_checklist_status(parcel_id, current_user.id, db)
+    return await svc.get_checklist_status(
+        parcel_id, current_user.organization_id, current_user.id, db
+    )
 
 
 @router.get("/{parcel_id}/documents/{document_id}")
