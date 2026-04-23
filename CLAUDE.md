@@ -82,3 +82,20 @@ Bij elke nieuwe sessie of nieuwe taak:
 - Multi-tenant: elke query filtert op `organization_id`
 
 Voor diepere project-context: zie `~/.claude/projects/-home-klarifai-Documents-klarifai-clientprojects-propdex/memory/MEMORY.md`.
+
+---
+
+## Design System
+
+**Always read `DESIGN.md` before making any visual or UI decisions.**
+
+Alle font-keuzes, kleuren, spacing, radius, motion en aesthetic direction zijn daar vastgelegd. Niet afwijken zonder expliciete user-approval. In QA / design-review mode: flag elke code die niet met DESIGN.md matcht.
+
+Korte samenvatting (altijd DESIGN.md lezen voor de volledige regels):
+- **North Star:** two-mode product — Discovery (map-first) + Build-management (data-dense).
+- **Canvas:** Morning Mist `#F2F6F3`, NIET wit.
+- **Accent:** Warm Amber `#F9A826` (intelligence). Obsidian `#0E1111` (commitment).
+- **Font:** Plus Jakarta Sans, single family.
+- **Glass surfaces:** `bg-white/60 backdrop-blur-[24px]`.
+- **Tokens live in:** `frontend/src/styles/index.css` (Tailwind v4 `@theme` block).
+- **Light mode only.** Dark mode is uit scope.
