@@ -55,5 +55,9 @@ def slot_for_type(doc_type: str) -> str:
 
 
 def types_for_slot(slot: str) -> list[str]:
-    """Return all document_types that map to a given slot."""
+    """Return all document_types that map to a given slot.
+
+    Unknown slots return [slot] as a no-op sentinel — callers querying the DB
+    by the returned types will find nothing, which is the correct empty result.
+    """
     return SLOT_TO_DOC_TYPES.get(slot, [slot])
