@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 05-document-level-cache-sentinel-woonvisie/05-01-PLAN.md
-last_updated: "2026-04-24T19:11:08.861Z"
+stopped_at: Phase 6 context gathered (via wave-sessie)
+last_updated: "2026-04-24T20:00:47.566Z"
 last_activity: 2026-04-24 — M048/Phase 5 shipped — DOCUMENT_SENTINEL + SCHEMA_VERSION 2→3; 33 min, 6 tasks, 7 files
 progress:
   total_phases: 8
@@ -97,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-24T19:06:44.872Z
-Stopped at: Completed 05-document-level-cache-sentinel-woonvisie/05-01-PLAN.md
-Resume file: None
+Last session: 2026-04-24T20:00:47.564Z
+Stopped at: Phase 6 context gathered (via wave-sessie)
+Resume file: .planning/phases/06-wijkpolicy-schema-woonvisie-scoring-upgrade/06-CONTEXT.md
