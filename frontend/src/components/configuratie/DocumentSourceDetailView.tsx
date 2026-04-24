@@ -112,6 +112,7 @@ export function DocumentSourceDetailView({
               key={doc.id}
               document={doc}
               onView={() => setViewingDocId(doc.id)}
+              isSuperuser={isSuperuser}
             />
           ))}
         </SectionInsightCard>
