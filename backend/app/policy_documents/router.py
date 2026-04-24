@@ -244,10 +244,12 @@ async def download_policy_document(
     doc = await svc.get_document_for_download(document_id, current_user.organization_id, db)
     if doc is None or doc.entity_type != entity_type or doc.entity_code != entity_code:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+    from urllib.parse import quote as _quote
+    encoded = _quote(doc.filename, safe="")
     return Response(
         content=doc.file_data,
         media_type=doc.content_type,
-        headers={"Content-Disposition": f'inline; filename="{doc.filename}"'},
+        headers={"Content-Disposition": f"inline; filename*=UTF-8''{encoded}"},
     )
 
 
