@@ -3,7 +3,7 @@ phase: 6
 slug: wijkpolicy-schema-woonvisie-scoring-upgrade
 status: planned
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-04-24
 updated: 2026-04-24
 ---
@@ -42,20 +42,19 @@ updated: 2026-04-24
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 06-01-T1 | 01 | 1 | WOON-04 | unit (stub) | `cd backend && pytest tests/unit/test_wijk_policy_schema.py --collect-only` | ❌ NEW | ⬜ pending |
-| 06-01-T1 | 01 | 1 | WOON-05 | unit (stub) | `cd backend && pytest tests/unit/test_wijk_policy_schema.py::test_payload_roundtrip --collect-only` | ❌ NEW | ⬜ pending |
-| 06-01-T2 | 01 | 1 | SCORE-04 | unit (stub) | `cd backend && pytest tests/unit/test_score_woonvisie_match_wijk_differentiation.py --collect-only` | ❌ NEW | ⬜ pending |
-| 06-01-T2 | 01 | 1 | SCORE-04 | unit (stub) | `cd backend && pytest tests/unit/test_score_woonvisie_match_wijk_differentiation.py::test_blerick_citaat_in_toelichting_lang --collect-only` | ❌ NEW | ⬜ pending |
-| 06-01-T2 | 01 | 1 | SCORE-04 | unit (stub) | `cd backend && pytest tests/unit/test_score_woonvisie_match_wijk_differentiation.py::test_case_and_diacritic_insensitive_match --collect-only` | ❌ NEW | ⬜ pending |
-| 06-01-T3 | 01 | 1 | SCORE-04 | unit (stub) | `cd backend && pytest tests/unit/test_score_woonvisie_match_fallback.py --collect-only` | ❌ NEW | ⬜ pending |
-| 06-01-T3 | 01 | 1 | SCORE-04 | unit (stub) | `cd backend && pytest tests/unit/test_score_woonvisie_match_fallback.py::test_no_wijk_naam_falls_back_without_crash --collect-only` | ❌ NEW | ⬜ pending |
-| 06-01-T4 | 01 | 1 | WOON-05 | unit | `cd backend && pytest tests/unit/test_factor_extraction_schemas.py::test_schema_version_is_at_least_three -x` | ✅ EDIT | ⬜ pending |
-| 06-01-T4 | 01 | 1 | WOON-05 | unit/integration (stub) | `cd backend && pytest tests/unit/test_factor_extraction_service.py::test_v3_cache_entry_is_miss_after_bump_to_v4 --collect-only` | ✅ EDIT | ⬜ pending |
-| 06-01-T5 | 01 | 1 | TEST-06 | smoke | `cd backend && pytest tests/ --collect-only 2>&1 \| tail -3` (collection count ↑≥ 16) | ✅ | ⬜ pending |
-| 06-02-T1 | 02 | 2 | WOON-04 | implementation | `cd backend && pytest tests/unit/test_wijk_policy_schema.py -x` (GOES GREEN) | ✅ | ⬜ pending |
-| 06-02-T2 | 02 | 2 | WOON-05 | implementation | `cd backend && pytest tests/unit/test_factor_extraction_schemas.py tests/unit/test_factor_extraction_service.py::test_v3_cache_entry_is_miss_after_bump_to_v4 -x` (GOES GREEN) | ✅ | ⬜ pending |
-| 06-03-T1 | 03 | 3 | SCORE-04 | implementation | `cd backend && pytest tests/unit/test_score_woonvisie_match_wijk_differentiation.py tests/unit/test_score_woonvisie_match_fallback.py -x` (GOES GREEN) | ✅ | ⬜ pending |
-| 06-04-T1 | 04 | 4 | TEST-06 | integration | `cd backend && pytest tests/integration/test_woonvisie_match.py -x` | ✅ EDIT | ⬜ pending |
+| 06-01-T1 | 01 | 1 | WOON-04 | unit | `pytest backend/tests/unit/test_wijk_policy_schema.py -x` | ✅ after T1 | ⬜ pending |
+| 06-01-T1 | 01 | 1 | WOON-05 | unit | `pytest backend/tests/unit/test_wijk_policy_schema.py::test_payload_roundtrip -x` | ✅ after T1 | ⬜ pending |
+| 06-01-T4 | 01 | 1 | WOON-05 | unit | `pytest backend/tests/unit/test_factor_extraction_schemas.py::test_schema_version_is_at_least_three -x` | ✅ EDIT T4 | ⬜ pending |
+| 06-01-T4 | 01 | 1 | WOON-05 | unit/integration | `pytest backend/tests/unit/test_factor_extraction_service.py::test_v3_cache_entry_is_miss_after_bump_to_v4 -x` | ✅ EDIT T4 | ⬜ pending |
+| 06-01-T2 | 01 | 1 | SCORE-04 | unit | `pytest backend/tests/unit/test_score_woonvisie_match_wijk_differentiation.py -x` | ✅ after T2 | ⬜ pending |
+| 06-01-T2 | 01 | 1 | SCORE-04 | unit | `pytest backend/tests/unit/test_score_woonvisie_match_wijk_differentiation.py::test_blerick_citaat_in_toelichting_lang -x` | ✅ after T2 | ⬜ pending |
+| 06-01-T2 | 01 | 1 | SCORE-04 | unit | `pytest backend/tests/unit/test_score_woonvisie_match_wijk_differentiation.py::test_case_and_diacritic_insensitive_match -x` | ✅ after T2 | ⬜ pending |
+| 06-01-T3 | 01 | 1 | SCORE-04 | unit | `pytest backend/tests/unit/test_score_woonvisie_match_fallback.py -x` | ✅ after T3 | ⬜ pending |
+| 06-01-T3 | 01 | 1 | SCORE-04 | unit | `pytest backend/tests/unit/test_score_woonvisie_match_fallback.py::test_no_wijk_naam_falls_back_without_crash -x` | ✅ after T3 | ⬜ pending |
+| 06-02-T1 | 02 | 2 | WOON-04 | implementation | `pytest backend/tests/unit/test_wijk_policy_schema.py -x` (goes green) | ✅ | ⬜ pending |
+| 06-02-T2 | 02 | 2 | WOON-05 | implementation | `pytest backend/tests/unit/test_factor_extraction_schemas.py -x` (v4 green) | ✅ | ⬜ pending |
+| 06-03-T1 | 03 | 3 | SCORE-04 | implementation | `pytest backend/tests/unit/test_score_woonvisie_match_wijk_differentiation.py backend/tests/unit/test_score_woonvisie_match_fallback.py -x` (goes green) | ✅ | ⬜ pending |
+| 06-04-T1 | 04 | 4 | TEST-06 | integration | `pytest backend/tests/integration/test_woonvisie_match.py -x` | ✅ EDIT | ⬜ pending |
 | 06-04-T2 | 04 | 4 | TEST-06 | smoke | `cd backend && pytest tests/ -x && ruff check . && mypy .` | ✅ full suite | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
