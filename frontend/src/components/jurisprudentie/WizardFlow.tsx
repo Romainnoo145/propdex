@@ -326,6 +326,7 @@ export default function WizardFlow({
                     selected={isSelected}
                     onClick={() => {
                       onFilterChange('periode', opt.value === 'alles' ? undefined : opt.value)
+                      onComplete()
                     }}
                   />
                 )
