@@ -95,6 +95,7 @@ interface UploadParams {
 
 export function useUploadPolicyDocument() {
   const qc = useQueryClient()
+  const { accessToken } = useAuth()
 
   return useMutation<PolicyDocument, Error, UploadParams>({
     mutationFn: async ({ entityType, entityCode, sourceKey, file }) => {
@@ -103,10 +104,14 @@ export function useUploadPolicyDocument() {
 
       const url = `/api/policy-documents/${entityType}/${entityCode}?source_key=${encodeURIComponent(sourceKey)}`
 
+      const headers: HeadersInit = {}
+      if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
+
       const res = await fetch(url, {
         method: 'POST',
         body: formData,
         credentials: 'include',
+        headers,
       })
 
       if (!res.ok) {
@@ -132,11 +137,14 @@ interface DeleteParams {
 
 export function useDeletePolicyDocument() {
   const qc = useQueryClient()
+  const { accessToken } = useAuth()
 
   return useMutation<void, Error, DeleteParams>({
     mutationFn: async ({ entityType, entityCode, documentId }) => {
       const url = `/api/policy-documents/${entityType}/${entityCode}/${documentId}`
-      const res = await fetch(url, { method: 'DELETE', credentials: 'include' })
+      const headers: HeadersInit = {}
+      if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
+      const res = await fetch(url, { method: 'DELETE', credentials: 'include', headers })
       if (!res.ok && res.status !== 204) {
         throw new Error(`Delete failed: ${res.status}`)
       }
