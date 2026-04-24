@@ -166,6 +166,40 @@ async def test_v2_cache_entry_is_miss_after_bump_to_v3(test_db, create_test_user
 
 
 @pytest.mark.asyncio
+async def test_v3_cache_entry_is_miss_after_bump_to_v4(test_db, create_test_user) -> None:
+    """M048/Phase 6: pre-bump v3 entries (old woonvisie payload shape) are cache-miss after bump to v4.
+
+    Mirrors test_v2_cache_entry_is_miss_after_bump_to_v3 (Phase 5 pattern).
+    """
+    assert SCHEMA_VERSION >= 4, f"Test only valid at SCHEMA_VERSION>=4, got {SCHEMA_VERSION}"
+
+    doc = await _seed_policy_document(test_db, create_test_user)
+    stale = FactorExtractionCache(
+        parcel_id=DOCUMENT_SENTINEL,
+        policy_document_id=doc.id,
+        factor_id="woonvisie_match",
+        schema_version=3,
+        extracted_payload={
+            "periode_start": 2020,
+            "periode_einde": 2025,
+            "prioritized_segment": "sociaal",
+            "growth_wijken": ["Blerick"],
+            "confidence": 0.9,
+        },
+    )
+    test_db.add(stale)
+    await test_db.commit()
+
+    result = await _get_cache_hit(
+        test_db,
+        parcel_id=DOCUMENT_SENTINEL,
+        policy_document_id=doc.id,
+        factor_id="woonvisie_match",
+    )
+    assert result is None, "v3 cache entry must be a miss after bump to v4"
+
+
+@pytest.mark.asyncio
 async def test_document_sentinel_one_claude_call_for_two_parcels(test_db, create_test_user):
     """TEST-05: 2 extract_factor calls met DOCUMENT_SENTINEL → exact 1 Claude call.
 

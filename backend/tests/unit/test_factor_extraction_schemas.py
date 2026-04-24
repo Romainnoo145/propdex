@@ -107,15 +107,16 @@ def test_error_codes_is_exactly_five() -> None:
     assert len(ERROR_CODES) == 5
 
 
-def test_schema_version_is_three() -> None:
-    """SCHEMA_VERSION bumped 2→3 in M048/Phase 5 for document-level cache sentinel.
+def test_schema_version_is_at_least_three() -> None:
+    """SCHEMA_VERSION bumped 2→3 in M048/Phase 5; Phase 6 bumps 3→4 for WijkPolicy shape.
 
+    Version-agnostic: any future bump only requires updating the constant, not this test.
     v2 entries (parcel-keyed) become cache-misses and are superseded on next
     access via on_conflict_do_update; no cleanup migration required.
     """
     from app.ai.factor_extraction_schemas import SCHEMA_VERSION
 
-    assert SCHEMA_VERSION == 3
+    assert SCHEMA_VERSION >= 3, f"SCHEMA_VERSION regressed below 3: got {SCHEMA_VERSION}"
     assert isinstance(SCHEMA_VERSION, int)
 
 
