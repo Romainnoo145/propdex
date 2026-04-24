@@ -1259,22 +1259,20 @@ function CompactProvincieGrid({
         <button
           key={p.provinciecode}
           onClick={() => onSelectProvincie(p.provinciecode)}
-          className="group flex items-center gap-4 rounded-2xl border-2 border-aura-obsidian/40 bg-aura-glass-white/60 px-5 py-4 text-left transition-all hover:border-aura-obsidian/60 hover:shadow-sm"
+          className="group flex flex-col items-center gap-4 rounded-2xl border-2 border-aura-obsidian/40 bg-aura-glass-white/60 px-6 py-8 text-center transition-all hover:border-aura-obsidian/60 hover:shadow-sm"
         >
-          <div className="flex size-14 shrink-0 items-center justify-center">
-            <svg viewBox={p.svgData.viewBox} className="h-12 w-12">
-              <path
-                d={p.svgData.primaryD}
-                fill="#F9A826"
-                fillOpacity={0.15}
-                stroke="#F9A826"
-                strokeWidth={1.5}
-                strokeLinejoin="round"
-                className="transition-all group-hover:fill-opacity-30"
-              />
-            </svg>
-          </div>
-          <span className="text-[15px] font-bold leading-snug text-aura-obsidian">
+          <svg viewBox={p.svgData.viewBox} className="h-28 w-28">
+            <path
+              d={p.svgData.primaryD}
+              fill="#F9A826"
+              fillOpacity={0.15}
+              stroke="#F9A826"
+              strokeWidth={0.8}
+              strokeLinejoin="round"
+              className="transition-all group-hover:fill-opacity-30"
+            />
+          </svg>
+          <span className="text-[14px] font-bold leading-snug text-aura-obsidian">
             {p.provincienaam}
           </span>
         </button>
@@ -1864,7 +1862,7 @@ function ConfiguratiePage() {
   if (activeNiveau === "provinciaal") {
     return (
       <ResultsShell>
-        <div className="mx-auto max-w-4xl space-y-6">
+        <div className="mx-auto max-w-5xl space-y-6">
           <motion.button
             variants={fadeUp}
             initial="hidden"
