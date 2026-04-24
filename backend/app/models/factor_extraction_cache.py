@@ -39,6 +39,9 @@ class FactorExtractionCache(Base):
         primary_key=True,
         server_default=text("gen_random_uuid()"),
     )
+    # "__document__" sentinel used for document-level factor types
+    # (woonvisie_match and future cascade factors where extraction is
+    # not parcel-specific). See factor_extraction_schemas.DOCUMENT_SENTINEL.
     parcel_id: Mapped[str] = mapped_column(
         String(50),
         nullable=False,

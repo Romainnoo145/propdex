@@ -47,12 +47,13 @@ async def _seed_policy_document(test_db, create_test_user) -> PolicyDocument:
 
 @pytest.mark.asyncio
 async def test_v1_cache_entry_is_miss(test_db, create_test_user):
-    """Cache entry met schema_version=1 geeft None terug wanneer SCHEMA_VERSION==2.
+    """Cache entry met schema_version=1 geeft None terug wanneer SCHEMA_VERSION==3.
 
     CACHE-01 / TEST-01: Bewijst dat de WHERE-clause in _get_cache_hit()
-    pre-M047 entries correct weigert.
+    pre-M047 entries correct weigert. Blijft valide na elke SCHEMA_VERSION-bump
+    zolang huidige versie > 1.
     """
-    assert SCHEMA_VERSION == 2, f"Test only valid at SCHEMA_VERSION==2, got {SCHEMA_VERSION}"
+    assert SCHEMA_VERSION >= 2, f"Test only valid at SCHEMA_VERSION>=2, got {SCHEMA_VERSION}"
 
     doc = await _seed_policy_document(test_db, create_test_user)
     parcel = "NL.IMBAG.Pand.0983100000000091"
