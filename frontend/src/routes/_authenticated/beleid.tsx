@@ -1929,79 +1929,89 @@ function ConfiguratiePage() {
 
   return (
     <ResultsShell>
-      <div className="mx-auto max-w-4xl">
-        {/* Hero */}
-        <motion.div variants={fadeUp} initial="hidden" animate="show">
-          <p
-            className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400"
-            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+      <div className="min-h-full flex flex-col items-center justify-center py-16 px-4">
+        <div className="w-full max-w-3xl">
+          {/* Hero — centered */}
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            className="text-center mb-12"
           >
-            Beleidsconfiguratie
-          </p>
-          <h1 className="mt-1 text-[28px] font-black leading-none tracking-tight text-[#0E1111]">
-            Beleid
-          </h1>
-          <p
-            className="mt-2 text-[13px] text-slate-500"
-            style={{ textWrap: "pretty" }}
+            <p
+              className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            >
+              Beleidsconfiguratie
+            </p>
+            <h1 className="mt-2 text-[42px] font-black leading-none tracking-tight text-[#0E1111]">
+              Beleid
+            </h1>
+            <p className="mt-3 text-[14px] text-slate-500 max-w-sm mx-auto leading-relaxed">
+              Beheer databronnen en beleidsdocumenten per bestuursniveau
+            </p>
+          </motion.div>
+
+          {/* Niveau navigation buttons */}
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="show"
+            className="grid gap-4 grid-cols-1 sm:grid-cols-3"
           >
-            Beheer databronnen en beleidsdocumenten per bestuursniveau
+            {NIVEAU_CONFIGS.map((config) => {
+              const Icon = config.icon;
+              const count =
+                config.key === "landelijk"
+                  ? `${landelijkCount} bronnen`
+                  : config.key === "provinciaal"
+                    ? `${provincieCount} provincies`
+                    : `${gemeenteCount} gemeenten`;
+              return (
+                <motion.button
+                  key={config.key}
+                  variants={fadeUp}
+                  onClick={() =>
+                    navigate({ to: "/beleid", search: { gemeente: undefined, provincie: undefined, source: undefined, category: undefined, niveau: config.key } })
+                  }
+                  className="group flex flex-col items-center gap-5 rounded-[28px] border border-[#EAEFEF] bg-white p-8 text-center transition-all hover:border-[#F9A826] hover:shadow-xl active:scale-[0.98]"
+                >
+                  {/* Icon with ambient glow */}
+                  <div className="relative">
+                    <div className="absolute inset-0 rounded-full bg-[#F9A826]/20 blur-2xl scale-[2]" />
+                    <div className="relative flex size-16 items-center justify-center rounded-full bg-[#0E1111] shadow-[0_4px_20px_rgba(14,17,17,0.18)]">
+                      <Icon size={24} strokeWidth={1.5} className="text-[#F9A826]" />
+                    </div>
+                  </div>
+
+                  {/* Text */}
+                  <div className="flex-1 space-y-1.5">
+                    <h3 className="text-[16px] font-black tracking-tight text-[#0E1111]">
+                      {config.label}
+                    </h3>
+                    <p className="text-[12px] text-slate-500 leading-relaxed">
+                      {config.description}
+                    </p>
+                  </div>
+
+                  {/* Count + arrow */}
+                  <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-400">
+                    <span className="tabular-nums">{count}</span>
+                    <ArrowRight
+                      size={14}
+                      className="text-slate-300 transition-all group-hover:text-[#F9A826] group-hover:translate-x-0.5"
+                    />
+                  </div>
+                </motion.button>
+              );
+            })}
+          </motion.div>
+
+          {/* Footer */}
+          <p className="mt-10 text-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">
+            Beleid · 3 bestuursniveaus
           </p>
-        </motion.div>
-
-        {/* Niveau navigation buttons */}
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          animate="show"
-          className="mt-8 grid gap-4 grid-cols-1 sm:grid-cols-3"
-        >
-          {NIVEAU_CONFIGS.map((config) => {
-            const Icon = config.icon;
-            const count =
-              config.key === "landelijk"
-                ? `${landelijkCount} bronnen`
-                : config.key === "provinciaal"
-                  ? `${provincieCount} provincies`
-                  : `${gemeenteCount} gemeenten`;
-            return (
-              <motion.button
-                key={config.key}
-                variants={fadeUp}
-                onClick={() =>
-                  navigate({ to: "/beleid", search: { gemeente: undefined, provincie: undefined, source: undefined, category: undefined, niveau: config.key } })
-                }
-                className="group flex flex-col items-start gap-4 rounded-[20px] border border-[#EAEFEF] bg-white p-6 text-left transition-all hover:border-[#F9A826] hover:shadow-md"
-              >
-                <div className="flex size-12 items-center justify-center rounded-full bg-[#0E1111]">
-                  <Icon size={20} strokeWidth={1.5} className="text-[#F9A826]" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-[15px] font-bold text-[#0E1111]">
-                    {config.label}
-                  </h3>
-                  <p className="mt-1 text-[12px] text-slate-500 leading-relaxed">
-                    {config.description}
-                  </p>
-                </div>
-                <div className="flex w-full items-center justify-between">
-                  <span className="text-[12px] font-bold text-slate-400 tabular-nums">
-                    {count}
-                  </span>
-                  <ArrowRight
-                    size={16}
-                    className="text-slate-300 transition-colors group-hover:text-[#F9A826]"
-                  />
-                </div>
-              </motion.button>
-            );
-          })}
-        </motion.div>
-
-        {/* Footer */}
-        <p className="mt-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-          Beleid · 3 bestuursniveaus
-        </p>
+        </div>
       </div>
     </ResultsShell>
   );
