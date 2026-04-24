@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-02-PLAN.md (WijkPolicy schema + SCHEMA_VERSION v3->v4)
-last_updated: "2026-04-24T21:45:31.135Z"
-last_activity: 2026-04-24 — M048/Phase 6 Plan 01 shipped — Wave-0 stubs (16 red tests) + version-agnostic SCHEMA_VERSION; 4 min, 5 tasks, 6 files
+stopped_at: Completed 06-03-PLAN.md (per-wijk differentiating woonvisie scorer; 9/9 Phase-6 tests green)
+last_updated: "2026-04-24T21:53:20.137Z"
+last_activity: 2026-04-24 — M048/Phase 6 Plan 03 shipped — rewrote score_woonvisie_match for WijkPolicy; 5 min, 1 task, 1 file
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
   percent: 63
 ---
 
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 ## Current Position
 
-Phase: 3 of 8 complete (P3/P4/P7/P8 pending; P6 Wave-0 done — Wave-2/3/4 next)
-Plan: 06-01 complete (Phase 6 Wave-0 stubs — WijkPolicy schema + woonvisie scoring tests)
-Status: Ready to execute Plan 06-02 (WijkPolicy class + SCHEMA_VERSION 3→4 bump)
-Last activity: 2026-04-24 — M048/Phase 6 Plan 01 shipped — Wave-0 stubs (16 red tests) + version-agnostic SCHEMA_VERSION; 4 min, 5 tasks, 6 files
+Phase: 3 of 8 complete (P3/P4/P7/P8 pending; P6 Wave 0+2+3 shipped — Wave 4 integration next)
+Plan: 06-03 complete (per-wijk differentiating woonvisie scorer — 9/9 Phase-6 unit tests green)
+Status: Ready to execute Plan 06-04 (Venlo integration + WoonvisiePopup data-contract smoke)
+Last activity: 2026-04-24 — M048/Phase 6 Plan 03 shipped — rewrote score_woonvisie_match for WijkPolicy; 5 min, 1 task, 1 file
 
-Progress: [██████░░░░] 63% (5/8 plans)
+Progress: [█████████░] 88% (7/8 plans)
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [██████░░░░] 63% (5/8 plans)
 | Phase 05-document-level-cache-sentinel-woonvisie P01 | 33m | 6 tasks | 7 files |
 | Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade P01 | 4m 18s | 5 tasks | 6 files |
 | Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade P02 | 9m | 2 tasks | 4 files |
+| Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade P03 | 5m | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,9 @@ Progress: [██████░░░░] 63% (5/8 plans)
 - [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6: WijkPolicy Pydantic model lives inline in woonvisie_match.py (no new module); deprecated fields retained on payload for cache-roundtrip but removed from _INPUT_SCHEMA + prompt so Claude stops emitting them
 - [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6: top-level tool-use required narrowed from 5 to 3 fields ([periode_start, periode_einde, confidence]); wijk_policies + algemeen_citaat optional so vague documents still extract
 - [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6: SCHEMA_VERSION bumped 3->4; no Alembic migration (Phase-5 pattern); pre-existing version-pinned test assertions rewritten to version-agnostic (SCHEMA_VERSION constant reference or >= N) to honor the Phase-6 lock
+- [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6 / Plan 03: longest-normalised-name wins for WijkPolicy match — deterministic over Claude list-order; Blerick-Noord beats Blerick when both present
+- [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6 / Plan 03: FactorResult.waarde migrated from legacy string to dict {matched_wijk, matched_policy, prioritized_segment, algemeen_citaat} — WoonvisiePopup consumes directly
+- [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6 / Plan 03: _PRIORITEIT_SCORE_DELTA locked (groei=+3.0, herstructurering=+1.5, neutraal=0.0, krimp=-2.5); deprecated WoonvisiePayload fields (growth_wijken/shrink_wijken/etc) no longer read by scorer — retained on model for cache-roundtrip only
 
 ### Pending Todos
 
@@ -105,6 +109,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-24T21:45:21.593Z
-Stopped at: Completed 06-02-PLAN.md (WijkPolicy schema + SCHEMA_VERSION v3->v4)
+Last session: 2026-04-24T21:53:20.135Z
+Stopped at: Completed 06-03-PLAN.md (per-wijk differentiating woonvisie scorer; 9/9 Phase-6 tests green)
 Resume file: None
