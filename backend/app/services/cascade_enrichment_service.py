@@ -14,7 +14,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.factor_extraction_schemas import FactorExtractionError
+from app.ai.factor_extraction_schemas import DOCUMENT_SENTINEL, FactorExtractionError
 from app.ai.factors.woonvisie_match import WOONVISIE_MATCH_FACTOR_DEF
 from app.models.policy_document import PolicyDocument
 from app.services.factor_extraction_service import extract_factor
@@ -78,7 +78,7 @@ async def get_cascade_payloads(
             extracted = await extract_factor(
                 db,
                 factor_def=WOONVISIE_MATCH_FACTOR_DEF,
-                parcel_id=parcel_id,
+                parcel_id=DOCUMENT_SENTINEL,  # document-level: cache shared across all parcels in gemeente
                 policy_document=doc,
             )
             payloads["woonvisie_match"] = extracted.payload
