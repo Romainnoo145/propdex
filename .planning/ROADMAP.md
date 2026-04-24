@@ -104,7 +104,13 @@ Plans:
   5. `citaat` beschikbaar in `toelichting_lang` van `FactorResult` zodat Phase 3 popup het kan tonen
   6. Venlo-smoke: perceel in Blerick (groei + sociaal-wijk) scoort anders dan perceel in Venlo-Centrum (neutraal) met hetzelfde projecttype
   7. Pre-existing 275 tests groen na schema wijziging
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Wave-0 test stubs (3 new test files + version-agnostic SCHEMA_VERSION + v3→v4 cache-miss stub)
+- [ ] 06-02-PLAN.md — WijkPolicy + WoonvisiePayload extension + new _INPUT_SCHEMA + prompt + SCHEMA_VERSION 3→4
+- [ ] 06-03-PLAN.md — score_woonvisie_match rewrite + _normalize_wijk helper + _PRIORITEIT_SCORE_DELTA
+- [ ] 06-04-PLAN.md — Integration test rewrite + Venlo-smoke + full-suite phase gate + frontend audit
 
 ### Phase 7: Factor pinning + groep-pages + 6 cards per page
 **Goal**: ParcelDetailModal Potentie/Risico tabs schalen naar 30+ factoren zonder UI-werk per cascade-milestone. User kan top-6 pinnen (persistent), factoren gegroepeerd per bron over pages, 6 cards per page
@@ -152,6 +158,6 @@ waar S01=P5, S02=P6, S03=P3, S04=P7, S05=P4, S06=P8.
 | 3. Woonvisie Popup | 0/? | Not started | - |
 | 4. KlimaatLayer Bug | 0/? | Not started | - |
 | 5. Document-level cache sentinel | 0/? | Not started | - |
-| 6. WijkPolicy schema + scoring | 0/? | Not started | - |
+| 6. WijkPolicy schema + scoring | 0/4 | Not started | - |
 | 7. Factor pinning + groep-pages | 0/? | Not started | - |
 | 8. Integration tests + Venlo E2E | 0/? | Not started | - |
