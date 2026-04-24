@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: milestone
-status: planning
-stopped_at: Completed 06-01-PLAN.md (Wave-0 stubs, 16 red tests + 1 green version-agnostic guard)
-last_updated: "2026-04-24T21:33:35.744Z"
+status: executing
+stopped_at: Completed 06-02-PLAN.md (WijkPolicy schema + SCHEMA_VERSION v3->v4)
+last_updated: "2026-04-24T21:45:31.135Z"
 last_activity: 2026-04-24 — M048/Phase 6 Plan 01 shipped — Wave-0 stubs (16 red tests) + version-agnostic SCHEMA_VERSION; 4 min, 5 tasks, 6 files
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 8
-  completed_plans: 5
-  percent: 5
+  completed_plans: 6
+  percent: 63
 ---
 
 # Propdex — GSD State
@@ -54,6 +54,7 @@ Progress: [██████░░░░] 63% (5/8 plans)
 | Phase 02-score-ui-fix P02 | 4m | 1 tasks | 1 files |
 | Phase 05-document-level-cache-sentinel-woonvisie P01 | 33m | 6 tasks | 7 files |
 | Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade P01 | 4m 18s | 5 tasks | 6 files |
+| Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade P02 | 9m | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,9 @@ Progress: [██████░░░░] 63% (5/8 plans)
 - [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6: version-agnostic SCHEMA_VERSION assertion (>= 3) — survives v3->v4 bump without per-version test edits
 - [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6: Wave-0 stubs intentionally fail with ImportError on WijkPolicy — explicit Nyquist signal driving Plan 06-02 implementation
 - [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6: v3->v4 cache-miss test mirrors Phase-5 v2->v3 pattern exactly (same fixture, same imports, same assertion shape)
+- [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6: WijkPolicy Pydantic model lives inline in woonvisie_match.py (no new module); deprecated fields retained on payload for cache-roundtrip but removed from _INPUT_SCHEMA + prompt so Claude stops emitting them
+- [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6: top-level tool-use required narrowed from 5 to 3 fields ([periode_start, periode_einde, confidence]); wijk_policies + algemeen_citaat optional so vague documents still extract
+- [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6: SCHEMA_VERSION bumped 3->4; no Alembic migration (Phase-5 pattern); pre-existing version-pinned test assertions rewritten to version-agnostic (SCHEMA_VERSION constant reference or >= N) to honor the Phase-6 lock
 
 ### Pending Todos
 
@@ -101,6 +105,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-24T21:33:35.742Z
-Stopped at: Completed 06-01-PLAN.md (Wave-0 stubs, 16 red tests + 1 green version-agnostic guard)
+Last session: 2026-04-24T21:45:21.593Z
+Stopped at: Completed 06-02-PLAN.md (WijkPolicy schema + SCHEMA_VERSION v3->v4)
 Resume file: None
