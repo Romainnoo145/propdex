@@ -16,15 +16,15 @@
 - [x] **SCORE-01**: ScoreBreakdownModal displays potentie/risico balance dynamically from org-profile (`potentie_risico_balance` prop via `useOrgScoreWeights`) — not hardcoded 60%/40%
 - [x] **SCORE-02**: ScoreBreakdownModal displays `percentage_of_category` (0–100%) per factor instead of raw `×{gewicht}` integer label
 - [x] **SCORE-03**: `potentie_risico_balance` is passed as prop to ScoreBreakdownModal from parent (not read from scan flags)
-- [ ] **SCORE-04**: `score_woonvisie_match()` uses per-wijk `WijkPolicy` (prioriteit + gewenste_segmenten) to produce differentiating scores between parcelen in different wijken van dezelfde gemeente met hetzelfde projecttype
+- [x] **SCORE-04**: `score_woonvisie_match()` uses per-wijk `WijkPolicy` (prioriteit + gewenste_segmenten) to produce differentiating scores between parcelen in different wijken van dezelfde gemeente met hetzelfde projecttype
 
 ### Woonvisie Kaart Popup
 
 - [ ] **WOON-01**: Woonvisie kaart (kaart 10 in Potentie grid) is clickable and opens a popup
 - [ ] **WOON-02**: Popup shows wijk naam, prioriteit-chip, beleidstekst as amber-bordered blockquote, paginanummer, and segmentmatch-chips (e.g. sociaal ✓ / duur ✗)
 - [ ] **WOON-03**: Popup renders in Aura style (glass surface, rounded-[24px], amber accent, Plus Jakarta Sans) consistent with DESIGN.md
-- [ ] **WOON-04**: `WijkPolicy` pydantic model met velden wijk_naam, prioriteit (groei/krimp/herstructurering/neutraal), gewenste_segmenten (sociaal/midden/duur/gemengd), citaat, pagina
-- [ ] **WOON-05**: `WoonvisiePayload` uitgebreid met `wijk_policies: list[WijkPolicy]`, `algemeen_citaat: str`, `confidence: float`; SCHEMA_VERSION bump 3→4
+- [x] **WOON-04**: `WijkPolicy` pydantic model met velden wijk_naam, prioriteit (groei/krimp/herstructurering/neutraal), gewenste_segmenten (sociaal/midden/duur/gemengd), citaat, pagina
+- [x] **WOON-05**: `WoonvisiePayload` uitgebreid met `wijk_policies: list[WijkPolicy]`, `algemeen_citaat: str`, `confidence: float`; SCHEMA_VERSION bump 3→4
 
 ### Pin Mechanism + Group Pages (NEW 2026-04-24)
 
@@ -52,7 +52,7 @@
 - [x] **TEST-03**: Unit tests cover `percentage_of_category` display — factor percentage shown correctly from scan data
 - [ ] **TEST-04**: Integration or component tests cover woonvisie popup — opens on click, shows correct wijk/prioriteit/segmentmatch data
 - [x] **TEST-05**: Unit tests cover document-level sentinel cache — 2 scans voor verschillende parcelen tegen dezelfde woonvisie = 1 Claude call; v2→v3 bump invalidateert oude entries
-- [ ] **TEST-06**: Unit/integration tests cover WijkPolicy schema + scoring — Venlo Blerick vs Venlo-Centrum produceren verschillende woonvisie_match scores met zelfde projecttype
+- [x] **TEST-06**: Unit/integration tests cover WijkPolicy schema + scoring — Venlo Blerick vs Venlo-Centrum produceren verschillende woonvisie_match scores met zelfde projecttype
 - [ ] **TEST-07**: Component tests cover pin flow — pin/unpin, max-6 guard, ⭐ badge rendering, page-navigation met pinned synth-page
 - [ ] **TEST-08**: E2E smoke — Venlo woonvisie upload → 2 parcelen scan → 1 Claude call → verschillende scores → popup toont wijk-specifiek citaat → pins persisteren across refresh
 
@@ -99,12 +99,12 @@
 | SCORE-01 | Phase 2 | Complete |
 | SCORE-02 | Phase 2 | Complete |
 | SCORE-03 | Phase 2 | Complete |
-| SCORE-04 | Phase 6 | Pending |
+| SCORE-04 | Phase 6 | Complete |
 | WOON-01 | Phase 3 | Pending |
 | WOON-02 | Phase 3 | Pending |
 | WOON-03 | Phase 3 | Pending |
-| WOON-04 | Phase 6 | Pending |
-| WOON-05 | Phase 6 | Pending |
+| WOON-04 | Phase 6 | Complete |
+| WOON-05 | Phase 6 | Complete |
 | PIN-01 | Phase 7 | Pending |
 | PIN-02 | Phase 7 | Pending |
 | PIN-03 | Phase 7 | Pending |
@@ -117,7 +117,7 @@
 | TEST-03 | Phase 2 | Complete |
 | TEST-04 | Phase 3 | Pending |
 | TEST-05 | Phase 5 | Complete |
-| TEST-06 | Phase 6 | Pending |
+| TEST-06 | Phase 6 | Complete |
 | TEST-07 | Phase 7 | Pending |
 | TEST-08 | Phase 8 | Pending |
 

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 6 context gathered (via wave-sessie)
-last_updated: "2026-04-24T20:00:47.566Z"
-last_activity: 2026-04-24 — M048/Phase 5 shipped — DOCUMENT_SENTINEL + SCHEMA_VERSION 2→3; 33 min, 6 tasks, 7 files
+stopped_at: Completed 06-01-PLAN.md (Wave-0 stubs, 16 red tests + 1 green version-agnostic guard)
+last_updated: "2026-04-24T21:33:35.744Z"
+last_activity: 2026-04-24 — M048/Phase 6 Plan 01 shipped — Wave-0 stubs (16 red tests) + version-agnostic SCHEMA_VERSION; 4 min, 5 tasks, 6 files
 progress:
   total_phases: 8
   completed_phases: 3
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 8
+  completed_plans: 5
   percent: 5
 ---
 
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 ## Current Position
 
-Phase: 3 of 8 complete (P3/P4/P6-P8 pending)
-Plan: 05-01 complete (document-level cache sentinel woonvisie — CACHE-02 + TEST-05)
-Status: Ready to plan next phase
-Last activity: 2026-04-24 — M048/Phase 5 shipped — DOCUMENT_SENTINEL + SCHEMA_VERSION 2→3; 33 min, 6 tasks, 7 files
+Phase: 3 of 8 complete (P3/P4/P7/P8 pending; P6 Wave-0 done — Wave-2/3/4 next)
+Plan: 06-01 complete (Phase 6 Wave-0 stubs — WijkPolicy schema + woonvisie scoring tests)
+Status: Ready to execute Plan 06-02 (WijkPolicy class + SCHEMA_VERSION 3→4 bump)
+Last activity: 2026-04-24 — M048/Phase 6 Plan 01 shipped — Wave-0 stubs (16 red tests) + version-agnostic SCHEMA_VERSION; 4 min, 5 tasks, 6 files
 
-Progress: [████░░░░░░] 37.5% (3/8 phases)
+Progress: [██████░░░░] 63% (5/8 plans)
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [████░░░░░░] 37.5% (3/8 phases)
 | Phase 02-score-ui-fix P01 | 11m | 2 tasks | 2 files |
 | Phase 02-score-ui-fix P02 | 4m | 1 tasks | 1 files |
 | Phase 05-document-level-cache-sentinel-woonvisie P01 | 33m | 6 tasks | 7 files |
+| Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade P01 | 4m 18s | 5 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,9 @@ Progress: [████░░░░░░] 37.5% (3/8 phases)
 - [Phase 02-score-ui-fix]: Portal-rendered modals require within(document.body) in play functions — createPortal escapes canvasElement scope
 - [Phase 05-document-level-cache-sentinel-woonvisie]: Phase 5: DOCUMENT_SENTINEL kept at caller-level (cascade_enrichment_service), not hoisted to FactorDefinition — defer registry-hoisting to M050 when 2nd document-level factor lands
 - [Phase 05-document-level-cache-sentinel-woonvisie]: Phase 5: version-agnostic test guards (>= N or use SCHEMA_VERSION constant) — future bumps won't require per-test assertion edits
+- [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6: version-agnostic SCHEMA_VERSION assertion (>= 3) — survives v3->v4 bump without per-version test edits
+- [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6: Wave-0 stubs intentionally fail with ImportError on WijkPolicy — explicit Nyquist signal driving Plan 06-02 implementation
+- [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6: v3->v4 cache-miss test mirrors Phase-5 v2->v3 pattern exactly (same fixture, same imports, same assertion shape)
 
 ### Pending Todos
 
@@ -97,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-24T20:00:47.564Z
-Stopped at: Phase 6 context gathered (via wave-sessie)
-Resume file: .planning/phases/06-wijkpolicy-schema-woonvisie-scoring-upgrade/06-CONTEXT.md
+Last session: 2026-04-24T21:33:35.742Z
+Stopped at: Completed 06-01-PLAN.md (Wave-0 stubs, 16 red tests + 1 green version-agnostic guard)
+Resume file: None
