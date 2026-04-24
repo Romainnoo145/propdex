@@ -7,7 +7,7 @@ falen → expliciete FactorExtractionError (geen silent default-pass).
 """
 
 from datetime import datetime
-from typing import Any, Generic, TypeVar
+from typing import Any, Final, Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -61,7 +61,7 @@ class ExtractedFactor(BaseModel, Generic[PayloadT]):
         )
     )
     schema_version: int = Field(
-        default=2,
+        default=3,
         description=(
             "Bump bij backwards-incompat schema-wijziging; cache-entries "
             "met lagere versie worden genegeerd (re-extract)."
@@ -111,7 +111,22 @@ ERROR_CODES: frozenset[str] = frozenset(
 """Iron-rule constant: uitbreiding vereist schema-versie-bump + S05-logging update."""
 
 
-SCHEMA_VERSION: int = 2
+SCHEMA_VERSION: int = 3
 """Current cache-schema versie. Bump bij: (a) payload-shape change in >=1 factor,
 (b) toevoeging nieuwe required metadata-veld, (c) cache-key component change.
-Oude cache-entries met lagere SCHEMA_VERSION worden bij read als miss behandeld."""
+Oude cache-entries met lagere SCHEMA_VERSION worden bij read als miss behandeld.
+
+Bumped to 3 in M048/Phase 5: document-level cache sentinel for woonvisie_match.
+Old v2 entries (parcel-keyed) become cache-misses and are superseded on next
+access via on_conflict_do_update; no cleanup migration required."""
+
+
+DOCUMENT_SENTINEL: Final[str] = "__document__"
+"""Use as parcel_id in extract_factor() when the factor extracts document-level
+signals that do not vary per parcel. Ensures exactly 1 Claude call per unique
+(policy_document_id, factor_id, SCHEMA_VERSION) tuple across all parcels.
+
+Introduced in M048/Phase 5 for woonvisie_match. At Venlo scale (100k+ parcelen)
+the previous parcel-keyed cache would fire 100k Claude calls per woonvisie —
+each returning the same document-scoped payload. The sentinel collapses that
+to 1 call per (doc, factor, schema_version) tuple."""

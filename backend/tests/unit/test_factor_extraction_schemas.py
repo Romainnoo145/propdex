@@ -72,7 +72,7 @@ def test_extracted_factor_from_cache_flag_is_required_semantic() -> None:
         from_cache=False,
     )
     assert result.from_cache is False
-    assert result.schema_version == 2  # default bumped in M048/Phase 1
+    assert result.schema_version == 3  # default bumped in M048/Phase 5
 
 
 def test_factor_extraction_error_carries_error_code() -> None:
@@ -107,9 +107,27 @@ def test_error_codes_is_exactly_five() -> None:
     assert len(ERROR_CODES) == 5
 
 
-def test_schema_version_is_two() -> None:
-    """SCHEMA_VERSION bumped 1→2 in M048/Phase 1 to invalidate M047 extraction cache entries."""
+def test_schema_version_is_three() -> None:
+    """SCHEMA_VERSION bumped 2→3 in M048/Phase 5 for document-level cache sentinel.
+
+    v2 entries (parcel-keyed) become cache-misses and are superseded on next
+    access via on_conflict_do_update; no cleanup migration required.
+    """
     from app.ai.factor_extraction_schemas import SCHEMA_VERSION
 
-    assert SCHEMA_VERSION == 2
+    assert SCHEMA_VERSION == 3
     assert isinstance(SCHEMA_VERSION, int)
+
+
+def test_document_sentinel_constant() -> None:
+    """DOCUMENT_SENTINEL is the reserved parcel_id for document-level factors.
+
+    Used by cascade_enrichment_service.get_cascade_payloads when the factor
+    extracts document-scoped signals (e.g. woonvisie_match) — ensures exactly
+    1 Claude call per (policy_document_id, factor_id, SCHEMA_VERSION) tuple.
+    """
+    from app.ai.factor_extraction_schemas import DOCUMENT_SENTINEL
+
+    assert DOCUMENT_SENTINEL == "__document__"
+    assert isinstance(DOCUMENT_SENTINEL, str)
+    assert len(DOCUMENT_SENTINEL) <= 50  # fits String(50) parcel_id column
