@@ -86,7 +86,10 @@ Plans:
   4. Geen DB migratie vereist (sentinel past in bestaande `String(50)` kolom); unique-constraint blijft correct
   5. Code-comment toegevoegd bij `FactorExtractionCache` model: `# "__document__" sentinel used for document-level factor types`
   6. Unit tests dekken: sentinel-write → sentinel-hit op 2e lookup; v2→v3 bump invalidateert oude entries
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 05-01-PLAN.md — SCHEMA_VERSION 2→3 + DOCUMENT_SENTINEL constant + caller edit in cascade_enrichment_service + unit/integration tests + stale iron-rule fix
 
 ### Phase 6: WijkPolicy schema + woonvisie scoring upgrade
 **Goal**: Woonvisie-extractie produceert per-wijk beleid (prioriteit + gewenste segmenten + citaat) i.p.v. gemeente-brede platte lijsten. Score_woonvisie_match differentieert tussen percelen in verschillende wijken binnen dezelfde gemeente

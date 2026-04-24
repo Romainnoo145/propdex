@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v4.0
-milestone_name: M048 Score v4.0 Frontend Scaling
+milestone_name: milestone
 status: planning
-stopped_at: M048 scope expanded via office hours — 4 new phases added (5-8)
-last_updated: "2026-04-24T18:10:00.000Z"
-last_activity: 2026-04-24 — M048 scope expansion; phases 5-8 added from design doc 20260424-200512
+stopped_at: Completed 05-document-level-cache-sentinel-woonvisie/05-01-PLAN.md
+last_updated: "2026-04-24T19:06:44.874Z"
+last_activity: 2026-04-24 — M048 scope expansion via office hours; 4 new phases added (P5-P8) from design doc 20260424-200512
 progress:
   total_phases: 8
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
-  percent: 25
+  completed_phases: 3
+  total_plans: 4
+  completed_plans: 4
+  percent: 37.5
 ---
 
 # Propdex — GSD State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** From grondpositie to first spade in one cockpit — no switching between 10 tabs
-**Current focus:** M048 Score v4.0 Frontend Scaling — Phases 1+2 done; next: plan Phase 5 (document-level cache sentinel) or Phase 4 (KlimaatLayer bug) — parallel-eligible
+**Current focus:** M048 Score v4.0 Frontend Scaling — Phases 1+2+5 done; next: plan Phase 3 (woonvisie popup), 4 (KlimaatLayer bug), or 6 (WijkPolicy schema) — parallel-eligible
 
 ## Current Position
 
-Phase: 2 of 8 complete (P3-P8 pending)
-Plan: —
+Phase: 3 of 8 complete (P3/P4/P6-P8 pending)
+Plan: 05-01 complete (document-level cache sentinel woonvisie — CACHE-02 + TEST-05)
 Status: Ready to plan next phase
-Last activity: 2026-04-24 — M048 scope expansion via office hours; 4 new phases added (P5-P8) from design doc 20260424-200512
+Last activity: 2026-04-24 — M048/Phase 5 shipped — DOCUMENT_SENTINEL + SCHEMA_VERSION 2→3; 33 min, 6 tasks, 7 files
 
-Progress: [██░░░░░░░░] 25% (2/8 phases)
+Progress: [████░░░░░░] 37.5% (3/8 phases)
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [██░░░░░░░░] 25% (2/8 phases)
 | Phase 01-cache-sentinel P01 | 37m | 2 tasks | 3 files |
 | Phase 02-score-ui-fix P01 | 11m | 2 tasks | 2 files |
 | Phase 02-score-ui-fix P02 | 4m | 1 tasks | 1 files |
+| Phase 05-document-level-cache-sentinel-woonvisie P01 | 33m | 6 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,8 @@ Progress: [██░░░░░░░░] 25% (2/8 phases)
 - [Phase 02-score-ui-fix]: Dynamic flex via style={{ flex: N }} not Tailwind flex-[N] class (runtime values not purged by JIT)
 - [Phase 02-score-ui-fix]: Storybook 10 test imports use 'storybook/test' not '@storybook/test' — package path changed in v10
 - [Phase 02-score-ui-fix]: Portal-rendered modals require within(document.body) in play functions — createPortal escapes canvasElement scope
+- [Phase 05-document-level-cache-sentinel-woonvisie]: Phase 5: DOCUMENT_SENTINEL kept at caller-level (cascade_enrichment_service), not hoisted to FactorDefinition — defer registry-hoisting to M050 when 2nd document-level factor lands
+- [Phase 05-document-level-cache-sentinel-woonvisie]: Phase 5: version-agnostic test guards (>= N or use SCHEMA_VERSION constant) — future bumps won't require per-test assertion edits
 
 ### Pending Todos
 
@@ -94,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-22T19:20:13.692Z
-Stopped at: Completed 02-score-ui-fix/02-02-PLAN.md — ScoreBreakdownModal Storybook stories with play assertions
+Last session: 2026-04-24T19:06:44.872Z
+Stopped at: Completed 05-document-level-cache-sentinel-woonvisie/05-01-PLAN.md
 Resume file: None

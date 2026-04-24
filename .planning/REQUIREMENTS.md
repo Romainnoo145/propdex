@@ -9,7 +9,7 @@
 ### Cache Infrastructure
 
 - [x] **CACHE-01**: System invalidates M047 extraction cache by bumping SCHEMA_VERSION from 1 to 2 in `backend/app/ai/factor_extraction_schemas.py`
-- [ ] **CACHE-02**: Document-level factors (woonvisie_match) cache with sentinel `parcel_id="__document__"` — 1 Claude call per document instead of per parcel. SCHEMA_VERSION bump 2→3 invalidates old parcel-keyed entries
+- [x] **CACHE-02**: Document-level factors (woonvisie_match) cache with sentinel `parcel_id="__document__"` — 1 Claude call per document instead of per parcel. SCHEMA_VERSION bump 2→3 invalidates old parcel-keyed entries
 
 ### Score UI
 
@@ -51,7 +51,7 @@
 - [x] **TEST-02**: Unit tests cover ScoreBreakdownModal balance display — percentage reflects `potentie_risico_balance` prop value (not hardcoded)
 - [x] **TEST-03**: Unit tests cover `percentage_of_category` display — factor percentage shown correctly from scan data
 - [ ] **TEST-04**: Integration or component tests cover woonvisie popup — opens on click, shows correct wijk/prioriteit/segmentmatch data
-- [ ] **TEST-05**: Unit tests cover document-level sentinel cache — 2 scans voor verschillende parcelen tegen dezelfde woonvisie = 1 Claude call; v2→v3 bump invalidateert oude entries
+- [x] **TEST-05**: Unit tests cover document-level sentinel cache — 2 scans voor verschillende parcelen tegen dezelfde woonvisie = 1 Claude call; v2→v3 bump invalidateert oude entries
 - [ ] **TEST-06**: Unit/integration tests cover WijkPolicy schema + scoring — Venlo Blerick vs Venlo-Centrum produceren verschillende woonvisie_match scores met zelfde projecttype
 - [ ] **TEST-07**: Component tests cover pin flow — pin/unpin, max-6 guard, ⭐ badge rendering, page-navigation met pinned synth-page
 - [ ] **TEST-08**: E2E smoke — Venlo woonvisie upload → 2 parcelen scan → 1 Claude call → verschillende scores → popup toont wijk-specifiek citaat → pins persisteren across refresh
@@ -95,7 +95,7 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | CACHE-01 | Phase 1 | Complete |
-| CACHE-02 | Phase 5 | Pending |
+| CACHE-02 | Phase 5 | Complete |
 | SCORE-01 | Phase 2 | Complete |
 | SCORE-02 | Phase 2 | Complete |
 | SCORE-03 | Phase 2 | Complete |
@@ -116,7 +116,7 @@
 | TEST-02 | Phase 2 | Complete |
 | TEST-03 | Phase 2 | Complete |
 | TEST-04 | Phase 3 | Pending |
-| TEST-05 | Phase 5 | Pending |
+| TEST-05 | Phase 5 | Complete |
 | TEST-06 | Phase 6 | Pending |
 | TEST-07 | Phase 7 | Pending |
 | TEST-08 | Phase 8 | Pending |
