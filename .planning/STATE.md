@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-03-PLAN.md (per-wijk differentiating woonvisie scorer; 9/9 Phase-6 tests green)
-last_updated: "2026-04-24T21:53:20.137Z"
+stopped_at: Completed 06-04-PLAN.md (Phase 6 closed — 12 woonvisie integration tests green, frontend audit captured)
+last_updated: "2026-04-24T22:23:38.070Z"
 last_activity: 2026-04-24 — M048/Phase 6 Plan 03 shipped — rewrote score_woonvisie_match for WijkPolicy; 5 min, 1 task, 1 file
 progress:
   total_phases: 8
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 8
-  completed_plans: 7
-  percent: 63
+  completed_plans: 8
+  percent: 88
 ---
 
 # Propdex — GSD State
@@ -56,6 +56,7 @@ Progress: [█████████░] 88% (7/8 plans)
 | Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade P01 | 4m 18s | 5 tasks | 6 files |
 | Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade P02 | 9m | 2 tasks | 4 files |
 | Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade P03 | 5m | 1 tasks | 1 files |
+| Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade P04 | 26 min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,9 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6 / Plan 03: longest-normalised-name wins for WijkPolicy match — deterministic over Claude list-order; Blerick-Noord beats Blerick when both present
 - [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6 / Plan 03: FactorResult.waarde migrated from legacy string to dict {matched_wijk, matched_policy, prioritized_segment, algemeen_citaat} — WoonvisiePopup consumes directly
 - [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6 / Plan 03: _PRIORITEIT_SCORE_DELTA locked (groei=+3.0, herstructurering=+1.5, neutraal=0.0, krimp=-2.5); deprecated WoonvisiePayload fields (growth_wijken/shrink_wijken/etc) no longer read by scorer — retained on model for cache-roundtrip only
+- [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6 / Plan 04: deprecated-field keyword-arg construction (growth_wijken/shrink_wijken/excluded_project_types) fully purged from integration tests — test surface now matches Plan-06-02 schema authoritatively
+- [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6 / Plan 04: Venlo smoke-test asserts >= 0.2 score-differentiation between Blerick (groei+sociaal+midden overlap) and Venlo-Centrum (neutraal+duur+gemengd no-overlap) for project_type=nieuwbouw_wonen — validates the whole point of Phase 6 in one assertion
+- [Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade]: Phase 6 / Plan 04: Frontend audit captured PotentieLayer.tsx as the only consumer of woonvisie_match.waarde (reads .prioritized_segment) — Phase 3 WoonvisiePopup work now has concrete TypeScript-type-update target list
 
 ### Pending Todos
 
@@ -109,6 +113,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-24T21:53:20.135Z
-Stopped at: Completed 06-03-PLAN.md (per-wijk differentiating woonvisie scorer; 9/9 Phase-6 tests green)
+Last session: 2026-04-24T22:23:38.068Z
+Stopped at: Completed 06-04-PLAN.md (Phase 6 closed — 12 woonvisie integration tests green, frontend audit captured)
 Resume file: None
