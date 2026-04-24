@@ -72,7 +72,10 @@ def test_extracted_factor_from_cache_flag_is_required_semantic() -> None:
         from_cache=False,
     )
     assert result.from_cache is False
-    assert result.schema_version == 3  # default bumped in M048/Phase 5
+    # Version-agnostic: ExtractedFactor.schema_version default tracks SCHEMA_VERSION constant.
+    from app.ai.factor_extraction_schemas import SCHEMA_VERSION
+
+    assert result.schema_version == SCHEMA_VERSION
 
 
 def test_factor_extraction_error_carries_error_code() -> None:

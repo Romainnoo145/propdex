@@ -127,13 +127,13 @@ async def test_current_version_cache_entry_is_hit(test_db, create_test_user):
 
 @pytest.mark.asyncio
 async def test_v2_cache_entry_is_miss_after_bump_to_v3(test_db, create_test_user):
-    """TEST-05: pre-M048/Phase 5 v2 entries (parcel-keyed) zijn cache-miss na bump.
+    """TEST-05: pre-M048/Phase 5 v2 entries (parcel-keyed) zijn cache-miss na elke bump >= 3.
 
     Bewijst dat bestaande parcel-keyed v2 rows automatisch als miss worden
-    behandeld bij lookup met SCHEMA_VERSION=3 — geen DB-migratie of cleanup
-    nodig.
+    behandeld bij lookup met SCHEMA_VERSION >= 3 — geen DB-migratie of cleanup
+    nodig. Version-agnostic: werkt ook na Phase-6 bump (v3->v4) en verdere bumps.
     """
-    assert SCHEMA_VERSION == 3, f"Test only valid at SCHEMA_VERSION==3, got {SCHEMA_VERSION}"
+    assert SCHEMA_VERSION >= 3, f"Test only valid at SCHEMA_VERSION>=3, got {SCHEMA_VERSION}"
 
     doc = await _seed_policy_document(test_db, create_test_user)
 
