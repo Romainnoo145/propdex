@@ -41,7 +41,7 @@ export function BeleidscontextCard({ gemeenteCode }: BeleidscontextCardProps) {
   return (
     <button
       type="button"
-      onClick={() => navigate({ to: "/beleid", search: { gemeente: gmCode } })}
+      onClick={() => navigate({ to: "/beleid", search: { gemeente: gmCode, provincie: undefined, source: undefined, category: undefined, niveau: undefined } })}
       className="w-full rounded-[16px] border border-violet-200 bg-violet-50/50 p-3 text-left transition-colors hover:bg-violet-50 group"
     >
       <div className="flex items-center gap-2 mb-2">

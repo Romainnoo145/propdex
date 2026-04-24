@@ -195,7 +195,7 @@ function VerkennerPage() {
       </AnimatePresence>
 
       {/* ── Chat shell ─────────────────────────────────── */}
-      <div className="flex-1 min-w-0 h-full overflow-hidden rounded-[40px] bg-aura-canvas flex flex-col">
+      <div className="flex-1 min-w-0 h-full overflow-hidden rounded-[40px] bg-[#FAFCFA] flex flex-col">
 
         {/* Thread */}
         <div ref={threadRef} className="flex-1 overflow-y-auto px-4 sm:px-6">

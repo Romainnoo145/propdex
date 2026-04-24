@@ -8,10 +8,9 @@
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { staggerContainer, fadeUp } from "@/lib/animations";
 import {
-  ChevronDown,
   Landmark,
   Building2,
   MapPin,
@@ -114,6 +113,11 @@ export const Route = createFileRoute("/_authenticated/beleid")({
     category:
       typeof search.category === "string"
         ? (search.category as string)
+        : undefined,
+    niveau:
+      typeof search.niveau === "string" &&
+      ["landelijk", "provinciaal", "gemeentelijk"].includes(search.niveau)
+        ? (search.niveau as "landelijk" | "provinciaal" | "gemeentelijk")
         : undefined,
   }),
   component: ConfiguratiePage,
@@ -237,71 +241,6 @@ interface ProcessedGemeente {
   gemeentecode: string;
   gemeentenaam: string;
   svgData: { primaryD: string; viewBox: string };
-}
-
-/* ─── Accordion card ────────────────────────────────────────── */
-
-interface AccordionLevelCardProps {
-  config: NiveauConfig;
-  count: number | string;
-  isOpen: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}
-
-function AccordionLevelCard({
-  config,
-  count,
-  isOpen,
-  onToggle,
-  children,
-}: AccordionLevelCardProps) {
-  const Icon = config.icon;
-  return (
-    <div className="rounded-[20px] border border-[#EAEFEF] bg-white overflow-hidden transition-shadow hover:shadow-sm">
-      <button
-        onClick={onToggle}
-        className="flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-[#FAFCFB]"
-      >
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#0E1111]">
-          <Icon size={18} strokeWidth={1.5} className="text-[#F9A826]" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[15px] font-bold text-[#0E1111]">
-            {config.label}
-          </h3>
-          <p className="text-[12px] text-slate-500 leading-snug mt-0.5">
-            {config.description}
-          </p>
-        </div>
-        <span className="text-[13px] font-bold text-slate-400 tabular-nums shrink-0">
-          {count}
-        </span>
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-          className="shrink-0"
-        >
-          <ChevronDown size={18} className="text-slate-400" />
-        </motion.div>
-      </button>
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
-            className="overflow-hidden"
-          >
-            <div className="border-t border-[#EAEFEF] px-5 py-5">
-              {children}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
 }
 
 /* ─── Data source insight card (expandable) ─────────────────── */
@@ -527,17 +466,21 @@ function DataSourceCard({
         to: "/beleid",
         search: {
           gemeente: gemeenteCode,
+          provincie: undefined,
           source: source.key,
           category: source.category,
+          niveau: undefined,
         },
       });
     } else if (entityType === "provincie" && entityCode) {
       navigate({
         to: "/beleid",
         search: {
+          gemeente: undefined,
           provincie: entityCode,
           source: source.key,
           category: source.category,
+          niveau: undefined,
         },
       });
     } else {
@@ -545,7 +488,13 @@ function DataSourceCard({
       // including document sources (no status check).
       navigate({
         to: "/beleid",
-        search: { source: source.key, category: source.category },
+        search: {
+          gemeente: undefined,
+          provincie: undefined,
+          source: source.key,
+          category: source.category,
+          niveau: undefined,
+        },
       });
     }
   }, [
@@ -1758,39 +1707,35 @@ function ConfiguratiePage() {
     provincie: activeProvincie,
     source: activeSource,
     category: activeCategory,
+    niveau: activeNiveau,
   } = Route.useSearch();
-  const [openNiveau, setOpenNiveau] = useState<SubsidieNiveau | null>(null);
   const { data: gemeenteGeoJSON } = useGemeenteGeoJSON(
-    openNiveau === "gemeentelijk" || !!activeGemeente,
+    activeNiveau === "gemeentelijk" || !!activeGemeente,
   );
   const { data: provincieGeoJSON } = useProvincieGeoJSON(
-    openNiveau === "provinciaal" || !!activeProvincie,
+    activeNiveau === "provinciaal" || !!activeProvincie,
   );
 
   const landelijkCount = LANDELIJK_DATA_SOURCES.length;
   const gemeenteCount = gemeenteGeoJSON?.features?.length ?? "342";
   const provincieCount = provincieGeoJSON?.features?.length ?? "12";
 
-  const handleToggle = useCallback((niveau: SubsidieNiveau) => {
-    setOpenNiveau((prev) => (prev === niveau ? null : niveau));
-  }, []);
-
   const handleSelectGemeente = useCallback(
     (code: string) => {
-      navigate({ to: "/beleid", search: { gemeente: code } });
+      navigate({ to: "/beleid", search: { gemeente: code, provincie: undefined, source: undefined, category: undefined, niveau: undefined } });
     },
     [navigate],
   );
 
   const handleSelectProvincie = useCallback(
     (code: string) => {
-      navigate({ to: "/beleid", search: { provincie: code } });
+      navigate({ to: "/beleid", search: { gemeente: undefined, provincie: code, source: undefined, category: undefined, niveau: undefined } });
     },
     [navigate],
   );
 
   const handleBackToMain = useCallback(() => {
-    navigate({ to: "/beleid", search: {} });
+    navigate({ to: "/beleid", search: { gemeente: undefined, provincie: undefined, source: undefined, category: undefined, niveau: undefined } });
   }, [navigate]);
 
   // If source workspace is selected, show full-page source detail
@@ -1804,7 +1749,7 @@ function ConfiguratiePage() {
             onBack={() =>
               navigate({
                 to: "/beleid",
-                search: { gemeente: activeGemeente, category: activeCategory },
+                search: { gemeente: activeGemeente, provincie: undefined, source: undefined, category: activeCategory, niveau: undefined },
               })
             }
           />
@@ -1824,10 +1769,7 @@ function ConfiguratiePage() {
             onBack={() =>
               navigate({
                 to: "/beleid",
-                search: {
-                  provincie: activeProvincie,
-                  category: activeCategory,
-                },
+                search: { gemeente: undefined, provincie: activeProvincie, source: undefined, category: activeCategory, niveau: undefined },
               })
             }
           />
@@ -1876,10 +1818,110 @@ function ConfiguratiePage() {
             onBack={() =>
               navigate({
                 to: "/beleid",
-                search: { category: activeCategory },
+                search: { gemeente: undefined, provincie: undefined, source: undefined, niveau: "landelijk", category: activeCategory },
               })
             }
           />
+        </div>
+      </ResultsShell>
+    );
+  }
+
+  // Niveau sub-pages
+  if (activeNiveau === "landelijk") {
+    return (
+      <ResultsShell>
+        <div className="mx-auto max-w-4xl space-y-6">
+          <motion.button
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            onClick={handleBackToMain}
+            className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#0E1111]"
+          >
+            <ArrowLeft size={14} />
+            Beleid
+          </motion.button>
+          <motion.div variants={fadeUp} initial="hidden" animate="show">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+              Bestuursniveau
+            </p>
+            <h1 className="mt-1 text-[28px] font-black leading-none tracking-tight text-[#0E1111]">
+              Landelijk
+            </h1>
+            <p className="mt-1 text-[12px] text-slate-500">
+              Rijkssubsidies, nationale regelgeving en RVO-instrumenten
+            </p>
+          </motion.div>
+          <motion.div variants={fadeUp} initial="hidden" animate="show">
+            <LandelijkContent initialCategory={activeCategory} />
+          </motion.div>
+        </div>
+      </ResultsShell>
+    );
+  }
+
+  if (activeNiveau === "provinciaal") {
+    return (
+      <ResultsShell>
+        <div className="mx-auto max-w-4xl space-y-6">
+          <motion.button
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            onClick={handleBackToMain}
+            className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#0E1111]"
+          >
+            <ArrowLeft size={14} />
+            Beleid
+          </motion.button>
+          <motion.div variants={fadeUp} initial="hidden" animate="show">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+              Bestuursniveau
+            </p>
+            <h1 className="mt-1 text-[28px] font-black leading-none tracking-tight text-[#0E1111]">
+              Provinciaal
+            </h1>
+            <p className="mt-1 text-[12px] text-slate-500">
+              12 provincies — regionaal beleid, subsidies en verordeningen
+            </p>
+          </motion.div>
+          <motion.div variants={fadeUp} initial="hidden" animate="show">
+            <CompactProvincieGrid onSelectProvincie={handleSelectProvincie} />
+          </motion.div>
+        </div>
+      </ResultsShell>
+    );
+  }
+
+  if (activeNiveau === "gemeentelijk") {
+    return (
+      <ResultsShell>
+        <div className="mx-auto max-w-4xl space-y-6">
+          <motion.button
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            onClick={handleBackToMain}
+            className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#0E1111]"
+          >
+            <ArrowLeft size={14} />
+            Beleid
+          </motion.button>
+          <motion.div variants={fadeUp} initial="hidden" animate="show">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+              Bestuursniveau
+            </p>
+            <h1 className="mt-1 text-[28px] font-black leading-none tracking-tight text-[#0E1111]">
+              Gemeentelijk
+            </h1>
+            <p className="mt-1 text-[12px] text-slate-500">
+              342 gemeenten — lokaal beleid, vergunningklimaat en databronnen
+            </p>
+          </motion.div>
+          <motion.div variants={fadeUp} initial="hidden" animate="show">
+            <CompactGemeenteGrid onSelectGemeente={handleSelectGemeente} />
+          </motion.div>
         </div>
       </ResultsShell>
     );
@@ -1907,43 +1949,53 @@ function ConfiguratiePage() {
           </p>
         </motion.div>
 
-        {/* Accordion levels */}
+        {/* Niveau navigation buttons */}
         <motion.div
           variants={staggerContainer}
           initial="hidden"
           animate="show"
-          className="mt-6 space-y-3"
+          className="mt-8 grid gap-4 grid-cols-1 sm:grid-cols-3"
         >
-          {NIVEAU_CONFIGS.map((config) => (
-            <motion.div key={config.key} variants={fadeUp}>
-              <AccordionLevelCard
-                config={config}
-                count={
-                  config.key === "landelijk"
-                    ? `${landelijkCount} bronnen`
-                    : config.key === "provinciaal"
-                      ? `${provincieCount} provincies`
-                      : `${gemeenteCount} gemeenten`
+          {NIVEAU_CONFIGS.map((config) => {
+            const Icon = config.icon;
+            const count =
+              config.key === "landelijk"
+                ? `${landelijkCount} bronnen`
+                : config.key === "provinciaal"
+                  ? `${provincieCount} provincies`
+                  : `${gemeenteCount} gemeenten`;
+            return (
+              <motion.button
+                key={config.key}
+                variants={fadeUp}
+                onClick={() =>
+                  navigate({ to: "/beleid", search: { gemeente: undefined, provincie: undefined, source: undefined, category: undefined, niveau: config.key } })
                 }
-                isOpen={openNiveau === config.key}
-                onToggle={() => handleToggle(config.key)}
+                className="group flex flex-col items-start gap-4 rounded-[20px] border border-[#EAEFEF] bg-white p-6 text-left transition-all hover:border-[#F9A826] hover:shadow-md"
               >
-                {config.key === "landelijk" && (
-                  <LandelijkContent initialCategory={activeCategory} />
-                )}
-                {config.key === "provinciaal" && (
-                  <CompactProvincieGrid
-                    onSelectProvincie={handleSelectProvincie}
+                <div className="flex size-12 items-center justify-center rounded-full bg-[#0E1111]">
+                  <Icon size={20} strokeWidth={1.5} className="text-[#F9A826]" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-[15px] font-bold text-[#0E1111]">
+                    {config.label}
+                  </h3>
+                  <p className="mt-1 text-[12px] text-slate-500 leading-relaxed">
+                    {config.description}
+                  </p>
+                </div>
+                <div className="flex w-full items-center justify-between">
+                  <span className="text-[12px] font-bold text-slate-400 tabular-nums">
+                    {count}
+                  </span>
+                  <ArrowRight
+                    size={16}
+                    className="text-slate-300 transition-colors group-hover:text-[#F9A826]"
                   />
-                )}
-                {config.key === "gemeentelijk" && (
-                  <CompactGemeenteGrid
-                    onSelectGemeente={handleSelectGemeente}
-                  />
-                )}
-              </AccordionLevelCard>
-            </motion.div>
-          ))}
+                </div>
+              </motion.button>
+            );
+          })}
         </motion.div>
 
         {/* Footer */}

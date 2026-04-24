@@ -39,6 +39,16 @@ export default function SideRailNav() {
       to: "/opgeslagen",
     },
     {
+      icon: <Search size={22} strokeWidth={1.5} />,
+      label: "Verkenner",
+      to: "/verkenner",
+    },
+    {
+      icon: <ScrollText size={22} strokeWidth={1.5} />,
+      label: "Beleid",
+      to: "/beleid",
+    },
+    {
       icon: <Scale size={22} strokeWidth={1.5} />,
       label: "Jurisprudentie",
       to: "/jurisprudentie",
@@ -51,16 +61,6 @@ export default function SideRailNav() {
         periode: undefined,
         view: undefined,
       } as unknown as Record<string, string>,
-    },
-    {
-      icon: <ScrollText size={22} strokeWidth={1.5} />,
-      label: "Beleid",
-      to: "/beleid",
-    },
-    {
-      icon: <Search size={22} strokeWidth={1.5} />,
-      label: "Verkenner",
-      to: "/verkenner",
     },
   ];
 
