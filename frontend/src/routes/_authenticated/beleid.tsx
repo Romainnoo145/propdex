@@ -1930,14 +1930,17 @@ function ConfiguratiePage() {
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-8">
         <div className="w-full max-w-3xl text-center">
           <motion.div variants={fadeUp} initial="hidden" animate="show">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400 mb-3">
-              Bestuursniveau
-            </p>
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <div className="size-1.5 rounded-full bg-aura-amber" />
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400">
+                Beleid
+              </p>
+            </div>
             <h1 className="text-[28px] font-black tracking-tight text-aura-obsidian sm:text-[36px]">
-              Beleid
+              Op welk niveau wil je beleid beheren?
             </h1>
             <p className="mt-2 text-[13px] text-slate-500">
-              Kies een bestuursniveau om databronnen en beleidsdocumenten te beheren.
+              Kies een bestuursniveau om databronnen en beleidsdocumenten te bekijken.
             </p>
           </motion.div>
 
@@ -1954,13 +1957,16 @@ function ConfiguratiePage() {
                 onClick={() =>
                   navigate({ to: "/beleid", search: { gemeente: undefined, provincie: undefined, source: undefined, category: undefined, niveau: config.key } })
                 }
-                className="relative flex flex-col overflow-hidden rounded-2xl border-2 border-aura-obsidian/40 bg-aura-glass-white/60 px-5 py-5 text-left transition-all hover:border-aura-obsidian/60 hover:shadow-sm"
+                className="group relative flex flex-col overflow-hidden rounded-2xl border-2 border-aura-obsidian/40 bg-aura-glass-white/60 px-5 py-5 text-left transition-all hover:border-aura-amber hover:shadow-[0_4px_20px_rgba(249,168,38,0.15)]"
               >
                 <span className="block text-[15px] font-bold leading-snug text-aura-obsidian">
                   {config.label}
                 </span>
                 <span className="mt-1.5 block text-[12px] leading-relaxed text-slate-400">
                   {config.description}
+                </span>
+                <span className="mt-3 block text-[12px] font-semibold text-aura-amber opacity-0 transition-opacity group-hover:opacity-100">
+                  Bekijken →
                 </span>
               </motion.button>
             ))}
