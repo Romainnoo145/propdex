@@ -33,10 +33,13 @@ def test_temperature_is_zero_iron_rule():
     assert factor_extractor._TEMPERATURE == 0.0
 
 
-def test_schema_version_starts_at_one_and_is_int():
+def test_schema_version_exists_and_is_int():
+    """Iron-rule: SCHEMA_VERSION must exist as int. Current value == 3
+    after M048/Phase 5 document-level cache sentinel bump (was 2 in Phase 1,
+    was 1 at M047/S04 introduction)."""
     from app.ai.factor_extraction_schemas import SCHEMA_VERSION
 
-    assert SCHEMA_VERSION == 1
+    assert SCHEMA_VERSION == 3
     assert isinstance(SCHEMA_VERSION, int)
 
 
