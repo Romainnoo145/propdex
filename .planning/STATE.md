@@ -4,7 +4,7 @@ milestone: v4.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 06-04-PLAN.md (Phase 6 closed — 12 woonvisie integration tests green, frontend audit captured)
-last_updated: "2026-04-24T22:23:38.070Z"
+last_updated: "2026-04-24T22:43:35.029Z"
 last_activity: 2026-04-24 — M048/Phase 6 Plan 03 shipped — rewrote score_woonvisie_match for WijkPolicy; 5 min, 1 task, 1 file
 progress:
   total_phases: 8
