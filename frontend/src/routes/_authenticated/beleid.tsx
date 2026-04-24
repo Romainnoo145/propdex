@@ -1928,45 +1928,47 @@ function ConfiguratiePage() {
   }
 
   return (
-    <ResultsShell>
-      <div className="mx-auto max-w-4xl space-y-6">
-        <motion.div variants={fadeUp} initial="hidden" animate="show">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-            Bestuursniveau
-          </p>
-          <h1 className="mt-1 text-[28px] font-black leading-none tracking-tight text-[#0E1111]">
-            Beleid
-          </h1>
-          <p className="mt-1 text-[12px] text-slate-500">
-            Kies een bestuursniveau om databronnen en beleidsdocumenten te beheren.
-          </p>
-        </motion.div>
+    <div className="flex h-full flex-col bg-[#FAFCFA] rounded-[40px] pb-14 md:pb-0">
+      <div className="flex flex-1 flex-col items-center justify-center px-6 py-8">
+        <div className="w-full max-w-3xl text-center">
+          <motion.div variants={fadeUp} initial="hidden" animate="show">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400 mb-3">
+              Bestuursniveau
+            </p>
+            <h1 className="text-[28px] font-black tracking-tight text-aura-obsidian sm:text-[36px]">
+              Beleid
+            </h1>
+            <p className="mt-2 text-[13px] text-slate-500">
+              Kies een bestuursniveau om databronnen en beleidsdocumenten te beheren.
+            </p>
+          </motion.div>
 
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          animate="show"
-          className="grid grid-cols-3 gap-3"
-        >
-          {NIVEAU_CONFIGS.map((config) => (
-            <motion.button
-              key={config.key}
-              variants={fadeUp}
-              onClick={() =>
-                navigate({ to: "/beleid", search: { gemeente: undefined, provincie: undefined, source: undefined, category: undefined, niveau: config.key } })
-              }
-              className="relative flex flex-col overflow-hidden rounded-2xl border-2 border-aura-obsidian/40 bg-aura-glass-white/60 px-5 py-5 text-left transition-all hover:border-aura-obsidian/60 hover:shadow-sm"
-            >
-              <span className="block text-[15px] font-bold leading-snug text-aura-obsidian">
-                {config.label}
-              </span>
-              <span className="mt-1.5 block text-[12px] leading-relaxed text-slate-400">
-                {config.description}
-              </span>
-            </motion.button>
-          ))}
-        </motion.div>
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="show"
+            className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3"
+          >
+            {NIVEAU_CONFIGS.map((config) => (
+              <motion.button
+                key={config.key}
+                variants={fadeUp}
+                onClick={() =>
+                  navigate({ to: "/beleid", search: { gemeente: undefined, provincie: undefined, source: undefined, category: undefined, niveau: config.key } })
+                }
+                className="relative flex flex-col overflow-hidden rounded-2xl border-2 border-aura-obsidian/40 bg-aura-glass-white/60 px-5 py-5 text-left transition-all hover:border-aura-obsidian/60 hover:shadow-sm"
+              >
+                <span className="block text-[15px] font-bold leading-snug text-aura-obsidian">
+                  {config.label}
+                </span>
+                <span className="mt-1.5 block text-[12px] leading-relaxed text-slate-400">
+                  {config.description}
+                </span>
+              </motion.button>
+            ))}
+          </motion.div>
+        </div>
       </div>
-    </ResultsShell>
+    </div>
   );
 }
