@@ -1927,96 +1927,44 @@ function ConfiguratiePage() {
     );
   }
 
-  const NIVEAU_TAGS: Record<string, string[]> = {
-    landelijk:   ["Rijkssubsidies", "Nationale regelgeving", "RVO-instrumenten"],
-    provinciaal: ["Regionaal beleid", "Subsidies", "Verordeningen"],
-    gemeentelijk:["Lokaal beleid", "Vergunningklimaat", "Databronnen"],
-  };
-
   return (
     <ResultsShell>
-      <div className="flex flex-col gap-12 max-w-[680px] py-2">
-        {/* Header */}
-        <motion.header
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          className="flex flex-col gap-3"
-        >
-          <div className="flex items-center gap-2">
-            <div className="size-2 rounded-full bg-[#F9A826]" />
-            <span className="text-[11px] font-medium uppercase tracking-[0.05em] text-[#0E1111]">
-              Beleidsconfiguratie
-            </span>
-          </div>
-          <h1 className="text-[32px] font-bold tracking-[-0.01em] leading-snug text-[#0E1111]">
+      <div className="mx-auto max-w-4xl space-y-6">
+        <motion.div variants={fadeUp} initial="hidden" animate="show">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            Bestuursniveau
+          </p>
+          <h1 className="mt-1 text-[28px] font-black leading-none tracking-tight text-[#0E1111]">
             Beleid
           </h1>
-          <p className="text-[14px] text-[#1A1C1E] leading-relaxed">
-            Beheer databronnen en actieve beleidsdocumenten per bestuursniveau.
+          <p className="mt-1 text-[12px] text-slate-500">
+            Kies een bestuursniveau om databronnen en beleidsdocumenten te beheren.
           </p>
-        </motion.header>
+        </motion.div>
 
-        {/* Rows */}
         <motion.div
           variants={staggerContainer}
           initial="hidden"
           animate="show"
-          className="flex flex-col gap-4"
+          className="grid grid-cols-3 gap-3"
         >
-          {NIVEAU_CONFIGS.map((config) => {
-            const Icon = config.icon;
-            const count =
-              config.key === "landelijk"
-                ? `${landelijkCount} bronnen`
-                : config.key === "provinciaal"
-                  ? `${provincieCount} provincies`
-                  : `${gemeenteCount} gemeenten`;
-            const tags = NIVEAU_TAGS[config.key] ?? [];
-            return (
-              <motion.button
-                key={config.key}
-                variants={fadeUp}
-                onClick={() =>
-                  navigate({ to: "/beleid", search: { gemeente: undefined, provincie: undefined, source: undefined, category: undefined, niveau: config.key } })
-                }
-                className="group flex items-center justify-between gap-6 rounded-[24px] border border-[#EAEFEF] bg-white/60 backdrop-blur-[24px] p-6 text-left transition-all hover:border-[#F9A826] hover:shadow-[0_8px_32px_rgba(249,168,38,0.10)]"
-              >
-                {/* Left: icon + label + tags */}
-                <div className="flex items-center gap-6 min-w-0">
-                  <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#0E1111] transition-transform group-hover:scale-105">
-                    <Icon size={20} strokeWidth={1.5} className="text-[#F9A826]" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[16px] font-bold text-[#0E1111]">
-                      {config.label}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded-full bg-[#EAEFEF] px-2.5 py-0.5 text-[11px] font-medium text-[#1A1C1E]"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right: count + arrow */}
-                <div className="flex shrink-0 items-center gap-2 pl-4">
-                  <span className="text-[14px] font-bold tabular-nums text-[#0E1111] transition-colors group-hover:text-[#F9A826]">
-                    {count}
-                  </span>
-                  <ArrowRight
-                    size={16}
-                    className="text-[#0E1111] transition-all group-hover:translate-x-1 group-hover:text-[#F9A826]"
-                  />
-                </div>
-              </motion.button>
-            );
-          })}
+          {NIVEAU_CONFIGS.map((config) => (
+            <motion.button
+              key={config.key}
+              variants={fadeUp}
+              onClick={() =>
+                navigate({ to: "/beleid", search: { gemeente: undefined, provincie: undefined, source: undefined, category: undefined, niveau: config.key } })
+              }
+              className="relative flex flex-col overflow-hidden rounded-2xl border-2 border-aura-obsidian/40 bg-aura-glass-white/60 px-5 py-5 text-left transition-all hover:border-aura-obsidian/60 hover:shadow-sm"
+            >
+              <span className="block text-[15px] font-bold leading-snug text-aura-obsidian">
+                {config.label}
+              </span>
+              <span className="mt-1.5 block text-[12px] leading-relaxed text-slate-400">
+                {config.description}
+              </span>
+            </motion.button>
+          ))}
         </motion.div>
       </div>
     </ResultsShell>
