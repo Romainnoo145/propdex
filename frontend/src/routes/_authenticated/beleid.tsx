@@ -1242,11 +1242,11 @@ function CompactProvincieGrid({
 
   if (isLoading) {
     return (
-      <div className="grid gap-3 grid-cols-3 sm:grid-cols-4 lg:grid-cols-6">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 12 }).map((_, i) => (
           <div
             key={i}
-            className="aspect-square rounded-[16px] bg-[#F2F6F3] animate-pulse"
+            className="h-[68px] rounded-2xl bg-[#F2F6F3] animate-pulse"
           />
         ))}
       </div>
@@ -1254,27 +1254,27 @@ function CompactProvincieGrid({
   }
 
   return (
-    <div className="grid gap-3 grid-cols-3 sm:grid-cols-4 lg:grid-cols-6">
+    <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
       {provincies.map((p) => (
         <button
           key={p.provinciecode}
           onClick={() => onSelectProvincie(p.provinciecode)}
-          className="group flex flex-col items-center gap-2 rounded-[16px] border border-[#EAEFEF] bg-white p-3 transition-all hover:border-[#F9A826] hover:shadow-sm"
+          className="group flex items-center gap-4 rounded-2xl border-2 border-aura-obsidian/40 bg-aura-glass-white/60 px-5 py-4 text-left transition-all hover:border-aura-obsidian/60 hover:shadow-sm"
         >
-          <div className="flex size-12 items-center justify-center">
-            <svg viewBox={p.svgData.viewBox} className="h-10 w-10">
+          <div className="flex size-14 shrink-0 items-center justify-center">
+            <svg viewBox={p.svgData.viewBox} className="h-12 w-12">
               <path
                 d={p.svgData.primaryD}
                 fill="#F9A826"
-                fillOpacity={0.12}
+                fillOpacity={0.15}
                 stroke="#F9A826"
                 strokeWidth={1.5}
                 strokeLinejoin="round"
-                className="transition-all group-hover:fill-opacity-25"
+                className="transition-all group-hover:fill-opacity-30"
               />
             </svg>
           </div>
-          <span className="text-[11px] font-semibold text-[#0E1111] text-center leading-tight line-clamp-2">
+          <span className="text-[15px] font-bold leading-snug text-aura-obsidian">
             {p.provincienaam}
           </span>
         </button>
