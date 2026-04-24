@@ -384,12 +384,12 @@ function StepPage({
 }) {
   return (
     <div className="w-full max-w-3xl text-center">
-      <p
-        className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400 mb-3"
-        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-      >
-        Jurisprudentie
-      </p>
+      <div className="flex items-center justify-center gap-2 mb-3">
+        <div className="size-1.5 rounded-full bg-aura-amber" />
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400">
+          Jurisprudentie
+        </p>
+      </div>
       <h1 className="text-[28px] font-black tracking-tight text-aura-obsidian sm:text-[36px]">
         {title}
       </h1>
@@ -417,10 +417,10 @@ function WizardCard({
   return (
     <button
       onClick={onClick}
-      className={`relative flex flex-col overflow-hidden rounded-2xl border-2 px-5 py-5 text-left transition-all ${
+      className={`group relative flex flex-col overflow-hidden rounded-2xl border-2 px-5 py-5 text-left transition-all ${
         selected
           ? 'border-aura-obsidian bg-aura-amber'
-          : 'border-aura-obsidian/40 bg-aura-glass-white/60 hover:border-aura-obsidian/60 hover:shadow-sm'
+          : 'border-aura-obsidian/40 bg-aura-glass-white/60 hover:border-aura-amber hover:shadow-[0_4px_20px_rgba(249,168,38,0.15)]'
       }`}
     >
       {selected && (
@@ -445,6 +445,11 @@ function WizardCard({
           selected ? 'text-aura-obsidian/70' : 'text-aura-amber'
         }`}>
           {count} zaken
+        </span>
+      )}
+      {!selected && !count && (
+        <span className="mt-3 block text-[12px] font-semibold text-aura-amber opacity-0 transition-opacity group-hover:opacity-100">
+          Bekijken →
         </span>
       )}
     </button>

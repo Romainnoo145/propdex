@@ -1123,7 +1123,7 @@ function CompactGemeenteGrid({
           <button
             key={g.gemeentecode}
             onClick={() => onSelectGemeente(g.gemeentecode)}
-            className="group flex flex-col items-center gap-2 rounded-[16px] border border-[#EAEFEF] bg-white p-3 transition-all hover:border-[#F9A826] hover:shadow-sm"
+            className="group flex flex-col items-center gap-2 rounded-[16px] border-2 border-aura-obsidian/40 bg-aura-glass-white/60 p-3 transition-all hover:border-aura-amber hover:shadow-[0_4px_20px_rgba(249,168,38,0.15)]"
           >
             <div className="flex size-12 items-center justify-center">
               <svg viewBox={g.svgData.viewBox} className="h-10 w-10">
@@ -1259,7 +1259,7 @@ function CompactProvincieGrid({
         <button
           key={p.provinciecode}
           onClick={() => onSelectProvincie(p.provinciecode)}
-          className="group flex flex-col items-center gap-4 rounded-2xl border-2 border-aura-obsidian/40 bg-aura-glass-white/60 px-6 py-8 text-center transition-all hover:border-aura-obsidian/60 hover:shadow-sm"
+          className="group flex flex-col items-center gap-4 rounded-2xl border-2 border-aura-obsidian/40 bg-aura-glass-white/60 px-6 py-8 text-center transition-all hover:border-aura-amber hover:shadow-[0_4px_20px_rgba(249,168,38,0.15)]"
         >
           <svg viewBox={p.svgData.viewBox} className="h-28 w-28">
             <path
