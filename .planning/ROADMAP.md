@@ -62,7 +62,12 @@ Plans:
   2. The popup displays: wijk naam, prioriteit-chip (color-coded), beleidstekst as an amber-bordered blockquote, paginanummer, and segmentmatch-chips (e.g. "sociaal ✓" / "duur ✗")
   3. The popup renders with glass surface (`backdrop-blur`), `rounded-[24px]`, amber accent borders, and Plus Jakarta Sans — consistent with DESIGN.md Aura tokens
   4. Component tests confirm popup opens on click and renders correct wijk/prioriteit/segmentmatch data from scan flags
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Rewrite WoonvisiePopup visual layer (prioriteit-chip + amber blockquote + ✓/✗ chip row + focus-lock + ESC handler)
+- [ ] 03-02-PLAN.md — Wire kaart 10 click in PotentieLayer + drill gemeenteNaam through ParcelDetailPanel
+- [ ] 03-03-PLAN.md — Storybook play-function tests (extend WoonvisiePopup.stories.tsx + new PotentieLayer.stories.tsx)
 
 ### Phase 4: KlimaatLayer Bug
 **Goal**: The KlimaatLayer always shows the verdict for the currently visible gemeente — switching gemeenten never leaves stale data on screen

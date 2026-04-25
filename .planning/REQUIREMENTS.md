@@ -21,8 +21,8 @@
 ### Woonvisie Kaart Popup
 
 - [ ] **WOON-01**: Woonvisie kaart (kaart 10 in Potentie grid) is clickable and opens a popup
-- [ ] **WOON-02**: Popup shows wijk naam, prioriteit-chip, beleidstekst as amber-bordered blockquote, paginanummer, and segmentmatch-chips (e.g. sociaal ✓ / duur ✗)
-- [ ] **WOON-03**: Popup renders in Aura style (glass surface, rounded-[24px], amber accent, Plus Jakarta Sans) consistent with DESIGN.md
+- [ ] **WOON-02**: Popup shows gemeente · periode · paginanummer (meta line), wijk naam (large title), prioriteit (label + colored dot), beleidstekst (citaat), and a single-line segmentmatch sentence — Minimal Calm Intelligence aesthetic, NO chips/blockquotes (resolved 2026-04-25, aesthetic memory wins)
+- [ ] **WOON-03**: Popup renders in Aura style — white surface, `rounded-[32px]`, Plus Jakarta Sans, focus-trap + ESC dismiss, consistent with DESIGN.md
 - [x] **WOON-04**: `WijkPolicy` pydantic model met velden wijk_naam, prioriteit (groei/krimp/herstructurering/neutraal), gewenste_segmenten (sociaal/midden/duur/gemengd), citaat, pagina
 - [x] **WOON-05**: `WoonvisiePayload` uitgebreid met `wijk_policies: list[WijkPolicy]`, `algemeen_citaat: str`, `confidence: float`; SCHEMA_VERSION bump 3→4
 

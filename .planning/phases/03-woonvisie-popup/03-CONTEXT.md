@@ -1,8 +1,10 @@
 # Phase 3: Woonvisie Popup — Context
 
 **Gathered:** 2026-04-25
-**Status:** Ready for planning
-**Source:** Synthesised from approved design memory (`feedback_m048_woonvisie_ui.md`) + ROADMAP.md goal + REQUIREMENTS.md (WOON-01..03, TEST-04). User has explicitly waived `/gsd:discuss-phase` — design is already approved.
+**Status:** Ready for planning — REVISED 2026-04-25 evening
+**Source:** Synthesised from updated design memory (`feedback_m048_woonvisie_ui.md` — minimal versie wint), ROADMAP.md goal, REQUIREMENTS.md (WOON-01..03, TEST-04 updated to minimal spec).
+
+**REVISION (2026-04-25 evening):** Earlier iteration of this CONTEXT.md prescribed a chip-style design (prioriteit-chip + amber blockquote + ✓/✗ chips). User reviewed the as-built popup in Storybook and rejected the chip-spec — the **minimal aesthetic wins** (dot+label, plain `<p>` citaat, single-line segmentmatch sentence). `WoonvisiePopup.tsx` is NOT rewritten in this phase. Only wire-up + tests.
 
 <domain>
 ## Phase Boundary
@@ -40,33 +42,25 @@
 - Click-outside dismiss + ESC dismiss + focus trap (`react-focus-lock` already in deps — add it; current implementation lacks it).
 - Animation: keep current Framer Motion (250ms cubic-bezier) — already respects DESIGN.md.
 
-### Popup content (LOCKED via memory `feedback_m048_woonvisie_ui.md` — confirmed 2026-04-25)
+### Popup content (LOCKED 2026-04-25 — minimal aesthetic wins)
 
-**The shipped `WoonvisiePopup.tsx` does NOT match the locked design. This phase REWRITES its visual layer to match memory.** Keep: portal, motion, ESC/click-outside (add focus-trap), data shape, gemeente/periode/pagina meta line, `rounded-[32px]`. Replace: prioriteit-dot → chip, plain `<p>` → amber-bordered blockquote, inline segmentmatch sentence → chip row with ✓/✗.
+**The shipped `WoonvisiePopup.tsx` IS the locked design. This phase does NOT modify its visual layer.** It uses the Minimal Calm Intelligence aesthetic per `feedback_minimal_aesthetic.md`: one focal point (the citaat), everything else recedes.
 
-In this order:
+Shipped DOM (do NOT change):
 
-1. **Meta line** (keep current): `Woonvisie {gemeente} · {periode_start}–{periode_einde} · p. {pagina}` — small grey text.
-2. **Wijk title** (keep current): `<h2>` 36px black, `{matched_policy.wijk_naam}` or `'Gemeente-breed'` fallback.
-3. **Prioriteit-chip** (REWRITE — replace current dot+text with a true chip):
-   - `groei` → `bg-emerald-100 text-emerald-900`, label `Groeigebied`
-   - `herstructurering` → `bg-amber-100 text-amber-900`, label `Herstructurering`
-   - `krimp` → `bg-red-100 text-red-900`, label `Krimpgebied`
-   - `neutraal` → `bg-stone-100 text-stone-700`, label `Neutraal`
-   - Pill: `inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-medium`.
-4. **Beleidstekst as blockquote** (REWRITE — replace current plain `<p>`):
-   - Wrap in `<blockquote>` with `border-l-4 border-amber-400 bg-[#F2F6F3] p-5 rounded-r-[12px]`.
-   - Inner text: `text-[15px] leading-[1.75] text-[#1A1C1E] whitespace-pre-line`.
-   - Empty fallback ("Geen beleidstekst beschikbaar voor deze gemeente.") stays in same blockquote.
-5. **Segmentmatch-chip row** (REWRITE — replace current inline sentence). Render only when `matched_policy !== null`:
-   - Build a deduped union of `gewenste_segmenten ∪ user_preferred_segments`.
-   - For each segment, render a chip showing the segment name + `✓` (in `gewenste_segmenten`) or `✗` (in user list but not in wijk list).
-   - Match (`✓`): `bg-emerald-50 text-emerald-800 border border-emerald-200`.
-   - Mismatch (`✗`): `bg-stone-50 text-stone-600 border border-stone-200`.
-   - Layout: `flex flex-wrap gap-2` row above the existing bottom border.
-   - When `userPreferred.length === 0` (project_type onbepaald): show only the wijk's preferred segments as `✓` chips with a small grey line "Projecttype onbekend — geen vergelijking".
-6. **Low-confidence note** (keep current): only when `confidence < 0.5`.
-7. **Fallback** (matched_policy === null): show `algemeen_citaat` in the blockquote, hide segmentmatch-chip row, replace prioriteit-chip area with grey "Gemeente-breed · geen wijk-specifiek beleid".
+1. **Meta line:** `Woonvisie {gemeente} · {periode_start}–{periode_einde} · p. {pagina}` — small grey text.
+2. **Wijk title:** `<h2>` 36px black, `{matched_policy.wijk_naam}` or `'Gemeente-breed'` fallback.
+3. **Prioriteit row:** small colored DOT + label (`Groeigebied` / `Herstructurering` / `Neutraal` / `Krimpgebied`) — NOT a chip/pill.
+4. **Citaat:** plain `<p>` with `whitespace-pre-line text-[15px] leading-[1.75]` — NOT a blockquote, NO amber border, NO Morning Mist background.
+5. **Segmentmatch:** single inline `<p>` (one sentence) — NOT a chip row. Sentence variants:
+   - Match: "Jouw project past volledig binnen sociaal en midden"
+   - Partial: "X sluit aan · Y wijkt af"
+   - Mismatch: "Jouw project (X) valt buiten Y"
+   - None: "Projecttype onbekend — geen segmentvergelijking" / "Wijk noemt geen voorkeurs-segmenten"
+6. **Low-confidence note:** only when `confidence < 0.5` — small italic grey.
+7. **Fallback** (`matched_policy === null`): title becomes "Gemeente-breed", prioriteit row shows "geen wijk-specifieke tekst", segmentmatch sentence is hidden, citaat is the algemeen_citaat.
+
+Earlier chip-spec (border-l-4, bg-emerald-100, ✓/✗ chip rows) is **explicitly rejected**. Test assertions must NOT reference those classes/symbols except as negative checks confirming they are absent.
 
 ### Data sourcing
 - All popup data MUST come from already-cached scan flags written by Phase 6 (`WijkPolicy` schema). NO new API calls. NO new backend endpoints.
@@ -76,9 +70,9 @@ In this order:
 - Hover state on kaart 10 must indicate clickability without breaking the existing static visual of the other 8 cards. Use `cursor-pointer` + a subtle amber-ring on hover (`hover:ring-2 hover:ring-amber-200/60`). Other 8 cards stay inert in this phase.
 
 ### Tests (TEST-04, MUST run via Storybook play-functions — verified test stack)
-- `WoonvisiePopup.stories.tsx`: extend with **play-functions** asserting (a) prioriteit-chip text + bg-class for at least 2 prioriteit values; (b) blockquote contains the `citaat` string; (c) at least one ✓ chip and one ✗ chip rendered for the mismatch story.
+- `WoonvisiePopup.stories.tsx`: extend with **play-functions** asserting (a) prioriteit label text for at least 2 prioriteit values (Groeigebied + Herstructurering); (b) citaat text content matches a substring of the wijk-specific citaat; (c) segmentmatch sentence is rendered (single `<p>`, NOT chips) — and explicitly assert that chip-classes are ABSENT (negative check).
 - `PotentieLayer.stories.tsx` (NEW Wave-0 file): one story rendering PotentieLayer with mock scan flags; play-function clicks kaart 10 and asserts popup opens with expected `wijk_naam`.
-- ESC + click-outside dismiss covered in WoonvisiePopup story play-function.
+- ESC + click-outside dismiss covered in WoonvisiePopup story play-function. **Note:** ESC handler is not currently wired in `WoonvisiePopup.tsx` (only backdrop click dismisses). If the ESC test fails, document as a follow-up todo and downgrade the test to click-outside only — do NOT modify the popup in this phase.
 
 </decisions>
 

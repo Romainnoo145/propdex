@@ -41,9 +41,9 @@ created: 2026-04-25
 | Req ID | Behavior | Test Type | Automated Command | File Exists | Status |
 |--------|----------|-----------|-------------------|-------------|--------|
 | WOON-01 | Click on kaart 10 (`woonvisie_match`) opens the popup | Storybook play (browser) on `PotentieLayer.stories.tsx` | `pnpm exec vitest run --project=storybook src/stories/parcel/PotentieLayer.stories.tsx -t "ClickOpensPopup"` | ❌ Wave 0 — story file MUST be created | ⬜ pending |
-| WOON-02 | Popup renders wijk_naam, prioriteit-chip, amber-bordered blockquote citaat, paginanummer, segmentmatch ✓/✗ chips | Storybook play asserting DOM via `within(document.body)` | `pnpm exec vitest run --project=storybook src/stories/parcel/WoonvisiePopup.stories.tsx -t "RendersChipDesign"` | ⚠ Stories exist (5 visual variants), `play` functions NOT yet authored | ⬜ pending |
-| WOON-03 | Popup uses Aura tokens — Plus Jakarta Sans, white surface, `rounded-[32px]`, amber accent on blockquote, prioriteit-chip class names per spec | Storybook play asserting computed classNames + a11y addon | (same file as WOON-02; separate play `AuraTokensApplied`) | ⚠ Visual stories exist; assertions NOT authored | ⬜ pending |
-| TEST-04 | Component tests cover open + content + dismiss (ESC + click-outside) | Storybook play | `WoonvisiePopup.stories.tsx`: `ClickOpensPopup`, `RendersChipDesign`, `AuraTokensApplied`, `ClickOutsideDismisses`, `EscDismisses`, `FallbackToAlgemeenWhenNoMatch` | ❌ Wave 0 | ⬜ pending |
+| WOON-02 | Popup renders meta line, wijk_naam, prioriteit dot+label, plain citaat text, single-line segmentmatch sentence (minimal aesthetic — NO chips/blockquote) | Storybook play asserting DOM via `within(document.body)` | `pnpm exec vitest run --project=storybook src/stories/parcel/WoonvisiePopup.stories.tsx` | ⚠ Stories exist (5 visual variants), `play` functions NOT yet authored | ⬜ pending |
+| WOON-03 | Popup uses Aura tokens — Plus Jakarta Sans, white surface, `rounded-[32px]`, framer-motion enter/exit | Storybook play + a11y addon | (same file as WOON-02) | ⚠ Visual stories exist; assertions NOT authored | ⬜ pending |
+| TEST-04 | Component tests cover open + content + dismiss (click-outside; ESC if wired) | Storybook play | `WoonvisiePopup.stories.tsx`: 6 play-functions covering BlerickGroei, VenloCentrumMismatch, TegelenHerstructurering, GeenMatchFallback, EscDismisses, ClickOutsideDismisses | ❌ Wave 0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -61,7 +61,7 @@ created: 2026-04-25
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| Visual diff against memory `feedback_m048_woonvisie_ui.md` description | WOON-02 / WOON-03 | Pixel-level visual taste check is faster by eye than by Chromatic at this scale | Run `cd frontend && pnpm storybook`, open `M048/WoonvisiePopup`, compare each variant to memory description (chip styling, amber blockquote, ✓/✗ chip layout). |
+| Visual diff against memory `feedback_m048_woonvisie_ui.md` description | WOON-02 / WOON-03 | Pixel-level visual taste check is faster by eye than by Chromatic at this scale | Run `cd frontend && pnpm storybook`, open `M048/WoonvisiePopup`, confirm each variant uses minimal aesthetic (dot+label, plain `<p>` citaat, single-line segmentmatch sentence — NO chips/blockquote/✓✗). |
 | Live wire-up smoke in dev server | WOON-01 | End-to-end click-through requires a real scan with woonvisie data | `cd frontend && pnpm dev` (port 9300), open Venlo, click a parcel with woonvisie_match factor, click kaart 10, confirm popup opens with correct wijk |
 
 ---
