@@ -134,7 +134,7 @@ export function PotentieModal({ open, onClose, parcelCacheId }: PotentieModalPro
     >
       {isLoading && <LoadingState />}
       {error && <ErrorState message={error.message} />}
-      {scanData && <PotentieLayer parcel={scanData} />}
+      {scanData && <PotentieLayer parcel={scanData} gemeenteNaam="" />}
     </ScoreModalShell>
   )
 }

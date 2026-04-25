@@ -4,6 +4,8 @@ import { Flame, TrendingUp, CircleHelp, ChevronLeft, ChevronRight, type LucideIc
 import type { ScanResultItem, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/types/scan'
 import { isScoreV3 } from '@/lib/score'
 import { TruncatedText } from '../TruncatedText'
+import { WoonvisiePopup, type WijkPolicy } from '../WoonvisiePopup'
+import { useParcelProjectType } from '@/hooks/useParcelProjectType'
 
 /* ── Verdict derivation ───────────────────────────────────── */
 
@@ -288,12 +290,27 @@ function deriveV21Cards(parcel: ScanResultItem): CardDisplay[] {
 
 interface PotentieLayerProps {
   parcel: ScanResultItem
+  gemeenteNaam: string
 }
 
 const CARDS_PER_PAGE = 9
 
-export function PotentieLayer({ parcel }: PotentieLayerProps) {
+export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
   const [page, setPage] = useState(0)
+  const [woonvisieOpen, setWoonvisieOpen] = useState(false)
+  const { data: projectTypeData } = useParcelProjectType(parcel.parcel_id)
+  const projectType = projectTypeData?.project_type ?? 'onbepaald'
+
+  // Extract woonvisie factor data for popup. Phase 6 factor.waarde shape:
+  // { matched_wijk, matched_policy, prioritized_segment, algemeen_citaat } | null
+  const woonvisieFactor = (parcel.score_breakdown as ScoreBreakdownV3 | null)?.['woonvisie_match']
+  const woonvisieWaarde = woonvisieFactor?.waarde as {
+    matched_wijk: string | null
+    matched_policy: WijkPolicy | null
+    prioritized_segment: string | null
+    algemeen_citaat: string
+  } | null
+  const hasWoonvisieData = woonvisieWaarde !== null && woonvisieWaarde !== undefined
   const isV3 = isScoreV3(parcel.score_breakdown)
   const potentieScore = parcel.potentie_score != null
     ? Math.round(parcel.potentie_score)
@@ -372,27 +389,58 @@ export function PotentieLayer({ parcel }: PotentieLayerProps) {
             transition={{ duration: 0.2 }}
             className="grid grid-cols-3 gap-1.5 auto-rows-fr h-full"
           >
-            {pageCards.map((card) => (
-              <div
-                key={card.label}
-                className="bg-white border border-slate-100 rounded-[24px] p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow overflow-hidden"
-              >
-                <div className="flex justify-between items-start gap-1">
-                  <TruncatedText text={card.label} className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight truncate" />
-                  <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0">
-                    {card.pts > 0 ? `+${card.pts}` : '—'}
-                  </span>
-                </div>
+            {pageCards.map((card) => {
+              if (card.label === 'WOONVISIE' && hasWoonvisieData) {
+                return (
+                  <button
+                    key={card.label}
+                    type="button"
+                    onClick={() => setWoonvisieOpen(true)}
+                    className="bg-white border border-slate-100 rounded-[24px] p-6 flex flex-col justify-between shadow-sm hover:shadow-md hover:ring-2 hover:ring-amber-200/60 transition-all overflow-hidden text-left cursor-pointer group relative"
+                  >
+                    <div className="flex justify-between items-start gap-1">
+                      <TruncatedText text={card.label} className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight truncate" />
+                      <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0">
+                        {card.pts > 0 ? `+${card.pts}` : '—'}
+                      </span>
+                    </div>
 
-                <div className="flex-1 flex items-center min-w-0">
-                  <TruncatedText text={card.value} className="text-2xl font-black text-slate-900 tracking-tighter leading-none truncate" />
-                </div>
+                    <div className="flex-1 flex items-center min-w-0">
+                      <TruncatedText text={card.value} className="text-2xl font-black text-slate-900 tracking-tighter leading-none truncate" />
+                    </div>
 
-                <div className="border-t border-slate-50 pt-3 min-w-0">
-                  <TruncatedText text={card.sub} className="text-[11px] font-bold text-slate-400 leading-tight truncate" />
+                    <div className="border-t border-slate-50 pt-3 min-w-0">
+                      <TruncatedText text={card.sub} className="text-[11px] font-bold text-slate-400 leading-tight truncate" />
+                    </div>
+
+                    <span className="absolute bottom-3 right-3 text-[9px] font-bold uppercase tracking-[0.1em] text-[#F9A826] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      klik &rarr;
+                    </span>
+                  </button>
+                )
+              }
+              return (
+                <div
+                  key={card.label}
+                  className="bg-white border border-slate-100 rounded-[24px] p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+                >
+                  <div className="flex justify-between items-start gap-1">
+                    <TruncatedText text={card.label} className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight truncate" />
+                    <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0">
+                      {card.pts > 0 ? `+${card.pts}` : '—'}
+                    </span>
+                  </div>
+
+                  <div className="flex-1 flex items-center min-w-0">
+                    <TruncatedText text={card.value} className="text-2xl font-black text-slate-900 tracking-tighter leading-none truncate" />
+                  </div>
+
+                  <div className="border-t border-slate-50 pt-3 min-w-0">
+                    <TruncatedText text={card.sub} className="text-[11px] font-bold text-slate-400 leading-tight truncate" />
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -421,6 +469,20 @@ export function PotentieLayer({ parcel }: PotentieLayerProps) {
           <ChevronRight className="size-4 text-slate-400" />
         </button>
       </div>
+
+      {hasWoonvisieData && (
+        <WoonvisiePopup
+          isOpen={woonvisieOpen}
+          onClose={() => setWoonvisieOpen(false)}
+          gemeente={gemeenteNaam}
+          periode_start={0}
+          periode_einde={0}
+          matched_policy={woonvisieWaarde!.matched_policy}
+          algemeen_citaat={woonvisieWaarde!.algemeen_citaat ?? ''}
+          project_type={projectType}
+          confidence={1.0}
+        />
+      )}
     </div>
   )
 }

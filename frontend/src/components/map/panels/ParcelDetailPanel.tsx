@@ -123,7 +123,7 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
   function renderDetailLayer() {
     switch (view.kind) {
       case 'potentie':
-        return <PotentieLayer parcel={parcel} />
+        return <PotentieLayer parcel={parcel} gemeenteNaam={gemeenteNaam ?? ''} />
       case 'risico':
         return <RisicoLayer parcel={parcel} />
       case 'dossiers':
