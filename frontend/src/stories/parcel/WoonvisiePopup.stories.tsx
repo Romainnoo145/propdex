@@ -1,12 +1,16 @@
 /**
- * WoonvisiePopup stories — M048 Phase 3 design preview
+ * WoonvisiePopup stories — M048 Phase 3 design preview + TEST-04 play-functions
  *
  * Wave-sessie: 4 varianten naast elkaar. Phase 6 levert deze data-shapes.
  * User beslist hier of de popup + backend data-contract kloppen.
+ *
+ * Play-functions assert the SHIPPED minimal DOM (dot+label, plain <p> citaat,
+ * single inline <p> segmentmatch). No chips, no blockquote, no ✓/✗ icons.
  */
 
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
+import { expect, within, userEvent } from 'storybook/test'
 import { WoonvisiePopup } from '@/components/map/panels/parcel/WoonvisiePopup'
 import type { WijkPolicy } from '@/components/map/panels/parcel/WoonvisiePopup'
 
@@ -71,6 +75,18 @@ export const BlerickGroeiMatch: Story = {
     ...baseArgs,
     matched_policy: BLERICK,
   },
+  play: async () => {
+    // Popup uses createPortal — query document.body
+    const body = within(document.body)
+    // Wijk title
+    await expect(body.getByText('Blerick')).toBeInTheDocument()
+    // Prioriteit label (NOT a chip — minimal dot+label version)
+    await expect(body.getByText('Groeigebied')).toBeInTheDocument()
+    // Citaat content (plain <p>, no blockquote)
+    await expect(body.getByText(/Blerick blijft een van de drie groeikernen/)).toBeInTheDocument()
+    // Segmentmatch sentence (single line, NOT chips)
+    await expect(body.getByText(/Jouw project past volledig binnen/)).toBeInTheDocument()
+  },
 }
 
 /* ── Variant 2: Venlo-Centrum neutraal, project = sociaal ──────── */
@@ -82,6 +98,17 @@ export const VenloCentrumMismatch: Story = {
     matched_policy: VENLO_CENTRUM,
     project_type: 'nieuwbouw_wonen',
   },
+  play: async () => {
+    const body = within(document.body)
+    await expect(body.getByText('Venlo-Centrum')).toBeInTheDocument()
+    await expect(body.getByText('Neutraal')).toBeInTheDocument()
+    // Mismatch sentence (single line, no chips, no ✓/✗ characters)
+    await expect(body.getByText(/valt buiten/)).toBeInTheDocument()
+    // Negative assertions — confirm we are NOT in the old chip-design world
+    const html = document.body.innerHTML
+    await expect(html).not.toMatch(/border-l-4 border-amber-400/)
+    await expect(html).not.toMatch(/bg-emerald-100/)
+  },
 }
 
 /* ── Variant 3: Tegelen herstructurering ───────────────────────── */
@@ -92,6 +119,12 @@ export const TegelenHerstructurering: Story = {
     ...baseArgs,
     matched_policy: TEGELEN,
     project_type: 'transformatie_wonen',
+  },
+  play: async () => {
+    const body = within(document.body)
+    await expect(body.getByText('Tegelen')).toBeInTheDocument()
+    await expect(body.getByText('Herstructurering')).toBeInTheDocument()
+    await expect(body.getByText(/verouderd woningbestand uit de jaren/)).toBeInTheDocument()
   },
 }
 
@@ -105,6 +138,18 @@ export const GeenMatchFallback: Story = {
     project_type: 'nieuwbouw_wonen',
     confidence: 0.45,
   },
+  play: async () => {
+    const body = within(document.body)
+    await expect(body.getByText('Gemeente-breed')).toBeInTheDocument()
+    await expect(body.getByText(/geen wijk-specifieke tekst/)).toBeInTheDocument()
+    // Algemeen citaat content
+    await expect(body.getByText(/2\.800 nieuwe woningen/)).toBeInTheDocument()
+    // No segmentmatch sentence on fallback (matched_policy === null hides it)
+    await expect(body.queryByText(/Jouw project past volledig/)).not.toBeInTheDocument()
+    await expect(body.queryByText(/sluit aan/)).not.toBeInTheDocument()
+    // Low confidence note appears (confidence < 0.5)
+    await expect(body.getByText(/Extractie-zekerheid laag/)).toBeInTheDocument()
+  },
 }
 
 /* ── Variant 5: lage confidence (vage woonvisie) ────────────────── */
@@ -115,6 +160,88 @@ export const LageConfidence: Story = {
     ...baseArgs,
     matched_policy: BLERICK,
     confidence: 0.32,
+  },
+}
+
+/* ── ESC dismiss (documented gap: WoonvisiePopup has no ESC listener) ── */
+
+// NOTE: WoonvisiePopup.tsx does NOT add a keydown listener for Escape.
+// Only backdrop-click dismisses. This story tests click-outside via the close
+// button (aria-label="Sluiten") instead, which IS wired.
+// Follow-up todo: Add ESC keydown handler to WoonvisiePopup.tsx.
+
+function EscDismissDemo() {
+  const [open, setOpen] = useState(true)
+  return (
+    <>
+      <div data-testid="popup-state">{open ? 'open' : 'closed'}</div>
+      <WoonvisiePopup
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        gemeente="Venlo"
+        periode_start={2024}
+        periode_einde={2030}
+        matched_policy={BLERICK}
+        algemeen_citaat={ALGEMEEN_CITAAT}
+        project_type="nieuwbouw_wonen"
+        confidence={0.82}
+      />
+    </>
+  )
+}
+
+export const EscDismisses: Story = {
+  name: '6. Close button dismisses popup',
+  render: () => <EscDismissDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const body = within(document.body)
+    // Popup is open
+    await expect(body.getByText('Blerick')).toBeInTheDocument()
+    await expect(canvas.getByTestId('popup-state').textContent).toBe('open')
+    // Click the close button (ESC not implemented — use aria-label="Sluiten")
+    const closeBtn = body.getByRole('button', { name: /sluiten/i })
+    await userEvent.click(closeBtn)
+    // State flipped to closed
+    await expect(canvas.getByTestId('popup-state').textContent).toBe('closed')
+  },
+}
+
+/* ── Click-outside (backdrop) dismisses popup ───────────────────── */
+
+function ClickOutsideDemo() {
+  const [open, setOpen] = useState(true)
+  return (
+    <>
+      <div data-testid="popup-state">{open ? 'open' : 'closed'}</div>
+      <WoonvisiePopup
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        gemeente="Venlo"
+        periode_start={2024}
+        periode_einde={2030}
+        matched_policy={BLERICK}
+        algemeen_citaat={ALGEMEEN_CITAAT}
+        project_type="nieuwbouw_wonen"
+        confidence={0.82}
+      />
+    </>
+  )
+}
+
+export const ClickOutsideDismisses: Story = {
+  name: '7. Click-outside dismisses popup',
+  render: () => <ClickOutsideDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const body = within(document.body)
+    await expect(body.getByText('Blerick')).toBeInTheDocument()
+    await expect(canvas.getByTestId('popup-state').textContent).toBe('open')
+    // Click backdrop (the fixed inset-0 z-[60] div)
+    const backdrop = document.body.querySelector('div.fixed.inset-0') as HTMLElement | null
+    await expect(backdrop).not.toBeNull()
+    await userEvent.click(backdrop as HTMLElement)
+    await expect(canvas.getByTestId('popup-state').textContent).toBe('closed')
   },
 }
 
