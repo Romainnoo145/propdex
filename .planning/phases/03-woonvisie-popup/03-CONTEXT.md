@@ -23,43 +23,62 @@
 <decisions>
 ## Implementation Decisions (LOCKED)
 
+### Path corrections from RESEARCH.md (2026-04-25)
+- `WoonvisiePopup.tsx` is **already shipped** at `frontend/src/components/map/panels/parcel/WoonvisiePopup.tsx` (210 lines) with mocked Storybook stories at `frontend/src/stories/parcel/WoonvisiePopup.stories.tsx`. Phase 3 = REWIRE + REWRITE the visual layer to match memory; do NOT create a new component.
+- The 3×3 Potentie grid lives at `frontend/src/components/map/panels/parcel/layers/PotentieLayer.tsx` (NOT `intelligence-grids/`). Kaart 10 currently renders as a static `<div>` (lines 376-394) — this is where the click handler + popup state get added.
+- Test stack is **Storybook play-functions via `@storybook/addon-vitest` (Playwright Chromium)**, NOT React Testing Library. Co-located `.test.tsx` will not run. Mirror the `ScoreBreakdownModal.stories.tsx` precedent.
+
 ### Component placement
-- The clickable wrapper lives in `frontend/src/components/parcel-detail/intelligence-grids/PotentieLayer.tsx` (or wherever the existing 3×3 grid renders kaart 10 — verify path during research).
-- DO NOT introduce a new layout. Wrap the existing card.
+- Modify the existing `WoonvisiePopup.tsx` (rewrite visual layer; keep portal/motion/types/data shape).
+- Wire-up in `PotentieLayer.tsx`: add `useState` for `isWoonvisieOpen`, change kaart 10's wrapper from `<div>` to `<button type="button" onClick={...}>`, render `<WoonvisiePopup .../>` at end of component.
 
 ### Popup style (Aura-conform)
-- Glass surface: `bg-white/60 backdrop-blur-[24px]`
-- Radius: `rounded-[24px]` (per ROADMAP); memory mentions 32px on bento modals — pick `rounded-[24px]` to match phase success criteria.
-- Border: amber accent (`border-[var(--amber)]` or `border-amber-400` token from DESIGN.md `@theme` block).
+- Surface: solid `bg-white` (current as-built — keep), NOT glass-blur (this is a foreground modal over a darkened backdrop, not a side-panel).
+- Radius: **`rounded-[32px]`** (DESIGN.md `--radius-2xl`, matches as-built and bento modal precedent). Overrides ROADMAP success-criterion of `rounded-[24px]`. Confirmed by user 2026-04-25.
+- Backdrop: existing `bg-black/30 backdrop-blur-md` overlay.
 - Font: Plus Jakarta Sans (already global).
-- Backdrop: standard portal overlay; click-outside dismiss; ESC dismiss; focus trap.
+- Click-outside dismiss + ESC dismiss + focus trap (`react-focus-lock` already in deps — add it; current implementation lacks it).
+- Animation: keep current Framer Motion (250ms cubic-bezier) — already respects DESIGN.md.
 
-### Popup content (in this order)
-1. Title row: `Woonvisie {gemeente}` + period (period from algemeen scan metadata if available — fallback to woonvisie publish year if extractor returns it).
-2. Wijk naam (large, semibold) + prioriteit-chip (color-coded by enum: groeigebied=mint/green, herstructurering=amber, krimp=neutral grey, neutraal=neutral).
-3. Beleidstekst: blockquote with `border-l-4 border-[amber-token]`, bg = Morning Mist (`#F2F6F3` / `bg-[var(--mist)]` if token exists).
-4. Paginanummer rendered as muted small text under the blockquote (e.g. "p. 42").
-5. Segmentmatch-chips row: one chip per segment (sociaal / midden / duur / gemengd) showing ✓ when the parcel's project type segment matches `gewenste_segmenten`, ✗ otherwise. Match logic must be derived from the same projecttype-segment mapping the backend uses for `score_woonvisie_match`.
+### Popup content (LOCKED via memory `feedback_m048_woonvisie_ui.md` — confirmed 2026-04-25)
+
+**The shipped `WoonvisiePopup.tsx` does NOT match the locked design. This phase REWRITES its visual layer to match memory.** Keep: portal, motion, ESC/click-outside (add focus-trap), data shape, gemeente/periode/pagina meta line, `rounded-[32px]`. Replace: prioriteit-dot → chip, plain `<p>` → amber-bordered blockquote, inline segmentmatch sentence → chip row with ✓/✗.
+
+In this order:
+
+1. **Meta line** (keep current): `Woonvisie {gemeente} · {periode_start}–{periode_einde} · p. {pagina}` — small grey text.
+2. **Wijk title** (keep current): `<h2>` 36px black, `{matched_policy.wijk_naam}` or `'Gemeente-breed'` fallback.
+3. **Prioriteit-chip** (REWRITE — replace current dot+text with a true chip):
+   - `groei` → `bg-emerald-100 text-emerald-900`, label `Groeigebied`
+   - `herstructurering` → `bg-amber-100 text-amber-900`, label `Herstructurering`
+   - `krimp` → `bg-red-100 text-red-900`, label `Krimpgebied`
+   - `neutraal` → `bg-stone-100 text-stone-700`, label `Neutraal`
+   - Pill: `inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-medium`.
+4. **Beleidstekst as blockquote** (REWRITE — replace current plain `<p>`):
+   - Wrap in `<blockquote>` with `border-l-4 border-amber-400 bg-[#F2F6F3] p-5 rounded-r-[12px]`.
+   - Inner text: `text-[15px] leading-[1.75] text-[#1A1C1E] whitespace-pre-line`.
+   - Empty fallback ("Geen beleidstekst beschikbaar voor deze gemeente.") stays in same blockquote.
+5. **Segmentmatch-chip row** (REWRITE — replace current inline sentence). Render only when `matched_policy !== null`:
+   - Build a deduped union of `gewenste_segmenten ∪ user_preferred_segments`.
+   - For each segment, render a chip showing the segment name + `✓` (in `gewenste_segmenten`) or `✗` (in user list but not in wijk list).
+   - Match (`✓`): `bg-emerald-50 text-emerald-800 border border-emerald-200`.
+   - Mismatch (`✗`): `bg-stone-50 text-stone-600 border border-stone-200`.
+   - Layout: `flex flex-wrap gap-2` row above the existing bottom border.
+   - When `userPreferred.length === 0` (project_type onbepaald): show only the wijk's preferred segments as `✓` chips with a small grey line "Projecttype onbekend — geen vergelijking".
+6. **Low-confidence note** (keep current): only when `confidence < 0.5`.
+7. **Fallback** (matched_policy === null): show `algemeen_citaat` in the blockquote, hide segmentmatch-chip row, replace prioriteit-chip area with grey "Gemeente-breed · geen wijk-specifiek beleid".
 
 ### Data sourcing
 - All popup data MUST come from already-cached scan flags written by Phase 6 (`WijkPolicy` schema). NO new API calls. NO new backend endpoints.
-- Read flag path: scan flags contain `woonvisie_match` factor with the matched `WijkPolicy` (wijk_naam, prioriteit, gewenste_segmenten, citaat, pagina) plus `algemeen_citaat` at the document level. Verify exact JSON path during research.
-- If wijk-specific data is missing for the current parcel: popup falls back to `algemeen_citaat` and shows a subtle "Geen wijk-specifiek beleid gevonden" line.
+- The exact frontend JSON path for the woonvisie factor result must be located during planning (research surfaced the data shape but NOT the consumer hook). The plan must specify how `PotentieLayer` reaches `matched_policy / algemeen_citaat / project_type / confidence / gemeente / periode_start / periode_einde`. If `gemeente` / `periode_*` / `confidence` aren't on the factor payload, prop-drill from `ScanResultsResponse` (`scan.gemeente_naam`) and accept the documented Phase 6 gap.
 
 ### Click affordance
-- Hover state on kaart 10 must indicate clickability without breaking the existing static visual of the other 8 cards (e.g. subtle scale/cursor or amber border highlight on hover only).
-- All other 8 cards stay inert in this phase.
+- Hover state on kaart 10 must indicate clickability without breaking the existing static visual of the other 8 cards. Use `cursor-pointer` + a subtle amber-ring on hover (`hover:ring-2 hover:ring-amber-200/60`). Other 8 cards stay inert in this phase.
 
-### Tests (TEST-04)
-- Component test: render PotentieLayer with mock scan flags → click kaart 10 → assert popup opens.
-- Component test: assert wijk naam, prioriteit-chip text, beleidstekst content, paginanummer, and at least one ✓ + one ✗ segmentmatch-chip render correctly.
-- Component test: assert click-outside / ESC dismiss closes popup.
-- Use existing test stack (Vitest + React Testing Library — verify in research).
-
-### Claude's Discretion
-- Exact file naming for the popup component (suggest `WoonvisiePopup.tsx` colocated under `intelligence-grids/`).
-- Whether to reuse an existing modal primitive or build a thin wrapper around the bento modal pattern — pick whichever keeps the diff smallest.
-- Animation: enter/exit transitions ≤ 180ms, respect `prefers-reduced-motion`.
+### Tests (TEST-04, MUST run via Storybook play-functions — verified test stack)
+- `WoonvisiePopup.stories.tsx`: extend with **play-functions** asserting (a) prioriteit-chip text + bg-class for at least 2 prioriteit values; (b) blockquote contains the `citaat` string; (c) at least one ✓ chip and one ✗ chip rendered for the mismatch story.
+- `PotentieLayer.stories.tsx` (NEW Wave-0 file): one story rendering PotentieLayer with mock scan flags; play-function clicks kaart 10 and asserts popup opens with expected `wijk_naam`.
+- ESC + click-outside dismiss covered in WoonvisiePopup story play-function.
 
 </decisions>
 
