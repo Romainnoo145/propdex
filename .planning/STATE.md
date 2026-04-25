@@ -4,7 +4,7 @@ milestone: v4.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 03-02-PLAN.md (Storybook play-functions for WOON-01..TEST-04 — 15 tests green)
-last_updated: "2026-04-25T17:41:22.380Z"
+last_updated: "2026-04-25T17:45:35.597Z"
 last_activity: 2026-04-24 — M048/Phase 6 Plan 03 shipped — rewrote score_woonvisie_match for WijkPolicy; 5 min, 1 task, 1 file
 progress:
   total_phases: 8
