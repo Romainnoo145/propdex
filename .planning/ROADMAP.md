@@ -59,15 +59,14 @@ Plans:
 **Requirements**: WOON-01, WOON-02, WOON-03, TEST-04
 **Success Criteria** (what must be TRUE):
   1. Clicking kaart 10 (Woonvisie) in the Potentie grid opens a popup — no click leaves the card inert
-  2. The popup displays: wijk naam, prioriteit-chip (color-coded), beleidstekst as an amber-bordered blockquote, paginanummer, and segmentmatch-chips (e.g. "sociaal ✓" / "duur ✗")
-  3. The popup renders with glass surface (`backdrop-blur`), `rounded-[24px]`, amber accent borders, and Plus Jakarta Sans — consistent with DESIGN.md Aura tokens
-  4. Component tests confirm popup opens on click and renders correct wijk/prioriteit/segmentmatch data from scan flags
-**Plans**: 3 plans
+  2. The popup displays: meta line (`Woonvisie {gemeente} · {periode} · p. {pagina}`), wijk naam, prioriteit dot+label, citaat as plain text, and segmentmatch as a single inline sentence — minimal aesthetic, NO chips/blockquote (resolved 2026-04-25)
+  3. The popup renders with white surface, `rounded-[32px]`, framer-motion enter/exit, Plus Jakarta Sans, click-outside dismiss — consistent with DESIGN.md Aura tokens
+  4. Component tests (Storybook play-functions) confirm popup opens on click and renders correct wijk/prioriteit/segmentmatch data from scan flags
+**Plans**: 2 plans (popup-rewrite plan dropped 2026-04-25 — minimal as-built popup wins over chip-spec)
 
 Plans:
-- [ ] 03-01-PLAN.md — Rewrite WoonvisiePopup visual layer (prioriteit-chip + amber blockquote + ✓/✗ chip row + focus-lock + ESC handler)
-- [ ] 03-02-PLAN.md — Wire kaart 10 click in PotentieLayer + drill gemeenteNaam through ParcelDetailPanel
-- [ ] 03-03-PLAN.md — Storybook play-function tests (extend WoonvisiePopup.stories.tsx + new PotentieLayer.stories.tsx)
+- [ ] 03-01-PLAN.md — Wire kaart 10 click in PotentieLayer + drill gemeenteNaam through ParcelDetailPanel
+- [ ] 03-02-PLAN.md — Storybook play-function tests (extend WoonvisiePopup.stories.tsx + new PotentieLayer.stories.tsx) asserting minimal-aesthetic DOM
 
 ### Phase 4: KlimaatLayer Bug
 **Goal**: The KlimaatLayer always shows the verdict for the currently visible gemeente — switching gemeenten never leaves stale data on screen
@@ -160,7 +159,7 @@ waar S01=P5, S02=P6, S03=P3, S04=P7, S05=P4, S06=P8.
 |-------|----------------|--------|-----------|
 | 1. Cache Sentinel | 1/1 | Complete | 2026-04-22 |
 | 2. Score UI Fix | 2/2 | Complete | 2026-04-22 |
-| 3. Woonvisie Popup | 0/? | Not started | - |
+| 3. Woonvisie Popup | 1/2 | In Progress|  |
 | 4. KlimaatLayer Bug | 0/? | Not started | - |
 | 5. Document-level cache sentinel | 0/? | Not started | - |
 | 6. WijkPolicy schema + scoring | 0/4 | Not started | - |

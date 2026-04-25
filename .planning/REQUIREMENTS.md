@@ -20,7 +20,7 @@
 
 ### Woonvisie Kaart Popup
 
-- [ ] **WOON-01**: Woonvisie kaart (kaart 10 in Potentie grid) is clickable and opens a popup
+- [x] **WOON-01**: Woonvisie kaart (kaart 10 in Potentie grid) is clickable and opens a popup
 - [ ] **WOON-02**: Popup shows gemeente · periode · paginanummer (meta line), wijk naam (large title), prioriteit (label + colored dot), beleidstekst (citaat), and a single-line segmentmatch sentence — Minimal Calm Intelligence aesthetic, NO chips/blockquotes (resolved 2026-04-25, aesthetic memory wins)
 - [ ] **WOON-03**: Popup renders in Aura style — white surface, `rounded-[32px]`, Plus Jakarta Sans, focus-trap + ESC dismiss, consistent with DESIGN.md
 - [x] **WOON-04**: `WijkPolicy` pydantic model met velden wijk_naam, prioriteit (groei/krimp/herstructurering/neutraal), gewenste_segmenten (sociaal/midden/duur/gemengd), citaat, pagina
@@ -100,7 +100,7 @@
 | SCORE-02 | Phase 2 | Complete |
 | SCORE-03 | Phase 2 | Complete |
 | SCORE-04 | Phase 6 | Complete |
-| WOON-01 | Phase 3 | Pending |
+| WOON-01 | Phase 3 | Complete |
 | WOON-02 | Phase 3 | Pending |
 | WOON-03 | Phase 3 | Pending |
 | WOON-04 | Phase 6 | Complete |
