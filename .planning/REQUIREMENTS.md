@@ -21,8 +21,8 @@
 ### Woonvisie Kaart Popup
 
 - [x] **WOON-01**: Woonvisie kaart (kaart 10 in Potentie grid) is clickable and opens a popup
-- [ ] **WOON-02**: Popup shows gemeente · periode · paginanummer (meta line), wijk naam (large title), prioriteit (label + colored dot), beleidstekst (citaat), and a single-line segmentmatch sentence — Minimal Calm Intelligence aesthetic, NO chips/blockquotes (resolved 2026-04-25, aesthetic memory wins)
-- [ ] **WOON-03**: Popup renders in Aura style — white surface, `rounded-[32px]`, Plus Jakarta Sans, focus-trap + ESC dismiss, consistent with DESIGN.md
+- [x] **WOON-02**: Popup shows gemeente · periode · paginanummer (meta line), wijk naam (large title), prioriteit (label + colored dot), beleidstekst (citaat), and a single-line segmentmatch sentence — Minimal Calm Intelligence aesthetic, NO chips/blockquotes (resolved 2026-04-25, aesthetic memory wins)
+- [x] **WOON-03**: Popup renders in Aura style — white surface, `rounded-[32px]`, Plus Jakarta Sans, focus-trap + ESC dismiss, consistent with DESIGN.md
 - [x] **WOON-04**: `WijkPolicy` pydantic model met velden wijk_naam, prioriteit (groei/krimp/herstructurering/neutraal), gewenste_segmenten (sociaal/midden/duur/gemengd), citaat, pagina
 - [x] **WOON-05**: `WoonvisiePayload` uitgebreid met `wijk_policies: list[WijkPolicy]`, `algemeen_citaat: str`, `confidence: float`; SCHEMA_VERSION bump 3→4
 
@@ -50,7 +50,7 @@
 - [x] **TEST-01**: Unit tests cover SCHEMA_VERSION bump — old cache entries with version < 2 are rejected
 - [x] **TEST-02**: Unit tests cover ScoreBreakdownModal balance display — percentage reflects `potentie_risico_balance` prop value (not hardcoded)
 - [x] **TEST-03**: Unit tests cover `percentage_of_category` display — factor percentage shown correctly from scan data
-- [ ] **TEST-04**: Integration or component tests cover woonvisie popup — opens on click, shows correct wijk/prioriteit/segmentmatch data
+- [x] **TEST-04**: Integration or component tests cover woonvisie popup — opens on click, shows correct wijk/prioriteit/segmentmatch data
 - [x] **TEST-05**: Unit tests cover document-level sentinel cache — 2 scans voor verschillende parcelen tegen dezelfde woonvisie = 1 Claude call; v2→v3 bump invalidateert oude entries
 - [x] **TEST-06**: Unit/integration tests cover WijkPolicy schema + scoring — Venlo Blerick vs Venlo-Centrum produceren verschillende woonvisie_match scores met zelfde projecttype
 - [ ] **TEST-07**: Component tests cover pin flow — pin/unpin, max-6 guard, ⭐ badge rendering, page-navigation met pinned synth-page
@@ -101,8 +101,8 @@
 | SCORE-03 | Phase 2 | Complete |
 | SCORE-04 | Phase 6 | Complete |
 | WOON-01 | Phase 3 | Complete |
-| WOON-02 | Phase 3 | Pending |
-| WOON-03 | Phase 3 | Pending |
+| WOON-02 | Phase 3 | Complete |
+| WOON-03 | Phase 3 | Complete |
 | WOON-04 | Phase 6 | Complete |
 | WOON-05 | Phase 6 | Complete |
 | PIN-01 | Phase 7 | Pending |
@@ -115,7 +115,7 @@
 | TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 2 | Complete |
 | TEST-03 | Phase 2 | Complete |
-| TEST-04 | Phase 3 | Pending |
+| TEST-04 | Phase 3 | Complete |
 | TEST-05 | Phase 5 | Complete |
 | TEST-06 | Phase 6 | Complete |
 | TEST-07 | Phase 7 | Pending |
