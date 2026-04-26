@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 07-04-PLAN.md (FactorCard + PotentieLayer + RisicoLayer Wave 2 refactor)
-last_updated: "2026-04-26T15:12:46.417Z"
+stopped_at: "Completed 07-05-PLAN.md (Wave 3: story fix + checkpoint for human visual sign-off)"
+last_updated: "2026-04-26T15:19:52.633Z"
 last_activity: 2026-04-24 — M048/Phase 6 Plan 03 shipped — rewrote score_woonvisie_match for WijkPolicy; 5 min, 1 task, 1 file
 progress:
   total_phases: 8
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 16
-  completed_plans: 15
+  completed_plans: 16
   percent: 88
 ---
 
@@ -64,6 +64,7 @@ Progress: [█████████░] 88% (7/8 plans)
 | Phase 07-factor-pinning-groep-pages-6-cards-per-page P03 | 22m | 2 tasks | 3 files |
 | Phase 07-factor-pinning-groep-pages-6-cards-per-page P02 | 45 minutes | 3 tasks | 8 files |
 | Phase 07-factor-pinning-groep-pages-6-cards-per-page P04 | 6min | 3 tasks | 4 files |
+| Phase 07-factor-pinning-groep-pages-6-cards-per-page P05 | 10m | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,7 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 07-factor-pinning-groep-pages-6-cards-per-page]: statement_cache_size=0 + pool_pre_ping=False in test_engine: fixes asyncpg DDL prepared-statement cache bug (Python 3.14 + asyncpg + SQLAlchemy 2.x pg_type UniqueViolation between tests)
 - [Phase 07-04]: bodemtype added to FACTOR_BRON as UI-only 'fysiek' entry for BODEMTYPE env card — not in backend FACTOR_REGISTRY
 - [Phase 07-04]: envCards label→factor_key map is inline keyMap in deriveEnvCards — avoids exported constant that must sync with enrichment labels
+- [Phase 07-05]: ClickOpensPopup story updated to querySelectorAll('[role=button], button') after Plan 04 FactorCard refactor changed interactive cards to div[role=button]
 
 ### Pending Todos
 
@@ -134,6 +136,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-26T15:12:46.415Z
-Stopped at: Completed 07-04-PLAN.md (FactorCard + PotentieLayer + RisicoLayer Wave 2 refactor)
+Last session: 2026-04-26T15:19:44.624Z
+Stopped at: Completed 07-05-PLAN.md (Wave 3: story fix + checkpoint for human visual sign-off)
 Resume file: None
