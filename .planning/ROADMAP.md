@@ -19,7 +19,7 @@ M048 closes the gap between the scoring engine refactored in M047 and what users
 - [ ] **Phase 5: Document-level cache sentinel (woonvisie)** — `parcel_id="__document__"` sentinel voorkomt 100k Claude-calls per gemeente
 - [ ] **Phase 6: WijkPolicy schema + woonvisie scoring upgrade** — per-wijk segment-opdracht voor differentiërende scoring
 - [x] **Phase 7: Factor pinning + groep-pages + 6 cards per page** — UI fundament voor 30+ factoren, pinnable top-6, per-bron groepering (completed 2026-04-26)
-- [ ] **Phase 8: Integration tests + Venlo E2E smoke** — end-to-end verificatie van S01-S04 flow
+- [x] **Phase 8: Integration tests + Venlo E2E smoke** — end-to-end verificatie van S01-S04 flow (completed 2026-04-26)
 
 ## Phase Details
 
@@ -177,4 +177,4 @@ waar S01=P5, S02=P6, S03=P3, S04=P7, S05=P4, S06=P8.
 | 5. Document-level cache sentinel | 0/? | Not started | - |
 | 6. WijkPolicy schema + scoring | 0/4 | Not started | - |
 | 7. Factor pinning + groep-pages | 5/5 | Complete   | 2026-04-26 |
-| 8. Integration tests + Venlo E2E | 0/1 | Not started | - |
+| 8. Integration tests + Venlo E2E | 1/1 | Complete   | 2026-04-26 |

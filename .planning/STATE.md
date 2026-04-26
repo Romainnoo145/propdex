@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 07-05-PLAN.md (Phase 7 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix)
-last_updated: "2026-04-26T15:59:09.302Z"
+stopped_at: "Completed 08-01-PLAN.md (Phase 8 complete — M048 convergence smoke layer: 4 backend smoke + 4 Storybook plays + WoonvisieMatchWaarde TS contract type)"
+last_updated: "2026-04-26T19:20:18.579Z"
 last_activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
 progress:
   total_phases: 8
-  completed_phases: 7
-  total_plans: 16
-  completed_plans: 16
+  completed_phases: 8
+  total_plans: 17
+  completed_plans: 17
   percent: 88
 ---
 
@@ -65,6 +65,7 @@ Progress: [█████████░] 88% (7/8 plans)
 | Phase 07-factor-pinning-groep-pages-6-cards-per-page P02 | 45 minutes | 3 tasks | 8 files |
 | Phase 07-factor-pinning-groep-pages-6-cards-per-page P04 | 6min | 3 tasks | 4 files |
 | Phase 07-factor-pinning-groep-pages-6-cards-per-page P05 | 10m | 1 tasks | 1 files |
+| Phase 08-integration-tests-venlo-e2e-smoke P01 | 38m | 10 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -130,6 +131,12 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 07-05]: No 'bekijk meer →' hover CTA — only woonvisie_match is currently clickable; deferred to M049+ when all cards have factor-detail destinations
 - [Phase 07-05]: Pin star always visible (slate-300 outline default, amber when pinned) — hover-only is anti-pattern on touch; persistent star communicates intent without requiring hover
 - [Phase 07-05]: Drill-down indicator = subtle ArrowRight bottom-right of cards with onCardClick (only woonvisie_match for now) — minimalistic affordance, no text label, signals clickability without hijacking visual hierarchy
+- [Phase 08-integration-tests-venlo-e2e-smoke]: Storybook = convergence smoke layer (NOT Playwright); component-level pin remount survival is the proxy for live-refresh which is deferred to human verification
+- [Phase 08-integration-tests-venlo-e2e-smoke]: Sentinel substitution at cascade boundary spy-tested via monkeypatch on cascade_enrichment_service.extract_factor (caller-side binding, NOT factor_extraction_service)
+- [Phase 08-integration-tests-venlo-e2e-smoke]: _VENLO_BLERICK_CENTRUM_PAYLOAD inline in test_m048_phase8_smoke.py — NOT relocated to tests/factories.py (out of scope)
+- [Phase 08-integration-tests-venlo-e2e-smoke]: Plan path 'app.services.factor_extraction_service.get_claude_client' was incorrect — does not exist; corrected to 'app.ai.factor_extractor.create_claude_client' returning SimpleNamespace(client, model) wrapper
+- [Phase 08-integration-tests-venlo-e2e-smoke]: Pin-persistence component-level only; live-backend hard-refresh deferred to human verification block in 08-VERIFICATION.md
+- [Phase 08-integration-tests-venlo-e2e-smoke]: Frontend Wave-0 stub task (T7) added to enforce Nyquist parity with backend Task 1
 
 ### Pending Todos
 
@@ -141,6 +148,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-26T16:00:00.000Z
-Stopped at: Completed 07-05-PLAN.md (Phase 7 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix)
+Last session: 2026-04-26T19:20:18.576Z
+Stopped at: Completed 08-01-PLAN.md (Phase 8 complete — M048 convergence smoke layer: 4 backend smoke + 4 Storybook plays + WoonvisieMatchWaarde TS contract type)
 Resume file: None

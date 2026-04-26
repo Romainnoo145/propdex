@@ -54,7 +54,7 @@
 - [x] **TEST-05**: Unit tests cover document-level sentinel cache — 2 scans voor verschillende parcelen tegen dezelfde woonvisie = 1 Claude call; v2→v3 bump invalidateert oude entries
 - [x] **TEST-06**: Unit/integration tests cover WijkPolicy schema + scoring — Venlo Blerick vs Venlo-Centrum produceren verschillende woonvisie_match scores met zelfde projecttype
 - [x] **TEST-07**: Component tests cover pin flow — pin/unpin, max-6 guard, ⭐ badge rendering, page-navigation met pinned synth-page
-- [ ] **TEST-08**: E2E smoke — Venlo woonvisie upload → 2 parcelen scan → 1 Claude call → verschillende scores → popup toont wijk-specifiek citaat → pins persisteren across refresh
+- [x] **TEST-08**: E2E smoke — Venlo woonvisie upload → 2 parcelen scan → 1 Claude call → verschillende scores → popup toont wijk-specifiek citaat → pins persisteren across refresh
 
 ## Future Requirements (M049+)
 
@@ -119,7 +119,7 @@
 | TEST-05 | Phase 5 | Complete |
 | TEST-06 | Phase 6 | Complete |
 | TEST-07 | Phase 7 | Complete |
-| TEST-08 | Phase 8 | Pending |
+| TEST-08 | Phase 8 | Complete |
 
 **Coverage:**
 - M048 requirements: 25 total (12 initial + 13 added 2026-04-24)
