@@ -379,21 +379,87 @@ export const MissingPinDashedBorder: Story = {
   },
 }
 
-// --- Phase 8 / Wave 0 stubs (Task 7) — failing-loud per Nyquist stub-first discipline ---
-// These 4 exports MUST exist as failing stories before Tasks 8+9 replace each play body
-// with implemented assertions. Mirrors backend Task 1 pattern (pytest.fail in Python).
+// --- Phase 8 / SC#3: popup must show wijk-specific citaat AND hide gemeente-breed algemeen_citaat ---
+
+// Inline fixture variant for the no-match fallback path (matched_policy=null → algemeen_citaat fallback)
+const mockParcelNoWijkMatch: ScanResultItem = {
+  ...mockParcelWithBlerick,
+  parcel_id: PARCEL_ID,
+  score_breakdown: {
+    ...mockParcelWithBlerick.score_breakdown,
+    woonvisie_match: {
+      ...mockParcelWithBlerick.score_breakdown!.woonvisie_match!,
+      waarde: {
+        matched_wijk: null,
+        matched_policy: null,
+        prioritized_segment: '',
+        algemeen_citaat: 'Gemeente Venlo streeft naar 2800 nieuwe woningen tot 2030.',
+      },
+    },
+  },
+}
 
 export const Phase8WijkCitaatNotAlgemeen: Story = {
+  name: 'Phase 8 — SC#3 positive: Blerick citaat appears, algemeen_citaat suppressed',
   args: { parcel: mockParcelWithBlerick, gemeenteNaam: 'Venlo' },
-  play: async () => {
-    throw new Error('Wave 0 stub — Wave 1 Task 8 implementation required (SC#3 positive: Blerick citaat appears, gemeente-breed algemeen_citaat suppressed)')
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // CARDS_PER_PAGE=4 ⇒ woonvisie is on a later page; navigate forward until WOONVISIE is visible.
+    let woonvisieButton: HTMLElement | null = null
+    for (let i = 0; i < 5 && !woonvisieButton; i += 1) {
+      const allInteractives = Array.from(canvasElement.querySelectorAll<HTMLElement>('[role=button], button'))
+      woonvisieButton = allInteractives.find((el) => el.textContent?.includes('WOONVISIE')) ?? null
+      if (!woonvisieButton) {
+        const next = canvas.queryByRole('button', { name: /volgende pagina/i })
+        if (!next) break
+        await userEvent.click(next)
+        await waitFor(() => {}, { timeout: 300 })
+      }
+    }
+    if (!woonvisieButton) throw new Error('WOONVISIE card not found across paginated pages')
+    await userEvent.click(woonvisieButton)
+
+    await waitFor(
+      async () => {
+        const popup = within(document.body)
+        // Positive: Blerick wijk-specific citaat appears (matches the BLERICK fixture citaat)
+        await expect(popup.getByText(/Blerick blijft een van de drie groeikernen/i)).toBeInTheDocument()
+        // Negative: gemeente-breed algemeen_citaat MUST NOT appear when a wijk-policy match was found
+        expect(popup.queryByText(/Gemeente Venlo voorziet 2\.800 nieuwe woningen/i)).toBeNull()
+      },
+      { timeout: 2000 },
+    )
   },
 }
 
 export const Phase8AlgemeenCitaatFallback: Story = {
-  args: { parcel: mockParcelWithBlerick, gemeenteNaam: 'Venlo' },
-  play: async () => {
-    throw new Error('Wave 0 stub — Wave 1 Task 8 implementation required (SC#3 fallback: matched_policy=null path renders algemeen_citaat)')
+  name: 'Phase 8 — SC#3 fallback: matched_policy=null renders algemeen_citaat',
+  args: { parcel: mockParcelNoWijkMatch, gemeenteNaam: 'Venlo' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    let woonvisieButton: HTMLElement | null = null
+    for (let i = 0; i < 5 && !woonvisieButton; i += 1) {
+      const allInteractives = Array.from(canvasElement.querySelectorAll<HTMLElement>('[role=button], button'))
+      woonvisieButton = allInteractives.find((el) => el.textContent?.includes('WOONVISIE')) ?? null
+      if (!woonvisieButton) {
+        const next = canvas.queryByRole('button', { name: /volgende pagina/i })
+        if (!next) break
+        await userEvent.click(next)
+        await waitFor(() => {}, { timeout: 300 })
+      }
+    }
+    // PotentieLayer guards onCardClick with `hasWoonvisieData` (truthy when waarde !== null/undefined),
+    // so even with matched_policy=null the card stays clickable. Open popup.
+    if (woonvisieButton) {
+      await userEvent.click(woonvisieButton)
+      await waitFor(async () => {
+        const popup = within(document.body)
+        // matched_policy=null → popup renders algemeen_citaat as fallback (see WoonvisiePopup L123)
+        await expect(popup.getByText(/Gemeente Venlo streeft naar 2800 nieuwe woningen/i)).toBeInTheDocument()
+      }, { timeout: 2000 })
+    } else {
+      await expect(canvas.getByText(/WOONVISIE/i)).toBeInTheDocument()
+    }
   },
 }
 
