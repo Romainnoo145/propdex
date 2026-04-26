@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-02-PLAN.md (Storybook play-functions for WOON-01..TEST-04 — 15 tests green)
-last_updated: "2026-04-25T17:45:35.597Z"
+stopped_at: Completed 04-01-PLAN.md (BUG-01 KlimaatLayer ghost-verdict — key prop fix + 3 Storybook stories green)
+last_updated: "2026-04-26T12:30:22.560Z"
 last_activity: 2026-04-24 — M048/Phase 6 Plan 03 shipped — rewrote score_woonvisie_match for WijkPolicy; 5 min, 1 task, 1 file
 progress:
   total_phases: 8
-  completed_phases: 5
-  total_plans: 10
-  completed_plans: 10
+  completed_phases: 6
+  total_plans: 11
+  completed_plans: 11
   percent: 88
 ---
 
@@ -59,6 +59,7 @@ Progress: [█████████░] 88% (7/8 plans)
 | Phase 06-wijkpolicy-schema-woonvisie-scoring-upgrade P04 | 26 min | 2 tasks | 1 files |
 | Phase 03-woonvisie-popup P01 | 12m | 2 tasks | 3 files |
 | Phase 03-woonvisie-popup P02 | 20m | 3 tasks | 2 files |
+| Phase 04-klimaatlayer-bug P01 | 5m | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -108,6 +109,7 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 03-woonvisie-popup]: Phase 03 Plan 01: WoonvisiePopup only renders as button when hasWoonvisieData — graceful degradation for parcels without woonvisie_match factor
 - [Phase Phase 03 Plan 02]: EscDismisses story uses Sluiten button (aria-label=Sluiten) not Escape key — WoonvisiePopup.tsx has no keydown listener; ESC gap documented as follow-up todo
 - [Phase Phase 03 Plan 02]: PotentieLayer ClickOpensPopup navigates to page 2 first — woonvisie_match is card 10, CARDS_PER_PAGE=9 puts it on page 2; waitFor(2000ms) handles AnimatePresence transition
+- [Phase 04-klimaatlayer-bug]: key={activePanel.code} on GemeenteContextPanel (not naam) — codes are stable identifiers, heals all four gemeente layers simultaneously
 
 ### Pending Todos
 
@@ -119,6 +121,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-25T17:41:22.378Z
-Stopped at: Completed 03-02-PLAN.md (Storybook play-functions for WOON-01..TEST-04 — 15 tests green)
+Last session: 2026-04-26T12:30:22.558Z
+Stopped at: Completed 04-01-PLAN.md (BUG-01 KlimaatLayer ghost-verdict — key prop fix + 3 Storybook stories green)
 Resume file: None

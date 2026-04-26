@@ -43,7 +43,7 @@
 
 ### Bug Fixes
 
-- [ ] **BUG-01**: KlimaatLayer shows correct gemeente verdict when user switches between gemeenten on the map (no stale gemeente data shown)
+- [x] **BUG-01**: KlimaatLayer shows correct gemeente verdict when user switches between gemeenten on the map (no stale gemeente data shown)
 
 ### Tests
 
@@ -111,7 +111,7 @@
 | GROUP-01 | Phase 7 | Pending |
 | GROUP-02 | Phase 7 | Pending |
 | UI-01 | Phase 7 | Pending |
-| BUG-01 | Phase 4 | Pending |
+| BUG-01 | Phase 4 | Complete |
 | TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 2 | Complete |
 | TEST-03 | Phase 2 | Complete |

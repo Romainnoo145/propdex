@@ -15,7 +15,7 @@ M048 closes the gap between the scoring engine refactored in M047 and what users
 - [x] **Phase 1: Cache Sentinel** — Bump SCHEMA_VERSION 1→2, reject stale extraction cache entries, add unit tests (completed 2026-04-22)
 - [x] **Phase 2: Score UI Fix** — Wire potentie/risico balance + percentage_of_category dynamically from org-profile props (completed 2026-04-22)
 - [x] **Phase 3: Woonvisie Popup** — Clickable kaart 10 in Potentie grid with approved Aura-style popup (completed 2026-04-25)
-- [ ] **Phase 4: KlimaatLayer Bug** — Correct gemeente verdict on map-switch, no stale data
+- [x] **Phase 4: KlimaatLayer Bug** — Correct gemeente verdict on map-switch, no stale data (completed 2026-04-26)
 - [ ] **Phase 5: Document-level cache sentinel (woonvisie)** — `parcel_id="__document__"` sentinel voorkomt 100k Claude-calls per gemeente
 - [ ] **Phase 6: WijkPolicy schema + woonvisie scoring upgrade** — per-wijk segment-opdracht voor differentiërende scoring
 - [ ] **Phase 7: Factor pinning + groep-pages + 6 cards per page** — UI fundament voor 30+ factoren, pinnable top-6, per-bron groepering
@@ -163,7 +163,7 @@ waar S01=P5, S02=P6, S03=P3, S04=P7, S05=P4, S06=P8.
 | 1. Cache Sentinel | 1/1 | Complete | 2026-04-22 |
 | 2. Score UI Fix | 2/2 | Complete | 2026-04-22 |
 | 3. Woonvisie Popup | 2/2 | Complete   | 2026-04-25 |
-| 4. KlimaatLayer Bug | 0/1 | Planned | - |
+| 4. KlimaatLayer Bug | 1/1 | Complete   | 2026-04-26 |
 | 5. Document-level cache sentinel | 0/? | Not started | - |
 | 6. WijkPolicy schema + scoring | 0/4 | Not started | - |
 | 7. Factor pinning + groep-pages | 0/? | Not started | - |
