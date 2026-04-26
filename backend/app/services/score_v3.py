@@ -59,6 +59,18 @@ class ScoreV3Result:
 _CRITICAL_RISK_FACTORS = {"funderingsrisico", "bodemverontreiniging", "asbest"}
 
 
+# M048/Phase 7 GROUP-01: bron-groep voor frontend UI-pagination.
+# Metadata-only — geen runtime scoring impact. Lookup via FACTOR_REGISTRY[key].bron.
+Bron = Literal[
+    "gemeente_beleid",
+    "markt",
+    "fysiek",
+    "klimaat",
+    "juridisch",
+    "planologisch",
+]
+
+
 @dataclass
 class FactorRegistryEntry:
     """Registry entry for a single scoring factor."""
@@ -68,6 +80,7 @@ class FactorRegistryEntry:
     default_weight: int  # normalized so category sums to 100
     weight_by_projecttype: dict[str, int] | None  # None = use default_weight for all
     data_source: str  # human-readable provenance string
+    bron: Bron  # M048/Phase 7 GROUP-01 — UI-only bron-groep for pagination
 
 
 FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
@@ -80,6 +93,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
             "optoppen": 12,
         },
         data_source="BAG + Kadaster",
+        bron="fysiek",
     ),
     "optoppotentie": FactorRegistryEntry(
         id="optoppotentie",
@@ -90,6 +104,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
             "nieuwbouw_wonen": 7,
         },
         data_source="PLU WMS + 3D BAG",
+        bron="fysiek",
     ),
     "bestemming": FactorRegistryEntry(
         id="bestemming",
@@ -97,6 +112,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=13,
         weight_by_projecttype=None,
         data_source="Bestemmingsplan / Ruimtelijkeplannen.nl",
+        bron="gemeente_beleid",
     ),
     "leegstand": FactorRegistryEntry(
         id="leegstand",
@@ -104,6 +120,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=9,
         weight_by_projecttype=None,
         data_source="BAG",
+        bron="fysiek",
     ),
     "funda_frictie": FactorRegistryEntry(
         id="funda_frictie",
@@ -111,6 +128,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=5,
         weight_by_projecttype=None,
         data_source="Funda (pilot)",
+        bron="markt",
     ),
     "perceelgrootte": FactorRegistryEntry(
         id="perceelgrootte",
@@ -118,6 +136,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=13,
         weight_by_projecttype=None,
         data_source="Kadaster",
+        bron="fysiek",
     ),
     "demografie": FactorRegistryEntry(
         id="demografie",
@@ -125,6 +144,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=9,
         weight_by_projecttype=None,
         data_source="CBS StatLine",
+        bron="markt",
     ),
     "vergunning_succeskans": FactorRegistryEntry(
         id="vergunning_succeskans",
@@ -132,6 +152,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=15,
         weight_by_projecttype=None,
         data_source="Rechtspraak.nl",
+        bron="gemeente_beleid",
     ),
     "woonvisie_match": FactorRegistryEntry(
         id="woonvisie_match",
@@ -142,6 +163,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
             "optoppen": 8,
         },
         data_source="Gemeentelijke woonvisie (LLM-extracted)",
+        bron="gemeente_beleid",
     ),
     # --- RISICO (13 factors, sum default_weight = 100) ---
     "funderingsrisico": FactorRegistryEntry(
@@ -150,6 +172,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=16,
         weight_by_projecttype=None,
         data_source="PDOK Funderingsrisicogebieden + BAG",
+        bron="fysiek",
     ),
     "asbest": FactorRegistryEntry(
         id="asbest",
@@ -157,6 +180,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=7,
         weight_by_projecttype=None,
         data_source="BAG",
+        bron="fysiek",
     ),
     "bodemverontreiniging": FactorRegistryEntry(
         id="bodemverontreiniging",
@@ -164,6 +188,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=8,
         weight_by_projecttype=None,
         data_source="Bodemloket",
+        bron="fysiek",
     ),
     "monument": FactorRegistryEntry(
         id="monument",
@@ -171,6 +196,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=6,
         weight_by_projecttype=None,
         data_source="RCE API + Bestemmingsplan",
+        bron="juridisch",
     ),
     "bestemmingswijziging": FactorRegistryEntry(
         id="bestemmingswijziging",
@@ -178,6 +204,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=9,
         weight_by_projecttype=None,
         data_source="Bestemmingsplan / Ruimtelijkeplannen.nl",
+        bron="planologisch",
     ),
     "constructieve_staat": FactorRegistryEntry(
         id="constructieve_staat",
@@ -185,6 +212,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=8,
         weight_by_projecttype=None,
         data_source="BAG + EP-Online",
+        bron="fysiek",
     ),
     "juridisch_klimaat": FactorRegistryEntry(
         id="juridisch_klimaat",
@@ -192,6 +220,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=9,
         weight_by_projecttype=None,
         data_source="Rechtspraak.nl",
+        bron="juridisch",
     ),
     "criminaliteit": FactorRegistryEntry(
         id="criminaliteit",
@@ -199,6 +228,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=7,
         weight_by_projecttype=None,
         data_source="CBS dataderden",
+        bron="markt",  # closest fit — sociaal would require expanding enum
     ),
     "max_hoogte_bereikt": FactorRegistryEntry(
         id="max_hoogte_bereikt",
@@ -206,6 +236,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=6,
         weight_by_projecttype=None,
         data_source="PLU WMS + 3D BAG",
+        bron="fysiek",
     ),
     "natura2000": FactorRegistryEntry(
         id="natura2000",
@@ -213,6 +244,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=6,
         weight_by_projecttype=None,
         data_source="PDOK Natura2000 WFS",
+        bron="klimaat",
     ),
     "overstromingsrisico": FactorRegistryEntry(
         id="overstromingsrisico",
@@ -220,6 +252,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=7,
         weight_by_projecttype=None,
         data_source="Rijkswaterstaat Overstromingen WMS",
+        bron="klimaat",
     ),
     "geluid": FactorRegistryEntry(
         id="geluid",
@@ -227,6 +260,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=6,
         weight_by_projecttype=None,
         data_source="RIVM Geluidbelasting Lden WMS",
+        bron="klimaat",
     ),
     "luchtkwaliteit": FactorRegistryEntry(
         id="luchtkwaliteit",
@@ -234,6 +268,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=5,
         weight_by_projecttype=None,
         data_source="RIVM Luchtkwaliteit NSL WMS",
+        bron="klimaat",
     ),
 }
 
