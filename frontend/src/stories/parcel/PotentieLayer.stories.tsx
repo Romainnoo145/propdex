@@ -463,16 +463,81 @@ export const Phase8AlgemeenCitaatFallback: Story = {
   },
 }
 
+// --- Phase 8 / SC#4: pin cache persists across remount cycle (Storybook proxy for "across hard refresh") ---
+// Real refresh requires backend round-trip — see human_verification block in 08-VERIFICATION.md.
+// These stories prove the COMPONENT-LEVEL guarantee: pre-seeded TanStack cache survives page-nav cycles.
+
 export const Phase8PinsPersistAcrossRemount: Story = {
+  name: 'Phase 8 — SC#4: pre-seeded pins survive forward+back nav remount',
+  decorators: [pinDecorator([
+    makeFactorPin('woonvisie_match', 0),
+    makeFactorPin('vergunning_succeskans', 1),
+    makeFactorPin('demografie', 2),
+  ])],
   args: { parcel: mockParcelWithBlerick, gemeenteNaam: 'Venlo' },
-  play: async () => {
-    throw new Error('Wave 0 stub — Wave 1 Task 9 implementation required (SC#4: pre-seeded pin cache survives page-nav-then-back remount)')
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // First mount: GEPIND page shows 3 pinned cards via pin-star-filled testid (always-visible per Phase 7).
+    await waitFor(() => {
+      expect(canvas.getByText('GEPIND')).toBeInTheDocument()
+      expect(canvasElement.querySelectorAll('[data-testid="pin-star-filled"]').length).toBeGreaterThanOrEqual(3)
+    }, { timeout: 2000 })
+
+    // Navigate forward — this remounts the card list with new content.
+    const next = canvas.getByLabelText('Volgende pagina')
+    await userEvent.click(next)
+    // Navigate back to GEPIND page.
+    const prev = canvas.getByLabelText('Vorige pagina')
+    await userEvent.click(prev)
+
+    // After remount cycle, the 3 pinned cards must STILL be visible — proves cache survived nav.
+    await waitFor(() => {
+      expect(canvas.getByText('GEPIND')).toBeInTheDocument()
+      expect(canvasElement.querySelectorAll('[data-testid="pin-star-filled"]').length).toBeGreaterThanOrEqual(3)
+    }, { timeout: 2000 })
   },
 }
 
 export const Phase8PinnedSurvivesPageNav: Story = {
+  name: 'Phase 8 — SC#4 multi-nav: pinned survive multiple group-page round-trips',
+  decorators: [pinDecorator([
+    makeFactorPin('woonvisie_match', 0),
+    makeFactorPin('vergunning_succeskans', 1),
+  ])],
   args: { parcel: mockParcelWithBlerick, gemeenteNaam: 'Venlo' },
-  play: async () => {
-    throw new Error('Wave 0 stub — Wave 1 Task 9 implementation required (SC#4 multi-nav: pinned cards persist across multiple group-page round-trips)')
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+
+    // Initial: 2 pinned cards visible on GEPIND
+    await waitFor(() => {
+      expect(canvasElement.querySelectorAll('[data-testid="pin-star-filled"]').length).toBeGreaterThanOrEqual(2)
+    }, { timeout: 2000 })
+
+    // Round-trip multiple group pages — each click forces a remount.
+    // The Vorige/Volgende buttons are always rendered; they are disabled at the boundaries.
+    const isDisabled = (el: HTMLElement | null) =>
+      !el || el.hasAttribute('disabled') || el.getAttribute('aria-disabled') === 'true'
+
+    // Forward two pages (or as many as exist)
+    for (let i = 0; i < 2; i += 1) {
+      const next = canvas.getByLabelText('Volgende pagina') as HTMLButtonElement
+      if (isDisabled(next)) break
+      await userEvent.click(next)
+      await waitFor(() => {}, { timeout: 250 })
+    }
+
+    // Navigate back to GEPIND (page 0) — stop when Vorige pagina is disabled
+    for (let i = 0; i < 5; i += 1) {
+      const prev = canvas.getByLabelText('Vorige pagina') as HTMLButtonElement
+      if (isDisabled(prev)) break
+      await userEvent.click(prev)
+      await waitFor(() => {}, { timeout: 250 })
+    }
+
+    // Pinned cards still visible on GEPIND
+    await waitFor(() => {
+      expect(canvas.getByText('GEPIND')).toBeInTheDocument()
+      expect(canvasElement.querySelectorAll('[data-testid="pin-star-filled"]').length).toBeGreaterThanOrEqual(2)
+    }, { timeout: 2000 })
   },
 }
