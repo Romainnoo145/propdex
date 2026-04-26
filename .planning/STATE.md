@@ -128,6 +128,8 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 07-05]: CARDS_PER_PAGE dropped 6→4 with 2x2 grid; MAX_PINS_PER_CATEGORY dropped 6→4 — steady-state M050-M057 factor projection shows 5 categories overflow at 4/page anyway; 4/page accepts overflow as normal pattern, gives titles room in 620px panel
 - [Phase 07-05]: Score badge stays top-right in flex cluster with items-center — earlier overlap was absolute-positioned star + items-start; fix: collapse star+badge into single right-side cluster
 - [Phase 07-05]: No 'bekijk meer →' hover CTA — only woonvisie_match is currently clickable; deferred to M049+ when all cards have factor-detail destinations
+- [Phase 07-05]: Pin star always visible (slate-300 outline default, amber when pinned) — hover-only is anti-pattern on touch; persistent star communicates intent without requiring hover
+- [Phase 07-05]: Drill-down indicator = subtle ArrowRight bottom-right of cards with onCardClick (only woonvisie_match for now) — minimalistic affordance, no text label, signals clickability without hijacking visual hierarchy
 
 ### Pending Todos
 
