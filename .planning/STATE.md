@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 07-02-PLAN.md (UserFactorPin model + migration + factor_pins REST API)
-last_updated: "2026-04-26T15:04:05.168Z"
+stopped_at: Completed 07-04-PLAN.md (FactorCard + PotentieLayer + RisicoLayer Wave 2 refactor)
+last_updated: "2026-04-26T15:12:46.417Z"
 last_activity: 2026-04-24 — M048/Phase 6 Plan 03 shipped — rewrote score_woonvisie_match for WijkPolicy; 5 min, 1 task, 1 file
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 15
   percent: 88
 ---
 
@@ -63,6 +63,7 @@ Progress: [█████████░] 88% (7/8 plans)
 | Phase 07-factor-pinning-groep-pages-6-cards-per-page P01 | 5m | 3 tasks | 9 files |
 | Phase 07-factor-pinning-groep-pages-6-cards-per-page P03 | 22m | 2 tasks | 3 files |
 | Phase 07-factor-pinning-groep-pages-6-cards-per-page P02 | 45 minutes | 3 tasks | 8 files |
+| Phase 07-factor-pinning-groep-pages-6-cards-per-page P04 | 6min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -120,6 +121,8 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 07-03]: bron field REQUIRED on FactorRegistryEntry (no default) — module-load assertion is safety net; forces explicit thought when adding new factors
 - [Phase 07-factor-pinning-groep-pages-6-cards-per-page]: Check-before-insert instead of catch-IntegrityError: avoids SQLAlchemy async session rollback/greenlet issues on Python 3.14 + asyncpg; matches auth_service.py project pattern
 - [Phase 07-factor-pinning-groep-pages-6-cards-per-page]: statement_cache_size=0 + pool_pre_ping=False in test_engine: fixes asyncpg DDL prepared-statement cache bug (Python 3.14 + asyncpg + SQLAlchemy 2.x pg_type UniqueViolation between tests)
+- [Phase 07-04]: bodemtype added to FACTOR_BRON as UI-only 'fysiek' entry for BODEMTYPE env card — not in backend FACTOR_REGISTRY
+- [Phase 07-04]: envCards label→factor_key map is inline keyMap in deriveEnvCards — avoids exported constant that must sync with enrichment labels
 
 ### Pending Todos
 
@@ -131,6 +134,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-26T15:04:05.166Z
-Stopped at: Completed 07-02-PLAN.md (UserFactorPin model + migration + factor_pins REST API)
+Last session: 2026-04-26T15:12:46.415Z
+Stopped at: Completed 07-04-PLAN.md (FactorCard + PotentieLayer + RisicoLayer Wave 2 refactor)
 Resume file: None
