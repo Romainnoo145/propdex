@@ -189,8 +189,51 @@ async def test_two_parcels_different_woonvisie_scores_via_cache(test_db, create_
 
 @pytest.mark.asyncio
 async def test_cache_key_uses_document_sentinel_and_schema_v4(test_db, create_test_user, monkeypatch):
-    """Regression: written cache row has parcel_id=='__document__' AND schema_version==4."""
-    pytest.fail("Wave 0 stub — Wave 1 Task 4 implementation required")
+    """Regression: written cache row uses parcel_id=='__document__' AND schema_version==4 after Phase 5+6 bumps."""
+    from datetime import datetime
+
+    from app.ai.factor_extraction_schemas import ExtractedFactor
+
+    user, org = await create_test_user()
+    doc = await _seed_venlo_woonvisie(test_db, org, user)
+
+    captured: dict = {}
+
+    async def _spy_extract_factor(db, *, factor_def, parcel_id, policy_document, **kwargs):
+        captured["parcel_id"] = parcel_id
+        captured["factor_def_key"] = factor_def.factor_id
+        return ExtractedFactor[WoonvisiePayload](
+            factor_id=factor_def.factor_id,
+            parcel_id=parcel_id,
+            policy_document_id=str(policy_document.id),
+            payload=_VENLO_BLERICK_CENTRUM_PAYLOAD,
+            extracted_at=datetime.utcnow(),
+            from_cache=False,
+            schema_version=SCHEMA_VERSION,
+        )
+
+    monkeypatch.setattr(cascade_enrichment_service, "extract_factor", _spy_extract_factor)
+
+    await cascade_enrichment_service.get_cascade_payloads(
+        test_db,
+        parcel_id="NL.IMBAG.Pand.0983-REAL-PARCEL-XYZ",
+        gemeente_code="0983",
+        organization_id=org.id,
+    )
+
+    # Caller-side substitution proof (Phase 5 SC#1)
+    assert captured["parcel_id"] == DOCUMENT_SENTINEL, (
+        f"Cascade boundary must substitute parcel_id with '__document__' sentinel for woonvisie_match; "
+        f"got {captured['parcel_id']!r}"
+    )
+    assert captured["factor_def_key"] == "woonvisie_match"
+
+    # Schema-version regression: SCHEMA_VERSION must be at the post-Phase-6 floor (>= 4)
+    assert SCHEMA_VERSION >= 4, (
+        f"SCHEMA_VERSION must be >= 4 after Phase 6 bump; got {SCHEMA_VERSION}"
+    )
+
+    _ = doc
 
 
 @pytest.mark.asyncio
