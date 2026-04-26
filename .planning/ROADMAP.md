@@ -136,7 +136,14 @@ Plans:
   9. Pins persisteren across browser-refresh en devices (backend-backed)
   10. Multi-tenant: user van org A ziet geen pins van user in org B (TenantMixin filter)
   11. Component tests dekken: pin/unpin flow, max-6 guard, ⭐ badge rendering, page-navigation met pinned synth-page
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Wave-0 test stubs (4 backend pytest stubs + factor-pins mock helper + 8 PotentieLayer + 3 RisicoLayer story stubs + VALIDATION.md update)
+- [ ] 07-02-PLAN.md — Backend: UserFactorPin model + Alembic migration y0_m048_s04 + factor_pins router (GET/POST/DELETE under /api/users/me/factor-pins) + multi-tenant isolation + max-6 guard
+- [ ] 07-03-PLAN.md — Foundations: bron field on FACTOR_REGISTRY (22 entries) + frontend lib/factor-groups.ts (Bron + buildPages) + useFactorPins hook (optimistic + max-6 toast)
+- [ ] 07-04-PLAN.md — Layer refactor: shared FactorCard.tsx (tone variant + pin-star UI) + PotentieLayer + RisicoLayer to 6-cards/page + pinned synth-page + group pages
+- [ ] 07-05-PLAN.md — Story battery + visual sign-off (full Storybook + backend regression + user checkpoint)
 
 ### Phase 8: Integration tests + Venlo E2E smoke
 **Goal**: End-to-end verificatie dat Phase 5+6+3+7 samen correct werken voor Venlo woonvisie: upload → scan → cache-dedup → score-diff tussen wijken → UI rendering met pinning + citation popup
@@ -166,5 +173,5 @@ waar S01=P5, S02=P6, S03=P3, S04=P7, S05=P4, S06=P8.
 | 4. KlimaatLayer Bug | 1/1 | Complete   | 2026-04-26 |
 | 5. Document-level cache sentinel | 0/? | Not started | - |
 | 6. WijkPolicy schema + scoring | 0/4 | Not started | - |
-| 7. Factor pinning + groep-pages | 0/? | Not started | - |
+| 7. Factor pinning + groep-pages | 0/5 | Not started | - |
 | 8. Integration tests + Venlo E2E | 0/? | Not started | - |
