@@ -28,18 +28,18 @@
 
 ### Pin Mechanism + Group Pages (NEW 2026-04-24)
 
-- [x] **PIN-01**: User can pin/unpin individual factoren (Potentie en Risico) met max 6 pins per categorie; 7e pin-poging toont toast "max 6 bereikt"
+- [x] **PIN-01**: User can pin/unpin individual factoren (Potentie en Risico) met max 4 pins per categorie; 5e pin-poging toont toast "Max 4 bereikt" (cap dropped 6→4 in Plan 07-05 after steady-state factor projection — see STATE.md)
 - [x] **PIN-02**: Pins persisteren across browser-refresh en devices via backend-backed `user_factor_pins` tabel met Alembic migratie; unique constraint `(user_id, category, factor_key)`; TenantMixin voor org-isolation
 - [x] **PIN-03**: REST API endpoints: `GET /api/user/factor-pins?category=X`, `POST /api/user/factor-pins` (toggle), `DELETE /api/user/factor-pins/:id`; optimistic UI updates via TanStack Query
 
 ### Factor Groups + Pagination (NEW 2026-04-24)
 
 - [x] **GROUP-01**: Elke entry in `FACTOR_REGISTRY` heeft een `category` veld (potentie: `gemeente_beleid`/`markt`/`fysiek`/`klimaat`; risico: idem + eventueel `juridisch`/`planologisch`)
-- [x] **GROUP-02**: Potentie/Risico tabs tonen 6 cards per page (i.p.v. 9); page 1 = pinned synth-page met ⭐; page 2+ = 1 groep per page; pinned factoren tonen ⭐ badge op hun groep-page
+- [x] **GROUP-02**: Potentie/Risico tabs tonen 4 cards per page (2x2 grid; cap dropped from 6 in Plan 07-05); page 1 = pinned synth-page met ⭐; page 2+ = 1 groep per page (categorieën met >4 cards spreiden over 2 pages); pinned factoren tonen ⭐ badge op hun groep-page
 
 ### UI Consistency (NEW 2026-04-24)
 
-- [x] **UI-01**: Hover op factor-card toont pin-icoon rechtsboven; click → optimistic update + POST; unpin werkt vanaf pinned-page en groep-page; beide locaties synchroniseren
+- [x] **UI-01**: Pin-icoon altijd zichtbaar rechtsboven op factor-card (slate-300 outline default, amber fill bij pin — geen hover-only state, mobile-ready); click → optimistic update + POST; unpin werkt vanaf pinned-page en groep-page; beide locaties synchroniseren. Cards met onCardClick krijgen subtiele ArrowRight bottom-right als drill-down affordance.
 
 ### Bug Fixes
 
