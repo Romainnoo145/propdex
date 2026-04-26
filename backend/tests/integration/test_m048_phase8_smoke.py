@@ -238,8 +238,41 @@ async def test_cache_key_uses_document_sentinel_and_schema_v4(test_db, create_te
 
 @pytest.mark.asyncio
 async def test_second_cascade_call_is_idempotent(test_db, create_test_user, monkeypatch):
-    """Second sequential call returns cached result → mock_client.messages.create.call_count stays 1."""
-    pytest.fail("Wave 0 stub — Wave 1 Task 5 implementation required")
+    """Second sequential get_cascade_payloads call → underlying Claude is hit at most once total
+    (proves cache hit on round 2; complements unit-level test_document_sentinel_one_claude_call_for_two_parcels).
+    """
+    user, org = await create_test_user()
+    await _seed_venlo_woonvisie(test_db, org, user)
+
+    response = make_tool_use_response(
+        tool_name="extract_woonvisie_match",
+        tool_input=_VENLO_BLERICK_CENTRUM_PAYLOAD.model_dump(mode="json"),
+    )
+    mock_client = make_mock_anthropic_client(response)
+    monkeypatch.setattr(
+        "app.ai.factor_extractor.create_claude_client",
+        lambda: _make_mock_claude_wrapper(mock_client),
+    )
+
+    # First call — cold cache → 1 Claude call.
+    await cascade_enrichment_service.get_cascade_payloads(
+        test_db,
+        parcel_id="NL.IMBAG.Pand.0983-A",
+        gemeente_code="0983",
+        organization_id=org.id,
+    )
+    assert mock_client.messages.create.call_count == 1, "First call should hit Claude exactly once"
+
+    # Second call — same gemeente, different parcel_id → must come from cache via DOCUMENT_SENTINEL.
+    await cascade_enrichment_service.get_cascade_payloads(
+        test_db,
+        parcel_id="NL.IMBAG.Pand.0983-B",
+        gemeente_code="0983",
+        organization_id=org.id,
+    )
+    assert mock_client.messages.create.call_count == 1, (
+        f"Second call should be a cache hit (no extra Claude calls); got {mock_client.messages.create.call_count}"
+    )
 
 
 # Re-export for static-analysis tools that scan symbols.
@@ -249,16 +282,3 @@ __all__ = [
     "test_cache_key_uses_document_sentinel_and_schema_v4",
     "test_second_cascade_call_is_idempotent",
 ]
-
-
-# Suppress unused-import lints — these are the cross-phase contract surface that
-# Wave 1 (Tasks 2-5) will start using.
-_ = (
-    DOCUMENT_SENTINEL,
-    SCHEMA_VERSION,
-    cascade_enrichment_service,
-    compute_score_v3,
-    make_mock_anthropic_client,
-    make_tool_use_response,
-    _minimal_parcel_data,
-)
