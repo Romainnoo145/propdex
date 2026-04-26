@@ -197,3 +197,187 @@ export const ClickOpensPopup: Story = {
     await expect(bodyAfter.getByText('Groeigebied')).toBeInTheDocument()
   },
 }
+
+/* ── Phase 7 stories — pinning + group pages ──────────────────── */
+import { Toaster } from 'sonner'
+import { makeFactorPin, makeQueryClientWithPins } from '@/test-utils/factorPinsMock'
+
+function pinDecorator(pins: ReturnType<typeof makeFactorPin>[]) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (Story: () => any) => {
+    const qc = makeQueryClientWithPins(PARCEL_ID, pins, 'potentie')
+    return (
+      <QueryClientProvider client={qc}>
+        <AuthContext.Provider value={mockAuthValue}>
+          <Toaster />
+          <div className="h-screen w-screen bg-[#F2F6F3] flex flex-col overflow-hidden">
+            <Story />
+          </div>
+        </AuthContext.Provider>
+      </QueryClientProvider>
+    )
+  }
+}
+
+// SC#4 + SC#5: 0 pins → page 0 = TOP FACTOREN with 6 cards
+export const PinnedPageEmpty: Story = {
+  name: 'Phase 7 — Pinned page (0 pins → TOP FACTOREN)',
+  decorators: [pinDecorator([])],
+  args: { parcel: mockParcelWithBlerick, gemeenteNaam: 'Venlo' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('TOP FACTOREN')).toBeInTheDocument()
+    const grid = canvasElement.querySelector('.grid-cols-3') as HTMLElement
+    await expect(grid.children.length).toBe(6)
+  },
+}
+
+// SC#5: 3 pins → 3 pinned + 3 ghosts
+export const PinnedPagePartial: Story = {
+  name: 'Phase 7 — Pinned page (3 pins + 3 ghosts)',
+  decorators: [pinDecorator([
+    makeFactorPin('vrije_grond', 0),
+    makeFactorPin('bestemming', 1),
+    makeFactorPin('woonvisie_match', 2),
+  ])],
+  args: { parcel: mockParcelWithBlerick, gemeenteNaam: 'Venlo' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('GEPIND')).toBeInTheDocument()
+    const grid = canvasElement.querySelector('.grid-cols-3') as HTMLElement
+    await expect(grid.children.length).toBe(6)
+    await expect(canvas.getAllByText(/pin een factor/i).length).toBe(3)
+  },
+}
+
+// SC#5: 6 pins → 6 cards no ghosts
+export const PinnedPageFull: Story = {
+  name: 'Phase 7 — Pinned page (6 pins, no ghosts)',
+  decorators: [pinDecorator([
+    makeFactorPin('vrije_grond', 0),
+    makeFactorPin('optoppotentie', 1),
+    makeFactorPin('bestemming', 2),
+    makeFactorPin('leegstand', 3),
+    makeFactorPin('funda_frictie', 4),
+    makeFactorPin('perceelgrootte', 5),
+  ])],
+  args: { parcel: mockParcelWithBlerick, gemeenteNaam: 'Venlo' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('GEPIND')).toBeInTheDocument()
+    const grid = canvasElement.querySelector('.grid-cols-3') as HTMLElement
+    await expect(grid.children.length).toBe(6)
+    await expect(canvas.queryAllByText(/pin een factor/i).length).toBe(0)
+  },
+}
+
+// SC#5: navigate forward through group pages — assert title sequence
+export const GroupPagesNavigation: Story = {
+  name: 'Phase 7 — Navigate group pages (GEPIND → GEMEENTE BELEID → MARKT → FYSIEK)',
+  decorators: [pinDecorator([])],
+  args: { parcel: mockParcelWithBlerick, gemeenteNaam: 'Venlo' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('TOP FACTOREN')).toBeInTheDocument()
+    const next = canvas.getByLabelText('Volgende pagina')
+    await userEvent.click(next)
+    await waitFor(() => expect(canvas.getByText('GEMEENTE BELEID')).toBeInTheDocument(), { timeout: 1500 })
+    await userEvent.click(next)
+    await waitFor(() => expect(canvas.getByText('MARKT')).toBeInTheDocument(), { timeout: 1500 })
+    await userEvent.click(next)
+    await waitFor(() => expect(canvas.getByText('FYSIEK')).toBeInTheDocument(), { timeout: 1500 })
+  },
+}
+
+// SC#6: Pinned factor on its own group-page also shows ⭐
+export const PinnedAlsoOnGroupPage: Story = {
+  name: 'Phase 7 — Pinned factor visible on both pinned-page and group-page',
+  decorators: [pinDecorator([makeFactorPin('funda_frictie', 0)])],
+  args: { parcel: mockParcelWithBlerick, gemeenteNaam: 'Venlo' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // Page 0: GEPIND has the funda_frictie card with star
+    await expect(canvas.getByText('GEPIND')).toBeInTheDocument()
+    const starsPage0 = canvasElement.querySelectorAll('[data-testid="pin-star-filled"]')
+    await expect(starsPage0.length).toBeGreaterThanOrEqual(1)
+    // Navigate to MARKT page (where funda_frictie lives)
+    const next = canvas.getByLabelText('Volgende pagina')
+    await userEvent.click(next) // → GEMEENTE BELEID
+    await userEvent.click(next) // → MARKT
+    await waitFor(() => expect(canvas.getByText('MARKT')).toBeInTheDocument(), { timeout: 1500 })
+    const starsMarkt = canvasElement.querySelectorAll('[data-testid="pin-star-filled"]')
+    await expect(starsMarkt.length).toBeGreaterThanOrEqual(1)
+  },
+}
+
+// SC#7: Hover unpinned card → star outline; click → pin
+export const PinFlow: Story = {
+  name: 'Phase 7 — Hover star + click pins factor',
+  decorators: [pinDecorator([])],
+  args: { parcel: mockParcelWithBlerick, gemeenteNaam: 'Venlo' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // Navigate to MARKT page where funda_frictie lives
+    const next = canvas.getByLabelText('Volgende pagina')
+    await userEvent.click(next) // GEMEENTE BELEID
+    await userEvent.click(next) // MARKT
+    await waitFor(() => expect(canvas.getByText('MARKT')).toBeInTheDocument(), { timeout: 1500 })
+    // Click pin star on first card
+    const starButton = canvasElement.querySelector('[data-testid="pin-star-button"]') as HTMLElement
+    await expect(starButton).toBeTruthy()
+    await userEvent.click(starButton)
+    // Star should now be filled
+    await waitFor(() => {
+      const filled = canvasElement.querySelector('[data-testid="pin-star-filled"]')
+      expect(filled).toBeTruthy()
+    }, { timeout: 1000 })
+  },
+}
+
+// SC#8: 6 pins + 7th attempt → toast "Max 6 bereikt"
+export const Max6Guard: Story = {
+  name: 'Phase 7 — 7th pin attempt shows toast',
+  decorators: [pinDecorator([
+    makeFactorPin('vrije_grond', 0),
+    makeFactorPin('optoppotentie', 1),
+    makeFactorPin('bestemming', 2),
+    makeFactorPin('leegstand', 3),
+    makeFactorPin('funda_frictie', 4),
+    makeFactorPin('perceelgrootte', 5),
+  ])],
+  args: { parcel: mockParcelWithBlerick, gemeenteNaam: 'Venlo' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // Navigate to a group page with an unpinned card
+    const next = canvas.getByLabelText('Volgende pagina')
+    await userEvent.click(next)
+    await userEvent.click(next)
+    await userEvent.click(next) // FYSIEK page
+    await waitFor(() => expect(canvas.getByText('FYSIEK')).toBeInTheDocument(), { timeout: 1500 })
+    // Try to pin a 7th — find first unpinned star button
+    const starButtons = canvasElement.querySelectorAll('[data-testid="pin-star-button"]:not([data-pinned="true"])')
+    await expect(starButtons.length).toBeGreaterThan(0)
+    await userEvent.click(starButtons[0] as HTMLElement)
+    // Toast renders to portal — query body
+    const body = within(document.body)
+    await waitFor(() => expect(body.getByText(/Max 6 bereikt/i)).toBeInTheDocument(), { timeout: 1500 })
+  },
+}
+
+// PIN-01: Missing pinned factor renders dashed border + Geen data
+export const MissingPinDashedBorder: Story = {
+  name: 'Phase 7 — Pinned factor with missing data shows dashed border',
+  decorators: [pinDecorator([makeFactorPin('vergunning_succeskans', 0)])],
+  args: {
+    // mockParcelWithBlerick without vergunning_succeskans factor in score_breakdown — uses default mockParcelWithBlerick
+    parcel: mockParcelWithBlerick,
+    gemeenteNaam: 'Venlo',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('GEPIND')).toBeInTheDocument()
+    // Card with dashed border exists
+    const dashed = canvasElement.querySelector('[data-testid="factor-card-missing"]')
+    await expect(dashed).toBeTruthy()
+  },
+}
