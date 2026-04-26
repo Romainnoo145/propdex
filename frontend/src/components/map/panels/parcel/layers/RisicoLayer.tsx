@@ -389,7 +389,6 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
             <p className={`text-xl font-bold uppercase tracking-wide ${verdict.color}`}>
               {verdict.label}
             </p>
-            <TruncatedText text={oneLiner} className="text-[13px] text-slate-500 mt-0.5 truncate" />
           </div>
 
           <div
@@ -409,7 +408,7 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
 
       {/* ── Factor Cards Grid with page transition ────────── */}
       <div className="flex-1 mt-4 relative flex flex-col">
-        <h3 className="text-[10px] font-black tracking-[0.15em] uppercase text-slate-500 mb-2 pl-6">
+        <h3 className="text-[10px] font-black tracking-[0.15em] uppercase text-slate-500 mb-2">
           {currentPage?.title ?? ''}
         </h3>
         <AnimatePresence mode="wait">
