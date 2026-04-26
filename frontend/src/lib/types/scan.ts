@@ -527,3 +527,22 @@ export interface ScanListResponse {
   offset: number
   limit: number
 }
+
+// --- Phase 6 → Phase 3 → Phase 8 cross-phase contract ---
+// Mirrors backend `WijkPolicy` Pydantic model in app/ai/factors/woonvisie_match.py.
+// `factor.waarde` for woonvisie_match is now a dict (was string in M047/S06).
+// Source of truth: .planning/phases/06-wijkpolicy-schema-woonvisie-scoring-upgrade/06-04-SUMMARY.md L138-158
+export type WijkPolicy = {
+  wijk_naam: string
+  prioriteit: 'groei' | 'krimp' | 'herstructurering' | 'neutraal'
+  gewenste_segmenten: ('sociaal' | 'midden' | 'duur' | 'gemengd')[]
+  citaat: string
+  pagina: number | null
+}
+
+export type WoonvisieMatchWaarde = {
+  matched_wijk: string | null            // parcel's wijk_naam if a policy matched, else null
+  matched_policy: WijkPolicy | null      // full WijkPolicy.model_dump() on hit; null on fallback
+  prioritized_segment: string            // legacy UI fallback (still populated by post-Phase-6 scorer)
+  algemeen_citaat: string                // gemeente-brede citaat for no-match fallback
+}
