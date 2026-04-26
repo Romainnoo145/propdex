@@ -80,39 +80,39 @@ export function FactorCard({
         isInteractive ? 'cursor-pointer text-left' : ''
       }`}
     >
-      {/* Top: label + pts badge */}
-      <div className="flex justify-between items-start gap-1 relative">
+      {/* Top: label + pts badge + pin star (right-cluster keeps badge & star aligned) */}
+      <div className="flex justify-between items-center gap-2">
         <TruncatedText
           text={card.label}
           className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight line-clamp-1 pr-1"
         />
-        <span
-          className={`${ptsBadge} px-2 py-0.5 rounded-full text-[10px] font-black shrink-0`}
-        >
-          {card.pts > 0 ? `+${card.pts}` : '—'}
-        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span
+            className={`${ptsBadge} px-2 py-0.5 rounded-full text-[10px] font-black leading-none`}
+          >
+            {card.pts > 0 ? `+${card.pts}` : '—'}
+          </span>
+          {(onStarClick !== undefined || isPinned) && (
+            <button
+              type="button"
+              onClick={handleStarClick}
+              data-testid={isPinned ? 'pin-star-filled' : 'pin-star-button'}
+              data-pinned={isPinned ? 'true' : 'false'}
+              aria-label={isPinned ? 'Unpin factor' : 'Pin factor'}
+              className={`p-0.5 rounded-full hover:bg-slate-50 transition-opacity duration-150 ${
+                isPinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              }`}
+            >
+              <Star
+                className={`size-4 ${
+                  isPinned ? 'text-amber-500 fill-amber-500' : 'text-slate-300'
+                }`}
+                strokeWidth={2}
+              />
+            </button>
+          )}
+        </div>
       </div>
-
-      {/* Star — always rendered; visibility controlled by opacity class */}
-      {(onStarClick !== undefined || isPinned) && (
-        <button
-          type="button"
-          onClick={handleStarClick}
-          data-testid={isPinned ? 'pin-star-filled' : 'pin-star-button'}
-          data-pinned={isPinned ? 'true' : 'false'}
-          aria-label={isPinned ? 'Unpin factor' : 'Pin factor'}
-          className={`absolute top-3 right-3 p-1 rounded-full hover:bg-slate-50 transition-opacity duration-150 ${
-            isPinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-          }`}
-        >
-          <Star
-            className={`size-4 ${
-              isPinned ? 'text-amber-500 fill-amber-500' : 'text-slate-300'
-            }`}
-            strokeWidth={2}
-          />
-        </button>
-      )}
 
       {/* Middle: value */}
       <div className="flex-1 flex items-center min-w-0 mt-2">
