@@ -2659,6 +2659,7 @@ function MapPage() {
       {/* Map detail panels — only one visible at a time */}
       {activePanel?.kind === 'gemeente' && (
         <GemeenteContextPanel
+          key={activePanel.code}
           naam={activePanel.naam}
           code={activePanel.code}
           wijkGeojson={wijkGeojson}
