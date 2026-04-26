@@ -2,8 +2,8 @@
 phase: 7
 slug: factor-pinning-groep-pages-6-cards-per-page
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-26
 ---
 
@@ -38,13 +38,24 @@ created: 2026-04-26
 
 ## Per-Task Verification Map
 
-> Filled by gsd-planner during step 8. Map every task to: requirement ID, test surface, command, expected proof.
-
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 7-XX-XX | TBD  | TBD  | PIN-01      | TBD       | TBD               | TBD         | ⬜ pending |
+| 7-01-T1 | 01 | 0 | TEST-07 (Wave 0) | unit + integration stubs | `cd backend && pytest tests/unit/test_factor_registry_bron_field.py tests/unit/test_user_factor_pin_model.py tests/integration/test_factor_pins_router.py tests/integration/test_user_factor_pins_migration.py --collect-only` | ✅ post-task | ⬜ pending |
+| 7-01-T2 | 01 | 0 | TEST-07 (Wave 0) | story stubs | `cd frontend && test -f src/test-utils/factorPinsMock.ts && grep -q PinnedPageEmpty src/stories/parcel/PotentieLayer.stories.tsx` | ✅ post-task | ⬜ pending |
+| 7-01-T3 | 01 | 0 | TEST-07 (validation) | doc update | `grep -q "nyquist_compliant: true" .planning/phases/07-factor-pinning-groep-pages-6-cards-per-page/07-VALIDATION.md` | ✅ post-task | ⬜ pending |
+| 7-02-T1 | 02 | 1 | PIN-02 | model + migration | `cd backend && pytest tests/unit/test_user_factor_pin_model.py tests/integration/test_user_factor_pins_migration.py -x` | ✅ via Plan 01 | ⬜ pending |
+| 7-02-T2 | 02 | 1 | PIN-03 | router integration | `cd backend && pytest tests/integration/test_factor_pins_router.py -x` | ✅ via Plan 01 | ⬜ pending |
+| 7-02-T3 | 02 | 1 | PIN-02/PIN-03 (regression) | full backend suite | `cd backend && pytest -x` (275+ tests, no regression) | ✅ existing | ⬜ pending |
+| 7-03-T1 | 03 | 1 | GROUP-01 | unit (registry) | `cd backend && pytest tests/unit/test_factor_registry_bron_field.py -x` | ✅ via Plan 01 | ⬜ pending |
+| 7-03-T2 | 03 | 1 | GROUP-02 + UI-01 | hook + module type-check | `cd frontend && npm run check` | ✅ existing | ⬜ pending |
+| 7-04-T1 | 04 | 2 | GROUP-02 + UI-01 + PIN-01 | layer refactor type-check | `cd frontend && npm run check` | ✅ existing | ⬜ pending |
+| 7-04-T2 | 04 | 2 | UI-01 + PIN-01 | story render smoke | `cd frontend && npm run test-storybook -- --grep "Phase 7 — Pinned page \\(0 pins"` | ✅ via Plan 01 | ⬜ pending |
+| 7-05-T1 | 05 | 3 | TEST-07 + UI-01 + PIN-01 + GROUP-02 | full Storybook | `cd frontend && npm run test-storybook` | ✅ via Plan 01+04 | ⬜ pending |
+| 7-05-T2 | 05 | 3 | phase gate | full backend + frontend | `cd backend && pytest -x && cd ../frontend && npm run check && npm run test-storybook` | ✅ existing | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+
+*Updated 2026-04-26 by Plan 01 Task 3.*
 
 ---
 
@@ -75,11 +86,11 @@ Test files that MUST exist before later waves can verify themselves:
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags (CI-friendly only)
-- [ ] Feedback latency < 30s (quick) / 120s (full)
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags (CI-friendly only)
+- [x] Feedback latency < 30s (quick) / 120s (full)
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** Wave 0 complete (2026-04-26)
