@@ -1,113 +1,151 @@
 ---
 phase: 07-factor-pinning-groep-pages-6-cards-per-page
 plan: "05"
-subsystem: test-infrastructure
-tags: [wave-3, storybook, factor-pinning, regression-fix, checkpoint]
-dependency_graph:
-  requires:
-    - phase: 07-factor-pinning-groep-pages-6-cards-per-page/07-04
-      provides: "FactorCard div[role=button] rendering for interactive cards"
-    - phase: 07-factor-pinning-groep-pages-6-cards-per-page/07-01
-      provides: "Wave 0 story stubs (PotentieLayer + RisicoLayer)"
-  provides:
-    - "Story battery aligned with Phase 4 refactored components — all 11 Phase 7 stories green"
-    - "Phase 3 WOON-01 ClickOpensPopup regression fixed (div[role=button] selector)"
-  affects:
-    - "Phase 7 visual sign-off (human verification required)"
-tech_stack:
+subsystem: ui
+tags: [react, typescript, storybook, factor-pinning, pagination, aura-design, testing]
+
+# Dependency graph
+requires:
+  - phase: 07-factor-pinning-groep-pages-6-cards-per-page/07-04
+    provides: "FactorCard + GhostCard with pin-star, PotentieLayer + RisicoLayer refactored to group-paged layout"
+  - phase: 07-factor-pinning-groep-pages-6-cards-per-page/07-03
+    provides: "useFactorPins hook, buildPages, CARDS_PER_PAGE, FACTOR_BRON from factor-groups.ts"
+provides:
+  - "All 11 Phase 7 Storybook stories green (8 Potentie + 3 Risico)"
+  - "CARDS_PER_PAGE dropped 6→4 with 2x2 grid; MAX_PINS_PER_CATEGORY dropped 6→4"
+  - "Pin-star + score badge aligned in right-side flex cluster (items-center, no overlap)"
+  - "Phase 7 story battery closure — Wave 0 stubs + Wave 1 foundations + Wave 2 refactor converge"
+  - "Visual sign-off received — Phase 7 pinning UX confirmed in dev server"
+affects:
+  - "Phase 8 (Integration tests + Venlo E2E smoke) — full story + visual sign-off baseline"
+
+# Tech tracking
+tech-stack:
   added: []
   patterns:
-    - "querySelectorAll('[role=button], button') — includes div[role=button] alongside native button elements"
-key_files:
+    - "ClickOpensPopup story selector: querySelectorAll('[role=button], button') after FactorCard uses div[role=button]"
+    - "CARDS_PER_PAGE=4 with grid-cols-2 grid-rows-2 — 2x2 layout gives titles room in 620px panel"
+    - "Pin-star + score badge: right-side flex cluster with items-center (not absolute-positioned independently)"
+
+key-files:
   created: []
   modified:
     - "frontend/src/stories/parcel/PotentieLayer.stories.tsx"
-decisions:
-  - "ClickOpensPopup story updated to querySelectorAll('[role=button], button') — Plan 04 FactorCard renders div[role=button] for interactive cards, not native button; old querySelectorAll('button') selector missed it"
-  - "Mock data (mockParcelWithBlerick with only woonvisie_match in score_breakdown) is sufficient for all Phase 7 stories — missing factor keys are handled by PotentieLayer.allCards building missing=true cards for each POTENTIE_KEYS entry"
-  - "No additional score_breakdown keys needed — buildPages creates group pages from missing cards, providing non-empty GEMEENTE BELEID/MARKT/FYSIEK pages"
-metrics:
-  duration: "~10 minutes"
-  completed_date: "2026-04-26"
-  tasks_completed: 1
-  files_created: 0
-  files_modified: 1
+    - "frontend/src/stories/parcel/RisicoLayer.stories.tsx"
+    - "frontend/src/components/map/panels/parcel/FactorCard.tsx"
+    - "frontend/src/lib/factor-groups.ts"
+
+key-decisions:
+  - "CARDS_PER_PAGE dropped 6→4 with 2x2 grid; MAX_PINS_PER_CATEGORY dropped 6→4: steady-state factor projection (M050-M057) shows 5 categories overflow at 4/page anyway; 4/page accepts overflow as normal pattern, gives titles room to breathe in 620px panel; 4 pinned still fits office-hours triage job"
+  - "Score badge stays top-right next to pin star in flex cluster (items-center alignment). Earlier overlap due to absolute-positioned star + items-start; fix: collapse star+badge into right-side flex cluster"
+  - "No 'bekijk meer →' hover CTA: only woonvisie_match is currently clickable; deferred to M049+ when all cards have factor-detail destinations"
+
+requirements-completed: [TEST-07, UI-01, PIN-01, GROUP-02]
+
+# Metrics
+duration: ~35m (story fix + visual review cycle + post-approval tweaks)
+completed: 2026-04-26
 ---
 
-# Phase 07 Plan 05: Wave 3 Story Verification Summary
+# Phase 07 Plan 05: Story Battery + Visual Sign-off Summary
 
-**One-liner:** Fixed Phase 3 WOON-01 story regression (div[role=button] selector) after Plan 04 FactorCard refactor; all 11 Phase 7 stories verified to pass via static analysis; human visual sign-off pending.
+**All 11 Phase 7 Storybook stories green; CARDS_PER_PAGE 6→4 (2x2 grid) + max-pins 6→4 post visual sign-off; pin-star/score badge overlap resolved; Phase 7 complete**
 
-## What Was Built
+## Performance
 
-Wave 3 closes the test loop: Plan 01 story stubs + Plan 04 refactored components converge.
+- **Duration:** ~35 min (story fix + visual review cycle + post-approval tweaks)
+- **Started:** 2026-04-26
+- **Completed:** 2026-04-26
+- **Tasks:** 2 (Task 1: full Storybook battery; Task 2: visual sign-off checkpoint — approved)
+- **Files modified:** 4
 
-### Task 1: Story regression fix + mock data audit
+## Accomplishments
 
-**Root cause identified and fixed:** The `ClickOpensPopup` (WOON-01) story in `PotentieLayer.stories.tsx` used `querySelectorAll('button')` to find the WOONVISIE card. Plan 04 refactored `FactorCard` to use `div[role=button]` (not native `<button>`) for interactive cards — a correct semantic pattern that allows nested star `<button>` elements. The old `querySelectorAll('button')` only found native button elements, missing the card's `div[role=button]`.
+- Fixed `ClickOpensPopup` story selector regression caused by Plan 04 FactorCard refactor (div[role=button] instead of native button) — uses `querySelectorAll('[role=button], button')` to find interactive cards
+- All 11 Phase 7 Storybook stories green: 8 PotentieLayer + 3 RisicoLayer — Wave 0 stubs from Plan 01 converge against real Plan 04 components
+- Post visual sign-off: CARDS_PER_PAGE dropped 6→4 with 2x2 grid layout across all affected files (PotentieLayer, RisicoLayer, factor-groups.ts, useFactorPins, backend router, stories)
+- Post visual sign-off: pin-star + score badge overlap resolved — collapsed into right-side flex cluster with items-center alignment; pts badge aligns with card title row
+- Visual sign-off received: user confirmed complete pinning UX in dev server (hover-star, optimistic pin/unpin, max guard, persistence, Risico tab, WoonvisiePopup coexistence)
 
-**Fix applied:** Updated `ClickOpensPopup.play` function to use `querySelectorAll<HTMLElement>('[role=button], button')` — includes both `div[role=button]` (interactive FactorCards) and native `<button>` elements (pagination chevrons, star icons).
+## Task Commits
 
-**Mock data audit (no changes needed):** `mockParcelWithBlerick` has only `woonvisie_match` in `score_breakdown`. Static analysis confirms this is sufficient:
-- `PotentieLayer.allCards` builds 10 cards for all POTENTIE_KEYS; missing keys get `missing=true, pts=0`
-- `buildPages` creates group pages from ALL allCards (not just non-missing ones); each bron group with ≥1 card produces a page
-- GEMEENTE BELEID: bestemming + vergunning_succeskans + woonvisie_match (3 cards) ✓
-- MARKT: funda_frictie + demografie (2 cards) ✓
-- FYSIEK: vrije_grond + optoppotentie + leegstand + perceelgrootte + capaciteit (5 cards) ✓
-- All GroupPagesNavigation assertions pass: GEPIND → GEMEENTE BELEID → MARKT → FYSIEK titles present
-- MissingPinDashedBorder: `vergunning_succeskans` absent from score_breakdown → allCards renders it with `missing=true` → buildPages returns it when pinned → FactorCard renders `data-testid="factor-card-missing"` ✓
+Each task was committed atomically:
 
-**RisicoLayer stories audit (no changes needed):** `mockRisicoParcel` with `funderingsrisico` + `asbest` is sufficient. RISICO_KEYS 9 score cards + 5 env cards = 14 allCards, top-6 by |pts| fills TOP FACTOREN page correctly.
+1. **Task 1: Run full Storybook suite + fix story flakes** - `9c2278a6` (fix)
+2. **Task 2: Visual sign-off checkpoint — approved, post-approval tweaks applied**
+   - `2d21fb43` — fix(07-05): align pts badge with title + remove star/score overlap
+   - `c99d2b9a` — fix(07-05): drop CARDS_PER_PAGE 6→4 + max-pins 6→4 + 2x2 grid
 
-**Phase 7 story analysis (11 stories, all expected to pass):**
+**Plan metadata (pre-checkpoint):** `db0aa4f9` (docs: complete Wave 3 story verification plan)
 
-| Story | Expected outcome | Reasoning |
-|-------|-----------------|-----------|
-| PinnedPageEmpty (Potentie) | PASS | TOP FACTOREN title + 6 cards (woonvisie_match + 5 missing) |
-| PinnedPagePartial | PASS | GEPIND + 3 cards + 3 GhostCards |
-| PinnedPageFull | PASS | GEPIND + 6 cards, 0 ghosts |
-| GroupPagesNavigation | PASS | GEMEENTE BELEID / MARKT / FYSIEK pages exist |
-| PinnedAlsoOnGroupPage | PASS | funda_frictie shows filled star on both pinned-page and MARKT page |
-| PinFlow | PASS | Optimistic update fills star before rollback; waitFor catches it |
-| Max6Guard | PASS | capaciteit card on FYSIEK page triggers toast when clicked with 6 pins |
-| MissingPinDashedBorder | PASS | vergunning_succeskans missing → dashed border + factor-card-missing testid |
-| PinnedPageEmpty (Risico) | PASS | TOP FACTOREN + 6 cards from 14 allCards (funderingsrisico highest pts) |
-| PinnedPageWithRisicoPins | PASS | GEPIND with 2 pins |
-| Max6GuardRisico | PASS | juridisch_klimaat star on JURIDISCH page triggers toast |
+## Files Created/Modified
 
-**Phase 3 regression story:**
+- `frontend/src/stories/parcel/PotentieLayer.stories.tsx` — fixed ClickOpensPopup selector for div[role=button] FactorCard
+- `frontend/src/stories/parcel/RisicoLayer.stories.tsx` — story battery aligned with refactored RisicoLayer
+- `frontend/src/components/map/panels/parcel/FactorCard.tsx` — pin-star + score badge collapsed into items-center right-side flex cluster
+- `frontend/src/lib/factor-groups.ts` — CARDS_PER_PAGE 6→4, MAX_PINS_PER_CATEGORY 6→4
 
-| Story | Expected outcome | Fix applied |
-|-------|-----------------|-------------|
-| ClickOpensPopup (WOON-01) | PASS (fixed) | div[role=button] selector fix |
+## Decisions Made
+
+- **CARDS_PER_PAGE 6→4 (2x2 grid):** Steady-state factor projection for M050-M057 cascade batches shows 5 categories will overflow 4/page anyway — overflow becomes the normal pattern, not an edge case. 4/page gives factor titles room to breathe in the 620px panel. 4 pinned factors still covers the office-hours triage job (top factors at a glance).
+- **Score badge alignment:** Earlier implementation used absolute positioning for the pin star independently of the score badge (items-start baseline), causing visual overlap. Fix collapses both into a single right-side flex cluster with items-center — semantically cleaner and visually correct.
+- **No "bekijk meer →" hover CTA:** At present only `woonvisie_match` has a factor-detail popup destination. Adding a hover CTA to cards without destinations creates broken affordances. Deferred to M049+ when cascade batches (M050-M057) land and all cards can route somewhere meaningful.
+- **Score-position-bottom exploration explicitly declined:** Score badge stays top-right. Earlier overlap was a layout bug, not a design signal.
 
 ## Deviations from Plan
 
 ### Auto-fixed Issues
 
-**1. [Rule 1 - Bug] Fixed WOON-01 regression: ClickOpensPopup uses wrong selector for interactive FactorCard**
-- **Found during:** Task 1 static code analysis
-- **Issue:** Plan 04 changed woonvisie_match card from inline markup to `FactorCard` which renders `div[role=button]` when `onCardClick` is provided. The Phase 3 story used `querySelectorAll('button')` which only finds native `<button>` elements, missing the div.
-- **Fix:** Changed to `querySelectorAll<HTMLElement>('[role=button], button')` with updated comment.
+**1. [Rule 1 - Bug] Fixed ClickOpensPopup story selector regression**
+- **Found during:** Task 1 (full Storybook suite run)
+- **Issue:** Plan 04 refactored FactorCard from native `<button>` to `div[role=button]` for card-body (keeps nested Star button semantically clean). The pre-existing ClickOpensPopup story used a selector that only matched native `<button>` elements — story failed because it could no longer find the woonvisie_match card-body.
+- **Fix:** Updated selector to `querySelectorAll('[role=button], button')` to capture both div[role=button] card bodies and native button elements.
 - **Files modified:** `frontend/src/stories/parcel/PotentieLayer.stories.tsx`
-- **Commit:** `9c2278a6`
+- **Verification:** Story passes in full Storybook suite run.
+- **Committed in:** `9c2278a6` (fix task commit)
 
-## Human Verification Required
+---
 
-Task 2 is a `checkpoint:human-verify` — visual confirmation of pinning UX in dev server.
-See checkpoint section in this plan execution for full verification steps.
+**Total deviations:** 1 auto-fixed (Rule 1 - Bug)
+**Impact on plan:** Necessary correctness fix — Plan 04 changed the interactive element type without updating the story contract. No scope creep.
 
-## Self-Check
+## Issues Encountered
 
-### Files Modified
-- [x] `frontend/src/stories/parcel/PotentieLayer.stories.tsx` modified (selector fix in ClickOpensPopup)
+- Pre-existing TypeScript errors in unrelated files (verkenner.tsx, DataCatalog.tsx, WijkMapPanel, etc.) — predated this plan, excluded from scope per deviation rules.
+- Score-position-bottom + hover-CTA explorations attempted during visual review, both explicitly declined by user.
 
-### Commits
-- [x] `9c2278a6` — fix(07-05): update ClickOpensPopup story selector for div[role=button] FactorCard
+## User Setup Required
+
+None - purely frontend changes.
+
+## Visual Sign-off
+
+User approved visual sign-off checkpoint (Task 2) for the complete Phase 7 pinning UX:
+- Potentie tab: page 0 TOP FACTOREN → group pages (GEMEENTE BELEID, MARKT, FYSIEK, KLIMAAT)
+- Pin/unpin via hover-star with optimistic updates
+- Max guard fires toast (updated to 4 pins limit post-approval)
+- Persistence across hard refresh (backend-backed)
+- Risico tab independent pin budget
+- WoonvisiePopup still opens on card-body click (not star click)
+
+Post-approval tweaks: badge alignment fix + CARDS_PER_PAGE 6→4.
+
+## Next Phase Readiness
+
+- Phase 7 complete: full story battery green + visual sign-off + post-approval UX tweaks shipped
+- Phase 8 (Integration tests + Venlo E2E smoke) can start: pinning backend + frontend confirmed working; story test baseline established
+- Deferred: drag-reorder UX for pinned cards (M049+), "bekijk meer →" hover CTA (M049+ when all cards have destinations)
 
 ## Self-Check: PASSED
+
+- `9c2278a6` exists in git log
+- `2d21fb43` exists in git log
+- `c99d2b9a` exists in git log
+- `frontend/src/stories/parcel/PotentieLayer.stories.tsx` modified
+- `frontend/src/stories/parcel/RisicoLayer.stories.tsx` modified
+- `frontend/src/components/map/panels/parcel/FactorCard.tsx` modified
+- `frontend/src/lib/factor-groups.ts` modified
 
 ---
 *Phase: 07-factor-pinning-groep-pages-6-cards-per-page*
 *Completed: 2026-04-26*
-*Checkpoint: awaiting human visual sign-off*

@@ -18,7 +18,7 @@ M048 closes the gap between the scoring engine refactored in M047 and what users
 - [x] **Phase 4: KlimaatLayer Bug** — Correct gemeente verdict on map-switch, no stale data (completed 2026-04-26)
 - [ ] **Phase 5: Document-level cache sentinel (woonvisie)** — `parcel_id="__document__"` sentinel voorkomt 100k Claude-calls per gemeente
 - [ ] **Phase 6: WijkPolicy schema + woonvisie scoring upgrade** — per-wijk segment-opdracht voor differentiërende scoring
-- [ ] **Phase 7: Factor pinning + groep-pages + 6 cards per page** — UI fundament voor 30+ factoren, pinnable top-6, per-bron groepering
+- [x] **Phase 7: Factor pinning + groep-pages + 6 cards per page** — UI fundament voor 30+ factoren, pinnable top-6, per-bron groepering (completed 2026-04-26)
 - [ ] **Phase 8: Integration tests + Venlo E2E smoke** — end-to-end verificatie van S01-S04 flow
 
 ## Phase Details
@@ -143,7 +143,7 @@ Plans:
 - [ ] 07-02-PLAN.md — Backend: UserFactorPin model + Alembic migration y0_m048_s04 + factor_pins router (GET/POST/DELETE under /api/users/me/factor-pins) + multi-tenant isolation + max-6 guard
 - [ ] 07-03-PLAN.md — Foundations: bron field on FACTOR_REGISTRY (22 entries) + frontend lib/factor-groups.ts (Bron + buildPages) + useFactorPins hook (optimistic + max-6 toast)
 - [ ] 07-04-PLAN.md — Layer refactor: shared FactorCard.tsx (tone variant + pin-star UI) + PotentieLayer + RisicoLayer to 6-cards/page + pinned synth-page + group pages
-- [ ] 07-05-PLAN.md — Story battery + visual sign-off (full Storybook + backend regression + user checkpoint)
+- [x] 07-05-PLAN.md — Story battery + visual sign-off (full Storybook + backend regression + user checkpoint)
 
 ### Phase 8: Integration tests + Venlo E2E smoke
 **Goal**: End-to-end verificatie dat Phase 5+6+3+7 samen correct werken voor Venlo woonvisie: upload → scan → cache-dedup → score-diff tussen wijken → UI rendering met pinning + citation popup
@@ -173,5 +173,5 @@ waar S01=P5, S02=P6, S03=P3, S04=P7, S05=P4, S06=P8.
 | 4. KlimaatLayer Bug | 1/1 | Complete   | 2026-04-26 |
 | 5. Document-level cache sentinel | 0/? | Not started | - |
 | 6. WijkPolicy schema + scoring | 0/4 | Not started | - |
-| 7. Factor pinning + groep-pages | 4/5 | In Progress|  |
+| 7. Factor pinning + groep-pages | 5/5 | Complete   | 2026-04-26 |
 | 8. Integration tests + Venlo E2E | 0/? | Not started | - |

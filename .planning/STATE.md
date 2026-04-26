@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 07-05-PLAN.md (Wave 3: story fix + checkpoint for human visual sign-off)"
-last_updated: "2026-04-26T15:19:52.633Z"
-last_activity: 2026-04-24 — M048/Phase 6 Plan 03 shipped — rewrote score_woonvisie_match for WijkPolicy; 5 min, 1 task, 1 file
+stopped_at: "Completed 07-05-PLAN.md (Phase 7 complete — story battery green + visual sign-off + post-approval tweaks)"
+last_updated: "2026-04-26T16:00:00.000Z"
+last_activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
 progress:
   total_phases: 8
   completed_phases: 7
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 3 of 8 complete (P3/P4/P7/P8 pending; P6 Wave 0+2+3 shipped — Wave 4 integration next)
-Plan: 06-03 complete (per-wijk differentiating woonvisie scorer — 9/9 Phase-6 unit tests green)
-Status: Ready to execute Plan 06-04 (Venlo integration + WoonvisiePopup data-contract smoke)
-Last activity: 2026-04-24 — M048/Phase 6 Plan 03 shipped — rewrote score_woonvisie_match for WijkPolicy; 5 min, 1 task, 1 file
+Plan: 07-05 complete (Phase 7 story battery + visual sign-off — pinning UX confirmed; CARDS_PER_PAGE 6→4)
+Status: Phase 7 complete. Ready for Phase 8 (Integration tests + Venlo E2E smoke).
+Last activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
 
 Progress: [█████████░] 88% (7/8 plans)
 
@@ -125,6 +125,9 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 07-04]: bodemtype added to FACTOR_BRON as UI-only 'fysiek' entry for BODEMTYPE env card — not in backend FACTOR_REGISTRY
 - [Phase 07-04]: envCards label→factor_key map is inline keyMap in deriveEnvCards — avoids exported constant that must sync with enrichment labels
 - [Phase 07-05]: ClickOpensPopup story updated to querySelectorAll('[role=button], button') after Plan 04 FactorCard refactor changed interactive cards to div[role=button]
+- [Phase 07-05]: CARDS_PER_PAGE dropped 6→4 with 2x2 grid; MAX_PINS_PER_CATEGORY dropped 6→4 — steady-state M050-M057 factor projection shows 5 categories overflow at 4/page anyway; 4/page accepts overflow as normal pattern, gives titles room in 620px panel
+- [Phase 07-05]: Score badge stays top-right in flex cluster with items-center — earlier overlap was absolute-positioned star + items-start; fix: collapse star+badge into single right-side cluster
+- [Phase 07-05]: No 'bekijk meer →' hover CTA — only woonvisie_match is currently clickable; deferred to M049+ when all cards have factor-detail destinations
 
 ### Pending Todos
 
@@ -136,6 +139,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-26T15:19:44.624Z
-Stopped at: Completed 07-05-PLAN.md (Wave 3: story fix + checkpoint for human visual sign-off)
+Last session: 2026-04-26T16:00:00.000Z
+Stopped at: Completed 07-05-PLAN.md (Phase 7 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix)
 Resume file: None
