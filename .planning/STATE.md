@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 07-01-PLAN.md (Wave 0 Nyquist anchors — 4 backend stubs + frontend stories + VALIDATION.md)
-last_updated: "2026-04-26T13:59:49.197Z"
+stopped_at: Completed 07-03-PLAN.md (bron field + factor-groups.ts + useFactorPins hook)
+last_updated: "2026-04-26T14:20:17.081Z"
 last_activity: 2026-04-24 — M048/Phase 6 Plan 03 shipped — rewrote score_woonvisie_match for WijkPolicy; 5 min, 1 task, 1 file
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 16
-  completed_plans: 12
+  completed_plans: 13
   percent: 88
 ---
 
@@ -61,6 +61,7 @@ Progress: [█████████░] 88% (7/8 plans)
 | Phase 03-woonvisie-popup P02 | 20m | 3 tasks | 2 files |
 | Phase 04-klimaatlayer-bug P01 | 5m | 3 tasks | 2 files |
 | Phase 07-factor-pinning-groep-pages-6-cards-per-page P01 | 5m | 3 tasks | 9 files |
+| Phase 07-factor-pinning-groep-pages-6-cards-per-page P03 | 22m | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,9 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 04-klimaatlayer-bug]: key={activePanel.code} on GemeenteContextPanel (not naam) — codes are stable identifiers, heals all four gemeente layers simultaneously
 - [Phase 07]: Wave 0 Nyquist: ImportError on app.models.user_factor_pin is explicit signal driving Plan 02 — no pytest.skip/xfail allowed
 - [Phase 07]: factorPinsMock uses inline TanStack Query cache pre-seed (queryClient.setQueryData) not MSW — matches Phase 3 precedent
+- [Phase 07-03]: criminaliteit mapped to 'markt' (not 'sociaal') — avoids expanding 6-value Bron enum; marketability affected by criminaliteit
+- [Phase 07-03]: capaciteit mapped to 'fysiek' inline in FACTOR_BRON — UI-only derived card (building_metrics), NOT in backend FACTOR_REGISTRY
+- [Phase 07-03]: bron field REQUIRED on FactorRegistryEntry (no default) — module-load assertion is safety net; forces explicit thought when adding new factors
 
 ### Pending Todos
 
@@ -124,6 +128,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-26T13:59:49.195Z
-Stopped at: Completed 07-01-PLAN.md (Wave 0 Nyquist anchors — 4 backend stubs + frontend stories + VALIDATION.md)
+Last session: 2026-04-26T14:20:17.079Z
+Stopped at: Completed 07-03-PLAN.md (bron field + factor-groups.ts + useFactorPins hook)
 Resume file: None
