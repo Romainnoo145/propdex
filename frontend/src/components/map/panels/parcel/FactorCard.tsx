@@ -8,7 +8,7 @@
  * keyboard-accessible; Star is a nested button with stopPropagation.
  */
 
-import { Star } from 'lucide-react'
+import { ArrowRight, Star } from 'lucide-react'
 import { TruncatedText } from './TruncatedText'
 
 export type CardTone = 'positive' | 'negative'
@@ -99,9 +99,7 @@ export function FactorCard({
               data-testid={isPinned ? 'pin-star-filled' : 'pin-star-button'}
               data-pinned={isPinned ? 'true' : 'false'}
               aria-label={isPinned ? 'Unpin factor' : 'Pin factor'}
-              className={`p-0.5 rounded-full hover:bg-slate-50 transition-opacity duration-150 ${
-                isPinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-              }`}
+              className="p-0.5 rounded-full hover:bg-slate-50 transition-colors"
             >
               <Star
                 className={`size-4 ${
@@ -122,12 +120,20 @@ export function FactorCard({
         />
       </div>
 
-      {/* Bottom: sub */}
-      <div className="border-t border-slate-50 pt-3 min-w-0">
+      {/* Bottom: sub + drill-down indicator on clickable cards */}
+      <div className="border-t border-slate-50 pt-3 min-w-0 flex items-end justify-between gap-2">
         <TruncatedText
           text={isMissing ? 'Geen data' : card.sub}
           className="text-[11px] font-bold text-slate-400 leading-tight line-clamp-2 pr-1"
         />
+        {isInteractive && !isMissing && (
+          <ArrowRight
+            data-testid="factor-card-drill-down"
+            aria-hidden="true"
+            className="size-3 text-slate-300 shrink-0 mb-0.5"
+            strokeWidth={2}
+          />
+        )}
       </div>
     </div>
   )
