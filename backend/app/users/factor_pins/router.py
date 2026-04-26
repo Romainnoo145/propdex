@@ -28,7 +28,7 @@ from app.users.factor_pins.schemas import (
 
 logger = logging.getLogger(__name__)
 
-MAX_PINS_PER_CATEGORY = 6
+MAX_PINS_PER_CATEGORY = 4
 
 router = APIRouter(
     prefix="/api/users/me/factor-pins",
@@ -65,8 +65,8 @@ async def create_pin(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> FactorPinResponse:
-    """Create a new pin. Enforces max-6 per category and uniqueness."""
-    # Server-side max-6 guard (frontend has its own toast guard; this is the backup-net)
+    """Create a new pin. Enforces max-pins per category and uniqueness."""
+    # Server-side max-pins guard (frontend has its own toast guard; this is the backup-net)
     count_q = select(func.count(UserFactorPin.id)).where(
         UserFactorPin.user_id == current_user.id,
         UserFactorPin.organization_id == current_user.organization_id,

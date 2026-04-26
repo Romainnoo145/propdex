@@ -133,7 +133,7 @@ export function FactorCard({
   )
 }
 
-/** Ghost slot rendered when pinned-page is partial (< 6 pins). */
+/** Ghost slot rendered when pinned-page is partial (< CARDS_PER_PAGE pins). */
 interface GhostCardProps {
   onClick?: () => void
 }

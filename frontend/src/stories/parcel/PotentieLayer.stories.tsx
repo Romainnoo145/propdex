@@ -251,23 +251,21 @@ export const PinnedPagePartial: Story = {
   },
 }
 
-// SC#5: 6 pins → 6 cards no ghosts
+// SC#5: 4 pins → 4 cards no ghosts
 export const PinnedPageFull: Story = {
-  name: 'Phase 7 — Pinned page (6 pins, no ghosts)',
+  name: 'Phase 7 — Pinned page (4 pins, no ghosts)',
   decorators: [pinDecorator([
     makeFactorPin('vrije_grond', 0),
     makeFactorPin('optoppotentie', 1),
     makeFactorPin('bestemming', 2),
     makeFactorPin('leegstand', 3),
-    makeFactorPin('funda_frictie', 4),
-    makeFactorPin('perceelgrootte', 5),
   ])],
   args: { parcel: mockParcelWithBlerick, gemeenteNaam: 'Venlo' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('GEPIND')).toBeInTheDocument()
-    const grid = canvasElement.querySelector('.grid-cols-3') as HTMLElement
-    await expect(grid.children.length).toBe(6)
+    const grid = canvasElement.querySelector('.grid-cols-2') as HTMLElement
+    await expect(grid.children.length).toBe(4)
     await expect(canvas.queryAllByText(/pin een factor/i).length).toBe(0)
   },
 }
@@ -335,16 +333,14 @@ export const PinFlow: Story = {
   },
 }
 
-// SC#8: 6 pins + 7th attempt → toast "Max 6 bereikt"
-export const Max6Guard: Story = {
-  name: 'Phase 7 — 7th pin attempt shows toast',
+// SC#8: 4 pins + 5th attempt → toast "Max 4 bereikt"
+export const Max4Guard: Story = {
+  name: 'Phase 7 — 5th pin attempt shows toast',
   decorators: [pinDecorator([
     makeFactorPin('vrije_grond', 0),
     makeFactorPin('optoppotentie', 1),
     makeFactorPin('bestemming', 2),
     makeFactorPin('leegstand', 3),
-    makeFactorPin('funda_frictie', 4),
-    makeFactorPin('perceelgrootte', 5),
   ])],
   args: { parcel: mockParcelWithBlerick, gemeenteNaam: 'Venlo' },
   play: async ({ canvasElement }) => {
@@ -355,13 +351,13 @@ export const Max6Guard: Story = {
     await userEvent.click(next)
     await userEvent.click(next) // FYSIEK page
     await waitFor(() => expect(canvas.getByText('FYSIEK')).toBeInTheDocument(), { timeout: 1500 })
-    // Try to pin a 7th — find first unpinned star button
+    // Try to pin a 5th — find first unpinned star button
     const starButtons = canvasElement.querySelectorAll('[data-testid="pin-star-button"]:not([data-pinned="true"])')
     await expect(starButtons.length).toBeGreaterThan(0)
     await userEvent.click(starButtons[0] as HTMLElement)
     // Toast renders to portal — query body
     const body = within(document.body)
-    await waitFor(() => expect(body.getByText(/Max 6 bereikt/i)).toBeInTheDocument(), { timeout: 1500 })
+    await waitFor(() => expect(body.getByText(/Max 4 bereikt/i)).toBeInTheDocument(), { timeout: 1500 })
   },
 }
 

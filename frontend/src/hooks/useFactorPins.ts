@@ -9,8 +9,8 @@
  *   POST   /api/users/me/factor-pins {category, factor_key}     → 201 FactorPin | 409 | 400 MAX_PINS_REACHED
  *   DELETE /api/users/me/factor-pins/{id}                       → 204
  *
- * Max-6 guard fires `toast("⭐ Max 6 bereikt")` BEFORE POST when adding
- * would exceed 6 pins; server 400 is silent backup-net.
+ * Max-4 guard fires `toast("⭐ Max 4 bereikt")` BEFORE POST when adding
+ * would exceed 4 pins; server 400 is silent backup-net.
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -29,7 +29,7 @@ export interface FactorPin {
   created_at: string
 }
 
-export const MAX_PINS_PER_CATEGORY = 6
+export const MAX_PINS_PER_CATEGORY = 4
 
 const BASE = '/api/users/me/factor-pins'
 
@@ -133,7 +133,7 @@ export function useFactorPins(category: PinCategory): UseFactorPinsResult {
       return
     }
     if (pins.length >= MAX_PINS_PER_CATEGORY) {
-      toast('⭐ Max 6 bereikt')
+      toast('⭐ Max 4 bereikt')
       return
     }
     addMutation.mutate(factorKey)

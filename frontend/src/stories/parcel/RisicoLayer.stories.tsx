@@ -88,15 +88,13 @@ export const PinnedPageWithRisicoPins: Story = {
   },
 }
 
-export const Max6GuardRisico: Story = {
-  name: 'Phase 7 — Risico 7th pin shows toast',
+export const Max4GuardRisico: Story = {
+  name: 'Phase 7 — Risico 5th pin shows toast',
   decorators: [pinDecorator([
     makeFactorPin('funderingsrisico', 0, 'risico'),
     makeFactorPin('asbest', 1, 'risico'),
     makeFactorPin('bodemverontreiniging', 2, 'risico'),
     makeFactorPin('monument', 3, 'risico'),
-    makeFactorPin('bestemmingswijziging', 4, 'risico'),
-    makeFactorPin('constructieve_staat', 5, 'risico'),
   ])],
   args: { parcel: mockRisicoParcel },
   play: async ({ canvasElement }) => {
@@ -113,6 +111,6 @@ export const Max6GuardRisico: Story = {
     const starButtons = canvasElement.querySelectorAll('[data-testid="pin-star-button"]:not([data-pinned="true"])')
     await userEvent.click(starButtons[0] as HTMLElement)
     const body = within(document.body)
-    await waitFor(() => expect(body.getByText(/Max 6 bereikt/i)).toBeInTheDocument(), { timeout: 1500 })
+    await waitFor(() => expect(body.getByText(/Max 4 bereikt/i)).toBeInTheDocument(), { timeout: 1500 })
   },
 }

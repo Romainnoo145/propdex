@@ -428,7 +428,7 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -40 }}
             transition={{ duration: 0.2 }}
-            className="grid grid-cols-3 grid-rows-2 gap-1.5 auto-rows-fr flex-1"
+            className="grid grid-cols-2 grid-rows-2 gap-1.5 auto-rows-fr flex-1"
           >
             {(currentPage?.cards ?? []).map((slot, idx) => {
               if ('kind' in slot && slot.kind === 'ghost') {

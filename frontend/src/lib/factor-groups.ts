@@ -103,15 +103,15 @@ export interface BuiltPage {
   cards: PageSlot[]
 }
 
-export const CARDS_PER_PAGE = 6
+export const CARDS_PER_PAGE = 4
 
 /**
  * Build the full page array: page 0 = pinned synth-page; page 1..N = group pages.
  *
  * Page 0 logic:
- *   - 0 pins → title "TOP FACTOREN", show top-6 by |pts| desc across all bronnen
- *   - 1..5 pins → title "GEPIND", show pinned cards in position order + ghost slots filling to 6
- *   - 6 pins → title "GEPIND", show 6 pinned cards (no ghosts)
+ *   - 0 pins → title "TOP FACTOREN", show top-4 by |pts| desc across all bronnen
+ *   - 1..3 pins → title "GEPIND", show pinned cards in position order + ghost slots filling to 4
+ *   - 4 pins → title "GEPIND", show 4 pinned cards (no ghosts)
  *
  * Group pages (one per bron in BRON_ORDER, skipping empty):
  *   - title = BRON_LABEL[bron]
@@ -125,13 +125,13 @@ export function buildPages(
   // Page 0: pinned or fallback
   let pinnedPage: BuiltPage
   if (pins.length === 0) {
-    const top6 = [...allCards]
+    const topN = [...allCards]
       .sort((a, b) => Math.abs(b.pts) - Math.abs(a.pts))
       .slice(0, CARDS_PER_PAGE)
     pinnedPage = {
       title: 'TOP FACTOREN',
       kind: 'pinned',
-      cards: top6,
+      cards: topN,
     }
   } else {
     const ordered = [...pins].sort((a, b) => a.position - b.position)

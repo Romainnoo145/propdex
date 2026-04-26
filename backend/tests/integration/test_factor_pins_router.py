@@ -60,12 +60,11 @@ async def test_post_duplicate_pin_returns_409(
 
 
 @pytest.mark.asyncio
-async def test_post_seventh_pin_returns_400_max_pins_reached(
+async def test_post_fifth_pin_returns_400_max_pins_reached(
     async_client: AsyncClient, auth_headers: dict
 ) -> None:
     keys = [
-        "vrije_grond", "optoppotentie", "bestemming",
-        "leegstand", "funda_frictie", "perceelgrootte",
+        "vrije_grond", "optoppotentie", "bestemming", "leegstand",
     ]
     for key in keys:
         r = await async_client.post(
@@ -74,11 +73,11 @@ async def test_post_seventh_pin_returns_400_max_pins_reached(
             json={"category": "potentie", "factor_key": key},
         )
         assert r.status_code == 201, r.text
-    # 7th pin
+    # 5th pin
     resp = await async_client.post(
         "/api/users/me/factor-pins",
         headers=auth_headers,
-        json={"category": "potentie", "factor_key": "demografie"},
+        json={"category": "potentie", "factor_key": "funda_frictie"},
     )
     assert resp.status_code == 400
     detail = resp.json()["detail"]
