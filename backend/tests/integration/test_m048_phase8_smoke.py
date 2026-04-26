@@ -47,6 +47,19 @@ _VENLO_BLERICK_CENTRUM_PAYLOAD = WoonvisiePayload(
 )
 
 
+def _make_mock_claude_wrapper(mock_client):
+    """Wrap an AsyncMock client into the wrapper-shape returned by create_claude_client().
+
+    extract_factor_live() reads `wrapper.client` and `wrapper.model` (see
+    app/ai/factor_extractor.py:79-81). Tests must monkeypatch
+    `app.ai.factor_extractor.create_claude_client` to return this wrapper —
+    NOT `app.services.factor_extraction_service.get_claude_client` (which does
+    not exist; the plan referenced a path that was never implemented).
+    """
+    from types import SimpleNamespace
+    return SimpleNamespace(client=mock_client, model="test-model")
+
+
 async def _seed_venlo_woonvisie(test_db, org, user) -> PolicyDocument:
     """Seed an active Venlo woonvisie PolicyDocument and return it.
 
@@ -81,7 +94,42 @@ async def _seed_venlo_woonvisie(test_db, org, user) -> PolicyDocument:
 @pytest.mark.asyncio
 async def test_two_parcels_one_claude_call_via_cascade_boundary(test_db, create_test_user, monkeypatch):
     """SC#1: two real parcel_ids → cascade boundary collapses to 1 mock Claude call via DOCUMENT_SENTINEL."""
-    pytest.fail("Wave 0 stub — Wave 1 Task 2 implementation required")
+    user, org = await create_test_user()
+    await _seed_venlo_woonvisie(test_db, org, user)
+
+    # Mock Anthropic client at the call-site binding. extract_factor_live() in
+    # app.ai.factor_extractor calls create_claude_client() — patch that import,
+    # NOT the (non-existent) app.services.factor_extraction_service.get_claude_client.
+    response = make_tool_use_response(
+        tool_name="extract_woonvisie_match",
+        tool_input=_VENLO_BLERICK_CENTRUM_PAYLOAD.model_dump(mode="json"),
+    )
+    mock_client = make_mock_anthropic_client(response)
+    monkeypatch.setattr(
+        "app.ai.factor_extractor.create_claude_client",
+        lambda: _make_mock_claude_wrapper(mock_client),
+    )
+
+    # Two different real parcel_ids — same gemeente, same doc.
+    payloads_1 = await cascade_enrichment_service.get_cascade_payloads(
+        test_db,
+        parcel_id="NL.IMBAG.Pand.0983-BLERICK-001",
+        gemeente_code="0983",
+        organization_id=org.id,
+    )
+    payloads_2 = await cascade_enrichment_service.get_cascade_payloads(
+        test_db,
+        parcel_id="NL.IMBAG.Pand.0983-CENTRUM-002",
+        gemeente_code="0983",
+        organization_id=org.id,
+    )
+
+    # The proof: cascade-boundary collapsed two parcel-paths into one Claude call via DOCUMENT_SENTINEL.
+    assert mock_client.messages.create.call_count == 1, (
+        f"Expected 1 Claude call (cache-dedup); got {mock_client.messages.create.call_count}"
+    )
+    assert "woonvisie_match" in payloads_1, "First parcel should have woonvisie_match payload"
+    assert "woonvisie_match" in payloads_2, "Second parcel should have woonvisie_match payload"
 
 
 @pytest.mark.asyncio
