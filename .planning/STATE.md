@@ -4,7 +4,7 @@ milestone: v4.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 04-01-PLAN.md (BUG-01 KlimaatLayer ghost-verdict — key prop fix + 3 Storybook stories green)
-last_updated: "2026-04-26T12:35:29.065Z"
+last_updated: "2026-04-26T12:36:43.486Z"
 last_activity: 2026-04-24 — M048/Phase 6 Plan 03 shipped — rewrote score_woonvisie_match for WijkPolicy; 5 min, 1 task, 1 file
 progress:
   total_phases: 8
