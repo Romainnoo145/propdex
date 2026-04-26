@@ -378,3 +378,35 @@ export const MissingPinDashedBorder: Story = {
     await expect(dashed).toBeTruthy()
   },
 }
+
+// --- Phase 8 / Wave 0 stubs (Task 7) — failing-loud per Nyquist stub-first discipline ---
+// These 4 exports MUST exist as failing stories before Tasks 8+9 replace each play body
+// with implemented assertions. Mirrors backend Task 1 pattern (pytest.fail in Python).
+
+export const Phase8WijkCitaatNotAlgemeen: Story = {
+  args: { parcel: mockParcelWithBlerick, gemeenteNaam: 'Venlo' },
+  play: async () => {
+    throw new Error('Wave 0 stub — Wave 1 Task 8 implementation required (SC#3 positive: Blerick citaat appears, gemeente-breed algemeen_citaat suppressed)')
+  },
+}
+
+export const Phase8AlgemeenCitaatFallback: Story = {
+  args: { parcel: mockParcelWithBlerick, gemeenteNaam: 'Venlo' },
+  play: async () => {
+    throw new Error('Wave 0 stub — Wave 1 Task 8 implementation required (SC#3 fallback: matched_policy=null path renders algemeen_citaat)')
+  },
+}
+
+export const Phase8PinsPersistAcrossRemount: Story = {
+  args: { parcel: mockParcelWithBlerick, gemeenteNaam: 'Venlo' },
+  play: async () => {
+    throw new Error('Wave 0 stub — Wave 1 Task 9 implementation required (SC#4: pre-seeded pin cache survives page-nav-then-back remount)')
+  },
+}
+
+export const Phase8PinnedSurvivesPageNav: Story = {
+  args: { parcel: mockParcelWithBlerick, gemeenteNaam: 'Venlo' },
+  play: async () => {
+    throw new Error('Wave 0 stub — Wave 1 Task 9 implementation required (SC#4 multi-nav: pinned cards persist across multiple group-page round-trips)')
+  },
+}
