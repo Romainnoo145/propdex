@@ -5,7 +5,11 @@ import type { ScanResultItem, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/type
 import { isScoreV3 } from '@/lib/score'
 import { TruncatedText } from '../TruncatedText'
 import { WoonvisiePopup, type WijkPolicy } from '../WoonvisiePopup'
+import { FactorCard, GhostCard } from '../FactorCard'
 import { useParcelProjectType } from '@/hooks/useParcelProjectType'
+import { useFactorPins } from '@/hooks/useFactorPins'
+import { FACTOR_BRON, buildPages, CARDS_PER_PAGE } from '@/lib/factor-groups'
+import type { PageCard } from '@/lib/factor-groups'
 
 /* ── Verdict derivation ───────────────────────────────────── */
 
@@ -56,7 +60,7 @@ function deriveVerdict(potentieScore: number | null): Verdict {
 
 function generateOneLiner(
   parcel: ScanResultItem,
-  cards: CardDisplay[],
+  cards: PageCard[],
   isV3: boolean,
 ): string {
   if (isV3 && parcel.score_breakdown) {
@@ -65,7 +69,7 @@ function generateOneLiner(
       .filter((c) => c.pts > 0)
       .sort((a, b) => b.pts - a.pts)
       .slice(0, 2)
-    if (top.length > 0) return top.map((c) => `${c.value}`).join(' \u00b7 ')
+    if (top.length > 0) return top.map((c) => `${c.value}`).join(' · ')
   }
 
   // v2.1 fallback
@@ -89,19 +93,12 @@ function generateOneLiner(
   }
 
   if (parts.length === 0) {
-    return parcel.bouwjaar != null ? `Bouwjaar ${parcel.bouwjaar} \u2014 heuristiek` : 'Beperkte data'
+    return parcel.bouwjaar != null ? `Bouwjaar ${parcel.bouwjaar} — heuristiek` : 'Beperkte data'
   }
-  return parts.slice(0, 2).join(' \u00b7 ')
+  return parts.slice(0, 2).join(' · ')
 }
 
 /* ── Factor display mapping ───────────────────────────────── */
-
-interface CardDisplay {
-  label: string
-  value: string
-  sub: string
-  pts: number
-}
 
 /** Map from factor key → human-readable card display */
 const FACTOR_LABELS: Record<string, string> = {
@@ -127,8 +124,8 @@ function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResu
       const pandOpp = parcel.building_metrics?.pand_oppervlakte_m2 ?? 0
       const marge = Math.round(Math.max(0, area - pandOpp))
       return {
-        value: pct != null ? `${pct}% VRIJ` : '\u2014',
-        sub: marge > 0 ? `\u00b1 ${marge.toLocaleString('nl-NL')} m\u00b2 marge` : 'Geen marge',
+        value: pct != null ? `${pct}% VRIJ` : '—',
+        sub: marge > 0 ? `± ${marge.toLocaleString('nl-NL')} m² marge` : 'Geen marge',
       }
     }
     case 'optoppotentie': {
@@ -143,7 +140,7 @@ function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResu
       if (ah != null && mh != null && mh > ah) {
         return { value: `+${Math.round(mh - ah)}M`, sub: `Max ${mh}m vs huidig ${ah}m` }
       }
-      return { value: '\u2014', sub: factor.missing ? 'Geen DSO hoogtedata' : 'Max bereikt' }
+      return { value: '—', sub: factor.missing ? 'Geen DSO hoogtedata' : 'Max bereikt' }
     }
     case 'bestemming': {
       const best = parcel.bestemmingen
@@ -158,7 +155,7 @@ function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResu
           sub: isWonen ? 'Compatibel' : 'Wijziging nodig',
         }
       }
-      return { value: '\u2014', sub: 'Geen bestemmingsdata' }
+      return { value: '—', sub: 'Geen bestemmingsdata' }
     }
     case 'leegstand': {
       const signal = parcel.vacancy_signal
@@ -173,26 +170,26 @@ function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResu
       if (ms && ms.listing_duration_days > 0) {
         return { value: `${ms.listing_duration_days} DAGEN`, sub: 'Frictie op Funda' }
       }
-      return { value: '\u2014', sub: factor.missing ? 'Niet op Funda' : 'Geen marktsignaal' }
+      return { value: '—', sub: factor.missing ? 'Niet op Funda' : 'Geen marktsignaal' }
     }
     case 'perceelgrootte': {
       const area = parcel.area_m2
       if (area != null && area > 0) {
         return {
-          value: `${area.toLocaleString('nl-NL')} M\u00b2`,
+          value: `${area.toLocaleString('nl-NL')} M²`,
           sub: area >= 1000 ? 'Groot perceeloppervlak' : area >= 300 ? 'Gemiddeld oppervlak' : 'Klein perceel',
         }
       }
-      return { value: '\u2014', sub: 'Geen oppervlaktedata' }
+      return { value: '—', sub: 'Geen oppervlaktedata' }
     }
     case 'demografie': {
       const score = factor.genormaliseerde_score
-      if (factor.missing) return { value: '\u2014', sub: 'Geen CBS data' }
+      if (factor.missing) return { value: '—', sub: 'Geen CBS data' }
       const label = score >= 0.7 ? 'GROEIEND' : score >= 0.4 ? 'STABIEL' : 'KRIMPEND'
       return { value: label, sub: `Score ${Math.round(score * 100)}% (CBS)` }
     }
     case 'vergunning_succeskans': {
-      if (factor.missing) return { value: '\u2014', sub: 'Geen vergunningdata' }
+      if (factor.missing) return { value: '—', sub: 'Geen vergunningdata' }
       const pct = Math.round(factor.genormaliseerde_score * 100)
       return { value: `${pct}% SUCCES`, sub: 'Vergunningsklimaat' }
     }
@@ -215,7 +212,7 @@ function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResu
       return { value, sub }
     }
     default:
-      return { value: '\u2014', sub: '' }
+      return { value: '—', sub: '' }
   }
 }
 
@@ -230,9 +227,9 @@ function capacityValue(parcel: ScanResultItem): string {
   if (vrij > 0 && maxLagen != null && maxLagen > 0) {
     const gbo = vrij * maxLagen * 0.8 // 80% BVO→GBO
     const units = Math.floor(gbo / 80) // 80m² per unit
-    return units > 0 ? `${units} UNITS` : '\u2014'
+    return units > 0 ? `${units} UNITS` : '—'
   }
-  return '\u2014'
+  return '—'
 }
 
 function capacitySub(parcel: ScanResultItem): string {
@@ -243,14 +240,14 @@ function capacitySub(parcel: ScanResultItem): string {
   const maxLagen = bm?.max_bouwlagen ?? null
   if (vrij > 0 && maxLagen != null && maxLagen > 0) {
     const gbo = Math.round(vrij * maxLagen * 0.8)
-    return `\u00b1 ${gbo.toLocaleString('nl-NL')} m\u00b2 GBO`
+    return `± ${gbo.toLocaleString('nl-NL')} m² GBO`
   }
   return 'Onvoldoende data'
 }
 
 /* ── v2.1 fallback cards ──────────────────────────────────── */
 
-function deriveV21Cards(parcel: ScanResultItem): CardDisplay[] {
+function deriveV21Cards(parcel: ScanResultItem): Omit<PageCard, 'factor_key' | 'bron'>[] {
   const area = parcel.area_m2 ?? 0
   const pandOpp = parcel.building_metrics?.pand_oppervlakte_m2 ?? 0
   const vrijPct = area > 0 ? Math.round(Math.max(0, (1 - pandOpp / area)) * 100) : null
@@ -278,18 +275,18 @@ function deriveV21Cards(parcel: ScanResultItem): CardDisplay[] {
   else if (signal === 'in_gebruik') { leegVal = 'IN GEBRUIK'; leegSub = 'Geen leegstandsignaal' }
 
   const ms = parcel.market_signals
-  const fundaVal = ms && ms.listing_duration_days > 0 ? `${ms.listing_duration_days} DAGEN` : '\u2014'
+  const fundaVal = ms && ms.listing_duration_days > 0 ? `${ms.listing_duration_days} DAGEN` : '—'
   const fundaSub = ms && ms.listing_duration_days > 0 ? 'Frictie op Funda' : 'Niet op Funda'
 
   return [
-    { label: 'ONDERBENUTTING', value: vrijPct != null ? `${vrijPct}% VRIJ` : '\u2014', sub: `\u00b1 ${vrijM2.toLocaleString('nl-NL')} m\u00b2 marge`, pts: 0 },
-    { label: 'HEADROOM', value: lagenHead != null ? `+${lagenHead} LAGEN` : '\u2014', sub: lagenHead != null ? `Max ${bm?.max_bouwlagen} vs huidig ${bm?.actual_bouwlagen}` : 'Geen DSO data', pts: 0 },
+    { label: 'ONDERBENUTTING', value: vrijPct != null ? `${vrijPct}% VRIJ` : '—', sub: `± ${vrijM2.toLocaleString('nl-NL')} m² marge`, pts: 0 },
+    { label: 'HEADROOM', value: lagenHead != null ? `+${lagenHead} LAGEN` : '—', sub: lagenHead != null ? `Max ${bm?.max_bouwlagen} vs huidig ${bm?.actual_bouwlagen}` : 'Geen DSO data', pts: 0 },
     { label: 'BESTEMMING', value: bestNaam, sub: isWonen ? 'Compatibel' : 'Wijziging nodig', pts: 0 },
     { label: 'ACQUISITIE', value: leegVal, sub: leegSub, pts: 0 },
     { label: 'MARKT', value: fundaVal, sub: fundaSub, pts: 0 },
-    { label: 'SCHAAL', value: area > 0 ? `${area.toLocaleString('nl-NL')} M\u00b2` : '\u2014', sub: area >= 1000 ? 'Groot perceeloppervlak' : area >= 300 ? 'Gemiddeld oppervlak' : 'Klein perceel', pts: 0 },
-    { label: 'DEMOGRAFIE', value: '\u2014', sub: 'Niet beschikbaar (v2.1 scan)', pts: 0 },
-    { label: 'LEGAL', value: '\u2014', sub: 'Niet beschikbaar (v2.1 scan)', pts: 0 },
+    { label: 'SCHAAL', value: area > 0 ? `${area.toLocaleString('nl-NL')} M²` : '—', sub: area >= 1000 ? 'Groot perceeloppervlak' : area >= 300 ? 'Gemiddeld oppervlak' : 'Klein perceel', pts: 0 },
+    { label: 'DEMOGRAFIE', value: '—', sub: 'Niet beschikbaar (v2.1 scan)', pts: 0 },
+    { label: 'LEGAL', value: '—', sub: 'Niet beschikbaar (v2.1 scan)', pts: 0 },
     { label: 'CAPACITEIT', value: capacityValue(parcel), sub: capacitySub(parcel), pts: 0 },
   ]
 }
@@ -301,13 +298,18 @@ interface PotentieLayerProps {
   gemeenteNaam: string
 }
 
-const CARDS_PER_PAGE = 9
+const POTENTIE_KEYS = [
+  'vrije_grond', 'optoppotentie', 'bestemming', 'leegstand',
+  'funda_frictie', 'perceelgrootte', 'demografie', 'vergunning_succeskans',
+  'capaciteit', 'woonvisie_match',
+] as const
 
 export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
   const [page, setPage] = useState(0)
   const [woonvisieOpen, setWoonvisieOpen] = useState(false)
   const { data: projectTypeData } = useParcelProjectType(parcel.parcel_id)
   const projectType = projectTypeData?.project_type ?? 'onbepaald'
+  const { pins, toggle, isPinned } = useFactorPins('potentie')
 
   // Extract woonvisie factor data for popup. Phase 6 factor.waarde shape:
   // { matched_wijk, matched_policy, prioritized_segment, algemeen_citaat } | null
@@ -325,32 +327,55 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
     : parcel.score != null ? Math.round(parcel.score) : null
   const verdict = deriveVerdict(potentieScore)
 
-  const POTENTIE_KEYS = [
-    'vrije_grond', 'optoppotentie', 'bestemming', 'leegstand',
-    'funda_frictie', 'perceelgrootte', 'demografie', 'vergunning_succeskans',
-    'capaciteit', 'woonvisie_match',
-  ] as const
-
-  const allCards: CardDisplay[] = (() => {
+  const allCards: PageCard[] = (() => {
     if (isV3 && parcel.score_breakdown) {
       const breakdown = parcel.score_breakdown as ScoreBreakdownV3
       return POTENTIE_KEYS.map((key) => {
         const factor = breakdown[key]
+        const bron = FACTOR_BRON[key] ?? 'fysiek'
         if (factor) {
           const { value, sub } = formatFactorValue(key, factor, parcel)
-          return { label: FACTOR_LABELS[key] ?? key.toUpperCase(), value, sub, pts: Math.round(factor.bijdrage * 10) / 10 }
+          return {
+            label: FACTOR_LABELS[key] ?? key.toUpperCase(),
+            value,
+            sub,
+            pts: Math.round(factor.bijdrage * 10) / 10,
+            factor_key: key,
+            bron,
+            missing: factor.missing,
+          }
         }
         if (key === 'capaciteit') {
-          return { label: FACTOR_LABELS[key] ?? key.toUpperCase(), value: capacityValue(parcel), sub: capacitySub(parcel), pts: 0 }
+          return {
+            label: FACTOR_LABELS[key] ?? key.toUpperCase(),
+            value: capacityValue(parcel),
+            sub: capacitySub(parcel),
+            pts: 0,
+            factor_key: key,
+            bron,
+          }
         }
-        return { label: FACTOR_LABELS[key] ?? key.toUpperCase(), value: '—', sub: 'Data niet beschikbaar', pts: 0 }
+        return {
+          label: FACTOR_LABELS[key] ?? key.toUpperCase(),
+          value: '—',
+          sub: 'Data niet beschikbaar',
+          pts: 0,
+          factor_key: key,
+          bron,
+          missing: true,
+        }
       })
     }
-    return deriveV21Cards(parcel)
+    // v2.1 fallback — wrap deriveV21Cards results with factor_key + bron
+    return deriveV21Cards(parcel).map((c, i) => ({
+      ...c,
+      factor_key: POTENTIE_KEYS[i] ?? `v21-${i}`,
+      bron: FACTOR_BRON[POTENTIE_KEYS[i] ?? ''] ?? 'fysiek',
+    }))
   })()
 
-  const totalPages = Math.ceil(allCards.length / CARDS_PER_PAGE)
-  const pageCards = allCards.slice(page * CARDS_PER_PAGE, (page + 1) * CARDS_PER_PAGE)
+  const pages = buildPages(allCards, pins.map((p) => ({ id: p.id, factor_key: p.factor_key, position: p.position })))
+  const currentPage = pages[page]
   const oneLiner = generateOneLiner(parcel, allCards, isV3)
 
   const springVal = useSpring(0, { stiffness: 60, damping: 20 })
@@ -359,6 +384,11 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
     return () => clearTimeout(timer)
   }, [potentieScore, springVal])
   const barWidth = useTransform(springVal, (v) => `${v}%`)
+
+  // Keep page in bounds when pages count changes
+  useEffect(() => {
+    if (page >= pages.length) setPage(Math.max(0, pages.length - 1))
+  }, [pages.length, page])
 
   return (
     <div className="flex flex-col flex-1 pt-4 px-6 pb-4">
@@ -386,8 +416,11 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
         </div>
       </div>
 
-      {/* ── 3x3 Intelligence Grid with page transition ───── */}
-      <div className="flex-1 mt-4 relative">
+      {/* ── Factor Cards Grid with page transition ────────── */}
+      <div className="flex-1 mt-4 relative flex flex-col">
+        <h3 className="text-[10px] font-black tracking-[0.15em] uppercase text-slate-500 mb-2">
+          {currentPage?.title ?? ''}
+        </h3>
         <AnimatePresence mode="wait">
           <motion.div
             key={page}
@@ -395,54 +428,28 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -40 }}
             transition={{ duration: 0.2 }}
-            className="grid grid-cols-3 gap-1.5 auto-rows-fr h-full"
+            className="grid grid-cols-3 grid-rows-2 gap-1.5 auto-rows-fr flex-1"
           >
-            {pageCards.map((card) => {
-              if (card.label === 'WOONVISIE' && hasWoonvisieData) {
-                return (
-                  <button
-                    key={card.label}
-                    type="button"
-                    onClick={() => setWoonvisieOpen(true)}
-                    className="bg-white border border-slate-100 rounded-[24px] p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow overflow-hidden text-left cursor-pointer"
-                  >
-                    <div className="flex justify-between items-start gap-1">
-                      <TruncatedText text={card.label} className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight line-clamp-1 pr-1" />
-                      <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0">
-                        {card.pts > 0 ? `+${card.pts}` : '—'}
-                      </span>
-                    </div>
-
-                    <div className="flex-1 flex items-center min-w-0">
-                      <TruncatedText text={card.value} className="text-2xl font-black text-slate-900 tracking-tight leading-[1.05] line-clamp-2 break-words pr-1" />
-                    </div>
-
-                    <div className="border-t border-slate-50 pt-3 min-w-0">
-                      <TruncatedText text={card.sub} className="text-[11px] font-bold text-slate-400 leading-tight line-clamp-2 pr-1" />
-                    </div>
-                  </button>
-                )
+            {(currentPage?.cards ?? []).map((slot, idx) => {
+              if ('kind' in slot && slot.kind === 'ghost') {
+                return <GhostCard key={`ghost-${idx}`} />
               }
+              const card = slot as PageCard
+              const pinned = isPinned(card.factor_key)
               return (
-                <div
-                  key={card.label}
-                  className="bg-white border border-slate-100 rounded-[24px] p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow overflow-hidden"
-                >
-                  <div className="flex justify-between items-start gap-1">
-                    <TruncatedText text={card.label} className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight line-clamp-1 pr-1" />
-                    <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0">
-                      {card.pts > 0 ? `+${card.pts}` : '—'}
-                    </span>
-                  </div>
-
-                  <div className="flex-1 flex items-center min-w-0">
-                    <TruncatedText text={card.value} className="text-2xl font-black text-slate-900 tracking-tight leading-[1.05] line-clamp-2 break-words pr-1" />
-                  </div>
-
-                  <div className="border-t border-slate-50 pt-3 min-w-0">
-                    <TruncatedText text={card.sub} className="text-[11px] font-bold text-slate-400 leading-tight line-clamp-2 pr-1" />
-                  </div>
-                </div>
+                <FactorCard
+                  key={card.factor_key}
+                  card={{ label: card.label, value: card.value, sub: card.sub, pts: card.pts }}
+                  tone="positive"
+                  isPinned={pinned}
+                  isMissing={!!card.missing}
+                  onStarClick={() => toggle(card.factor_key)}
+                  onCardClick={
+                    card.factor_key === 'woonvisie_match' && hasWoonvisieData
+                      ? () => setWoonvisieOpen(true)
+                      : undefined
+                  }
+                />
               )
             })}
           </motion.div>
@@ -461,12 +468,12 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
           <ChevronLeft className="size-4 text-slate-400" />
         </button>
         <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest tabular-nums">
-          {page + 1} / {totalPages}
+          {page + 1} / {pages.length}
         </span>
         <button
           type="button"
-          onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-          disabled={page >= totalPages - 1}
+          onClick={() => setPage((p) => Math.min(pages.length - 1, p + 1))}
+          disabled={page >= pages.length - 1}
           className="p-1 rounded-full hover:bg-slate-100 disabled:opacity-20 transition-colors"
           aria-label="Volgende pagina"
         >
