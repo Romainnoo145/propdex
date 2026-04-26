@@ -171,17 +171,18 @@ export const ClickOpensPopup: Story = {
     const bodyBefore = within(document.body)
     await expect(bodyBefore.queryByText('Blerick')).not.toBeInTheDocument()
 
-    // PotentieLayer has 10 cards, CARDS_PER_PAGE=9, so woonvisie_match is on page 2.
-    // Navigate to the next page first.
+    // Phase 7: CARDS_PER_PAGE=6, page 0 = TOP FACTOREN (or GEPIND), page 1 = GEMEENTE BELEID.
+    // woonvisie_match belongs to gemeente_beleid bron → navigate to page 1 first.
     const nextBtn = canvas.getByRole('button', { name: /volgende pagina/i })
     await userEvent.click(nextBtn)
 
-    // Wait for page transition (AnimatePresence 200ms) then find the WOONVISIE button.
-    // The button contains "WOONVISIE" as text (via TruncatedText <p>) inside it.
+    // Wait for page transition (AnimatePresence 200ms) then find the WOONVISIE interactive element.
+    // FactorCard with onCardClick renders as div[role=button] — include both in selector.
     let woonvisieButton: HTMLElement | null = null
     await waitFor(() => {
-      const allButtons = Array.from(canvasElement.querySelectorAll('button'))
-      woonvisieButton = allButtons.find((btn) => btn.textContent?.includes('WOONVISIE')) ?? null
+      // FactorCard uses div[role=button] for interactive cards — include both
+      const allInteractives = Array.from(canvasElement.querySelectorAll<HTMLElement>('[role=button], button'))
+      woonvisieButton = allInteractives.find((el) => el.textContent?.includes('WOONVISIE')) ?? null
       if (!woonvisieButton) throw new Error('WOONVISIE button not found yet')
     }, { timeout: 2000 })
     await expect(woonvisieButton).not.toBeNull()
