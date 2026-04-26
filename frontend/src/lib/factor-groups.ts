@@ -71,6 +71,7 @@ export const FACTOR_BRON: Record<string, Bron> = {
   overstromingsrisico: 'klimaat',
   geluid: 'klimaat',
   luchtkwaliteit: 'klimaat',
+  bodemtype: 'fysiek', // UI-only env card (funderingsrisico enrichment) — NOT in backend FACTOR_REGISTRY
 }
 
 /** Card shape consumed by buildPages — minimal contract. */

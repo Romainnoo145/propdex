@@ -5,6 +5,10 @@ import type { ScanResultItem, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/type
 import { isScoreV3 } from '@/lib/score'
 import { useParcelEnrichment } from '@/hooks/useScans'
 import { TruncatedText } from '../TruncatedText'
+import { FactorCard, GhostCard } from '../FactorCard'
+import { useFactorPins } from '@/hooks/useFactorPins'
+import { FACTOR_BRON, buildPages, CARDS_PER_PAGE } from '@/lib/factor-groups'
+import type { PageCard } from '@/lib/factor-groups'
 
 /* ── Verdict derivation ───────────────────────────────────── */
 
@@ -53,7 +57,7 @@ function deriveVerdict(risicoScore: number | null): Verdict {
 
 /* ── One-liner generation ─────────────────────────────────── */
 
-function generateOneLiner(cards: CardDisplay[], isV3: boolean): string {
+function generateOneLiner(cards: PageCard[], isV3: boolean): string {
   if (isV3) {
     const top = [...cards]
       .filter((c) => c.pts > 0)
@@ -65,13 +69,6 @@ function generateOneLiner(cards: CardDisplay[], isV3: boolean): string {
 }
 
 /* ── Factor display mapping ───────────────────────────────── */
-
-interface CardDisplay {
-  label: string
-  value: string
-  sub: string
-  pts: number
-}
 
 const FACTOR_LABELS: Record<string, string> = {
   funderingsrisico: 'FUNDERING',
@@ -170,7 +167,7 @@ function formatFactorValue(name: string, factor: ScoreFactorV3): { value: string
 
 /* ── v2.1 fallback cards ──────────────────────────────────── */
 
-function deriveV21Cards(parcel: ScanResultItem): CardDisplay[] {
+function deriveV21Cards(parcel: ScanResultItem): Omit<PageCard, 'factor_key' | 'bron'>[] {
   const bj = parcel.bouwjaar
   const pre1994 = bj != null && bj < 1994
   const bm = parcel.building_metrics
@@ -206,108 +203,105 @@ function deriveV21Cards(parcel: ScanResultItem): CardDisplay[] {
   ]
 }
 
-/* ── Environmental enrichment cards (page 2) ──────────────── */
+/* ── Environmental enrichment cards ──────────────────────── */
 
-function deriveEnvCards(enrichment: ReturnType<typeof useParcelEnrichment>['data']): CardDisplay[] {
-  const cards: CardDisplay[] = []
+function deriveEnvCards(enrichment: ReturnType<typeof useParcelEnrichment>['data']): PageCard[] {
+  /**
+   * label → factor_key mapping for env cards.
+   * bodemtype is UI-only (funderingsrisico enrichment) — added to FACTOR_BRON in factor-groups.ts.
+   */
+  const keyMap: Record<string, string> = {
+    'NATURA 2000': 'natura2000',
+    OVERSTROMING: 'overstromingsrisico',
+    GELUID: 'geluid',
+    LUCHTKWALITEIT: 'luchtkwaliteit',
+    BODEMTYPE: 'bodemtype',
+  }
+
+  const rawCards: Omit<PageCard, 'factor_key' | 'bron'>[] = []
 
   // Natura 2000
   const n2k = enrichment?.natura2000_data
   if (n2k) {
-    cards.push({
+    rawCards.push({
       label: 'NATURA 2000',
       value: n2k.binnen_5km ? 'NABIJ' : 'VRIJ',
       sub: n2k.naam ? n2k.naam.slice(0, 24) : (n2k.binnen_5km ? 'Binnen 5 km' : 'Buiten 5 km'),
       pts: 0,
     })
   } else {
-    cards.push({ label: 'NATURA 2000', value: '—', sub: 'Natura 2000 niet beschikbaar', pts: 0 })
+    rawCards.push({ label: 'NATURA 2000', value: '—', sub: 'Natura 2000 niet beschikbaar', pts: 0 })
   }
 
   // Overstromingsrisico
   const ov = enrichment?.overstromingsrisico_data
   if (ov) {
-    cards.push({
+    rawCards.push({
       label: 'OVERSTROMING',
       value: ov.in_risk_zone ? 'RISICOZONE' : 'VEILIG',
       sub: ov.description ? ov.description.slice(0, 28) : (ov.in_risk_zone ? 'In risicogebied' : 'Buiten zone'),
       pts: 0,
     })
   } else {
-    cards.push({ label: 'OVERSTROMING', value: '—', sub: 'Geen overstromingsdata', pts: 0 })
+    rawCards.push({ label: 'OVERSTROMING', value: '—', sub: 'Geen overstromingsdata', pts: 0 })
   }
 
   // Geluid
   const gl = enrichment?.geluid_data
   if (gl) {
-    cards.push({
+    rawCards.push({
       label: 'GELUID',
       value: `${Math.round(gl.lden_db)} DB`,
       sub: gl.boven_grenswaarde ? 'Boven grenswaarde' : gl.classification || 'Onder grenswaarde',
       pts: 0,
     })
   } else {
-    cards.push({ label: 'GELUID', value: '—', sub: 'Geen RIVM geluiddata', pts: 0 })
+    rawCards.push({ label: 'GELUID', value: '—', sub: 'Geen RIVM geluiddata', pts: 0 })
   }
 
   // Luchtkwaliteit
   const lk = enrichment?.luchtkwaliteit_data
   if (lk) {
-    cards.push({
+    rawCards.push({
       label: 'LUCHTKWALITEIT',
       value: lk.boven_grenswaarde ? 'SLECHT' : 'GOED',
       sub: `NO₂ ${Math.round(lk.no2_ugm3)} · PM10 ${Math.round(lk.pm10_ugm3)}`,
       pts: 0,
     })
   } else {
-    cards.push({ label: 'LUCHTKWALITEIT', value: '—', sub: 'Geen RIVM luchtkwaliteitdata', pts: 0 })
+    rawCards.push({ label: 'LUCHTKWALITEIT', value: '—', sub: 'Geen RIVM luchtkwaliteitdata', pts: 0 })
   }
 
   // Bodemtype (from funderingsrisico enrichment)
   const fr = enrichment?.funderingsrisico_data
   if (fr && fr.fgr) {
-    cards.push({
+    rawCards.push({
       label: 'BODEMTYPE',
       value: fr.fgr.toUpperCase().slice(0, 10),
       sub: fr.legenda ? fr.legenda.slice(0, 28) : 'Funderingsgebied',
       pts: 0,
     })
   } else {
-    cards.push({ label: 'BODEMTYPE', value: '—', sub: 'Geen funderingsgebieddata', pts: 0 })
+    rawCards.push({ label: 'BODEMTYPE', value: '—', sub: 'Geen funderingsgebieddata', pts: 0 })
   }
 
-  return cards
-}
-
-/* ── Reusable grid card ───────────────────────────────────── */
-
-function RisicoCard({ card }: { card: CardDisplay }) {
-  return (
-    <div className="bg-white border border-slate-100 rounded-[24px] p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-      {/* Top: label + pts badge */}
-      <div className="flex justify-between items-start gap-1">
-        <TruncatedText text={card.label} className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight truncate" />
-        <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0">
-          {card.pts > 0 ? `+${card.pts}` : '—'}
-        </span>
-      </div>
-
-      {/* Middle: value */}
-      <div className="flex-1 flex items-center min-w-0">
-        <TruncatedText text={card.value} className="text-2xl font-black text-slate-900 tracking-tighter leading-none truncate" />
-      </div>
-
-      {/* Bottom: insight */}
-      <div className="border-t border-slate-50 pt-3 min-w-0">
-        <TruncatedText text={card.sub} className="text-[11px] font-bold text-slate-400 leading-tight truncate" />
-      </div>
-    </div>
-  )
+  return rawCards.map((c) => {
+    const fk = keyMap[c.label] ?? c.label.toLowerCase()
+    return {
+      ...c,
+      factor_key: fk,
+      bron: FACTOR_BRON[fk] ?? 'fysiek',
+    }
+  })
 }
 
 /* ── Main component ───────────────────────────────────────── */
 
-const CARDS_PER_PAGE = 9
+const RISICO_KEYS = [
+  'funderingsrisico', 'asbest', 'bodemverontreiniging',
+  'monument', 'bestemmingswijziging', 'constructieve_staat',
+  'juridisch_klimaat', 'criminaliteit', 'max_hoogte_bereikt',
+] as const
 
 interface RisicoLayerProps {
   parcel: ScanResultItem
@@ -319,19 +313,15 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
   const isV3 = isScoreV3(parcel.score_breakdown)
   const verdict = deriveVerdict(risicoScore)
   const enrichmentQuery = useParcelEnrichment(parcel.parcel_id)
+  const { pins, toggle, isPinned } = useFactorPins('risico')
 
-  // Build page 1 cards (9 score factors)
-  const RISICO_KEYS = [
-    'funderingsrisico', 'asbest', 'bodemverontreiniging',
-    'monument', 'bestemmingswijziging', 'constructieve_staat',
-    'juridisch_klimaat', 'criminaliteit', 'max_hoogte_bereikt',
-  ] as const
-
-  const scoreCards: CardDisplay[] = (() => {
+  // Build score cards (9 risk factors from registry)
+  const scoreCards: PageCard[] = (() => {
     if (isV3 && parcel.score_breakdown) {
       const breakdown = parcel.score_breakdown as ScoreBreakdownV3
       return RISICO_KEYS.map((key) => {
         const factor = breakdown[key]
+        const bron = FACTOR_BRON[key] ?? 'fysiek'
         if (factor) {
           const { value, sub } = formatFactorValue(key, factor)
           return {
@@ -339,6 +329,9 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
             value,
             sub,
             pts: Math.round(factor.bijdrage * 10) / 10,
+            factor_key: key,
+            bron,
+            missing: factor.missing,
           }
         }
         return {
@@ -346,19 +339,27 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
           value: '—',
           sub: 'Data niet beschikbaar',
           pts: 0,
+          factor_key: key,
+          bron,
+          missing: true,
         }
       })
     }
-    return deriveV21Cards(parcel)
+    // v2.1 fallback — wrap deriveV21Cards results with factor_key + bron
+    return deriveV21Cards(parcel).map((c, i) => ({
+      ...c,
+      factor_key: RISICO_KEYS[i] ?? `v21-${i}`,
+      bron: FACTOR_BRON[RISICO_KEYS[i] ?? ''] ?? 'fysiek',
+    }))
   })()
 
-  // Build page 2 cards (5 environmental enrichment)
+  // Build env cards (5 environmental enrichment)
   const envCards = deriveEnvCards(enrichmentQuery.data)
 
-  // All cards across pages
-  const allCards = [...scoreCards, ...envCards]
-  const totalPages = Math.ceil(allCards.length / CARDS_PER_PAGE)
-  const pageCards = allCards.slice(page * CARDS_PER_PAGE, (page + 1) * CARDS_PER_PAGE)
+  // All cards combined for buildPages
+  const allCards: PageCard[] = [...scoreCards, ...envCards]
+  const pages = buildPages(allCards, pins.map((p) => ({ id: p.id, factor_key: p.factor_key, position: p.position })))
+  const currentPage = pages[page]
 
   const oneLiner = generateOneLiner(scoreCards, isV3)
 
@@ -369,6 +370,11 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
     return () => clearTimeout(timer)
   }, [risicoScore, springVal])
   const barWidth = useTransform(springVal, (v) => `${v}%`)
+
+  // Keep page in bounds when pages count changes
+  useEffect(() => {
+    if (page >= pages.length) setPage(Math.max(0, pages.length - 1))
+  }, [pages.length, page])
 
   return (
     <div className="flex flex-col flex-1 pt-4 px-6 pb-4">
@@ -401,8 +407,11 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
         </div>
       </div>
 
-      {/* ── 3x3 Intelligence Grid with page transition ───── */}
-      <div className="flex-1 mt-4 relative">
+      {/* ── Factor Cards Grid with page transition ────────── */}
+      <div className="flex-1 mt-4 relative flex flex-col">
+        <h3 className="text-[10px] font-black tracking-[0.15em] uppercase text-slate-500 mb-2">
+          {currentPage?.title ?? ''}
+        </h3>
         <AnimatePresence mode="wait">
           <motion.div
             key={page}
@@ -410,11 +419,25 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -40 }}
             transition={{ duration: 0.2 }}
-            className="grid grid-cols-3 gap-1.5 auto-rows-fr h-full"
+            className="grid grid-cols-3 grid-rows-2 gap-1.5 auto-rows-fr flex-1"
           >
-            {pageCards.map((card) => (
-              <RisicoCard key={card.label} card={card} />
-            ))}
+            {(currentPage?.cards ?? []).map((slot, idx) => {
+              if ('kind' in slot && slot.kind === 'ghost') {
+                return <GhostCard key={`ghost-${idx}`} />
+              }
+              const card = slot as PageCard
+              const pinned = isPinned(card.factor_key)
+              return (
+                <FactorCard
+                  key={card.factor_key}
+                  card={{ label: card.label, value: card.value, sub: card.sub, pts: card.pts }}
+                  tone="negative"
+                  isPinned={pinned}
+                  isMissing={!!card.missing}
+                  onStarClick={() => toggle(card.factor_key)}
+                />
+              )
+            })}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -431,12 +454,12 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
           <ChevronLeft className="size-4 text-slate-400" />
         </button>
         <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest tabular-nums">
-          {page + 1} / {totalPages}
+          {page + 1} / {pages.length}
         </span>
         <button
           type="button"
-          onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-          disabled={page >= totalPages - 1}
+          onClick={() => setPage((p) => Math.min(pages.length - 1, p + 1))}
+          disabled={page >= pages.length - 1}
           className="p-1 rounded-full hover:bg-slate-100 disabled:opacity-20 transition-colors"
           aria-label="Volgende pagina"
         >
