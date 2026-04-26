@@ -134,8 +134,57 @@ async def test_two_parcels_one_claude_call_via_cascade_boundary(test_db, create_
 
 @pytest.mark.asyncio
 async def test_two_parcels_different_woonvisie_scores_via_cache(test_db, create_test_user, monkeypatch):
-    """SC#2: same payload from cache → Blerick vs Venlo-Centrum diff >= 0.2 for project_type=nieuwbouw_wonen."""
-    pytest.fail("Wave 0 stub — Wave 1 Task 3 implementation required")
+    """SC#2: payload retrieved through cache layer differentiates Blerick vs Venlo-Centrum >= 0.2 for project_type=nieuwbouw_wonen."""
+    from datetime import datetime
+
+    from app.ai.factor_extraction_schemas import ExtractedFactor
+
+    user, org = await create_test_user()
+    doc = await _seed_venlo_woonvisie(test_db, org, user)
+
+    async def _fake_extract_factor(db, *, factor_def, parcel_id, policy_document, **kwargs):
+        return ExtractedFactor[WoonvisiePayload](
+            factor_id=factor_def.factor_id,
+            parcel_id=parcel_id,
+            policy_document_id=str(policy_document.id),
+            payload=_VENLO_BLERICK_CENTRUM_PAYLOAD,
+            extracted_at=datetime.utcnow(),
+            from_cache=False,
+            schema_version=SCHEMA_VERSION,
+        )
+
+    monkeypatch.setattr(cascade_enrichment_service, "extract_factor", _fake_extract_factor)
+
+    payloads = await cascade_enrichment_service.get_cascade_payloads(
+        test_db,
+        parcel_id="NL.IMBAG.Pand.0983-X",
+        gemeente_code="0983",
+        organization_id=org.id,
+    )
+    assert "woonvisie_match" in payloads, "Cascade boundary must surface woonvisie_match in payloads dict"
+
+    blerick_score = compute_score_v3(
+        _minimal_parcel_data("Blerick"),
+        project_type="nieuwbouw_wonen",
+        cascade_payloads=payloads,
+    ).score_breakdown["woonvisie_match"].genormaliseerde_score
+
+    centrum_score = compute_score_v3(
+        _minimal_parcel_data("Venlo-Centrum"),
+        project_type="nieuwbouw_wonen",
+        cascade_payloads=payloads,
+    ).score_breakdown["woonvisie_match"].genormaliseerde_score
+
+    assert blerick_score > centrum_score, (
+        f"Blerick (groei + sociaal/midden overlap) should outscore Venlo-Centrum (neutraal + segment-mismatch); "
+        f"got blerick={blerick_score:.3f} vs centrum={centrum_score:.3f}"
+    )
+    assert abs(blerick_score - centrum_score) >= 0.2, (
+        f"Differentiation threshold 0.2 not met (Phase 6 locked floor); diff={abs(blerick_score - centrum_score):.3f}"
+    )
+
+    # `doc` referenced for parity with helper signature; suppress unused-warning.
+    _ = doc
 
 
 @pytest.mark.asyncio
