@@ -200,11 +200,19 @@ function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResu
       return { value: capacityValue(parcel), sub: capacitySub(parcel) }
     case 'woonvisie_match': {
       if (factor.missing) return { value: '—', sub: 'Geen woonvisie beschikbaar' }
-      const s = factor.genormaliseerde_score
-      const label = s >= 0.7 ? 'PRIORITEIT' : s >= 0.4 ? 'PAST' : 'BEPERKT'
-      const w = factor.waarde as Record<string, unknown> | null
-      const segment = typeof w === 'object' && w !== null ? String(w.prioritized_segment ?? '') : ''
-      return { value: label, sub: segment ? `Segment: ${segment}` : factor.toelichting_kort.slice(0, 36) }
+      const w = factor.waarde as { matched_policy?: { prioriteit?: string; wijk_naam?: string } | null; matched_wijk?: string | null } | null
+      const matched = w && typeof w === 'object' ? w.matched_policy : null
+      const prio = matched && typeof matched === 'object' ? matched.prioriteit : null
+      const PRIO_VALUE: Record<string, string> = {
+        groei: 'GROEIGEBIED',
+        herstructurering: 'HERSTRUCTURERING',
+        krimp: 'KRIMP',
+        neutraal: 'NEUTRAAL',
+      }
+      const value = prio && PRIO_VALUE[prio] ? PRIO_VALUE[prio] : 'GEMEENTE-BREED'
+      const wijk = matched?.wijk_naam ?? w?.matched_wijk ?? null
+      const sub = wijk ? `Wijk: ${wijk}` : 'Geen wijk-specifiek beleid'
+      return { value, sub }
     }
     default:
       return { value: '\u2014', sub: '' }
@@ -396,26 +404,22 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
                     key={card.label}
                     type="button"
                     onClick={() => setWoonvisieOpen(true)}
-                    className="bg-white border border-slate-100 rounded-[24px] p-6 flex flex-col justify-between shadow-sm hover:shadow-md hover:ring-2 hover:ring-amber-200/60 transition-all overflow-hidden text-left cursor-pointer group relative"
+                    className="bg-white border border-slate-100 rounded-[24px] p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow overflow-hidden text-left cursor-pointer"
                   >
                     <div className="flex justify-between items-start gap-1">
-                      <TruncatedText text={card.label} className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight truncate" />
+                      <TruncatedText text={card.label} className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight line-clamp-1 pr-1" />
                       <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0">
                         {card.pts > 0 ? `+${card.pts}` : '—'}
                       </span>
                     </div>
 
                     <div className="flex-1 flex items-center min-w-0">
-                      <TruncatedText text={card.value} className="text-2xl font-black text-slate-900 tracking-tighter leading-none truncate" />
+                      <TruncatedText text={card.value} className="text-2xl font-black text-slate-900 tracking-tight leading-[1.05] line-clamp-2 break-words pr-1" />
                     </div>
 
                     <div className="border-t border-slate-50 pt-3 min-w-0">
-                      <TruncatedText text={card.sub} className="text-[11px] font-bold text-slate-400 leading-tight truncate" />
+                      <TruncatedText text={card.sub} className="text-[11px] font-bold text-slate-400 leading-tight line-clamp-2 pr-1" />
                     </div>
-
-                    <span className="absolute bottom-3 right-3 text-[9px] font-bold uppercase tracking-[0.1em] text-[#F9A826] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                      klik &rarr;
-                    </span>
                   </button>
                 )
               }
@@ -425,18 +429,18 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
                   className="bg-white border border-slate-100 rounded-[24px] p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow overflow-hidden"
                 >
                   <div className="flex justify-between items-start gap-1">
-                    <TruncatedText text={card.label} className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight truncate" />
+                    <TruncatedText text={card.label} className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight line-clamp-1 pr-1" />
                     <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0">
                       {card.pts > 0 ? `+${card.pts}` : '—'}
                     </span>
                   </div>
 
                   <div className="flex-1 flex items-center min-w-0">
-                    <TruncatedText text={card.value} className="text-2xl font-black text-slate-900 tracking-tighter leading-none truncate" />
+                    <TruncatedText text={card.value} className="text-2xl font-black text-slate-900 tracking-tight leading-[1.05] line-clamp-2 break-words pr-1" />
                   </div>
 
                   <div className="border-t border-slate-50 pt-3 min-w-0">
-                    <TruncatedText text={card.sub} className="text-[11px] font-bold text-slate-400 leading-tight truncate" />
+                    <TruncatedText text={card.sub} className="text-[11px] font-bold text-slate-400 leading-tight line-clamp-2 pr-1" />
                   </div>
                 </div>
               )

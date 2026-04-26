@@ -110,15 +110,19 @@ export function WoonvisiePopup({
 }: WoonvisiePopupProps) {
   if (!isOpen) return null
 
-  const hasWijkMatch = matched_policy !== null
-  const prio = matched_policy?.prioriteit ?? 'neutraal'
+  const hasWijkMatch =
+    matched_policy != null &&
+    typeof matched_policy === 'object' &&
+    typeof matched_policy.wijk_naam === 'string'
+  const prio = hasWijkMatch ? (matched_policy!.prioriteit ?? 'neutraal') : 'neutraal'
   const userPreferred = PROJECTTYPE_SEGMENT_MAP[project_type] ?? []
-  const wijkSegments = matched_policy?.gewenste_segmenten ?? []
+  const wijkSegments = hasWijkMatch ? (matched_policy!.gewenste_segmenten ?? []) : []
   const segMatch = segmentMatchSentence(userPreferred, wijkSegments)
   const lowConfidence = confidence < 0.5
 
-  const citaat = hasWijkMatch ? matched_policy!.citaat : algemeen_citaat
+  const citaat = hasWijkMatch ? (matched_policy!.citaat ?? algemeen_citaat) : algemeen_citaat
   const bron = hasWijkMatch ? matched_policy!.wijk_naam : 'Gemeente-breed'
+  const pagina = hasWijkMatch ? (matched_policy!.pagina ?? null) : null
 
   return createPortal(
     <AnimatePresence>
@@ -155,10 +159,10 @@ export function WoonvisiePopup({
               <span>Woonvisie {gemeente}</span>
               <span>·</span>
               <span>{periode_start}–{periode_einde}</span>
-              {hasWijkMatch && matched_policy!.pagina !== null && (
+              {pagina != null && (
                 <>
                   <span>·</span>
-                  <span>p. {matched_policy!.pagina}</span>
+                  <span>p. {pagina}</span>
                 </>
               )}
             </div>
