@@ -1,9 +1,9 @@
 ---
 phase: 4
 slug: klimaatlayer-bug
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: active
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-26
 ---
 
@@ -75,4 +75,4 @@ created: 2026-04-26
 - [ ] Feedback latency < 60s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved (Plan 04-01 created — stories authored as Task 1, fix as Task 2)

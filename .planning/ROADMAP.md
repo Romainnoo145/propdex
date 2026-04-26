@@ -76,7 +76,10 @@ Plans:
   1. Navigating from gemeente A to gemeente B on the map causes the KlimaatLayer verdict panel to update to gemeente B's data within one render cycle
   2. No ghost verdict from gemeente A remains visible after the transition
   3. Rapid switching between three different gemeenten leaves only the last-selected gemeente's verdict visible
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 04-01-PLAN.md — Add `key={activePanel.code}` to GemeenteContextPanel in map.tsx + Storybook play-function stories pinning SC#1, SC#2, SC#3
 
 ### Phase 5: Document-level cache sentinel (woonvisie)
 **Goal**: Woonvisie-extractie voor gemeente Venlo (100k+ parcelen) produceert precies 1 Claude-call per woonvisie-document, niet per perceel. Document-level factors slaan cache op met sentinel-key i.p.v. parcel_id
@@ -160,7 +163,7 @@ waar S01=P5, S02=P6, S03=P3, S04=P7, S05=P4, S06=P8.
 | 1. Cache Sentinel | 1/1 | Complete | 2026-04-22 |
 | 2. Score UI Fix | 2/2 | Complete | 2026-04-22 |
 | 3. Woonvisie Popup | 2/2 | Complete   | 2026-04-25 |
-| 4. KlimaatLayer Bug | 0/? | Not started | - |
+| 4. KlimaatLayer Bug | 0/1 | Planned | - |
 | 5. Document-level cache sentinel | 0/? | Not started | - |
 | 6. WijkPolicy schema + scoring | 0/4 | Not started | - |
 | 7. Factor pinning + groep-pages | 0/? | Not started | - |
