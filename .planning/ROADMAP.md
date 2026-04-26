@@ -173,5 +173,5 @@ waar S01=P5, S02=P6, S03=P3, S04=P7, S05=P4, S06=P8.
 | 4. KlimaatLayer Bug | 1/1 | Complete   | 2026-04-26 |
 | 5. Document-level cache sentinel | 0/? | Not started | - |
 | 6. WijkPolicy schema + scoring | 0/4 | Not started | - |
-| 7. Factor pinning + groep-pages | 2/5 | In Progress|  |
+| 7. Factor pinning + groep-pages | 3/5 | In Progress|  |
 | 8. Integration tests + Venlo E2E | 0/? | Not started | - |
