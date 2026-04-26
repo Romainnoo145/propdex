@@ -91,11 +91,19 @@ async def test_engine():
         # (test engine creation will fail if database truly doesn't exist)
         print(f"Note: Test database setup: {e}")
 
-    # Create async engine for test database
+    # Create async engine for test database.
+    # statement_cache_size=0: disable asyncpg prepared-statement cache for DDL.
+    # Without this, asyncpg caches CREATE TABLE prepared statements from the first
+    # test's create_all and then fails with pg_type_typname_nsp_index UniqueViolation
+    # on the second test's create_all (Python 3.14 + asyncpg + SQLAlchemy 2.x bug).
+    # pool_pre_ping=False: avoid MissingGreenlet errors when a connection is
+    # invalidated by an IntegrityError and the pool tries to ping it outside a
+    # greenlet context. Not needed in tests — connections are short-lived.
     engine = create_async_engine(
         test_db_url,
         echo=False,
-        pool_pre_ping=True,
+        pool_pre_ping=False,
+        connect_args={"statement_cache_size": 0},
     )
 
     yield engine
