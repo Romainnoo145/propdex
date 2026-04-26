@@ -28,18 +28,18 @@
 
 ### Pin Mechanism + Group Pages (NEW 2026-04-24)
 
-- [ ] **PIN-01**: User can pin/unpin individual factoren (Potentie en Risico) met max 6 pins per categorie; 7e pin-poging toont toast "max 6 bereikt"
-- [ ] **PIN-02**: Pins persisteren across browser-refresh en devices via backend-backed `user_factor_pins` tabel met Alembic migratie; unique constraint `(user_id, category, factor_key)`; TenantMixin voor org-isolation
-- [ ] **PIN-03**: REST API endpoints: `GET /api/user/factor-pins?category=X`, `POST /api/user/factor-pins` (toggle), `DELETE /api/user/factor-pins/:id`; optimistic UI updates via TanStack Query
+- [x] **PIN-01**: User can pin/unpin individual factoren (Potentie en Risico) met max 6 pins per categorie; 7e pin-poging toont toast "max 6 bereikt"
+- [x] **PIN-02**: Pins persisteren across browser-refresh en devices via backend-backed `user_factor_pins` tabel met Alembic migratie; unique constraint `(user_id, category, factor_key)`; TenantMixin voor org-isolation
+- [x] **PIN-03**: REST API endpoints: `GET /api/user/factor-pins?category=X`, `POST /api/user/factor-pins` (toggle), `DELETE /api/user/factor-pins/:id`; optimistic UI updates via TanStack Query
 
 ### Factor Groups + Pagination (NEW 2026-04-24)
 
-- [ ] **GROUP-01**: Elke entry in `FACTOR_REGISTRY` heeft een `category` veld (potentie: `gemeente_beleid`/`markt`/`fysiek`/`klimaat`; risico: idem + eventueel `juridisch`/`planologisch`)
-- [ ] **GROUP-02**: Potentie/Risico tabs tonen 6 cards per page (i.p.v. 9); page 1 = pinned synth-page met ⭐; page 2+ = 1 groep per page; pinned factoren tonen ⭐ badge op hun groep-page
+- [x] **GROUP-01**: Elke entry in `FACTOR_REGISTRY` heeft een `category` veld (potentie: `gemeente_beleid`/`markt`/`fysiek`/`klimaat`; risico: idem + eventueel `juridisch`/`planologisch`)
+- [x] **GROUP-02**: Potentie/Risico tabs tonen 6 cards per page (i.p.v. 9); page 1 = pinned synth-page met ⭐; page 2+ = 1 groep per page; pinned factoren tonen ⭐ badge op hun groep-page
 
 ### UI Consistency (NEW 2026-04-24)
 
-- [ ] **UI-01**: Hover op factor-card toont pin-icoon rechtsboven; click → optimistic update + POST; unpin werkt vanaf pinned-page en groep-page; beide locaties synchroniseren
+- [x] **UI-01**: Hover op factor-card toont pin-icoon rechtsboven; click → optimistic update + POST; unpin werkt vanaf pinned-page en groep-page; beide locaties synchroniseren
 
 ### Bug Fixes
 
@@ -53,7 +53,7 @@
 - [x] **TEST-04**: Integration or component tests cover woonvisie popup — opens on click, shows correct wijk/prioriteit/segmentmatch data
 - [x] **TEST-05**: Unit tests cover document-level sentinel cache — 2 scans voor verschillende parcelen tegen dezelfde woonvisie = 1 Claude call; v2→v3 bump invalidateert oude entries
 - [x] **TEST-06**: Unit/integration tests cover WijkPolicy schema + scoring — Venlo Blerick vs Venlo-Centrum produceren verschillende woonvisie_match scores met zelfde projecttype
-- [ ] **TEST-07**: Component tests cover pin flow — pin/unpin, max-6 guard, ⭐ badge rendering, page-navigation met pinned synth-page
+- [x] **TEST-07**: Component tests cover pin flow — pin/unpin, max-6 guard, ⭐ badge rendering, page-navigation met pinned synth-page
 - [ ] **TEST-08**: E2E smoke — Venlo woonvisie upload → 2 parcelen scan → 1 Claude call → verschillende scores → popup toont wijk-specifiek citaat → pins persisteren across refresh
 
 ## Future Requirements (M049+)
@@ -105,12 +105,12 @@
 | WOON-03 | Phase 3 | Complete |
 | WOON-04 | Phase 6 | Complete |
 | WOON-05 | Phase 6 | Complete |
-| PIN-01 | Phase 7 | Pending |
-| PIN-02 | Phase 7 | Pending |
-| PIN-03 | Phase 7 | Pending |
-| GROUP-01 | Phase 7 | Pending |
-| GROUP-02 | Phase 7 | Pending |
-| UI-01 | Phase 7 | Pending |
+| PIN-01 | Phase 7 | Complete |
+| PIN-02 | Phase 7 | Complete |
+| PIN-03 | Phase 7 | Complete |
+| GROUP-01 | Phase 7 | Complete |
+| GROUP-02 | Phase 7 | Complete |
+| UI-01 | Phase 7 | Complete |
 | BUG-01 | Phase 4 | Complete |
 | TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 2 | Complete |
@@ -118,7 +118,7 @@
 | TEST-04 | Phase 3 | Complete |
 | TEST-05 | Phase 5 | Complete |
 | TEST-06 | Phase 6 | Complete |
-| TEST-07 | Phase 7 | Pending |
+| TEST-07 | Phase 7 | Complete |
 | TEST-08 | Phase 8 | Pending |
 
 **Coverage:**

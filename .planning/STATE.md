@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 7 context gathered (4 gray-areas resolved + 3 design-doc Open Q's closed)
-last_updated: "2026-04-26T13:11:45.369Z"
+stopped_at: Completed 07-01-PLAN.md (Wave 0 Nyquist anchors — 4 backend stubs + frontend stories + VALIDATION.md)
+last_updated: "2026-04-26T13:59:49.197Z"
 last_activity: 2026-04-24 — M048/Phase 6 Plan 03 shipped — rewrote score_woonvisie_match for WijkPolicy; 5 min, 1 task, 1 file
 progress:
   total_phases: 8
   completed_phases: 6
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 16
+  completed_plans: 12
   percent: 88
 ---
 
@@ -60,6 +60,7 @@ Progress: [█████████░] 88% (7/8 plans)
 | Phase 03-woonvisie-popup P01 | 12m | 2 tasks | 3 files |
 | Phase 03-woonvisie-popup P02 | 20m | 3 tasks | 2 files |
 | Phase 04-klimaatlayer-bug P01 | 5m | 3 tasks | 2 files |
+| Phase 07-factor-pinning-groep-pages-6-cards-per-page P01 | 5m | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,8 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase Phase 03 Plan 02]: EscDismisses story uses Sluiten button (aria-label=Sluiten) not Escape key — WoonvisiePopup.tsx has no keydown listener; ESC gap documented as follow-up todo
 - [Phase Phase 03 Plan 02]: PotentieLayer ClickOpensPopup navigates to page 2 first — woonvisie_match is card 10, CARDS_PER_PAGE=9 puts it on page 2; waitFor(2000ms) handles AnimatePresence transition
 - [Phase 04-klimaatlayer-bug]: key={activePanel.code} on GemeenteContextPanel (not naam) — codes are stable identifiers, heals all four gemeente layers simultaneously
+- [Phase 07]: Wave 0 Nyquist: ImportError on app.models.user_factor_pin is explicit signal driving Plan 02 — no pytest.skip/xfail allowed
+- [Phase 07]: factorPinsMock uses inline TanStack Query cache pre-seed (queryClient.setQueryData) not MSW — matches Phase 3 precedent
 
 ### Pending Todos
 
@@ -121,6 +124,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-26T13:11:45.367Z
-Stopped at: Phase 7 context gathered (4 gray-areas resolved + 3 design-doc Open Q's closed)
-Resume file: .planning/phases/07-factor-pinning-groep-pages-6-cards-per-page/07-CONTEXT.md
+Last session: 2026-04-26T13:59:49.195Z
+Stopped at: Completed 07-01-PLAN.md (Wave 0 Nyquist anchors — 4 backend stubs + frontend stories + VALIDATION.md)
+Resume file: None
