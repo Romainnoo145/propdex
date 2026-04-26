@@ -418,7 +418,7 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
 
       {/* ── Factor Cards Grid with page transition ────────── */}
       <div className="flex-1 mt-4 relative flex flex-col">
-        <h3 className="text-[10px] font-black tracking-[0.15em] uppercase text-slate-500 mb-2">
+        <h3 className="text-[10px] font-black tracking-[0.15em] uppercase text-slate-500 mb-2 pl-6">
           {currentPage?.title ?? ''}
         </h3>
         <AnimatePresence mode="wait">
