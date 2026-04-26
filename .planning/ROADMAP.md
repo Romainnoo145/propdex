@@ -156,7 +156,10 @@ Plans:
   3. E2E test: ParcelDetailModal voor Blerick-perceel → klik Potentie tab → klik Woonvisie kaartje → popup toont Blerick-citaat (niet gemeente-breed)
   4. E2E test: user pint 3 factoren → refresh browser → pins blijven staan; navigate naar ander perceel → pins blijven zichtbaar op page 1
   5. Alle 275 pre-existing tests groen; nieuwe test-count > 290 (min 15 nieuwe tests over Phase 5-7)
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 08-01-PLAN.md — Wave 0 stub + 4 backend integration tests + 4 Storybook plays + WoonvisieMatchWaarde TypeScript types + regression-baseline gate (covers all 5 SC)
 
 ## Progress
 
@@ -174,4 +177,4 @@ waar S01=P5, S02=P6, S03=P3, S04=P7, S05=P4, S06=P8.
 | 5. Document-level cache sentinel | 0/? | Not started | - |
 | 6. WijkPolicy schema + scoring | 0/4 | Not started | - |
 | 7. Factor pinning + groep-pages | 5/5 | Complete   | 2026-04-26 |
-| 8. Integration tests + Venlo E2E | 0/? | Not started | - |
+| 8. Integration tests + Venlo E2E | 0/1 | Not started | - |
