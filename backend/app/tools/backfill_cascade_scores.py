@@ -21,6 +21,7 @@ from dataclasses import asdict
 
 from sqlalchemy import func, select, text
 
+from app.ai.factor_extraction_schemas import SCHEMA_VERSION
 from app.ai.factors.woonvisie_match import WoonvisiePayload
 from app.core.database import async_session_factory
 from app.models.area_scan import AreaScan
@@ -90,13 +91,16 @@ async def _load_woonvisie_payload(
             .where(
                 FactorExtractionCache.policy_document_id == doc.id,
                 FactorExtractionCache.factor_id == "woonvisie_match",
+                FactorExtractionCache.schema_version == SCHEMA_VERSION,
             )
             .limit(1)
         )
         cached = (await session.execute(cache_stmt)).scalar_one_or_none()
         if cached is None:
             logger.error(
-                "No cached woonvisie_match extraction for doc=%s — run rescore_cascade_job first",
+                "No cached woonvisie_match extraction at SCHEMA_VERSION=%s for doc=%s "
+                "— run rescore_cascade_job first to refresh the cache",
+                SCHEMA_VERSION,
                 doc.id,
             )
             return None
