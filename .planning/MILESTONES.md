@@ -1,5 +1,14 @@
 # Milestones
 
+## v1.48 Score v4.0 Frontend Scaling (Shipped: 2026-05-13)
+
+**Phases completed:** 8 phases, 17 plans, 9 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+
 ## M046 Scoring Fundament Opgeschoond (Shipped: 2026-04-20)
 
 **Status:** ✅ Complete — 6/6 slices shipped in 2 dagen (kickoff 2026-04-19, ship 2026-04-20)

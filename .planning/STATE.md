@@ -4,7 +4,7 @@ milestone: v4.0
 milestone_name: milestone
 status: completed
 stopped_at: "Completed 08-01-PLAN.md (Phase 8 complete — M048 convergence smoke layer: 4 backend smoke + 4 Storybook plays + WoonvisieMatchWaarde TS contract type)"
-last_updated: "2026-04-26T19:20:18.579Z"
+last_updated: "2026-05-13T15:29:58.885Z"
 last_activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
 progress:
   total_phases: 8
