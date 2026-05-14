@@ -1,0 +1,132 @@
+# Requirements: Propdex M049 — Data Sources per Gemeente hub
+
+**Defined:** 2026-05-14
+**Core Value:** From grondpositie to first spade in one cockpit — admins moeten per gemeente in één overzicht weten welke data-bronnen actief, broken, of niet-geconfigureerd zijn.
+
+## M049 Requirements
+
+### Data Model
+
+- [ ] **DATA-01**: `gemeente_data_source_status` SQLAlchemy model met velden (gemeente_code: String(6), source_key: String(64), status: Literal["live"/"broken"/"missing"/"not_applicable"], last_checked: datetime, error_message: nullable, configuratie: JSONB nullable), TenantMixin, unique constraint op (organization_id, gemeente_code, source_key)
+- [ ] **DATA-02**: Alembic migratie creëert tabel + indices op (gemeente_code, source_key) en (organization_id, gemeente_code)
+- [ ] **DATA-03**: Source-key catalog uitgebreid (`backend/.../source_keys.py` + frontend mirror) met alle 27+ bronnen verdeeld in 3 bron-types: A (cascade-uploads), B (open APIs), C (paid integrations)
+- [ ] **DATA-04**: `organization_integration_credentials` SQLAlchemy model voor encrypted credential storage (organization_id, source_key, credential_name, encrypted_value via Fernet, created_by_user_id, last_rotated_at)
+- [ ] **DATA-05**: Alembic migratie voor `organization_integration_credentials` + Fernet key configuratie in settings (read from `INTEGRATION_CREDENTIAL_KEY` env)
+
+### API Endpoints
+
+- [ ] **API-01**: `GET /api/admin/data-sources/{gemeente_code}` retourneert alle bronnen voor één gemeente, gestructureerd in 3 secties (cascade_uploads / open_apis / paid_integrations). Per rij: source_key, label, type, status, last_checked, error_message, available_actions
+- [ ] **API-02**: `GET /api/admin/data-sources/gemeenten` retourneert lijst van gemeenten met aggregate status (counts per status), gesorteerd op activiteit
+- [ ] **API-03**: `POST /api/admin/data-sources/{gemeente_code}/{source_key}/refresh` triggert herevaluatie van bron-status (probe API, recount documents, etc.), idempotent
+- [ ] **API-04**: `POST /api/admin/integration-credentials` slaat encrypted credential op; `DELETE /api/admin/integration-credentials/{id}` roteert/verwijdert; alleen superuser
+- [ ] **API-05**: Alle nieuwe admin endpoints zijn superuser-gated + organization_id-scoped via TenantMixin pattern
+
+### Frontend UX
+
+- [ ] **UX-01**: Nieuwe TanStack Router route `/instellingen/data-bronnen` met gemeente-picker (default: eerste gemeente uit org)
+- [ ] **UX-02**: Route `/instellingen/data-bronnen/{gemeente_code}` toont 3 secties (Beleidsdocumenten / Open APIs / Betaalde integraties) met status-pills (live/broken/missing/N.V.T.) en Aura-conform design (Pure Glass cards, Morning Mist canvas, Plus Jakarta Sans)
+- [ ] **UX-03**: Status-pill kleurcodes: live=Vitality Green, broken=red, missing=amber, N.V.T.=neutraal grijs — match Aura tokens
+- [ ] **UX-04**: Per data-source rij: label + bron-type badge + status-pill + last_checked relative ("2 dagen geleden") + action-buttons (Upload / Refresh / Configureer credential)
+- [ ] **UX-05**: SettingsTabNav krijgt nieuwe pill "Data-bronnen" (5e tab naast beleid-beheer); superuser-gated visibility match M045/S05 pattern
+- [ ] **UX-06**: Empty-state per gemeente: "Nog geen bronnen geactiveerd voor deze gemeente" met onboarding-CTA
+
+### Upload Flow Integration
+
+- [ ] **INT-01**: M045/S05 `UploadDocumentModal` wordt aangeroepen vanuit nieuwe data-source rij action "Upload"; document landt automatisch in juiste cascade-slot (gemeente + source_key)
+- [ ] **INT-02**: M045/S05 `VersionHistoryPanel` opent in nieuwe hub via "Bekijk versies" action op rijen met bestaand document
+- [ ] **INT-03**: M045/S05 `/instellingen/beleid-beheer` route blijft beschikbaar maar krijgt redirect-banner: "Beheer is verhuisd naar Data-bronnen — bekijk hier"
+- [ ] **INT-04**: Bestaande document-uploads worden automatisch zichtbaar in nieuwe hub via `gemeente_data_source_status` row-by-row materialisatie
+
+### Credentials Configuration
+
+- [ ] **CRED-01**: "Configureer credential" modal voor type-C bronnen (BRK, Vindsubsidies, NVM placeholders) met velden per source_key: api_key / client_cert / client_secret / endpoint_url
+- [ ] **CRED-02**: Encrypted-at-rest in `organization_integration_credentials` (Fernet symmetric, key uit `INTEGRATION_CREDENTIAL_KEY` env)
+- [ ] **CRED-03**: UI toont alleen credential-status (configured/missing/expired) — nooit decrypted waarden retourneren in GET responses
+- [ ] **CRED-04**: Credential-rotatie: "Roteren" button verwijdert oude entry + opent modal voor nieuwe waarde; audit-log entry op rotatie
+
+### ActionItems Migration
+
+- [ ] **MIG-01**: ActionItems pagina content (per-gemeente ActionItem cards) migreert naar Data-bronnen rijen als action-button "Bekijk action item" voor bronnen met action_required status
+- [ ] **MIG-02**: `/instellingen/action-items` route geeft 301 redirect naar `/instellingen/data-bronnen/{user_default_gemeente_code}`
+- [ ] **MIG-03**: ActionItem entity in DB blijft bestaan (referentieel werk), maar UI-paden verdwijnen volledig
+
+### Testing
+
+- [ ] **TEST-01**: Backend unit tests voor `gemeente_data_source_status` model + tenant-isolation queries (multi-tenant safety)
+- [ ] **TEST-02**: Backend integration tests voor alle 5 nieuwe API endpoints (auth, scoping, status transitions)
+- [ ] **TEST-03**: Backend test voor credential encryption roundtrip (Fernet encrypt → DB → decrypt) + key-rotation scenario
+- [ ] **TEST-04**: Frontend Storybook plays voor DataSourceRow component (live/broken/missing/configured states)
+- [ ] **TEST-05**: E2E smoke test: admin opent gemeente → ziet 27 bronnen → uploadt PDF → status flips naar live
+- [ ] **TEST-06**: Pre-merge regression: M045/S05 admin-hub paths blijven werken tot redirect-banner is geverifieerd
+
+## Future Requirements
+
+Deferred to post-M049 / latere milestones:
+
+### Bulk Operations
+
+- **BULK-01**: Cross-gemeente bulk-upload (zelfde document voor meerdere gemeenten in één actie) — M050+
+- **BULK-02**: Auto-discovery: scan welke bronnen voor welke gemeente nog ontbreken op basis van gemeente-tier — M050+
+
+### Monitoring & Alerting
+
+- **MON-01**: Alerting wanneer bron broken raakt (Slack/email naar superuser) — M050+
+- **MON-02**: Health dashboard per organization (aggregate status over alle gemeenten) — M050+
+
+## Out of Scope
+
+| Feature | Reden |
+|---------|--------|
+| BRK/NVM/Vindsubsidies daadwerkelijke API-integraties | M052/M053/M051 — M049 levert alleen de configuratie-UX |
+| Auto-ingest scheduling UI (cron-config in frontend) | M045/S06 weekly cron werkt; geen UI-tijd waard in M049 |
+| Per-gebruiker permission-tiers op data-source actions | Superuser-only model is voldoende voor MVP; multi-role audit komt in I-01 phase 2 |
+| Public-facing data-bronnen catalog | Admin-only; eindgebruikers zien score-resultaten, niet bron-status |
+| Multi-language UI strings | NL-only voor MVP; i18n komt na M058 |
+| Source-key custom catalog per organization | Catalog is shared/globaal in M049; per-org overrides niet nodig |
+
+## Traceability
+
+| Requirement | Slice | Status |
+|-------------|-------|--------|
+| DATA-01 | S01 | Pending |
+| DATA-02 | S01 | Pending |
+| DATA-03 | S01 | Pending |
+| DATA-04 | S05 | Pending |
+| DATA-05 | S05 | Pending |
+| API-01 | S02 | Pending |
+| API-02 | S02 | Pending |
+| API-03 | S02 | Pending |
+| API-04 | S05 | Pending |
+| API-05 | S02 | Pending |
+| UX-01 | S03 | Pending |
+| UX-02 | S03 | Pending |
+| UX-03 | S03 | Pending |
+| UX-04 | S03 | Pending |
+| UX-05 | S03 | Pending |
+| UX-06 | S03 | Pending |
+| INT-01 | S04 | Pending |
+| INT-02 | S04 | Pending |
+| INT-03 | S04 | Pending |
+| INT-04 | S04 | Pending |
+| CRED-01 | S05 | Pending |
+| CRED-02 | S05 | Pending |
+| CRED-03 | S05 | Pending |
+| CRED-04 | S05 | Pending |
+| MIG-01 | S06 | Pending |
+| MIG-02 | S06 | Pending |
+| MIG-03 | S06 | Pending |
+| TEST-01 | S01 | Pending |
+| TEST-02 | S02 | Pending |
+| TEST-03 | S05 | Pending |
+| TEST-04 | S03 | Pending |
+| TEST-05 | S06 | Pending |
+| TEST-06 | S04 | Pending |
+
+**Coverage:**
+- M049 requirements: 33 total
+- Mapped to slices: 33
+- Unmapped: 0 ✓
+
+---
+*Requirements defined: 2026-05-14*
+*Source: `~/.gstack/projects/Romainnoo145-propdex/complete-milestone-landscape-20260418.md` §M049*

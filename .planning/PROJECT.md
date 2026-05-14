@@ -21,14 +21,35 @@ From grondpositie to first spade in one cockpit — no switching between 10 tabs
 - ✓ LLM-determinism infrastructure: factor_extractor.py, Anthropic tool-use, temp=0, cache-key op (parcel_id, doc_version_hash, factor_id) — M047/S04
 - ✓ Re-scoring cascade ARQ job (rescore_parcels_for_document) + cascade_service — M047/S05
 - ✓ POC woonvisie_match factor voor Venlo end-to-end — M047/S06
+- ✓ Score UI dynamisch — potentie_risico_balance prop + percentage_of_category — M048/Phase 2
+- ✓ Woonvisie kaart popup in Intelligence Grid (kaart 10 klikbaar, minimal Aura style) — M048/Phase 3
+- ✓ KlimaatLayer gemeente-switch bug fix — M048/Phase 4
+- ✓ Document-level cache sentinel (`parcel_id="__document__"`) — 1 Claude-call per document — M048/Phase 5
+- ✓ WijkPolicy schema + per-wijk woonvisie scoring (Blerick vs Venlo-Centrum diff ≥ 0.2) — M048/Phase 6
+- ✓ Factor pinning + groep-pages (max 4 per categorie, 2x2 grid, synth-page) — M048/Phase 7
+- ✓ E2E smoke voor Venlo woonvisie pipeline — M048/Phase 8
+- ✓ Test-corpus validation: woonvisie_match generaliseert naar Amsterdam/Rotterdam/Sittard-Geleen (confidence 0.60-0.92) — M048 bonus
+
+## Current Milestone: M049 Data Sources per Gemeente hub
+
+**Goal:** Admin ziet per gemeente één overzicht van alle 27+ scoring-bronnen (3 bron-types A/B/C) met actie-knoppen, status-pills en credential-configuratie. Consolideert M045/S05 admin-hub + ActionItems pagina + bereidt configuratie-UX voor latere integratie-milestones (M051 Subsidies, M052 BRK, M053 NVM).
+
+**Target features:**
+- Datamodel `gemeente_data_source_status` met tenant-scoping
+- API endpoint `GET /api/admin/data-sources/{gemeente_code}` met alle 3 bron-types in één payload
+- Frontend route `/instellingen/data-bronnen/{gemeente_code}` met 3 secties
+- M045/S05 upload-flow integreren in nieuwe hub
+- `organization_integration_credentials` encrypted credential store + UX
+- ActionItems pagina deprecation + redirect
 
 ### Active
 
-- [ ] Score UI dynamisch (percentage_of_category ipv hardcoded 60/40 + ×{gewicht}) — M048
-- [ ] potentie_risico_balance als prop in ScoreBreakdownModal vanuit org-profiel — M048
-- [ ] Woonvisie kaart popup in Intelligence Grid (kaart 10 klikbaar) — M048
-- [ ] SCHEMA_VERSION bump 1→2 voor cache-invalidatie na M047 — M048
-- [ ] KlimaatLayer gemeente-verdict bug fix — M048
+- [ ] Datamodel `gemeente_data_source_status` met (gemeente_code, source_key, status, configuratie) — M049/S01
+- [ ] API `GET /api/admin/data-sources/{gemeente_code}` aggregated alle 3 bron-types — M049/S02
+- [ ] UX `/instellingen/data-bronnen/{gemeente_code}` met 3 secties + status-pills + acties — M049/S03
+- [ ] M045/S05 upload-flow integratie in nieuwe hub (geen aparte pagina meer) — M049/S04
+- [ ] `organization_integration_credentials` encrypted credential UX (BRK/Vindsubsidies/NVM placeholders) — M049/S05
+- [ ] ActionItems pagina deprecation + content-migratie + redirect — M049/S06
 
 ### Out of Scope
 
@@ -71,6 +92,10 @@ From grondpositie to first spade in one cockpit — no switching between 10 tabs
 | SCHEMA_VERSION bump na M047 | M047/S04 nieuwe extraction pipeline, S06 woonvisie_match — cache invalideren | — Pending (M048/S01) |
 | Dark mode out of scope | Sloopt Morning-Mist canvas + glass-morphism die de helft van Aura's character zijn | ✓ Good |
 | Mobile out of scope | 27" monitor target users, 6-8h/day use patterns require desktop density | ✓ Good |
+| CARDS_PER_PAGE 4 ipv 6 (M048 Phase 7) | Steady-state factor projection wint op visuele dichtheid bij 2x2 grid | ✓ Good |
+| Pin-mechanism backend-backed | localStorage skipt cross-device, backend-tabel werkt direct met TenantMixin | ✓ Good |
+| Probe-tool retained voor M050+ | woonvisie_match POC bewees generalisatie; protocol gestandaardiseerd per nieuwe factor | ✓ Good |
+| M049 vóór M050+ cascade-batches | Integratie-milestones (M051/M052/M053) hebben configuratie-UX nodig; als hub later komt → ad-hoc plekken die later refactored moeten | — Pending (M049) |
 
 ---
-*Last updated: 2026-04-22 after M047 shipped + M048 milestone start*
+*Last updated: 2026-05-14 after M048 shipped + M049 milestone start*
