@@ -6,17 +6,16 @@ fail at module import with ImportError — that IS the Nyquist signal.
 import asyncio
 import time
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.jwt import create_access_token
+from app.models.area_scan import AreaScan
 from app.models.data_source_status import DataSourceStatus
 from app.models.policy_document import PolicyDocument
-from app.models.area_scan import AreaScan
 from app.policy_documents.data_source_keys import DATA_SOURCE_KEYS
 
 
@@ -78,7 +77,7 @@ async def test_get_gemeente_sources_200_status_mix(
     # Seed 4 rows with all 4 status values for first 4 Type-A keys
     type_a = [k for k in DATA_SOURCE_KEYS if k.source_type == "A"][:4]
     statuses = ["live", "broken", "missing", "not_applicable"]
-    for k, s in zip(type_a, statuses):
+    for k, s in zip(type_a, statuses, strict=False):
         test_db.add(DataSourceStatus(
             id=uuid.uuid4(),
             gemeente_code="GM0983",
@@ -96,7 +95,7 @@ async def test_get_gemeente_sources_200_status_mix(
     assert resp.status_code == 200, resp.text
     body = resp.json()
     seen = {r["source_key"]: r["status"] for r in body["cascade_uploads"]}
-    for k, s in zip(type_a, statuses):
+    for k, s in zip(type_a, statuses, strict=False):
         assert seen[k.key] == s
 
 
@@ -347,7 +346,7 @@ async def test_get_gemeente_sources_under_300ms(
     await _seed_area_scan(test_db, "GM0983", "Venlo", org.id)
 
     # Seed ~50 rows
-    for i, k in enumerate(DATA_SOURCE_KEYS[:50]):
+    for _i, k in enumerate(DATA_SOURCE_KEYS[:50]):
         test_db.add(DataSourceStatus(
             id=uuid.uuid4(), gemeente_code="GM0983", source_key=k.key,
             status="live", last_checked=datetime.utcnow(),
