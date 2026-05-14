@@ -15,7 +15,7 @@ S04 maakt het beheer van **gemeente-niveau beleidsdocumenten** uit de data-bronn
 - Existing `UploadDocumentModal` props uitbreiden met optionele `initialGemeente?`, `initialSourceKey?`, `onSuccess?` — backwards-compatible voor M045 call site
 - Existing `VersionHistoryPanel` props checken op zelfde pattern (mogelijk al voldoende; planner moet bevestigen)
 - Banner top-of-page op `/instellingen/beleid-beheer` met deeplink naar `/instellingen/data-bronnen`
-- Cache-invalidation wiring: na upload-success invalidateert caller-page `dataSourcesAdminKeys.detail(gemeenteCode)` zodat de row's status-pill flipt naar live
+- Cache-invalidation wiring: na upload-success invalidateert caller-page `dataSourcesAdminKeys.gemeente(gemeenteCode)` zodat de row's status-pill flipt naar live
 - Probe-trigger flow: after upload, refresh action wordt aangeroepen om backend probe te runnen die `gemeente_data_source_status` rij upsert naar status='live' (INT-04 materialisatie)
 - Regression-test suite TEST-06: bestaande M045/S05 admin-hub paths blijven groen (smoke-test on beleid-beheer page render + upload via legacy path)
 
@@ -44,7 +44,7 @@ S04 maakt het beheer van **gemeente-niveau beleidsdocumenten** uit de data-bronn
 ### 2. Cache invalidation pattern (eng-review #2)
 
 - Modal blijft generiek — kent geen S03 query-keys.
-- Data-bronnen detail-route (`instellingen.data-bronnen.$gemeenteCode.tsx`) passeert een `onSuccess` callback die `queryClient.invalidateQueries({ queryKey: dataSourcesAdminKeys.detail(gemeenteCode) })` doet.
+- Data-bronnen detail-route (`instellingen.data-bronnen.$gemeenteCode.tsx`) passeert een `onSuccess` callback die `queryClient.invalidateQueries({ queryKey: dataSourcesAdminKeys.gemeente(gemeenteCode) })` doet.
 - Volgorde van side-effects op upload-success:
   1. `useUploadPolicyDocument` mutation success → bestaande M045 cache-invalidations (`policy-documents/admin/overview` + per-entity cache)
   2. Sonner toast met version_number
@@ -183,7 +183,7 @@ const refreshMutation = useRefreshDataSource()
 
 const handleUploadSuccess = (sourceKey: string) => {
   // S03 cache invalidation
-  queryClient.invalidateQueries({ queryKey: dataSourcesAdminKeys.detail(gemeenteCode) })
+  queryClient.invalidateQueries({ queryKey: dataSourcesAdminKeys.gemeente(gemeenteCode) })
   // INT-04: trigger probe so status flips to live
   refreshMutation.mutate({ gemeenteCode, sourceKey, sourceLabel: '...' })
 }
