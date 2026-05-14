@@ -1,16 +1,19 @@
-"""M049/S02 admin data-sources router (Wave-1: GET endpoints + POST stub).
+"""M049/S02 admin data-sources router (Wave-2: POST refresh + probe-registry + advisory lock).
 
-Plan 02 wires the POST refresh probe-registry + advisory lock.
+Plan 01 shipped GET endpoints + POST stub.
+Plan 02 replaces the 501 stub with advisory-lock + probe-registry dispatch.
 """
 import logging
+import uuid
 from collections import defaultdict
 from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path
-from sqlalchemy import select
+from sqlalchemy import BigInteger, func, select, type_coerce
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.admin.data_source_probes import PROBE_REGISTRY, compute_lock_key
 from app.admin.data_sources_schemas import (
     Action,
     DataSourceRow,
@@ -135,7 +138,7 @@ async def list_gemeenten(
             gemeente_code=code,
             gemeente_naam=name_map.get(code, code),
             total_sources=len(rs),
-            status_counts=counts,  # type: ignore[arg-type]
+            status_counts=counts,
             last_activity_at=last_activity,
         ))
 
@@ -200,6 +203,37 @@ async def get_gemeente_sources(
     )
 
 
+async def _load_or_create_row(
+    gemeente_code: str,
+    source_key: str,
+    db: AsyncSession,
+) -> DataSourceStatus:
+    """Get existing data_source_status row, or create an in-memory new one.
+
+    New rows are db.add()'ed but NOT flushed here — the outer commit persists
+    them. id is set explicitly via uuid4() so no server-side gen is needed before
+    _row_from_db serialises the row.
+    """
+    existing = await db.scalar(
+        select(DataSourceStatus)
+        .where(DataSourceStatus.gemeente_code == gemeente_code)
+        .where(DataSourceStatus.source_key == source_key)
+    )
+    if existing is not None:
+        return existing
+    row = DataSourceStatus(
+        id=uuid.uuid4(),
+        gemeente_code=gemeente_code,
+        source_key=source_key,
+        status="missing",
+        last_checked=None,
+        error_message=None,
+        configuratie=None,
+    )
+    db.add(row)
+    return row
+
+
 @router.post("/{gemeente_code}/{source_key}/refresh", response_model=DataSourceRow)
 async def refresh_source(
     gemeente_code: GemeenteCodePath,
@@ -207,8 +241,50 @@ async def refresh_source(
     _: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ) -> DataSourceRow:
-    """Wave-1 stub. Plan 02 implements advisory-lock + probe-registry."""
+    """Refresh status for one (gemeente_code, source_key) tuple.
+
+    Idempotent: advisory lock guards concurrent calls; compare-and-update means
+    unchanged probe results do not bump last_checked.
+
+    Advisory lock is transaction-scoped (pg_try_advisory_xact_lock) — auto-released
+    on commit/rollback, no manual cleanup needed.
+    """
     entry = get_entry(source_key)
     if entry is None:
         raise HTTPException(status_code=404, detail="Source key not in catalog")
-    raise HTTPException(status_code=501, detail="POST refresh implementation pending (M049/S02 Plan 02)")
+
+    # Advisory lock — auto-released on transaction end
+    lock_key = compute_lock_key(gemeente_code, source_key)
+    lock_acquired: bool = bool(
+        await db.scalar(
+            select(
+                func.pg_try_advisory_xact_lock(type_coerce(lock_key, BigInteger()))
+            )
+        )
+    )
+
+    row = await _load_or_create_row(gemeente_code, source_key, db)
+
+    if not lock_acquired:
+        # Another request is mid-refresh — return current state, no probe run, no write.
+        await db.commit()
+        return _row_from_db(row, entry)
+
+    # Dispatch to probe by source_type
+    probe_fn = PROBE_REGISTRY[entry.source_type]
+    probe_result = await probe_fn(source_key, gemeente_code, db)
+
+    # Compare-and-update: only write (and bump last_checked) when something changed.
+    if (
+        row.status != probe_result["status"]
+        or row.error_message != probe_result["error_message"]
+    ):
+        row.status = probe_result["status"]
+        row.error_message = probe_result["error_message"]
+        row.last_checked = datetime.utcnow()
+
+    # Always commit — ensures newly-created rows are persisted even when probe
+    # returned the same status as the default ("missing" → "missing" no-op).
+    await db.commit()
+
+    return _row_from_db(row, entry)
