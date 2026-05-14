@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: "Completed 02-01-PLAN.md (M049/S02 Wave-0+1: 15 tests + GET endpoints + schemas + router registration)"
-last_updated: "2026-05-14T13:12:20.357Z"
+stopped_at: "Completed 02-02-PLAN.md (M049/S02 Wave-2: POST refresh + probe-registry + advisory lock — 15/15 tests GREEN)"
+last_updated: "2026-05-14T15:25:50.659Z"
 last_activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
   percent: 88
 ---
 
@@ -69,6 +69,7 @@ Progress: [█████████░] 88% (7/8 plans)
 | Phase 01-datamodel-source-key-catalog P01 | 4 min | 3 tasks | 4 files |
 | Phase 01-datamodel-source-key-catalog P02 | 11 min | 3 tasks | 5 files |
 | Phase 02-admin-api-layer P01 | 8m | 2 tasks | 6 files |
+| Phase 02-admin-api-layer P02 | 132 min | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -147,6 +148,7 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 01-datamodel-source-key-catalog]: M049/S01 P02: alembic revision 657143b79099 (down_revision 3d1196c58771 = M048/S04 head, NOT stale CONTEXT bbdb5c6ff811); status enum lives in Pydantic Literal — DB column plain String(20) to avoid Postgres ENUM migration friction
 - [Phase 02-admin-api-layer]: M049/S02 P01: AreaScan seed helper omits org_id — AreaScan uses Base+TimestampMixin (no TenantMixin), no organization_id column
 - [Phase 02-admin-api-layer]: M049/S02 P01: compute_actions() inline in router (not separate registry) — 4 source_types x 2-3 status variants fits 30 lines, no over-engineering
+- [Phase 02-admin-api-layer]: blake2b stable hash for pg advisory lock key (PYTHONHASHSEED-safe); is_global=True filter in Type A probe; sequential concurrent test (asyncio.gather + shared test_db breaks SQLAlchemy)
 
 ### Pending Todos
 
@@ -158,6 +160,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-14T13:12:20.355Z
-Stopped at: Completed 02-01-PLAN.md (M049/S02 Wave-0+1: 15 tests + GET endpoints + schemas + router registration)
+Last session: 2026-05-14T15:25:50.657Z
+Stopped at: Completed 02-02-PLAN.md (M049/S02 Wave-2: POST refresh + probe-registry + advisory lock — 15/15 tests GREEN)
 Resume file: None
