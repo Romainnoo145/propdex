@@ -29,9 +29,11 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedInstellingenIndexRouteImport } from './routes/_authenticated/instellingen.index'
 import { Route as AuthenticatedRapportIdRouteImport } from './routes/_authenticated/rapport.$id'
 import { Route as AuthenticatedInstellingenScoreRouteImport } from './routes/_authenticated/instellingen.score'
+import { Route as AuthenticatedInstellingenDataBronnenRouteImport } from './routes/_authenticated/instellingen.data-bronnen'
 import { Route as AuthenticatedInstellingenBeleidBeheerRouteImport } from './routes/_authenticated/instellingen.beleid-beheer'
 import { Route as AuthenticatedInstellingenAdminRouteImport } from './routes/_authenticated/instellingen.admin'
 import { Route as AuthenticatedChecklistIdRouteImport } from './routes/_authenticated/checklist.$id'
+import { Route as AuthenticatedInstellingenDataBronnenGemeenteCodeRouteImport } from './routes/_authenticated/instellingen.data-bronnen.$gemeenteCode'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -137,6 +139,12 @@ const AuthenticatedInstellingenScoreRoute =
     path: '/score',
     getParentRoute: () => AuthenticatedInstellingenRoute,
   } as any)
+const AuthenticatedInstellingenDataBronnenRoute =
+  AuthenticatedInstellingenDataBronnenRouteImport.update({
+    id: '/data-bronnen',
+    path: '/data-bronnen',
+    getParentRoute: () => AuthenticatedInstellingenRoute,
+  } as any)
 const AuthenticatedInstellingenBeleidBeheerRoute =
   AuthenticatedInstellingenBeleidBeheerRouteImport.update({
     id: '/beleid-beheer',
@@ -154,6 +162,12 @@ const AuthenticatedChecklistIdRoute =
     id: '/checklist/$id',
     path: '/checklist/$id',
     getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedInstellingenDataBronnenGemeenteCodeRoute =
+  AuthenticatedInstellingenDataBronnenGemeenteCodeRouteImport.update({
+    id: '/$gemeenteCode',
+    path: '/$gemeenteCode',
+    getParentRoute: () => AuthenticatedInstellingenDataBronnenRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -176,9 +190,11 @@ export interface FileRoutesByFullPath {
   '/checklist/$id': typeof AuthenticatedChecklistIdRoute
   '/instellingen/admin': typeof AuthenticatedInstellingenAdminRoute
   '/instellingen/beleid-beheer': typeof AuthenticatedInstellingenBeleidBeheerRoute
+  '/instellingen/data-bronnen': typeof AuthenticatedInstellingenDataBronnenRouteWithChildren
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/instellingen/': typeof AuthenticatedInstellingenIndexRoute
+  '/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -199,9 +215,11 @@ export interface FileRoutesByTo {
   '/checklist/$id': typeof AuthenticatedChecklistIdRoute
   '/instellingen/admin': typeof AuthenticatedInstellingenAdminRoute
   '/instellingen/beleid-beheer': typeof AuthenticatedInstellingenBeleidBeheerRoute
+  '/instellingen/data-bronnen': typeof AuthenticatedInstellingenDataBronnenRouteWithChildren
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/instellingen': typeof AuthenticatedInstellingenIndexRoute
+  '/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -225,9 +243,11 @@ export interface FileRoutesById {
   '/_authenticated/checklist/$id': typeof AuthenticatedChecklistIdRoute
   '/_authenticated/instellingen/admin': typeof AuthenticatedInstellingenAdminRoute
   '/_authenticated/instellingen/beleid-beheer': typeof AuthenticatedInstellingenBeleidBeheerRoute
+  '/_authenticated/instellingen/data-bronnen': typeof AuthenticatedInstellingenDataBronnenRouteWithChildren
   '/_authenticated/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/_authenticated/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/_authenticated/instellingen/': typeof AuthenticatedInstellingenIndexRoute
+  '/_authenticated/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -251,9 +271,11 @@ export interface FileRouteTypes {
     | '/checklist/$id'
     | '/instellingen/admin'
     | '/instellingen/beleid-beheer'
+    | '/instellingen/data-bronnen'
     | '/instellingen/score'
     | '/rapport/$id'
     | '/instellingen/'
+    | '/instellingen/data-bronnen/$gemeenteCode'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -274,9 +296,11 @@ export interface FileRouteTypes {
     | '/checklist/$id'
     | '/instellingen/admin'
     | '/instellingen/beleid-beheer'
+    | '/instellingen/data-bronnen'
     | '/instellingen/score'
     | '/rapport/$id'
     | '/instellingen'
+    | '/instellingen/data-bronnen/$gemeenteCode'
   id:
     | '__root__'
     | '/'
@@ -299,9 +323,11 @@ export interface FileRouteTypes {
     | '/_authenticated/checklist/$id'
     | '/_authenticated/instellingen/admin'
     | '/_authenticated/instellingen/beleid-beheer'
+    | '/_authenticated/instellingen/data-bronnen'
     | '/_authenticated/instellingen/score'
     | '/_authenticated/rapport/$id'
     | '/_authenticated/instellingen/'
+    | '/_authenticated/instellingen/data-bronnen/$gemeenteCode'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -453,6 +479,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInstellingenScoreRouteImport
       parentRoute: typeof AuthenticatedInstellingenRoute
     }
+    '/_authenticated/instellingen/data-bronnen': {
+      id: '/_authenticated/instellingen/data-bronnen'
+      path: '/data-bronnen'
+      fullPath: '/instellingen/data-bronnen'
+      preLoaderRoute: typeof AuthenticatedInstellingenDataBronnenRouteImport
+      parentRoute: typeof AuthenticatedInstellingenRoute
+    }
     '/_authenticated/instellingen/beleid-beheer': {
       id: '/_authenticated/instellingen/beleid-beheer'
       path: '/beleid-beheer'
@@ -474,12 +507,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedChecklistIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/instellingen/data-bronnen/$gemeenteCode': {
+      id: '/_authenticated/instellingen/data-bronnen/$gemeenteCode'
+      path: '/$gemeenteCode'
+      fullPath: '/instellingen/data-bronnen/$gemeenteCode'
+      preLoaderRoute: typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRouteImport
+      parentRoute: typeof AuthenticatedInstellingenDataBronnenRoute
+    }
   }
 }
+
+interface AuthenticatedInstellingenDataBronnenRouteChildren {
+  AuthenticatedInstellingenDataBronnenGemeenteCodeRoute: typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
+}
+
+const AuthenticatedInstellingenDataBronnenRouteChildren: AuthenticatedInstellingenDataBronnenRouteChildren =
+  {
+    AuthenticatedInstellingenDataBronnenGemeenteCodeRoute:
+      AuthenticatedInstellingenDataBronnenGemeenteCodeRoute,
+  }
+
+const AuthenticatedInstellingenDataBronnenRouteWithChildren =
+  AuthenticatedInstellingenDataBronnenRoute._addFileChildren(
+    AuthenticatedInstellingenDataBronnenRouteChildren,
+  )
 
 interface AuthenticatedInstellingenRouteChildren {
   AuthenticatedInstellingenAdminRoute: typeof AuthenticatedInstellingenAdminRoute
   AuthenticatedInstellingenBeleidBeheerRoute: typeof AuthenticatedInstellingenBeleidBeheerRoute
+  AuthenticatedInstellingenDataBronnenRoute: typeof AuthenticatedInstellingenDataBronnenRouteWithChildren
   AuthenticatedInstellingenScoreRoute: typeof AuthenticatedInstellingenScoreRoute
   AuthenticatedInstellingenIndexRoute: typeof AuthenticatedInstellingenIndexRoute
 }
@@ -489,6 +545,8 @@ const AuthenticatedInstellingenRouteChildren: AuthenticatedInstellingenRouteChil
     AuthenticatedInstellingenAdminRoute: AuthenticatedInstellingenAdminRoute,
     AuthenticatedInstellingenBeleidBeheerRoute:
       AuthenticatedInstellingenBeleidBeheerRoute,
+    AuthenticatedInstellingenDataBronnenRoute:
+      AuthenticatedInstellingenDataBronnenRouteWithChildren,
     AuthenticatedInstellingenScoreRoute: AuthenticatedInstellingenScoreRoute,
     AuthenticatedInstellingenIndexRoute: AuthenticatedInstellingenIndexRoute,
   }
