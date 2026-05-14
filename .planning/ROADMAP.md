@@ -74,13 +74,14 @@ M049 consolideert het admin-landschap: M045/S05 PDF-upload-flow + ActionItems pa
 
 **Requirements:** INT-01, INT-02, INT-03, INT-04, TEST-06
 
-**Plans:** 4 plans
+**Plans:** 5 plans
 
 Plans:
 - [ ] 04-01-PLAN.md — UploadDocumentModal prop extension (initialGemeente/initialSourceKey/onSuccess)
 - [ ] 04-02-PLAN.md — VersionHistoryPanel modal-overlay mode (open/onClose/gemeenteCode props)
 - [ ] 04-03-PLAN.md — Beleid-beheer redirect banner (amber info banner + deeplink)
 - [ ] 04-04-PLAN.md — Detail-route modal-mount + DataSourceRow callback wiring + INT-04 probe trigger + TEST-06
+- [ ] 04-05-PLAN.md — Backend opportunistic probe-on-load for pre-existing Type A missing rows (INT-04 materialisatie)
 
 **Success criteria:**
 1. Click op "Upload" action bij beleidsdocument rij opent `UploadDocumentModal` met source_key pre-filled
