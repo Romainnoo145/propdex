@@ -65,9 +65,10 @@ function DataBronnenIndexPage() {
     return <DataSourcesEmptyState />
   }
   // While auto-redirect effect runs, render a transient spinner
+  const firstName = gemeenten[0]?.gemeente_naam ?? firstGemeenteCode
   return (
     <div className="flex items-center gap-2 py-8 text-slate-500">
-      <Loader2 size={16} className="animate-spin" /> Omleiden naar {gemeenten[0].gemeente_naam}…
+      <Loader2 size={16} className="animate-spin" /> Omleiden naar {firstName}…
     </div>
   )
 }
