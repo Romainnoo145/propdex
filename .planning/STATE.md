@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 status: completed
 stopped_at: "Completed 02-02-PLAN.md (M049/S02 Wave-2: POST refresh + probe-registry + advisory lock — 15/15 tests GREEN)"
-last_updated: "2026-05-14T15:25:50.659Z"
+last_updated: "2026-05-14T15:29:23.553Z"
 last_activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
 progress:
   total_phases: 6
