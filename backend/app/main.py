@@ -15,6 +15,7 @@ from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request as StarletteRequest
 from starlette.responses import Response as StarletteResponse
 
+from app.admin.data_sources_router import router as admin_data_sources_router
 from app.admin.router import router as admin_router
 from app.agents.chat_router import router as chat_router
 from app.agents.router import router as agents_router
@@ -165,6 +166,7 @@ app.include_router(policy_documents_router)
 app.include_router(agents_router)
 app.include_router(chat_router)
 app.include_router(admin_router)
+app.include_router(admin_data_sources_router)
 
 
 @app.get("/")

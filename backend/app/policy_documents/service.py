@@ -330,24 +330,14 @@ def _is_auto_ingested(filename: str) -> bool:
 
 
 async def _gemeente_name_map(db: AsyncSession) -> dict[str, str]:
-    """Return a best-effort {gemeente_code: gemeente_naam} map.
+    """Deprecated re-export — use app.services.gemeente_name_lookup.get_gemeente_name_map.
 
-    There is no canonical gemeente-code→name reference table in this
-    codebase — `gemeente_provincie_map` only stores code↔code. The
-    `area_scans` table stores the gemeente_naam alongside gemeente_code
-    for every scan run, so we derive names from there for any gemeente
-    that has ever been scanned. Gemeenten that have policy docs uploaded
-    but no scan yet fall back to their raw code (e.g. 'GM0983').
-
-    Single query — not N+1. Returns at most ~342 rows.
+    Thin wrapper kept for M045 callers that import this function directly.
+    M049/S02 extracted the real implementation to the shared module.
     """
-    stmt = (
-        select(AreaScan.gemeente_code, AreaScan.gemeente_naam)
-        .distinct()
-        .where(AreaScan.gemeente_code.is_not(None))
-    )
-    rows = (await db.execute(stmt)).all()
-    return {row.gemeente_code: row.gemeente_naam for row in rows}
+    from app.services.gemeente_name_lookup import get_gemeente_name_map
+
+    return await get_gemeente_name_map(db)
 
 
 def _resolve_entity_display_name(
