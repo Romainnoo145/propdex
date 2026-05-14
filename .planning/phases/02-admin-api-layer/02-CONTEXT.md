@@ -145,15 +145,22 @@ ProbeResult = TypedDict('ProbeResult', {
 ProbeFn = Callable[[str, str, AsyncSession], Awaitable[ProbeResult]]
 
 async def probe_type_a_cascade(source_key, gemeente_code, db) -> ProbeResult:
-    """Count PolicyDocument rows voor deze (gemeente, source_key). >0 = live, =0 = missing."""
+    """Count PolicyDocument rows voor deze (gemeente, source_key). >0 = live, =0 = missing.
+
+    NOTE (correctie via 02-RESEARCH.md): PolicyDocument heeft GEEN gemeente_code veld.
+    Filter via entity_type='gemeente' + entity_code=<code>. Tel alleen vendor-managed
+    uploads (is_global=True) — klant-org overrides tellen niet mee voor vendor catalog status.
+    """
     count = await db.scalar(
         select(func.count()).select_from(PolicyDocument)
-        .where(PolicyDocument.gemeente_code == gemeente_code)
+        .where(PolicyDocument.entity_type == "gemeente")
+        .where(PolicyDocument.entity_code == gemeente_code)
         .where(PolicyDocument.source_key == source_key)
+        .where(PolicyDocument.is_global == True)
     )
     if count > 0:
         return {"status": "live", "error_message": None}
-    return {"status": "missing", "error_message": "No PolicyDocument rows found"}
+    return {"status": "missing", "error_message": "No vendor PolicyDocument rows found"}
 
 async def probe_type_b_stub(source_key, gemeente_code, db) -> ProbeResult:
     return {"status": "not_applicable", "error_message": "Open-API probe not yet wired (deferred to later milestone)"}
@@ -253,14 +260,24 @@ Edge case: DB heeft een row met `source_key` die niet (meer) in `DATA_SOURCE_KEY
 <specifics>
 ## Specific Ideas
 
-### Gemeente-naam resolution
-S01 catalog kent `gemeente_code` ("GM0983") maar niet `gemeente_naam` ("Venlo"). Planner moet onderzoeken of er een bestaande mapper is (vermoedelijk in `backend/app/government_apis/cbs_odata.py` of `app/services/`). Als geen mapper bestaat: hardcoded dict voor MVP (Venlo + 1-2 demo-gemeentes), uitbreiden bij eerste live klant-rollout.
+### Gemeente-naam resolution — RESOLVED via 02-RESEARCH.md
+Bestaande mapper: `backend/app/policy_documents/service.py:332-350` — `_gemeente_name_map(db)` retourneert `{gemeente_code: gemeente_naam}` via DISTINCT query op `area_scans.gemeente_naam`. M045/S05 admin overview gebruikt dit pattern.
+
+**Action voor planner:** extract `_gemeente_name_map` naar `backend/app/services/gemeente_name_lookup.py` (private-function-reach-through vermijden, +1 file, -1 private fn, zero behavior change). Daarna importeren in nieuwe `data_sources_router.py`.
 
 ### Performance verificatie
 Plan moet een micro-bench includeren: `pytest -m perf` of inline `time.perf_counter()` rondom GET endpoint dat <300ms asserts bij 50 catalog-entries + 50 DB-rows. Bij overschrijding: investigate query plan voor `WHERE gemeente_code = X`.
 
-### Status enum centralisatie
-Status `Literal["live","broken","missing","not_applicable"]` herhaalt in model (S01), schemas (S02), probe-registry (S02). Plan moet één `DataSourceStatusEnum` shared constant in `backend/app/policy_documents/data_source_keys.py` (of separate `data_source_enums.py`) — single source of truth voor planner.
+### Status enum centralisatie — RESOLVED via 02-RESEARCH.md
+S01 heeft al `DataSourceStatusValue` Literal gedefinieerd in `backend/app/models/data_source_status.py:28`. **Plan moet die importeren en hergebruiken — NIET een nieuwe `data_source_enums.py` maken.**
+
+### Advisory-lock implementatie — verfijnd via 02-RESEARCH.md
+- `pg_try_advisory_xact_lock` werkt prima met asyncpg (`SET LOCAL`-caveat is niet van toepassing).
+- Gebruik `func.pg_try_advisory_xact_lock(type_coerce(LOCK_KEY, BigInteger()))` voor int4-overflow safety.
+- **Vervang Python `hash()` met `hashlib.blake2b(..., digest_size=8)`** voor cross-process stability (PYTHONHASHSEED is randomized).
+
+### FastAPI Path-validator vs not-found onderscheid
+`Path(pattern=r"^GM\d{4}$")` geeft **422** voor malformed `gemeente_code`. **404** is voor `gemeente_code` die wel valid format heeft maar geen rows produceert (of niet bestaat in `area_scans`). Plan moet beide test-paden dekken.
 
 ### Pydantic v2 conventies
 - `model_config = ConfigDict(from_attributes=True)` voor ORM mapping
