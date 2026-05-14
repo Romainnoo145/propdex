@@ -136,7 +136,7 @@ Estimated duur: 3-4 weken (in lijn met landscape doc schatting).
 |-------|-------|------|--------------|--------|-----------|
 | 1 | S01 | Datamodel & Source-Key Catalog | 4 | Not started | — |
 | 2 | S02 | Admin API Layer | 5 | Not started | — |
-| 3 | S03 | Data Sources UX | 7 | Not started | — |
+| 3 | 2/4 | In Progress|  | Not started | — |
 | 4 | S04 | M045 Upload-flow Integratie | 5 | Not started | — |
 | 5 | S05 | Encrypted Credentials | 8 | Not started | — |
 | 6 | S06 | ActionItems Deprecation | 4 | Not started | — |
