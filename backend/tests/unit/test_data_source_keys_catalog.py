@@ -10,8 +10,9 @@ from app.policy_documents.data_source_keys import (
     get_entry,
 )
 
+# test file is backend/tests/unit/...py -> parents[3] is project root
 TS_CATALOG_PATH = (
-    Path(__file__).resolve().parents[2]
+    Path(__file__).resolve().parents[3]
     / "frontend"
     / "src"
     / "lib"
