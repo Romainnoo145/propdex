@@ -11,6 +11,12 @@ from app.models.change_record import ChangeRecord  # noqa: F401
 from app.models.chat_conversation import ChatConversation  # noqa: F401
 from app.models.chat_message import ChatMessage  # noqa: F401
 from app.models.checklist_progress import ChecklistProgress  # noqa: F401
+from app.models.data_source_status import (  # noqa: F401
+    DataSourceStatus,
+    DataSourceStatusCreate,
+    DataSourceStatusRead,
+    DataSourceStatusValue,
+)
 from app.models.factor_extraction_cache import FactorExtractionCache  # noqa: F401
 from app.models.favorite_note import FavoriteNote  # noqa: F401
 from app.models.funda_listing_snapshot import FundaListingSnapshot  # noqa: F401
@@ -60,6 +66,10 @@ __all__ = [
     "ChangeRecord",
     "ChangeReadState",
     "ChecklistProgress",
+    "DataSourceStatus",
+    "DataSourceStatusCreate",
+    "DataSourceStatusRead",
+    "DataSourceStatusValue",
     "FactorExtractionCache",
     "UserFactorPin",
     "UserNotificationState",
