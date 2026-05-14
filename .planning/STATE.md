@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 01-01-PLAN.md (M049/S01 P01 catalog + sync tests)
-last_updated: "2026-05-14T12:19:34.641Z"
+stopped_at: Completed 01-02-PLAN.md (M049/S01 P02 model + migration + RBAC scaffold)
+last_updated: "2026-05-14T12:34:24.179Z"
 last_activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
   percent: 88
 ---
 
@@ -67,6 +67,7 @@ Progress: [█████████░] 88% (7/8 plans)
 | Phase 07-factor-pinning-groep-pages-6-cards-per-page P05 | 10m | 1 tasks | 1 files |
 | Phase 08-integration-tests-venlo-e2e-smoke P01 | 38m | 10 tasks | 5 files |
 | Phase 01-datamodel-source-key-catalog P01 | 4 min | 3 tasks | 4 files |
+| Phase 01-datamodel-source-key-catalog P02 | 11 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -141,6 +142,8 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 01-datamodel-source-key-catalog]: M049/S01 P01: catalog deliberately separate from M045 source_keys (eng-review lock-in 2026-05-14) — avoid naming-confusion cascade-level vs data-source-type
 - [Phase 01-datamodel-source-key-catalog]: M049/S01 P01: 42 entries shipped (20 Type-A + 17 Type-B + 5 Type-C) — exceeds >=27 floor, captures full landscape now
 - [Phase 01-datamodel-source-key-catalog]: M049/S01 P01: kebab-case regex relaxed to allow leading digit (3d-bag canonical key); TS-sync path resolution fixed to parents[3]
+- [Phase 01-datamodel-source-key-catalog]: M049/S01 P02: vendor-managed DataSourceStatus model — NO TenantMixin / organization_id (eng-review 2026-05-14 lock-in); RBAC at route layer via Depends(get_current_superuser)
+- [Phase 01-datamodel-source-key-catalog]: M049/S01 P02: alembic revision 657143b79099 (down_revision 3d1196c58771 = M048/S04 head, NOT stale CONTEXT bbdb5c6ff811); status enum lives in Pydantic Literal — DB column plain String(20) to avoid Postgres ENUM migration friction
 
 ### Pending Todos
 
@@ -152,6 +155,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-14T12:19:34.640Z
-Stopped at: Completed 01-01-PLAN.md (M049/S01 P01 catalog + sync tests)
+Last session: 2026-05-14T12:34:24.177Z
+Stopped at: Completed 01-02-PLAN.md (M049/S01 P02 model + migration + RBAC scaffold)
 Resume file: None

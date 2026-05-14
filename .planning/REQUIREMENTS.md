@@ -7,8 +7,8 @@
 
 ### Data Model
 
-- [ ] **DATA-01**: `DataSourceStatus` SQLAlchemy model met velden (gemeente_code: String(6), source_key: String(64), status: Literal["live"/"broken"/"missing"/"not_applicable"], last_checked: datetime, error_message: nullable, configuratie: JSONB nullable, managed_by_user_id: FK Users — vendor superuser die regel beheert). **GEEN TenantMixin** — vendor-managed catalog (Propdex BV maintains centraal). Unique constraint op (gemeente_code, source_key). Eng-review locked 2026-05-14.
-- [ ] **DATA-02**: Alembic migratie creëert `data_source_status` tabel + indices op (gemeente_code) + UQ composite (gemeente_code, source_key). Lege tabel, geen data-backfill.
+- [x] **DATA-01**: `DataSourceStatus` SQLAlchemy model met velden (gemeente_code: String(6), source_key: String(64), status: Literal["live"/"broken"/"missing"/"not_applicable"], last_checked: datetime, error_message: nullable, configuratie: JSONB nullable, managed_by_user_id: FK Users — vendor superuser die regel beheert). **GEEN TenantMixin** — vendor-managed catalog (Propdex BV maintains centraal). Unique constraint op (gemeente_code, source_key). Eng-review locked 2026-05-14.
+- [x] **DATA-02**: Alembic migratie creëert `data_source_status` tabel + indices op (gemeente_code) + UQ composite (gemeente_code, source_key). Lege tabel, geen data-backfill.
 - [x] **DATA-03**: Nieuwe data-source-type catalog in `backend/app/policy_documents/data_source_keys.py` + frontend mirror `frontend/src/lib/constants/dataSourceKeys.ts` — 27+ bronnen verdeeld in 3 types: A (cascade-uploads), B (open APIs), C (paid integrations). **APART** van bestaande `source_keys.py` (M045 cascade-level keys) om naming-confusion te voorkomen. Eng-review locked 2026-05-14.
 - [ ] **DATA-04**: `IntegrationCredential` SQLAlchemy model voor encrypted credential storage (source_key, credential_name, encrypted_value via Fernet, created_by_user_id, last_rotated_at). **GEEN TenantMixin** — vendor-managed (Propdex BV brengt eigen BRK/NVM/Vindsubsidies subscriptions; klant-orgs zien deze data shared via vendor-credentials). Unique constraint op (source_key, credential_name).
 - [ ] **DATA-05**: Alembic migratie voor `integration_credentials` + Fernet key configuratie in settings (read from `INTEGRATION_CREDENTIAL_KEY` env, validation faalt bij ontbrekende/zwakke key op app-startup)
@@ -88,8 +88,8 @@ Deferred to post-M049 / latere milestones:
 
 | Requirement | Slice | Status |
 |-------------|-------|--------|
-| DATA-01 | S01 | Pending |
-| DATA-02 | S01 | Pending |
+| DATA-01 | S01 | Complete |
+| DATA-02 | S01 | Complete |
 | DATA-03 | S01 | Complete |
 | DATA-04 | S05 | Pending |
 | DATA-05 | S05 | Pending |
