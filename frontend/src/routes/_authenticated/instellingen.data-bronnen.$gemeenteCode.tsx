@@ -96,6 +96,7 @@ function GemeenteDataSourcesPage() {
           <DataSourceSection
             title="Beleidsdocumenten"
             count={payload.cascade_uploads.length}
+            completed={payload.cascade_uploads.filter((r) => r.status === 'live').length}
           >
             {payload.cascade_uploads.map((row) => (
               <DataSourceRow
@@ -109,6 +110,7 @@ function GemeenteDataSourcesPage() {
           <DataSourceSection
             title="Open API-bronnen"
             count={payload.open_apis.length}
+            completed={payload.open_apis.filter((r) => r.status === 'live').length}
           >
             {payload.open_apis.map((row) => (
               <DataSourceRow
@@ -122,6 +124,7 @@ function GemeenteDataSourcesPage() {
           <DataSourceSection
             title="Betaalde integraties"
             count={payload.paid_integrations.length}
+            completed={payload.paid_integrations.filter((r) => r.status === 'live').length}
           >
             {payload.paid_integrations.map((row) => (
               <DataSourceRow

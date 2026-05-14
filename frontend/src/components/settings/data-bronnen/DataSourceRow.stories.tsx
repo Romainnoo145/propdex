@@ -2,13 +2,14 @@
  * DataSourceRow stories — M049/S03 (TEST-04)
  *
  * 4 status variants × play functions assert:
- *   1. StatusPill renders with correct data-status attribute
- *   2. Action buttons render with correct data-action + data-enabled state
- *   3. Disabled actions show their tooltip reason (basic presence check)
+ *   1. Status icon renders with correct aria-label + parent data-status
+ *   2. Action buttons render with correct aria-label + data-enabled state
+ *   3. Type A "missing" hides the refresh button (only Upload is meaningful)
+ *
+ * Status pill text dropped — icon + aria-label carry semantic.
+ * Action buttons are icon-only — query via getByLabelText / aria-label.
  *
  * Storybook 10: imports come from `storybook/test` (not `@storybook/test`).
- * Wrapped in QueryClientProvider + AuthContext + RouterProvider so
- * useRefreshDataSource + <Link> from DataSourceRow render without errors.
  */
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
@@ -95,17 +96,14 @@ export const LiveWithActions: Story = {
   args: { gemeenteCode: 'GM0983', row: mockLiveRow },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const pill = canvas.getByText('Live')
-    expect(pill).toBeInTheDocument()
-    // StatusPill has data-status on its <span>
-    const pillContainer = pill.closest('[data-status]') as HTMLElement | null
-    expect(pillContainer?.getAttribute('data-status')).toBe('live')
+    const icon = canvas.getByLabelText('Live')
+    const rowContainer = icon.closest('[data-status]') as HTMLElement | null
+    expect(rowContainer?.getAttribute('data-status')).toBe('live')
 
-    // 3 action buttons — view_versions, upload (as Link), refresh
-    const versionBtn = canvas.getByText('Bekijk versies').closest('[data-action]') as HTMLElement
-    const refreshBtn = canvas.getByText('Vernieuw status').closest('[data-action]') as HTMLElement
-    expect(versionBtn?.getAttribute('data-enabled')).toBe('true')
-    expect(refreshBtn?.getAttribute('data-enabled')).toBe('true')
+    const versionBtn = canvas.getByLabelText('Bekijk versies') as HTMLElement
+    const refreshBtn = canvas.getByLabelText('Vernieuw status') as HTMLElement
+    expect(versionBtn.getAttribute('data-enabled')).toBe('true')
+    expect(refreshBtn.getAttribute('data-enabled')).toBe('true')
   },
 }
 
@@ -114,32 +112,31 @@ export const BrokenWithError: Story = {
   args: { gemeenteCode: 'GM0983', row: mockBrokenRow },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const pill = canvas.getByText('Foutmelding')
-    const pillContainer = pill.closest('[data-status]') as HTMLElement | null
-    expect(pillContainer?.getAttribute('data-status')).toBe('broken')
+    const icon = canvas.getByLabelText('Foutmelding')
+    const rowContainer = icon.closest('[data-status]') as HTMLElement | null
+    expect(rowContainer?.getAttribute('data-status')).toBe('broken')
 
-    // Upload + Refresh actions only (no view_versions for broken state)
-    const uploadBtn = canvas.getByText('Upload').closest('[data-action]') as HTMLElement
-    const refreshBtn = canvas.getByText('Vernieuw status').closest('[data-action]') as HTMLElement
-    expect(uploadBtn?.getAttribute('data-action')).toBe('upload')
-    expect(refreshBtn?.getAttribute('data-action')).toBe('refresh')
-    expect(canvas.queryByText('Bekijk versies')).toBeNull()
+    const uploadBtn = canvas.getByLabelText('Upload') as HTMLElement
+    const refreshBtn = canvas.getByLabelText('Vernieuw status') as HTMLElement
+    expect(uploadBtn.getAttribute('data-action')).toBe('upload')
+    expect(refreshBtn.getAttribute('data-action')).toBe('refresh')
+    expect(canvas.queryByLabelText('Bekijk versies')).toBeNull()
   },
 }
 
 export const MissingPlaceholder: Story = {
-  name: '3. Missing — alleen Upload + Refresh enabled',
+  name: '3. Missing — Type A hides refresh, alleen Upload',
   args: { gemeenteCode: 'GM0983', row: mockMissingRow },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const pill = canvas.getByText('Ontbreekt')
-    const pillContainer = pill.closest('[data-status]') as HTMLElement | null
-    expect(pillContainer?.getAttribute('data-status')).toBe('missing')
+    const icon = canvas.getByLabelText('Ontbreekt')
+    const rowContainer = icon.closest('[data-status]') as HTMLElement | null
+    expect(rowContainer?.getAttribute('data-status')).toBe('missing')
 
-    const uploadBtn = canvas.getByText('Upload').closest('[data-action]') as HTMLElement
-    expect(uploadBtn?.getAttribute('data-enabled')).toBe('true')
-    const refreshBtn = canvas.getByText('Vernieuw status').closest('[data-action]') as HTMLElement
-    expect(refreshBtn?.getAttribute('data-enabled')).toBe('true')
+    const uploadBtn = canvas.getByLabelText('Upload') as HTMLElement
+    expect(uploadBtn.getAttribute('data-enabled')).toBe('true')
+    // Type A + missing → refresh deliberately hidden
+    expect(canvas.queryByLabelText('Vernieuw status')).toBeNull()
   },
 }
 
@@ -148,13 +145,13 @@ export const NotApplicable: Story = {
   args: { gemeenteCode: 'GM0983', row: mockNotApplicableRow },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const pill = canvas.getByText('N.v.t.')
-    const pillContainer = pill.closest('[data-status]') as HTMLElement | null
-    expect(pillContainer?.getAttribute('data-status')).toBe('not_applicable')
+    const icon = canvas.getByLabelText('Niet van toepassing')
+    const rowContainer = icon.closest('[data-status]') as HTMLElement | null
+    expect(rowContainer?.getAttribute('data-status')).toBe('not_applicable')
 
-    const credBtn = canvas.getByText('Configureer credential').closest('[data-action]') as HTMLElement
-    const refreshBtn = canvas.getByText('Vernieuw status').closest('[data-action]') as HTMLElement
-    expect(credBtn?.getAttribute('data-enabled')).toBe('false')
-    expect(refreshBtn?.getAttribute('data-enabled')).toBe('false')
+    const credBtn = canvas.getByLabelText('Configureer credential') as HTMLElement
+    const refreshBtn = canvas.getByLabelText('Vernieuw status') as HTMLElement
+    expect(credBtn.getAttribute('data-enabled')).toBe('false')
+    expect(refreshBtn.getAttribute('data-enabled')).toBe('false')
   },
 }

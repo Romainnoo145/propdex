@@ -33,6 +33,7 @@ import { Route as AuthenticatedInstellingenDataBronnenRouteImport } from './rout
 import { Route as AuthenticatedInstellingenBeleidBeheerRouteImport } from './routes/_authenticated/instellingen.beleid-beheer'
 import { Route as AuthenticatedInstellingenAdminRouteImport } from './routes/_authenticated/instellingen.admin'
 import { Route as AuthenticatedChecklistIdRouteImport } from './routes/_authenticated/checklist.$id'
+import { Route as AuthenticatedInstellingenDataBronnenIndexRouteImport } from './routes/_authenticated/instellingen.data-bronnen.index'
 import { Route as AuthenticatedInstellingenDataBronnenGemeenteCodeRouteImport } from './routes/_authenticated/instellingen.data-bronnen.$gemeenteCode'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -163,6 +164,12 @@ const AuthenticatedChecklistIdRoute =
     path: '/checklist/$id',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedInstellingenDataBronnenIndexRoute =
+  AuthenticatedInstellingenDataBronnenIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedInstellingenDataBronnenRoute,
+  } as any)
 const AuthenticatedInstellingenDataBronnenGemeenteCodeRoute =
   AuthenticatedInstellingenDataBronnenGemeenteCodeRouteImport.update({
     id: '/$gemeenteCode',
@@ -195,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/instellingen/': typeof AuthenticatedInstellingenIndexRoute
   '/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
+  '/instellingen/data-bronnen/': typeof AuthenticatedInstellingenDataBronnenIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -215,11 +223,11 @@ export interface FileRoutesByTo {
   '/checklist/$id': typeof AuthenticatedChecklistIdRoute
   '/instellingen/admin': typeof AuthenticatedInstellingenAdminRoute
   '/instellingen/beleid-beheer': typeof AuthenticatedInstellingenBeleidBeheerRoute
-  '/instellingen/data-bronnen': typeof AuthenticatedInstellingenDataBronnenRouteWithChildren
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/instellingen': typeof AuthenticatedInstellingenIndexRoute
   '/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
+  '/instellingen/data-bronnen': typeof AuthenticatedInstellingenDataBronnenIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -248,6 +256,7 @@ export interface FileRoutesById {
   '/_authenticated/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/_authenticated/instellingen/': typeof AuthenticatedInstellingenIndexRoute
   '/_authenticated/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
+  '/_authenticated/instellingen/data-bronnen/': typeof AuthenticatedInstellingenDataBronnenIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -276,6 +285,7 @@ export interface FileRouteTypes {
     | '/rapport/$id'
     | '/instellingen/'
     | '/instellingen/data-bronnen/$gemeenteCode'
+    | '/instellingen/data-bronnen/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -296,11 +306,11 @@ export interface FileRouteTypes {
     | '/checklist/$id'
     | '/instellingen/admin'
     | '/instellingen/beleid-beheer'
-    | '/instellingen/data-bronnen'
     | '/instellingen/score'
     | '/rapport/$id'
     | '/instellingen'
     | '/instellingen/data-bronnen/$gemeenteCode'
+    | '/instellingen/data-bronnen'
   id:
     | '__root__'
     | '/'
@@ -328,6 +338,7 @@ export interface FileRouteTypes {
     | '/_authenticated/rapport/$id'
     | '/_authenticated/instellingen/'
     | '/_authenticated/instellingen/data-bronnen/$gemeenteCode'
+    | '/_authenticated/instellingen/data-bronnen/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -507,6 +518,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedChecklistIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/instellingen/data-bronnen/': {
+      id: '/_authenticated/instellingen/data-bronnen/'
+      path: '/'
+      fullPath: '/instellingen/data-bronnen/'
+      preLoaderRoute: typeof AuthenticatedInstellingenDataBronnenIndexRouteImport
+      parentRoute: typeof AuthenticatedInstellingenDataBronnenRoute
+    }
     '/_authenticated/instellingen/data-bronnen/$gemeenteCode': {
       id: '/_authenticated/instellingen/data-bronnen/$gemeenteCode'
       path: '/$gemeenteCode'
@@ -519,12 +537,15 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedInstellingenDataBronnenRouteChildren {
   AuthenticatedInstellingenDataBronnenGemeenteCodeRoute: typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
+  AuthenticatedInstellingenDataBronnenIndexRoute: typeof AuthenticatedInstellingenDataBronnenIndexRoute
 }
 
 const AuthenticatedInstellingenDataBronnenRouteChildren: AuthenticatedInstellingenDataBronnenRouteChildren =
   {
     AuthenticatedInstellingenDataBronnenGemeenteCodeRoute:
       AuthenticatedInstellingenDataBronnenGemeenteCodeRoute,
+    AuthenticatedInstellingenDataBronnenIndexRoute:
+      AuthenticatedInstellingenDataBronnenIndexRoute,
   }
 
 const AuthenticatedInstellingenDataBronnenRouteWithChildren =

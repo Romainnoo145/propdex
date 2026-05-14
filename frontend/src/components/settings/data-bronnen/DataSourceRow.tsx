@@ -1,18 +1,28 @@
 /**
  * DataSourceRow — M049/S03
  *
- * Pure-Glass card row for one data-source slot. Composes:
- *   [label + source_type badge]  [StatusPill]  [last_checked relative]  [actions]
+ * Minimal list-row for one data-source slot:
+ *   [status icon] [label]   [last_checked]                [ghost icon actions]
  *
- * Action handling:
- *   - refresh action wired to useRefreshDataSource mutation
- *   - other actions (upload / view_versions / configure_credential) are placeholders
- *     for S04/S05; rendered as disabled buttons with tooltip when not enabled
+ * Status differentiation lives in the leading icon — direct scanability
+ * across 20+ rows. StatusPill dropped (icon carries semantic).
+ *
+ * Type A "missing" hides the refresh button (only upload is meaningful).
  *
  * Aura tokens locked in 03-CONTEXT.md §5.
  * Tooltip: CSS group/group-hover pattern (project convention, no Radix).
  */
-import { History, Loader2, RefreshCw, Settings2, Upload } from 'lucide-react'
+import {
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  History,
+  Loader2,
+  MinusCircle,
+  RefreshCw,
+  Settings2,
+  Upload,
+} from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { formatRelativeNL } from '@/lib/utils/datetime'
@@ -21,19 +31,12 @@ import type {
   Action,
   ActionType,
   DataSourceRow as DataSourceRowDTO,
-  SourceType,
+  DataSourceStatus,
 } from '@/lib/types/data-sources-admin'
-import { StatusPill } from './StatusPill'
 
 interface Props {
   gemeenteCode: string
   row: DataSourceRowDTO
-}
-
-const SOURCE_TYPE_BADGE: Record<SourceType, { className: string; label: string }> = {
-  A: { className: 'bg-[#D1E2D8]/40 text-[#0E1111]', label: 'Beleid' },
-  B: { className: 'bg-slate-100 text-slate-700', label: 'API' },
-  C: { className: 'bg-[#F9A826]/15 text-[#F9A826]', label: 'Integratie' },
 }
 
 const ACTION_ICON: Record<ActionType, typeof Upload> = {
@@ -43,6 +46,32 @@ const ACTION_ICON: Record<ActionType, typeof Upload> = {
   configure_credential: Settings2,
 }
 
+const STATUS_ICON: Record<
+  DataSourceStatus,
+  { Icon: typeof AlertTriangle; className: string; label: string }
+> = {
+  missing: {
+    Icon: AlertTriangle,
+    className: 'text-[#F9A826]',
+    label: 'Ontbreekt',
+  },
+  broken: {
+    Icon: AlertCircle,
+    className: 'text-red-500',
+    label: 'Foutmelding',
+  },
+  live: {
+    Icon: CheckCircle2,
+    className: 'text-[#22C55E]',
+    label: 'Live',
+  },
+  not_applicable: {
+    Icon: MinusCircle,
+    className: 'text-slate-400',
+    label: 'Niet van toepassing',
+  },
+}
+
 export function DataSourceRow({ gemeenteCode, row }: Props) {
   const refreshMutation = useRefreshDataSource()
   const isRefreshing =
@@ -50,37 +79,45 @@ export function DataSourceRow({ gemeenteCode, row }: Props) {
     refreshMutation.variables?.sourceKey === row.source_key &&
     refreshMutation.variables?.gemeenteCode === gemeenteCode
 
-  const badge = SOURCE_TYPE_BADGE[row.source_type]
+  const status = STATUS_ICON[row.status]
+  const StatusIcon = status.Icon
+
+  // Type A "missing" → only upload action is meaningful; hide refresh
+  const actions =
+    row.source_type === 'A' && row.status === 'missing'
+      ? row.available_actions.filter((a) => a.action !== 'refresh')
+      : row.available_actions
 
   return (
     <div
-      className="bg-white/60 backdrop-blur-[24px] border border-white/20 rounded-2xl p-4 flex flex-col md:flex-row md:items-center gap-4"
+      className="group flex items-center gap-3 py-3 border-b border-slate-200/60 last:border-b-0"
       data-source-key={row.source_key}
+      data-status={row.status}
     >
-      {/* Column 1: label + type badge */}
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="text-[13px] font-semibold text-[#0E1111] truncate">
-          {row.label_nl}
-        </span>
-        <span
-          className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${badge.className}`}
-          data-source-type={row.source_type}
-        >
-          {badge.label}
-        </span>
-      </div>
+      <Tooltip
+        content={row.error_message ?? status.label}
+        side="top"
+      >
+        <StatusIcon
+          size={18}
+          strokeWidth={2}
+          className={`shrink-0 ${status.className}`}
+          aria-label={status.label}
+        />
+      </Tooltip>
 
-      {/* Column 2: status pill */}
-      <StatusPill status={row.status} errorMessage={row.error_message} />
-
-      {/* Column 3: last_checked relative */}
-      <span className="text-[11px] text-slate-500">
-        {row.last_checked ? formatRelativeNL(row.last_checked) : 'Nog niet gecheckt'}
+      <span className="text-[13px] font-medium text-[#0E1111] truncate flex-1 min-w-0">
+        {row.label_nl}
       </span>
 
-      {/* Column 4: actions (ml-auto pushes right on md+) */}
-      <div className="flex items-center gap-1 md:ml-auto">
-        {row.available_actions.map((action) => (
+      {row.last_checked && (
+        <span className="text-[11px] text-slate-400 tabular-nums shrink-0">
+          {formatRelativeNL(row.last_checked)}
+        </span>
+      )}
+
+      <div className="flex items-center gap-0.5 shrink-0">
+        {actions.map((action) => (
           <ActionButton
             key={action.action}
             action={action}
@@ -120,22 +157,23 @@ function ActionButton({
     isRefreshing && action.action === 'refresh' ? Loader2 : ACTION_ICON[action.action]
   const isDisabled = !action.enabled || isRefreshing
   const baseClass =
-    'inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors'
-  const enabledClass = 'bg-[#0E1111] text-white hover:opacity-90'
-  const disabledClass = 'bg-slate-100 text-slate-400 cursor-not-allowed'
+    'inline-flex items-center justify-center size-8 rounded-full transition-colors'
+  const enabledClass = 'text-slate-500 hover:text-[#0E1111] hover:bg-slate-100'
+  const disabledClass = 'text-slate-300 cursor-not-allowed'
 
-  // Upload is a deep-link to /instellingen/beleid-beheer per 03-CONTEXT.md §12
   if (action.action === 'upload' && action.enabled) {
     return (
-      <Link
-        to="/instellingen/beleid-beheer"
-        className={`${baseClass} ${enabledClass}`}
-        data-action={action.action}
-        data-enabled="true"
-      >
-        <Icon size={14} strokeWidth={2} />
-        <span>{action.label_nl}</span>
-      </Link>
+      <Tooltip content={action.label_nl} side="top">
+        <Link
+          to="/instellingen/beleid-beheer"
+          className={`${baseClass} ${enabledClass}`}
+          aria-label={action.label_nl}
+          data-action={action.action}
+          data-enabled="true"
+        >
+          <Icon size={15} strokeWidth={1.75} />
+        </Link>
+      </Tooltip>
     )
   }
 
@@ -145,25 +183,26 @@ function ActionButton({
       disabled={isDisabled}
       onClick={action.action === 'refresh' && action.enabled ? onRefresh : undefined}
       className={`${baseClass} ${isDisabled ? disabledClass : enabledClass}`}
+      aria-label={action.label_nl}
       data-action={action.action}
       data-enabled={action.enabled ? 'true' : 'false'}
     >
       <Icon
-        size={14}
-        strokeWidth={2}
+        size={15}
+        strokeWidth={1.75}
         className={isRefreshing ? 'animate-spin' : ''}
       />
-      <span>{action.label_nl}</span>
     </button>
   )
 
-  if (!action.enabled && action.reason_disabled) {
-    return (
-      <Tooltip content={action.reason_disabled} side="top">
-        {btn}
-      </Tooltip>
-    )
-  }
+  const tooltipContent =
+    !action.enabled && action.reason_disabled
+      ? action.reason_disabled
+      : action.label_nl
 
-  return btn
+  return (
+    <Tooltip content={tooltipContent} side="top">
+      {btn}
+    </Tooltip>
+  )
 }
