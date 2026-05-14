@@ -25,10 +25,10 @@
 
 - [x] **UX-01**: Nieuwe TanStack Router route `/instellingen/data-bronnen` met gemeente-picker (default: eerste gemeente uit org)
 - [x] **UX-02**: Route `/instellingen/data-bronnen/{gemeente_code}` toont 3 secties (Beleidsdocumenten / Open APIs / Betaalde integraties) met status-pills (live/broken/missing/N.V.T.) en Aura-conform design (Pure Glass cards, Morning Mist canvas, Plus Jakarta Sans)
-- [ ] **UX-03**: Status-pill kleurcodes: live=Vitality Green, broken=red, missing=amber, N.V.T.=neutraal grijs — match Aura tokens
-- [ ] **UX-04**: Per data-source rij: label + bron-type badge + status-pill + last_checked relative ("2 dagen geleden") + action-buttons (Upload / Refresh / Configureer credential)
+- [x] **UX-03**: Status-pill kleurcodes: live=Vitality Green, broken=red, missing=amber, N.V.T.=neutraal grijs — match Aura tokens
+- [x] **UX-04**: Per data-source rij: label + bron-type badge + status-pill + last_checked relative ("2 dagen geleden") + action-buttons (Upload / Refresh / Configureer credential)
 - [x] **UX-05**: SettingsTabNav krijgt nieuwe pill "Data-bronnen" (5e tab naast beleid-beheer); superuser-gated visibility match M045/S05 pattern
-- [ ] **UX-06**: Empty-state per gemeente: "Nog geen bronnen geactiveerd voor deze gemeente" met onboarding-CTA
+- [x] **UX-06**: Empty-state per gemeente: "Nog geen bronnen geactiveerd voor deze gemeente" met onboarding-CTA
 
 ### Upload Flow Integration
 
@@ -100,10 +100,10 @@ Deferred to post-M049 / latere milestones:
 | API-05 | S02 | Complete |
 | UX-01 | S03 | Complete |
 | UX-02 | S03 | Complete |
-| UX-03 | S03 | Pending |
-| UX-04 | S03 | Pending |
+| UX-03 | S03 | Complete |
+| UX-04 | S03 | Complete |
 | UX-05 | S03 | Complete |
-| UX-06 | S03 | Pending |
+| UX-06 | S03 | Complete |
 | INT-01 | S04 | Pending |
 | INT-02 | S04 | Pending |
 | INT-03 | S04 | Pending |

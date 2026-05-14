@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 03-01-PLAN.md (M049/S03 types mirror + TanStack Query hooks foundation)
-last_updated: "2026-05-14T18:17:36.598Z"
+stopped_at: Completed 03-03-PLAN.md (M049/S03 data-bronnen component library)
+last_updated: "2026-05-14T18:39:09.899Z"
 last_activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
   percent: 88
 ---
 
@@ -72,6 +72,7 @@ Progress: [█████████░] 88% (7/8 plans)
 | Phase 02-admin-api-layer P02 | 132 min | 1 tasks | 3 files |
 | Phase 03-data-sources-ux P02 | 5min | 1 tasks | 1 files |
 | Phase 03-data-sources-ux P01 | 2min | 2 tasks | 2 files |
+| Phase 03-data-sources-ux P03 | 6min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -155,6 +156,9 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 03-data-sources-ux]: 03-02: fuzzy: true on matchRoute ensures pill stays active on /instellingen/data-bronnen AND /instellingen/data-bronnen/$gemeenteCode sub-route
 - [Phase 03-data-sources-ux]: lib/queries/ directory created as new sub-namespace for domain-scoped query hooks (distinct from src/hooks/ component-level)
 - [Phase 03-data-sources-ux]: Dual cache invalidation on refresh: both gemeente(code) and gemeenten() keys invalidated so picker status-dots update immediately
+- [Phase 03-data-sources-ux]: No @/components/ui/tooltip (Radix/shadcn) — created ui/Tooltip.tsx using project CSS group/group-hover pattern per TeamAttributionBadge.tsx convention
+- [Phase 03-data-sources-ux]: motion layoutId='gemeente-picker' is isolated scope from SettingsTabNav's 'settings-tab' — prevents cross-tab animation interference
+- [Phase 03-data-sources-ux]: Upload action renders as TanStack Link (not button) when enabled — deep-links to /instellingen/beleid-beheer per 03-CONTEXT §12 until S04 adds modal in-place
 
 ### Pending Todos
 
@@ -166,6 +170,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-14T18:17:36.595Z
-Stopped at: Completed 03-01-PLAN.md (M049/S03 types mirror + TanStack Query hooks foundation)
+Last session: 2026-05-14T18:39:09.897Z
+Stopped at: Completed 03-03-PLAN.md (M049/S03 data-bronnen component library)
 Resume file: None
