@@ -47,7 +47,9 @@ def test_all_labels_are_non_empty() -> None:
 
 
 def test_all_keys_are_kebab_case() -> None:
-    pattern = re.compile(r"^[a-z][a-z0-9-]*$")
+    # Kebab-case: lowercase alnum tokens joined by hyphens. Leading digit allowed
+    # (e.g. "3d-bag" is a canonical catalog key per CONTEXT §catalog files).
+    pattern = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
     bad = [e.key for e in DATA_SOURCE_KEYS if not pattern.match(e.key)]
     assert not bad, f"Non-kebab-case keys: {bad}"
 
