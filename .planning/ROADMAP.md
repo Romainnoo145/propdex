@@ -22,15 +22,22 @@ M049 consolideert het admin-landschap: M045/S05 PDF-upload-flow + ActionItems pa
 ## Slice Details
 
 ### S01: Datamodel & Source-Key Catalog
-**Goal:** SQLAlchemy infrastructuur klaar voor admin API + frontend kan source-key catalog renderen zonder backend roundtrip.
+**Goal:** SQLAlchemy infrastructuur klaar voor vendor-managed admin API + frontend kan data-source-key catalog renderen zonder backend roundtrip.
 
 **Requirements:** DATA-01, DATA-02, DATA-03, TEST-01
 
+**Eng-review beslissingen locked-in 2026-05-14:**
+- Vendor-managed model (geen TenantMixin) — Propdex BV maintains catalog centraal voor alle klant-orgs
+- Aparte data_source_keys.py + frontend mirror (NIET source_keys.py extenden — naming-confusion-risk)
+- `DataSourceStatus` als klassenaam, `data_source_status` als tabel (korter dan gemeente_*-prefix)
+- `configuratie: JSONB` houdt non-secret state (refresh-interval, last_synced_doc_id); secrets in S05
+
 **Success criteria:**
-1. `gemeente_data_source_status` model query'baar met TenantMixin filter (`organization_id`); unique constraint voorkomt dubbele (gemeente, source_key) rows per org
-2. Alembic migratie draait clean op propdex_test + propdex (productie) zonder data-loss
-3. Source-key catalog bevat 27+ entries verdeeld in 3 bron-types; Python + TypeScript mirror sync via shared definition file
-4. Multi-tenant test bewijst: org A's data-source rows zijn onzichtbaar voor org B
+1. `DataSourceStatus` model query'baar zonder org-filter (vendor-managed); unique constraint op (gemeente_code, source_key) voorkomt dubbele rows
+2. Alembic migratie draait clean op propdex_test + propdex zonder data-loss; lege tabel, geen backfill
+3. Data-source-key catalog bevat 27+ entries verdeeld in 3 bron-types (A cascade-uploads / B open APIs / C paid integrations); Python + TypeScript mirror sync via shared definition pattern (hand-maintained twin, zoals M045/S05)
+4. Superuser-RBAC test bewijst: regular user→403, superuser→200 op admin/data-sources route
+5. M045 PolicyDocument-tier (tenant-scoped uploads) blijft onveranderd — backward-compat verified
 
 **Depends on:** Nothing (eerste slice)
 
@@ -81,12 +88,17 @@ M049 consolideert het admin-landschap: M045/S05 PDF-upload-flow + ActionItems pa
 
 **Requirements:** DATA-04, DATA-05, API-04, CRED-01, CRED-02, CRED-03, CRED-04, TEST-03
 
+**Eng-review beslissing locked-in 2026-05-14:**
+- Vendor-managed credentials (geen TenantMixin) — Propdex BV brengt eigen subscriptions, klant-orgs profiteren via shared vendor-credentials. Match pricing-tier model uit partner-briefing 2026-05-13 (€299/€699/€1.249 zonder BYOK-friction). BYOK voor enterprise-tier wordt future-feature (niet MVP).
+- `IntegrationCredential` als klassenaam, `integration_credentials` als tabel
+- UQ op (source_key, credential_name)
+
 **Success criteria:**
 1. Fernet encryption roundtrip getest: stored value is base64 niet-leesbaar; decrypt levert origineel terug
 2. `INTEGRATION_CREDENTIAL_KEY` env-variable validation faalt bij ontbrekende/zwakke key op app-startup
 3. GET endpoints retourneren `configured: true` / `configured_at: <date>` — NOOIT decrypted waarden
 4. Credential-rotatie UX werkt: oude entry verwijderd, nieuwe entry geschreven, audit-log entry zichtbaar
-5. Superuser-only constraint getest
+5. Superuser-only RBAC constraint getest (vendor-managed access)
 
 **Depends on:** S01 (model pattern), S02 (API pattern), S03 (UI pattern)
 

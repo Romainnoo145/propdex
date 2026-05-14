@@ -7,11 +7,11 @@
 
 ### Data Model
 
-- [ ] **DATA-01**: `gemeente_data_source_status` SQLAlchemy model met velden (gemeente_code: String(6), source_key: String(64), status: Literal["live"/"broken"/"missing"/"not_applicable"], last_checked: datetime, error_message: nullable, configuratie: JSONB nullable), TenantMixin, unique constraint op (organization_id, gemeente_code, source_key)
-- [ ] **DATA-02**: Alembic migratie creëert tabel + indices op (gemeente_code, source_key) en (organization_id, gemeente_code)
-- [ ] **DATA-03**: Source-key catalog uitgebreid (`backend/.../source_keys.py` + frontend mirror) met alle 27+ bronnen verdeeld in 3 bron-types: A (cascade-uploads), B (open APIs), C (paid integrations)
-- [ ] **DATA-04**: `organization_integration_credentials` SQLAlchemy model voor encrypted credential storage (organization_id, source_key, credential_name, encrypted_value via Fernet, created_by_user_id, last_rotated_at)
-- [ ] **DATA-05**: Alembic migratie voor `organization_integration_credentials` + Fernet key configuratie in settings (read from `INTEGRATION_CREDENTIAL_KEY` env)
+- [ ] **DATA-01**: `DataSourceStatus` SQLAlchemy model met velden (gemeente_code: String(6), source_key: String(64), status: Literal["live"/"broken"/"missing"/"not_applicable"], last_checked: datetime, error_message: nullable, configuratie: JSONB nullable, managed_by_user_id: FK Users — vendor superuser die regel beheert). **GEEN TenantMixin** — vendor-managed catalog (Propdex BV maintains centraal). Unique constraint op (gemeente_code, source_key). Eng-review locked 2026-05-14.
+- [ ] **DATA-02**: Alembic migratie creëert `data_source_status` tabel + indices op (gemeente_code) + UQ composite (gemeente_code, source_key). Lege tabel, geen data-backfill.
+- [ ] **DATA-03**: Nieuwe data-source-type catalog in `backend/app/policy_documents/data_source_keys.py` + frontend mirror `frontend/src/lib/constants/dataSourceKeys.ts` — 27+ bronnen verdeeld in 3 types: A (cascade-uploads), B (open APIs), C (paid integrations). **APART** van bestaande `source_keys.py` (M045 cascade-level keys) om naming-confusion te voorkomen. Eng-review locked 2026-05-14.
+- [ ] **DATA-04**: `IntegrationCredential` SQLAlchemy model voor encrypted credential storage (source_key, credential_name, encrypted_value via Fernet, created_by_user_id, last_rotated_at). **GEEN TenantMixin** — vendor-managed (Propdex BV brengt eigen BRK/NVM/Vindsubsidies subscriptions; klant-orgs zien deze data shared via vendor-credentials). Unique constraint op (source_key, credential_name).
+- [ ] **DATA-05**: Alembic migratie voor `integration_credentials` + Fernet key configuratie in settings (read from `INTEGRATION_CREDENTIAL_KEY` env, validation faalt bij ontbrekende/zwakke key op app-startup)
 
 ### API Endpoints
 
@@ -19,7 +19,7 @@
 - [ ] **API-02**: `GET /api/admin/data-sources/gemeenten` retourneert lijst van gemeenten met aggregate status (counts per status), gesorteerd op activiteit
 - [ ] **API-03**: `POST /api/admin/data-sources/{gemeente_code}/{source_key}/refresh` triggert herevaluatie van bron-status (probe API, recount documents, etc.), idempotent
 - [ ] **API-04**: `POST /api/admin/integration-credentials` slaat encrypted credential op; `DELETE /api/admin/integration-credentials/{id}` roteert/verwijdert; alleen superuser
-- [ ] **API-05**: Alle nieuwe admin endpoints zijn superuser-gated + organization_id-scoped via TenantMixin pattern
+- [ ] **API-05**: Alle nieuwe admin endpoints zijn superuser-gated (vendor-only access). **GEEN organization_id-scoping** — `data_source_status` en `integration_credentials` zijn vendor-managed tabellen. Regular klant-org users krijgen 403 op alle admin/data-sources endpoints. M045/S05 PolicyDocument-tier (waar klant-orgs eigen overrides uploaden) blijft onveranderd TenantMixin.
 
 ### Frontend UX
 
@@ -52,7 +52,7 @@
 
 ### Testing
 
-- [ ] **TEST-01**: Backend unit tests voor `gemeente_data_source_status` model + tenant-isolation queries (multi-tenant safety)
+- [ ] **TEST-01**: Backend unit tests voor `DataSourceStatus` model: status-enum validation, UQ duplicate-insert IntegrityError, JSONB configuratie roundtrip, catalog completeness (27+ entries, 3 types, no duplicate keys), Alembic up+down clean op `propdex_test`. **Superuser-RBAC** test (geen tenant-isolation want vendor-managed): regular user→403, superuser→200 op admin/data-sources route.
 - [ ] **TEST-02**: Backend integration tests voor alle 5 nieuwe API endpoints (auth, scoping, status transitions)
 - [ ] **TEST-03**: Backend test voor credential encryption roundtrip (Fernet encrypt → DB → decrypt) + key-rotation scenario
 - [ ] **TEST-04**: Frontend Storybook plays voor DataSourceRow component (live/broken/missing/configured states)
