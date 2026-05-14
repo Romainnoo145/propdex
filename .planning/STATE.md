@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.0
+milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: "Completed 08-01-PLAN.md (Phase 8 complete — M048 convergence smoke layer: 4 backend smoke + 4 Storybook plays + WoonvisieMatchWaarde TS contract type)"
-last_updated: "2026-05-13T15:29:58.885Z"
+stopped_at: Completed 01-01-PLAN.md (M049/S01 P01 catalog + sync tests)
+last_updated: "2026-05-14T12:19:34.641Z"
 last_activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 17
-  completed_plans: 17
+  total_phases: 6
+  completed_phases: 0
+  total_plans: 2
+  completed_plans: 1
   percent: 88
 ---
 
@@ -66,6 +66,7 @@ Progress: [█████████░] 88% (7/8 plans)
 | Phase 07-factor-pinning-groep-pages-6-cards-per-page P04 | 6min | 3 tasks | 4 files |
 | Phase 07-factor-pinning-groep-pages-6-cards-per-page P05 | 10m | 1 tasks | 1 files |
 | Phase 08-integration-tests-venlo-e2e-smoke P01 | 38m | 10 tasks | 5 files |
+| Phase 01-datamodel-source-key-catalog P01 | 4 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -137,6 +138,9 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 08-integration-tests-venlo-e2e-smoke]: Plan path 'app.services.factor_extraction_service.get_claude_client' was incorrect — does not exist; corrected to 'app.ai.factor_extractor.create_claude_client' returning SimpleNamespace(client, model) wrapper
 - [Phase 08-integration-tests-venlo-e2e-smoke]: Pin-persistence component-level only; live-backend hard-refresh deferred to human verification block in 08-VERIFICATION.md
 - [Phase 08-integration-tests-venlo-e2e-smoke]: Frontend Wave-0 stub task (T7) added to enforce Nyquist parity with backend Task 1
+- [Phase 01-datamodel-source-key-catalog]: M049/S01 P01: catalog deliberately separate from M045 source_keys (eng-review lock-in 2026-05-14) — avoid naming-confusion cascade-level vs data-source-type
+- [Phase 01-datamodel-source-key-catalog]: M049/S01 P01: 42 entries shipped (20 Type-A + 17 Type-B + 5 Type-C) — exceeds >=27 floor, captures full landscape now
+- [Phase 01-datamodel-source-key-catalog]: M049/S01 P01: kebab-case regex relaxed to allow leading digit (3d-bag canonical key); TS-sync path resolution fixed to parents[3]
 
 ### Pending Todos
 
@@ -148,6 +152,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-26T19:20:18.576Z
-Stopped at: Completed 08-01-PLAN.md (Phase 8 complete — M048 convergence smoke layer: 4 backend smoke + 4 Storybook plays + WoonvisieMatchWaarde TS contract type)
+Last session: 2026-05-14T12:19:34.640Z
+Stopped at: Completed 01-01-PLAN.md (M049/S01 P01 catalog + sync tests)
 Resume file: None

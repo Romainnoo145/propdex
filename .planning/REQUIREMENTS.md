@@ -9,7 +9,7 @@
 
 - [ ] **DATA-01**: `DataSourceStatus` SQLAlchemy model met velden (gemeente_code: String(6), source_key: String(64), status: Literal["live"/"broken"/"missing"/"not_applicable"], last_checked: datetime, error_message: nullable, configuratie: JSONB nullable, managed_by_user_id: FK Users — vendor superuser die regel beheert). **GEEN TenantMixin** — vendor-managed catalog (Propdex BV maintains centraal). Unique constraint op (gemeente_code, source_key). Eng-review locked 2026-05-14.
 - [ ] **DATA-02**: Alembic migratie creëert `data_source_status` tabel + indices op (gemeente_code) + UQ composite (gemeente_code, source_key). Lege tabel, geen data-backfill.
-- [ ] **DATA-03**: Nieuwe data-source-type catalog in `backend/app/policy_documents/data_source_keys.py` + frontend mirror `frontend/src/lib/constants/dataSourceKeys.ts` — 27+ bronnen verdeeld in 3 types: A (cascade-uploads), B (open APIs), C (paid integrations). **APART** van bestaande `source_keys.py` (M045 cascade-level keys) om naming-confusion te voorkomen. Eng-review locked 2026-05-14.
+- [x] **DATA-03**: Nieuwe data-source-type catalog in `backend/app/policy_documents/data_source_keys.py` + frontend mirror `frontend/src/lib/constants/dataSourceKeys.ts` — 27+ bronnen verdeeld in 3 types: A (cascade-uploads), B (open APIs), C (paid integrations). **APART** van bestaande `source_keys.py` (M045 cascade-level keys) om naming-confusion te voorkomen. Eng-review locked 2026-05-14.
 - [ ] **DATA-04**: `IntegrationCredential` SQLAlchemy model voor encrypted credential storage (source_key, credential_name, encrypted_value via Fernet, created_by_user_id, last_rotated_at). **GEEN TenantMixin** — vendor-managed (Propdex BV brengt eigen BRK/NVM/Vindsubsidies subscriptions; klant-orgs zien deze data shared via vendor-credentials). Unique constraint op (source_key, credential_name).
 - [ ] **DATA-05**: Alembic migratie voor `integration_credentials` + Fernet key configuratie in settings (read from `INTEGRATION_CREDENTIAL_KEY` env, validation faalt bij ontbrekende/zwakke key op app-startup)
 
@@ -52,7 +52,7 @@
 
 ### Testing
 
-- [ ] **TEST-01**: Backend unit tests voor `DataSourceStatus` model: status-enum validation, UQ duplicate-insert IntegrityError, JSONB configuratie roundtrip, catalog completeness (27+ entries, 3 types, no duplicate keys), Alembic up+down clean op `propdex_test`. **Superuser-RBAC** test (geen tenant-isolation want vendor-managed): regular user→403, superuser→200 op admin/data-sources route.
+- [x] **TEST-01**: Backend unit tests voor `DataSourceStatus` model: status-enum validation, UQ duplicate-insert IntegrityError, JSONB configuratie roundtrip, catalog completeness (27+ entries, 3 types, no duplicate keys), Alembic up+down clean op `propdex_test`. **Superuser-RBAC** test (geen tenant-isolation want vendor-managed): regular user→403, superuser→200 op admin/data-sources route.
 - [ ] **TEST-02**: Backend integration tests voor alle 5 nieuwe API endpoints (auth, scoping, status transitions)
 - [ ] **TEST-03**: Backend test voor credential encryption roundtrip (Fernet encrypt → DB → decrypt) + key-rotation scenario
 - [ ] **TEST-04**: Frontend Storybook plays voor DataSourceRow component (live/broken/missing/configured states)
@@ -90,7 +90,7 @@ Deferred to post-M049 / latere milestones:
 |-------------|-------|--------|
 | DATA-01 | S01 | Pending |
 | DATA-02 | S01 | Pending |
-| DATA-03 | S01 | Pending |
+| DATA-03 | S01 | Complete |
 | DATA-04 | S05 | Pending |
 | DATA-05 | S05 | Pending |
 | API-01 | S02 | Pending |
@@ -115,7 +115,7 @@ Deferred to post-M049 / latere milestones:
 | MIG-01 | S06 | Pending |
 | MIG-02 | S06 | Pending |
 | MIG-03 | S06 | Pending |
-| TEST-01 | S01 | Pending |
+| TEST-01 | S01 | Complete |
 | TEST-02 | S02 | Pending |
 | TEST-03 | S05 | Pending |
 | TEST-04 | S03 | Pending |
