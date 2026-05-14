@@ -74,12 +74,20 @@ M049 consolideert het admin-landschap: M045/S05 PDF-upload-flow + ActionItems pa
 
 **Requirements:** INT-01, INT-02, INT-03, INT-04, TEST-06
 
+**Plans:** 4 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — UploadDocumentModal prop extension (initialGemeente/initialSourceKey/onSuccess)
+- [ ] 04-02-PLAN.md — VersionHistoryPanel modal-overlay mode (open/onClose/gemeenteCode props)
+- [ ] 04-03-PLAN.md — Beleid-beheer redirect banner (amber info banner + deeplink)
+- [ ] 04-04-PLAN.md — Detail-route modal-mount + DataSourceRow callback wiring + INT-04 probe trigger + TEST-06
+
 **Success criteria:**
 1. Click op "Upload" action bij beleidsdocument rij opent `UploadDocumentModal` met source_key pre-filled
 2. "Bekijk versies" action opent `VersionHistoryPanel` met juiste document context
 3. Bestaande document-uploads (uit M045/S05 era) zijn automatisch zichtbaar in nieuwe hub — geen handmatige migratie nodig
 4. `/instellingen/beleid-beheer` toont banner met deeplink naar nieuwe hub; oude routes blijven werken (geen 404)
-5. M045 regression-test suite blijft groen
+5. M445 regression-test suite blijft groen
 
 **Depends on:** Phase 3 (UI shell aanwezig om upload-modal in te plugin)
 
