@@ -146,7 +146,7 @@ async def list_gemeenten(
     out.sort(
         key=lambda s: (
             s.last_activity_at is None,
-            -((s.last_activity_at or datetime.min).timestamp()),
+            -(s.last_activity_at.timestamp() if s.last_activity_at else 0),
             s.gemeente_code,
         )
     )
