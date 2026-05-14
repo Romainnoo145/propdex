@@ -55,7 +55,7 @@
 - [x] **TEST-01**: Backend unit tests voor `DataSourceStatus` model: status-enum validation, UQ duplicate-insert IntegrityError, JSONB configuratie roundtrip, catalog completeness (27+ entries, 3 types, no duplicate keys), Alembic up+down clean op `propdex_test`. **Superuser-RBAC** test (geen tenant-isolation want vendor-managed): regular user→403, superuser→200 op admin/data-sources route.
 - [x] **TEST-02**: Backend integration tests voor alle 5 nieuwe API endpoints (auth, scoping, status transitions)
 - [ ] **TEST-03**: Backend test voor credential encryption roundtrip (Fernet encrypt → DB → decrypt) + key-rotation scenario
-- [ ] **TEST-04**: Frontend Storybook plays voor DataSourceRow component (live/broken/missing/configured states)
+- [x] **TEST-04**: Frontend Storybook plays voor DataSourceRow component (live/broken/missing/configured states)
 - [ ] **TEST-05**: E2E smoke test: admin opent gemeente → ziet 27 bronnen → uploadt PDF → status flips naar live
 - [ ] **TEST-06**: Pre-merge regression: M045/S05 admin-hub paths blijven werken tot redirect-banner is geverifieerd
 
@@ -118,7 +118,7 @@ Deferred to post-M049 / latere milestones:
 | TEST-01 | S01 | Complete |
 | TEST-02 | S02 | Complete |
 | TEST-03 | S05 | Pending |
-| TEST-04 | S03 | Pending |
+| TEST-04 | S03 | Complete |
 | TEST-05 | S06 | Pending |
 | TEST-06 | S04 | Pending |
 

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 03-03-PLAN.md (M049/S03 data-bronnen component library)
-last_updated: "2026-05-14T18:39:09.899Z"
+stopped_at: Completed 03-04-PLAN.md (M049/S03 data-bronnen routes + Storybook plays)
+last_updated: "2026-05-14T18:50:47.985Z"
 last_activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
   percent: 88
 ---
 
@@ -73,6 +73,7 @@ Progress: [█████████░] 88% (7/8 plans)
 | Phase 03-data-sources-ux P02 | 5min | 1 tasks | 1 files |
 | Phase 03-data-sources-ux P01 | 2min | 2 tasks | 2 files |
 | Phase 03-data-sources-ux P03 | 6min | 3 tasks | 6 files |
+| Phase 03-data-sources-ux P04 | 7min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -159,6 +160,9 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 03-data-sources-ux]: No @/components/ui/tooltip (Radix/shadcn) — created ui/Tooltip.tsx using project CSS group/group-hover pattern per TeamAttributionBadge.tsx convention
 - [Phase 03-data-sources-ux]: motion layoutId='gemeente-picker' is isolated scope from SettingsTabNav's 'settings-tab' — prevents cross-tab animation interference
 - [Phase 03-data-sources-ux]: Upload action renders as TanStack Link (not button) when enabled — deep-links to /instellingen/beleid-beheer per 03-CONTEXT §12 until S04 adds modal in-place
+- [Phase 03-data-sources-ux]: Route codegen: @tanstack/router-generator Generator class (not tsr CLI — lacks entrypoints config)
+- [Phase 03-data-sources-ux]: Stories use real routeTree + AuthContext.Provider: matches BottomTabNav.stories.tsx project pattern for auth-aware components
+- [Phase 03-data-sources-ux]: noUncheckedIndexedAccess: gemeenten[0]?.gemeente_naam with nullish coalescing — strict tsconfig requires optional chaining on index access
 
 ### Pending Todos
 
@@ -170,6 +174,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-14T18:39:09.897Z
-Stopped at: Completed 03-03-PLAN.md (M049/S03 data-bronnen component library)
+Last session: 2026-05-14T18:50:47.981Z
+Stopped at: Completed 03-04-PLAN.md (M049/S03 data-bronnen routes + Storybook plays)
 Resume file: None
