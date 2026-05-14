@@ -15,11 +15,11 @@
 
 ### API Endpoints
 
-- [ ] **API-01**: `GET /api/admin/data-sources/{gemeente_code}` retourneert alle bronnen voor één gemeente, gestructureerd in 3 secties (cascade_uploads / open_apis / paid_integrations). Per rij: source_key, label, type, status, last_checked, error_message, available_actions
-- [ ] **API-02**: `GET /api/admin/data-sources/gemeenten` retourneert lijst van gemeenten met aggregate status (counts per status), gesorteerd op activiteit
+- [x] **API-01**: `GET /api/admin/data-sources/{gemeente_code}` retourneert alle bronnen voor één gemeente, gestructureerd in 3 secties (cascade_uploads / open_apis / paid_integrations). Per rij: source_key, label, type, status, last_checked, error_message, available_actions
+- [x] **API-02**: `GET /api/admin/data-sources/gemeenten` retourneert lijst van gemeenten met aggregate status (counts per status), gesorteerd op activiteit
 - [ ] **API-03**: `POST /api/admin/data-sources/{gemeente_code}/{source_key}/refresh` triggert herevaluatie van bron-status (probe API, recount documents, etc.), idempotent
 - [ ] **API-04**: `POST /api/admin/integration-credentials` slaat encrypted credential op; `DELETE /api/admin/integration-credentials/{id}` roteert/verwijdert; alleen superuser
-- [ ] **API-05**: Alle nieuwe admin endpoints zijn superuser-gated (vendor-only access). **GEEN organization_id-scoping** — `data_source_status` en `integration_credentials` zijn vendor-managed tabellen. Regular klant-org users krijgen 403 op alle admin/data-sources endpoints. M045/S05 PolicyDocument-tier (waar klant-orgs eigen overrides uploaden) blijft onveranderd TenantMixin.
+- [x] **API-05**: Alle nieuwe admin endpoints zijn superuser-gated (vendor-only access). **GEEN organization_id-scoping** — `data_source_status` en `integration_credentials` zijn vendor-managed tabellen. Regular klant-org users krijgen 403 op alle admin/data-sources endpoints. M045/S05 PolicyDocument-tier (waar klant-orgs eigen overrides uploaden) blijft onveranderd TenantMixin.
 
 ### Frontend UX
 
@@ -53,7 +53,7 @@
 ### Testing
 
 - [x] **TEST-01**: Backend unit tests voor `DataSourceStatus` model: status-enum validation, UQ duplicate-insert IntegrityError, JSONB configuratie roundtrip, catalog completeness (27+ entries, 3 types, no duplicate keys), Alembic up+down clean op `propdex_test`. **Superuser-RBAC** test (geen tenant-isolation want vendor-managed): regular user→403, superuser→200 op admin/data-sources route.
-- [ ] **TEST-02**: Backend integration tests voor alle 5 nieuwe API endpoints (auth, scoping, status transitions)
+- [x] **TEST-02**: Backend integration tests voor alle 5 nieuwe API endpoints (auth, scoping, status transitions)
 - [ ] **TEST-03**: Backend test voor credential encryption roundtrip (Fernet encrypt → DB → decrypt) + key-rotation scenario
 - [ ] **TEST-04**: Frontend Storybook plays voor DataSourceRow component (live/broken/missing/configured states)
 - [ ] **TEST-05**: E2E smoke test: admin opent gemeente → ziet 27 bronnen → uploadt PDF → status flips naar live
@@ -93,11 +93,11 @@ Deferred to post-M049 / latere milestones:
 | DATA-03 | S01 | Complete |
 | DATA-04 | S05 | Pending |
 | DATA-05 | S05 | Pending |
-| API-01 | S02 | Pending |
-| API-02 | S02 | Pending |
+| API-01 | S02 | Complete |
+| API-02 | S02 | Complete |
 | API-03 | S02 | Pending |
 | API-04 | S05 | Pending |
-| API-05 | S02 | Pending |
+| API-05 | S02 | Complete |
 | UX-01 | S03 | Pending |
 | UX-02 | S03 | Pending |
 | UX-03 | S03 | Pending |
@@ -116,7 +116,7 @@ Deferred to post-M049 / latere milestones:
 | MIG-02 | S06 | Pending |
 | MIG-03 | S06 | Pending |
 | TEST-01 | S01 | Complete |
-| TEST-02 | S02 | Pending |
+| TEST-02 | S02 | Complete |
 | TEST-03 | S05 | Pending |
 | TEST-04 | S03 | Pending |
 | TEST-05 | S06 | Pending |
