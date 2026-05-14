@@ -31,7 +31,7 @@ import type {
   Action,
   ActionType,
   DataSourceRow as DataSourceRowDTO,
-  DataSourceStatus,
+  SourceStatus,
 } from '@/lib/types/data-sources-admin'
 
 interface Props {
@@ -47,7 +47,7 @@ const ACTION_ICON: Record<ActionType, typeof Upload> = {
 }
 
 const STATUS_ICON: Record<
-  DataSourceStatus,
+  SourceStatus,
   { Icon: typeof AlertTriangle; className: string; label: string }
 > = {
   missing: {
@@ -94,17 +94,23 @@ export function DataSourceRow({ gemeenteCode, row }: Props) {
       data-source-key={row.source_key}
       data-status={row.status}
     >
-      <Tooltip
-        content={row.error_message ?? status.label}
-        side="top"
-      >
+      {row.status === 'broken' && row.error_message ? (
+        <Tooltip content={row.error_message} side="top">
+          <StatusIcon
+            size={18}
+            strokeWidth={2}
+            className={`shrink-0 ${status.className}`}
+            aria-label={status.label}
+          />
+        </Tooltip>
+      ) : (
         <StatusIcon
           size={18}
           strokeWidth={2}
           className={`shrink-0 ${status.className}`}
           aria-label={status.label}
         />
-      </Tooltip>
+      )}
 
       <span className="text-[13px] font-medium text-[#0E1111] truncate flex-1 min-w-0">
         {row.label_nl}
@@ -163,17 +169,16 @@ function ActionButton({
 
   if (action.action === 'upload' && action.enabled) {
     return (
-      <Tooltip content={action.label_nl} side="top">
-        <Link
-          to="/instellingen/beleid-beheer"
-          className={`${baseClass} ${enabledClass}`}
-          aria-label={action.label_nl}
-          data-action={action.action}
-          data-enabled="true"
-        >
-          <Icon size={15} strokeWidth={1.75} />
-        </Link>
-      </Tooltip>
+      <Link
+        to="/instellingen/beleid-beheer"
+        className={`${baseClass} ${enabledClass}`}
+        aria-label={action.label_nl}
+        title={action.label_nl}
+        data-action={action.action}
+        data-enabled="true"
+      >
+        <Icon size={15} strokeWidth={1.75} />
+      </Link>
     )
   }
 
@@ -184,6 +189,7 @@ function ActionButton({
       onClick={action.action === 'refresh' && action.enabled ? onRefresh : undefined}
       className={`${baseClass} ${isDisabled ? disabledClass : enabledClass}`}
       aria-label={action.label_nl}
+      title={action.label_nl}
       data-action={action.action}
       data-enabled={action.enabled ? 'true' : 'false'}
     >
@@ -195,14 +201,14 @@ function ActionButton({
     </button>
   )
 
-  const tooltipContent =
-    !action.enabled && action.reason_disabled
-      ? action.reason_disabled
-      : action.label_nl
+  // Only show custom tooltip when disabled (to explain WHY)
+  if (!action.enabled && action.reason_disabled) {
+    return (
+      <Tooltip content={action.reason_disabled} side="top">
+        {btn}
+      </Tooltip>
+    )
+  }
 
-  return (
-    <Tooltip content={tooltipContent} side="top">
-      {btn}
-    </Tooltip>
-  )
+  return btn
 }
