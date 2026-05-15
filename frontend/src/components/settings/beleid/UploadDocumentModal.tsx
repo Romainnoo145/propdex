@@ -45,9 +45,12 @@ interface Props {
   open: boolean
   onClose: () => void
   gemeenten: GemeenteEntry[]
+  initialGemeente?: GemeenteEntry          // pre-selects gemeente when opened from data-bronnen row
+  initialSourceKey?: string                 // pre-selects source_key dropdown
+  onSuccess?: (versionId: string) => void   // called after upload + toast, before modal closes
 }
 
-export function UploadDocumentModal({ open, onClose, gemeenten }: Props) {
+export function UploadDocumentModal({ open, onClose, gemeenten, initialGemeente, initialSourceKey, onSuccess }: Props) {
   const queryClient = useQueryClient()
   const uploadMutation = useUploadPolicyDocument()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -82,6 +85,17 @@ export function UploadDocumentModal({ open, onClose, gemeenten }: Props) {
     return () => window.removeEventListener('keydown', handler)
   }, [open, onClose])
 
+  // Pre-fill from external context when opened from data-bronnen hub.
+  useEffect(() => {
+    if (open && initialGemeente) {
+      setNiveau('gemeente')
+      setEntityCode(initialGemeente.code)
+    }
+    if (open && initialSourceKey) {
+      setSourceKey(initialSourceKey)
+    }
+  }, [open, initialGemeente, initialSourceKey])
+
   if (!open) return null
 
   const handleSubmit = async () => {
@@ -111,6 +125,7 @@ export function UploadDocumentModal({ open, onClose, gemeenten }: Props) {
       await queryClient.invalidateQueries({ queryKey: ['admin-policy-overview'] })
       setFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
+      onSuccess?.(doc.id)    // invoke callback with version_id before closing
       onClose()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Upload faalde')
