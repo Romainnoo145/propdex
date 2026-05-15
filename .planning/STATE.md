@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04-01-PLAN.md (UploadDocumentModal props extension)
-last_updated: "2026-05-15T07:59:41.679Z"
+stopped_at: Completed 04-02-PLAN.md (M049/S04 VersionHistoryPanel modal-overlay mode)
+last_updated: "2026-05-15T08:01:12.466Z"
 last_activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 13
-  completed_plans: 10
+  completed_plans: 11
   percent: 88
 ---
 
@@ -76,6 +76,7 @@ Progress: [█████████░] 88% (7/8 plans)
 | Phase 03-data-sources-ux P04 | 7min | 3 tasks | 5 files |
 | Phase 04-m045-upload-flow-integratie P03 | 1m | 1 tasks | 1 files |
 | Phase 04-m045-upload-flow-integratie P04-01 | 1m 15s | 1 tasks | 1 files |
+| Phase 04-m045-upload-flow-integratie P02 | 9min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -167,6 +168,8 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 03-data-sources-ux]: noUncheckedIndexedAccess: gemeenten[0]?.gemeente_naam with nullish coalescing — strict tsconfig requires optional chaining on index access
 - [Phase 04-m045-upload-flow-integratie]: INT-03 banner: BeleidBeheerWithBanner wrapper at route level keeps migration notice separate from InstellingenBeleidPage component; no redirect logic — banner is informational only until M050
 - [Phase 04-m045-upload-flow-integratie]: 04-01: All three new UploadDocumentModal props are optional — InstellingenBeleidPage call site requires no changes
+- [Phase 04-m045-upload-flow-integratie]: resolvedEntityType/resolvedEntityCode derived from gemeenteCode shorthand before hook call — shorthand sets entityType='gemeente' implicitly for all Type-A cascade documents
+- [Phase 04-m045-upload-flow-integratie]: VersionHistoryPanel modal-overlay retrofit: VersionRows extracted inner component eliminates JSX duplication; ModalShell wraps loading+error+success states when onClose present; open===false guard after hooks per React rules
 
 ### Pending Todos
 
@@ -178,6 +181,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-15T07:59:41.677Z
-Stopped at: Completed 04-01-PLAN.md (UploadDocumentModal props extension)
+Last session: 2026-05-15T08:01:12.463Z
+Stopped at: Completed 04-02-PLAN.md (M049/S04 VersionHistoryPanel modal-overlay mode)
 Resume file: None
