@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 status: completed
 stopped_at: Completed 04-04-PLAN.md (DataSourceRow integration wiring — Upload + Bekijk versies actions wire to modals)
-last_updated: "2026-05-15T08:13:07.983Z"
+last_updated: "2026-05-15T08:20:01.104Z"
 last_activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
 progress:
   total_phases: 6
