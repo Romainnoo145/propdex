@@ -74,7 +74,7 @@ M049 consolideert het admin-landschap: M045/S05 PDF-upload-flow + ActionItems pa
 
 **Requirements:** INT-01, INT-02, INT-03, INT-04, TEST-06
 
-**Plans:** 3/5 plans executed
+**Plans:** 4/5 plans executed
 
 Plans:
 - [ ] 04-01-PLAN.md — UploadDocumentModal prop extension (initialGemeente/initialSourceKey/onSuccess)
@@ -143,7 +143,7 @@ Estimated duur: 3-4 weken (in lijn met landscape doc schatting).
 
 | Phase | Slice | Goal | Requirements | Status | Completed |
 |-------|-------|------|--------------|--------|-----------|
-| 1 | S01 | Datamodel & Source-Key Catalog | 4 | 3/5 | In Progress|  | 2 | S02 | Admin API Layer | 5 | Not started | — |
+| 1 | S01 | Datamodel & Source-Key Catalog | 4 | 4/5 | In Progress|  | 2 | S02 | Admin API Layer | 5 | Not started | — |
 | 3 | 3/4 | In Progress|  | Not started | — |
 | 4 | S04 | M045 Upload-flow Integratie | 5 | Not started | — |
 | 5 | S05 | Encrypted Credentials | 8 | Not started | — |

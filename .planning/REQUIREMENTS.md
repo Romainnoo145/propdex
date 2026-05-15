@@ -35,7 +35,7 @@
 - [x] **INT-01**: M045/S05 `UploadDocumentModal` wordt aangeroepen vanuit nieuwe data-source rij action "Upload"; document landt automatisch in juiste cascade-slot (gemeente + source_key)
 - [x] **INT-02**: M045/S05 `VersionHistoryPanel` opent in nieuwe hub via "Bekijk versies" action op rijen met bestaand document
 - [x] **INT-03**: M045/S05 `/instellingen/beleid-beheer` route blijft beschikbaar maar krijgt redirect-banner: "Beheer is verhuisd naar Data-bronnen — bekijk hier"
-- [ ] **INT-04**: Bestaande document-uploads worden automatisch zichtbaar in nieuwe hub via `gemeente_data_source_status` row-by-row materialisatie
+- [x] **INT-04**: Bestaande document-uploads worden automatisch zichtbaar in nieuwe hub via `gemeente_data_source_status` row-by-row materialisatie
 
 ### Credentials Configuration
 
@@ -107,7 +107,7 @@ Deferred to post-M049 / latere milestones:
 | INT-01 | S04 | Complete |
 | INT-02 | S04 | Complete |
 | INT-03 | S04 | Complete |
-| INT-04 | S04 | Pending |
+| INT-04 | S04 | Complete |
 | CRED-01 | S05 | Pending |
 | CRED-02 | S05 | Pending |
 | CRED-03 | S05 | Pending |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04-02-PLAN.md (M049/S04 VersionHistoryPanel modal-overlay mode)
-last_updated: "2026-05-15T08:01:12.466Z"
+stopped_at: Completed 04-05-PLAN.md (opportunistic probe-on-load + INT-04 integration tests)
+last_updated: "2026-05-15T08:05:30.188Z"
 last_activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 12
   percent: 88
 ---
 
@@ -77,6 +77,7 @@ Progress: [█████████░] 88% (7/8 plans)
 | Phase 04-m045-upload-flow-integratie P03 | 1m | 1 tasks | 1 files |
 | Phase 04-m045-upload-flow-integratie P04-01 | 1m 15s | 1 tasks | 1 files |
 | Phase 04-m045-upload-flow-integratie P02 | 9min | 1 tasks | 1 files |
+| Phase 04-m045-upload-flow-integratie P05 | 6m | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -170,6 +171,8 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 04-m045-upload-flow-integratie]: 04-01: All three new UploadDocumentModal props are optional — InstellingenBeleidPage call site requires no changes
 - [Phase 04-m045-upload-flow-integratie]: resolvedEntityType/resolvedEntityCode derived from gemeenteCode shorthand before hook call — shorthand sets entityType='gemeente' implicitly for all Type-A cascade documents
 - [Phase 04-m045-upload-flow-integratie]: VersionHistoryPanel modal-overlay retrofit: VersionRows extracted inner component eliminates JSX duplication; ModalShell wraps loading+error+success states when onClose present; open===false guard after hooks per React rules
+- [Phase 04-m045-upload-flow-integratie]: helpers extracted to data_sources_helpers.py to break circular import between router and orchestrator
+- [Phase 04-m045-upload-flow-integratie]: orchestrator rebuilds only cascade_uploads (Type A) after probe — open_apis and paid_integrations unchanged
 
 ### Pending Todos
 
@@ -181,6 +184,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-15T08:01:12.463Z
-Stopped at: Completed 04-02-PLAN.md (M049/S04 VersionHistoryPanel modal-overlay mode)
+Last session: 2026-05-15T08:05:30.186Z
+Stopped at: Completed 04-05-PLAN.md (opportunistic probe-on-load + INT-04 integration tests)
 Resume file: None
