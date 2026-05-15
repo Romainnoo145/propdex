@@ -2,27 +2,32 @@
 
 Plan 01 shipped GET endpoints + POST stub.
 Plan 02 replaces the 501 stub with advisory-lock + probe-registry dispatch.
+Plan 04-05 adds opportunistic probe-on-load via run_opportunistic_probes.
 """
 import logging
-import uuid
 from collections import defaultdict
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy import BigInteger, func, select, type_coerce
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.admin.data_source_probe_orchestrator import run_opportunistic_probes
 from app.admin.data_source_probes import PROBE_REGISTRY, compute_lock_key
+from app.admin.data_sources_helpers import (
+    _load_or_create_row,
+    _row_from_db,
+    _synthesize_missing_row,
+)
 from app.admin.data_sources_schemas import (
-    Action,
     DataSourceRow,
     GemeenteDataSourcesPayload,
     GemeenteSummary,
 )
 from app.auth.dependencies import get_current_superuser
 from app.core.database import get_db
-from app.models.data_source_status import DataSourceStatus
+from app.models.data_source_status import DataSourceStatus, DataSourceStatusValue
 from app.models.user import User
 from app.policy_documents.data_source_keys import DATA_SOURCE_KEYS, get_entry
 from app.services.gemeente_name_lookup import get_gemeente_name_map
@@ -35,76 +40,6 @@ router = APIRouter(
 )
 
 GemeenteCodePath = Annotated[str, Path(pattern=r"^GM\d{4}$")]
-
-
-_ACTION_LABELS = {
-    "view_versions": "Bekijk versies",
-    "upload": "Upload",
-    "refresh": "Vernieuw status",
-    "configure_credential": "Configureer credential",
-}
-
-
-def compute_actions(source_type: str, status: str) -> list[Action]:
-    """Return available_actions per the §6 matrix from 02-CONTEXT.md."""
-    if source_type == "A":
-        if status == "live":
-            return [
-                Action(action="view_versions", enabled=True, label_nl=_ACTION_LABELS["view_versions"]),
-                Action(action="upload", enabled=True, label_nl=_ACTION_LABELS["upload"]),
-                Action(action="refresh", enabled=True, label_nl=_ACTION_LABELS["refresh"]),
-            ]
-        return [
-            Action(action="upload", enabled=True, label_nl=_ACTION_LABELS["upload"]),
-            Action(action="refresh", enabled=True, label_nl=_ACTION_LABELS["refresh"]),
-        ]
-    if source_type == "B":
-        return [
-            Action(
-                action="refresh", enabled=False,
-                label_nl=_ACTION_LABELS["refresh"],
-                reason_disabled="Probe wordt later gewired",
-            ),
-        ]
-    # source_type == "C"
-    return [
-        Action(
-            action="configure_credential", enabled=False,
-            label_nl=_ACTION_LABELS["configure_credential"],
-            reason_disabled="Beschikbaar vanaf S05",
-        ),
-        Action(
-            action="refresh", enabled=False,
-            label_nl=_ACTION_LABELS["refresh"],
-            reason_disabled="Beschikbaar vanaf S05",
-        ),
-    ]
-
-
-def _row_from_db(db_row: DataSourceStatus, catalog_entry) -> DataSourceRow:  # type: ignore[no-untyped-def]
-    return DataSourceRow(
-        source_key=db_row.source_key,
-        label_nl=catalog_entry.label_nl,
-        source_type=catalog_entry.source_type,
-        status=db_row.status,
-        last_checked=db_row.last_checked,
-        error_message=db_row.error_message,
-        configuratie=db_row.configuratie,
-        available_actions=compute_actions(catalog_entry.source_type, db_row.status),
-    )
-
-
-def _synthesize_missing_row(catalog_entry) -> DataSourceRow:  # type: ignore[no-untyped-def]
-    return DataSourceRow(
-        source_key=catalog_entry.key,
-        label_nl=catalog_entry.label_nl,
-        source_type=catalog_entry.source_type,
-        status="missing",
-        last_checked=None,
-        error_message=None,
-        configuratie=None,
-        available_actions=compute_actions(catalog_entry.source_type, "missing"),
-    )
 
 
 @router.get("/gemeenten", response_model=list[GemeenteSummary])
@@ -128,10 +63,11 @@ async def list_gemeenten(
 
     out: list[GemeenteSummary] = []
     for code, rs in grouped.items():
-        counts: dict[str, int] = {"live": 0, "broken": 0, "missing": 0, "not_applicable": 0}
+        counts: dict[DataSourceStatusValue, int] = {"live": 0, "broken": 0, "missing": 0, "not_applicable": 0}
         last_activity: datetime | None = None
         for r in rs:
-            counts[r.status] = counts.get(r.status, 0) + 1
+            s_val = cast(DataSourceStatusValue, r.status)
+            counts[s_val] = counts.get(s_val, 0) + 1
             if r.last_checked and (last_activity is None or r.last_checked > last_activity):
                 last_activity = r.last_checked
         out.append(GemeenteSummary(
@@ -194,6 +130,8 @@ async def get_gemeente_sources(
         else:
             paid_integrations.append(row)
 
+    cascade_uploads = await run_opportunistic_probes(gemeente_code, cascade_uploads, db, name_map)
+
     return GemeenteDataSourcesPayload(
         gemeente_code=gemeente_code,
         gemeente_naam=name_map[gemeente_code],
@@ -201,37 +139,6 @@ async def get_gemeente_sources(
         open_apis=open_apis,
         paid_integrations=paid_integrations,
     )
-
-
-async def _load_or_create_row(
-    gemeente_code: str,
-    source_key: str,
-    db: AsyncSession,
-) -> DataSourceStatus:
-    """Get existing data_source_status row, or create an in-memory new one.
-
-    New rows are db.add()'ed but NOT flushed here — the outer commit persists
-    them. id is set explicitly via uuid4() so no server-side gen is needed before
-    _row_from_db serialises the row.
-    """
-    existing = await db.scalar(
-        select(DataSourceStatus)
-        .where(DataSourceStatus.gemeente_code == gemeente_code)
-        .where(DataSourceStatus.source_key == source_key)
-    )
-    if existing is not None:
-        return existing
-    row = DataSourceStatus(
-        id=uuid.uuid4(),
-        gemeente_code=gemeente_code,
-        source_key=source_key,
-        status="missing",
-        last_checked=None,
-        error_message=None,
-        configuratie=None,
-    )
-    db.add(row)
-    return row
 
 
 @router.post("/{gemeente_code}/{source_key}/refresh", response_model=DataSourceRow)
