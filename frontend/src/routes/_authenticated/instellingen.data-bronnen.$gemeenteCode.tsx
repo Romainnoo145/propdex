@@ -8,12 +8,18 @@
  * Path-param validation: ^GM\d{4}$ via parseParams.
  * Superuser-gated via beforeLoad (mirrors instellingen.beleid-beheer.tsx).
  */
+import { useState } from 'react'
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
+  dataSourcesAdminKeys,
   useGemeenteDataSources,
   useGemeentenSummary,
+  useRefreshDataSource,
 } from '@/lib/queries/data-sources-admin'
+import { UploadDocumentModal, type GemeenteEntry } from '@/components/settings/beleid/UploadDocumentModal'
+import { VersionHistoryPanel } from '@/components/settings/beleid/VersionHistoryPanel'
 import { DataSourceRow } from '@/components/settings/data-bronnen/DataSourceRow'
 import { DataSourceSection } from '@/components/settings/data-bronnen/DataSourceSection'
 import { GemeentePicker } from '@/components/settings/data-bronnen/GemeentePicker'
@@ -43,6 +49,12 @@ function GemeenteDataSourcesPage() {
   const gemeentenQuery = useGemeentenSummary()
   const dataSourcesQuery = useGemeenteDataSources(gemeenteCode)
 
+  // All hooks must be called unconditionally (React rules) — before any early returns
+  const queryClient = useQueryClient()
+  const refreshMutation = useRefreshDataSource()
+  const [openUploadFor, setOpenUploadFor] = useState<string | null>(null)
+  const [openVersionsFor, setOpenVersionsFor] = useState<string | null>(null)
+
   if (dataSourcesQuery.isLoading) {
     return (
       <div className="flex items-center gap-2 py-8 text-slate-500">
@@ -66,6 +78,29 @@ function GemeenteDataSourcesPage() {
   }
 
   const payload = dataSourcesQuery.data
+
+  const handleUploadSuccess = (sourceKey: string) => {
+    // 1. Invalidate data-bronnen hub query so row re-fetches with new status
+    void queryClient.invalidateQueries({ queryKey: dataSourcesAdminKeys.gemeente(gemeenteCode) })
+    // 2. INT-04: Trigger Type A probe — probe sees the new PolicyDocument row and flips status to 'live'
+    refreshMutation.mutate({
+      gemeenteCode,
+      sourceKey,
+      sourceLabel: 'Beleidsdocument',
+    })
+  }
+
+  // Build GemeenteEntry array for UploadDocumentModal (compatible shape)
+  const gemeentenForModal: GemeenteEntry[] = (gemeentenQuery.data ?? []).map((g) => ({
+    code: g.gemeente_code,
+    naam: g.gemeente_naam,
+    provincie_code: '',   // not available from S02 summary; UploadDocumentModal only uses code for entity_code
+  }))
+
+  const currentGemeenteEntry: GemeenteEntry | undefined = gemeentenForModal.find(
+    (g) => g.code === gemeenteCode,
+  )
+
   const totalRows =
     payload.cascade_uploads.length +
     payload.open_apis.length +
@@ -103,6 +138,8 @@ function GemeenteDataSourcesPage() {
                 key={row.source_key}
                 gemeenteCode={gemeenteCode}
                 row={row}
+                onUpload={(sk) => setOpenUploadFor(sk)}
+                onViewVersions={(sk) => setOpenVersionsFor(sk)}
               />
             ))}
           </DataSourceSection>
@@ -117,6 +154,8 @@ function GemeenteDataSourcesPage() {
                 key={row.source_key}
                 gemeenteCode={gemeenteCode}
                 row={row}
+                onUpload={(sk) => setOpenUploadFor(sk)}
+                onViewVersions={(sk) => setOpenVersionsFor(sk)}
               />
             ))}
           </DataSourceSection>
@@ -131,11 +170,38 @@ function GemeenteDataSourcesPage() {
                 key={row.source_key}
                 gemeenteCode={gemeenteCode}
                 row={row}
+                onUpload={(sk) => setOpenUploadFor(sk)}
+                onViewVersions={(sk) => setOpenVersionsFor(sk)}
               />
             ))}
           </DataSourceSection>
         </div>
       )}
+
+      {/* UploadDocumentModal — mounted at page level, one instance (eng-review §3) */}
+      <UploadDocumentModal
+        open={openUploadFor !== null}
+        onClose={() => setOpenUploadFor(null)}
+        gemeenten={gemeentenForModal}
+        initialGemeente={currentGemeenteEntry}
+        initialSourceKey={openUploadFor ?? undefined}
+        onSuccess={() => {
+          if (openUploadFor) handleUploadSuccess(openUploadFor)
+        }}
+      />
+
+      {/* VersionHistoryPanel — modal overlay mode (plan 04-02 extension) */}
+      <VersionHistoryPanel
+        open={openVersionsFor !== null}
+        onClose={() => setOpenVersionsFor(null)}
+        gemeenteCode={gemeenteCode}
+        sourceKey={openVersionsFor ?? ''}
+        entityType="gemeente"
+        entityCode={gemeenteCode}
+        latestVersionNumber={1}
+        onView={() => {}}
+        onDownload={() => {}}
+      />
     </div>
   )
 }

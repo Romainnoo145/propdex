@@ -12,7 +12,7 @@
  * Storybook 10: imports come from `storybook/test` (not `@storybook/test`).
  */
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, within } from 'storybook/test'
+import { expect, fn, userEvent, within } from 'storybook/test'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   createMemoryHistory,
@@ -93,8 +93,8 @@ type Story = StoryObj<typeof DataSourceRow>
 
 export const LiveWithActions: Story = {
   name: '1. Live — alle actions enabled',
-  args: { gemeenteCode: 'GM0983', row: mockLiveRow },
-  play: async ({ canvasElement }) => {
+  args: { gemeenteCode: 'GM0983', row: mockLiveRow, onUpload: fn(), onViewVersions: fn() },
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     const icon = canvas.getByLabelText('Live')
     const rowContainer = icon.closest('[data-status]') as HTMLElement | null
@@ -104,12 +104,16 @@ export const LiveWithActions: Story = {
     const refreshBtn = canvas.getByLabelText('Vernieuw status') as HTMLElement
     expect(versionBtn.getAttribute('data-enabled')).toBe('true')
     expect(refreshBtn.getAttribute('data-enabled')).toBe('true')
+
+    // Bekijk versies button is now a <button> not a <Link> — fires onViewVersions callback
+    await userEvent.click(versionBtn)
+    expect(args.onViewVersions).toHaveBeenCalled()
   },
 }
 
 export const BrokenWithError: Story = {
   name: '2. Broken — error message + tooltip',
-  args: { gemeenteCode: 'GM0983', row: mockBrokenRow },
+  args: { gemeenteCode: 'GM0983', row: mockBrokenRow, onUpload: fn(), onViewVersions: fn() },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const icon = canvas.getByLabelText('Foutmelding')
@@ -126,8 +130,8 @@ export const BrokenWithError: Story = {
 
 export const MissingPlaceholder: Story = {
   name: '3. Missing — Type A hides refresh, alleen Upload',
-  args: { gemeenteCode: 'GM0983', row: mockMissingRow },
-  play: async ({ canvasElement }) => {
+  args: { gemeenteCode: 'GM0983', row: mockMissingRow, onUpload: fn(), onViewVersions: fn() },
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     const icon = canvas.getByLabelText('Ontbreekt')
     const rowContainer = icon.closest('[data-status]') as HTMLElement | null
@@ -135,14 +139,21 @@ export const MissingPlaceholder: Story = {
 
     const uploadBtn = canvas.getByLabelText('Upload') as HTMLElement
     expect(uploadBtn.getAttribute('data-enabled')).toBe('true')
+    // Upload button is now a <button> (no longer a <Link>)
+    expect(uploadBtn.tagName).toBe('BUTTON')
+    expect(uploadBtn.getAttribute('data-action')).toBe('upload')
     // Type A + missing → refresh deliberately hidden
     expect(canvas.queryByLabelText('Vernieuw status')).toBeNull()
+
+    // Upload button fires onUpload callback (not Link navigation)
+    await userEvent.click(uploadBtn)
+    expect(args.onUpload).toHaveBeenCalled()
   },
 }
 
 export const NotApplicable: Story = {
   name: '4. N.v.t. — alle actions disabled met tooltip-reason',
-  args: { gemeenteCode: 'GM0983', row: mockNotApplicableRow },
+  args: { gemeenteCode: 'GM0983', row: mockNotApplicableRow, onUpload: fn(), onViewVersions: fn() },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const icon = canvas.getByLabelText('Niet van toepassing')
