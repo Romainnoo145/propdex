@@ -9,6 +9,8 @@ from datetime import datetime
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import func as sa_func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.jwt import create_access_token
@@ -345,6 +347,120 @@ async def test_catalog_drift_orphan_row(
         headers=_superuser_headers(user.id, org.id),
     )
     assert resp2.status_code == 404, resp2.text
+
+
+@pytest.mark.asyncio
+async def test_get_gemeente_sources_auto_live_from_existing_policy_document(
+    async_client: AsyncClient, test_db: AsyncSession, create_test_user
+):
+    """GET /{code} auto-probes missing Type A rows: pre-existing PolicyDocument → status='live'.
+
+    INT-04: bestaande document-uploads worden automatisch zichtbaar in nieuwe hub.
+    No manual Refresh click required.
+    """
+    user, org = await create_test_user(email="suQ@test", is_superuser=True)
+    await _seed_area_scan(test_db, "GM0983", "Venlo", org.id)
+
+    # Pick first Type A key from catalog
+    type_a_key = next(k for k in DATA_SOURCE_KEYS if k.source_type == "A").key
+
+    # Seed a PolicyDocument row as a vendor global upload — no DataSourceStatus row
+    test_db.add(PolicyDocument(
+        id=uuid.uuid4(), organization_id=org.id,
+        entity_type="gemeente", entity_code="GM0983", source_key=type_a_key,
+        is_global=True, filename="auto-probe.pdf", content_type="application/pdf",
+        file_data=b"x", file_size=1, uploaded_by_user_id=user.id, version_number=1,
+    ))
+    await test_db.commit()
+
+    # GET without any prior Refresh — opportunistic probe should flip status to 'live'
+    headers = _superuser_headers(user.id, org.id)
+    resp = await async_client.get("/api/admin/data-sources/GM0983", headers=headers)
+    assert resp.status_code == 200, resp.text
+
+    body = resp.json()
+    cascade_row = next(r for r in body["cascade_uploads"] if r["source_key"] == type_a_key)
+    assert cascade_row["status"] == "live", (
+        f"Expected status='live' for {type_a_key} after opportunistic probe, got: {cascade_row['status']}"
+    )
+
+    # Verify DataSourceStatus row was persisted in DB
+    db_status = await test_db.scalar(
+        select(DataSourceStatus)
+        .where(DataSourceStatus.gemeente_code == "GM0983")
+        .where(DataSourceStatus.source_key == type_a_key)
+    )
+    assert db_status is not None, "DataSourceStatus row should have been created by probe"
+    assert db_status.status == "live"
+
+
+@pytest.mark.asyncio
+async def test_get_gemeente_sources_missing_stays_missing_without_policy_document(
+    async_client: AsyncClient, test_db: AsyncSession, create_test_user
+):
+    """GET /{code} with no PolicyDocument rows: probe runs, finds nothing, stays 'missing'.
+
+    No false positive: Type A rows without uploads remain missing after opportunistic probe.
+    """
+    user, org = await create_test_user(email="suR@test", is_superuser=True)
+    await _seed_area_scan(test_db, "GM0983", "Venlo", org.id)
+    # No PolicyDocument rows, no DataSourceStatus rows
+
+    headers = _superuser_headers(user.id, org.id)
+    resp = await async_client.get("/api/admin/data-sources/GM0983", headers=headers)
+    assert resp.status_code == 200, resp.text
+
+    body = resp.json()
+    # All Type A rows should remain 'missing' — probe ran but found no documents
+    for row in body["cascade_uploads"]:
+        assert row["status"] == "missing", (
+            f"Expected status='missing' for {row['source_key']} (no PolicyDocument), "
+            f"got: {row['status']}"
+        )
+
+
+@pytest.mark.asyncio
+async def test_get_gemeente_sources_second_request_skips_probe(
+    async_client: AsyncClient, test_db: AsyncSession, create_test_user
+):
+    """Two sequential GETs after pre-existing PolicyDocument: both return 'live', exactly one DB row.
+
+    Second GET must find status='live' without re-probing — no duplicate rows (UQ constraint).
+    """
+    user, org = await create_test_user(email="suS@test", is_superuser=True)
+    await _seed_area_scan(test_db, "GM0983", "Venlo", org.id)
+
+    type_a_key = next(k for k in DATA_SOURCE_KEYS if k.source_type == "A").key
+
+    test_db.add(PolicyDocument(
+        id=uuid.uuid4(), organization_id=org.id,
+        entity_type="gemeente", entity_code="GM0983", source_key=type_a_key,
+        is_global=True, filename="second-req.pdf", content_type="application/pdf",
+        file_data=b"x", file_size=1, uploaded_by_user_id=user.id, version_number=1,
+    ))
+    await test_db.commit()
+
+    headers = _superuser_headers(user.id, org.id)
+
+    # First GET: opportunistic probe runs, creates DataSourceStatus row, returns 'live'
+    resp1 = await async_client.get("/api/admin/data-sources/GM0983", headers=headers)
+    assert resp1.status_code == 200, resp1.text
+    row1 = next(r for r in resp1.json()["cascade_uploads"] if r["source_key"] == type_a_key)
+    assert row1["status"] == "live", f"First GET: expected 'live', got {row1['status']}"
+
+    # Second GET: no missing rows → probe skipped → still 'live'
+    resp2 = await async_client.get("/api/admin/data-sources/GM0983", headers=headers)
+    assert resp2.status_code == 200, resp2.text
+    row2 = next(r for r in resp2.json()["cascade_uploads"] if r["source_key"] == type_a_key)
+    assert row2["status"] == "live", f"Second GET: expected 'live', got {row2['status']}"
+
+    # Exactly one DataSourceStatus row — no duplicates despite two GETs
+    count = await test_db.scalar(
+        select(sa_func.count()).select_from(DataSourceStatus)
+        .where(DataSourceStatus.gemeente_code == "GM0983")
+        .where(DataSourceStatus.source_key == type_a_key)
+    )
+    assert count == 1, f"Expected exactly 1 DataSourceStatus row, found {count}"
 
 
 @pytest.mark.asyncio
