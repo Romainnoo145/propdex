@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04-05-PLAN.md (opportunistic probe-on-load + INT-04 integration tests)
-last_updated: "2026-05-15T08:05:30.188Z"
+stopped_at: Completed 04-04-PLAN.md (DataSourceRow integration wiring — Upload + Bekijk versies actions wire to modals)
+last_updated: "2026-05-15T08:13:07.983Z"
 last_activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 13
-  completed_plans: 12
+  completed_plans: 13
   percent: 88
 ---
 
@@ -78,6 +78,7 @@ Progress: [█████████░] 88% (7/8 plans)
 | Phase 04-m045-upload-flow-integratie P04-01 | 1m 15s | 1 tasks | 1 files |
 | Phase 04-m045-upload-flow-integratie P02 | 9min | 1 tasks | 1 files |
 | Phase 04-m045-upload-flow-integratie P05 | 6m | 2 tasks | 4 files |
+| Phase 04-m045-upload-flow-integratie P04 | 7min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -173,6 +174,8 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 04-m045-upload-flow-integratie]: VersionHistoryPanel modal-overlay retrofit: VersionRows extracted inner component eliminates JSX duplication; ModalShell wraps loading+error+success states when onClose present; open===false guard after hooks per React rules
 - [Phase 04-m045-upload-flow-integratie]: helpers extracted to data_sources_helpers.py to break circular import between router and orchestrator
 - [Phase 04-m045-upload-flow-integratie]: orchestrator rebuilds only cascade_uploads (Type A) after probe — open_apis and paid_integrations unchanged
+- [Phase 04-m045-upload-flow-integratie]: 04-04: Hooks before early-returns in GemeenteDataSourcesPage — useQueryClient/useRefreshDataSource/useState placed before loading/error guards per React rules of hooks
+- [Phase 04-m045-upload-flow-integratie]: 04-04: GemeenteSummary→GemeenteEntry conversion at call site with provincie_code='' sentinel; handleUploadSuccess double-flush: invalidateQueries + refreshMutation.mutate for INT-04 probe trigger
 
 ### Pending Todos
 
@@ -184,6 +187,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-15T08:05:30.186Z
-Stopped at: Completed 04-05-PLAN.md (opportunistic probe-on-load + INT-04 integration tests)
+Last session: 2026-05-15T08:13:07.981Z
+Stopped at: Completed 04-04-PLAN.md (DataSourceRow integration wiring — Upload + Bekijk versies actions wire to modals)
 Resume file: None
