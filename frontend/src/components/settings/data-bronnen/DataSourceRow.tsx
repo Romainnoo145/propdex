@@ -23,7 +23,6 @@ import {
   Settings2,
   Upload,
 } from 'lucide-react'
-import { Link } from '@tanstack/react-router'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { formatRelativeNL } from '@/lib/utils/datetime'
 import { useRefreshDataSource } from '@/lib/queries/data-sources-admin'
@@ -37,6 +36,8 @@ import type {
 interface Props {
   gemeenteCode: string
   row: DataSourceRowDTO
+  onUpload?: (sourceKey: string) => void        // called when Upload button clicked
+  onViewVersions?: (sourceKey: string) => void  // called when Bekijk versies clicked
 }
 
 const ACTION_ICON: Record<ActionType, typeof Upload> = {
@@ -72,7 +73,7 @@ const STATUS_ICON: Record<
   },
 }
 
-export function DataSourceRow({ gemeenteCode, row }: Props) {
+export function DataSourceRow({ gemeenteCode, row, onUpload, onViewVersions }: Props) {
   const refreshMutation = useRefreshDataSource()
   const isRefreshing =
     refreshMutation.isPending &&
@@ -138,6 +139,8 @@ export function DataSourceRow({ gemeenteCode, row }: Props) {
                 sourceLabel: row.label_nl,
               })
             }
+            onUpload={onUpload}
+            onViewVersions={onViewVersions}
           />
         ))}
       </div>
@@ -152,12 +155,17 @@ interface ActionButtonProps {
   sourceLabel: string
   isRefreshing: boolean
   onRefresh: () => void
+  onUpload?: (sourceKey: string) => void
+  onViewVersions?: (sourceKey: string) => void
 }
 
 function ActionButton({
   action,
+  sourceKey,
   isRefreshing,
   onRefresh,
+  onUpload,
+  onViewVersions,
 }: ActionButtonProps) {
   const Icon =
     isRefreshing && action.action === 'refresh' ? Loader2 : ACTION_ICON[action.action]
@@ -169,8 +177,9 @@ function ActionButton({
 
   if (action.action === 'upload' && action.enabled) {
     return (
-      <Link
-        to="/instellingen/beleid-beheer"
+      <button
+        type="button"
+        onClick={() => onUpload?.(sourceKey)}
         className={`${baseClass} ${enabledClass}`}
         aria-label={action.label_nl}
         title={action.label_nl}
@@ -178,7 +187,23 @@ function ActionButton({
         data-enabled="true"
       >
         <Icon size={15} strokeWidth={1.75} />
-      </Link>
+      </button>
+    )
+  }
+
+  if (action.action === 'view_versions' && action.enabled) {
+    return (
+      <button
+        type="button"
+        onClick={() => onViewVersions?.(sourceKey)}
+        className={`${baseClass} ${enabledClass}`}
+        aria-label={action.label_nl}
+        title={action.label_nl}
+        data-action={action.action}
+        data-enabled="true"
+      >
+        <Icon size={15} strokeWidth={1.75} />
+      </button>
     )
   }
 
