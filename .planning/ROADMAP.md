@@ -18,6 +18,8 @@ M049 consolideert het admin-landschap: M045/S05 PDF-upload-flow + ActionItems pa
 - [ ] **Phase 4: M045 Upload-flow Integratie** (S04) — UploadDocumentModal + VersionHistoryPanel hergebruik vanuit nieuwe hub + legacy-route redirect-banner
 - [ ] **Phase 5: Encrypted Credentials** (S05) — Fernet-encrypted `IntegrationCredential` model + API endpoints + "Configureer credential" modal voor type-C bronnen
 - [ ] **Phase 6: ActionItems Deprecation** (S06) — Content migratie naar Data-bronnen action-buttons + 301 redirect + verificatie geen broken links
+- [ ] **Phase 7: Visual QA & Aura Conformance Sweep** (GAP-CLOSURE) — Browser-session smokes voor S03/S04/S05 + non-superuser redirect check + INT-03 banner deeplink polish
+- [ ] **Phase 8: S04.2 Verifier Backfill** (GAP-CLOSURE) — Run gsd-verifier op inserted security-hardening phase; produceer VERIFICATION.md zodat audit-trail compleet is
 
 ## Phase Details
 
@@ -158,12 +160,53 @@ Plans:
 
 **Depends on:** Phase 3 (Data-bronnen UI), Phase 4 (upload-flow integratie)
 
+### Phase 7: Visual QA & Aura Conformance Sweep (GAP-CLOSURE)
+**Goal:** Sluit alle deferred visual-smoke items uit S03/S04/S05 in één browser-sessie + polish de INT-03 banner deeplink zodat hij naar de actieve gemeente verwijst i.p.v. de index.
+
+**Closes gaps (from `M049-MILESTONE-AUDIT.md`):**
+- S03: Aura visual smoke (Morning Mist / Pure Glass / Plus Jakarta Sans / status-pill colors / SettingsTabNav active state)
+- S03: Non-superuser session → Data-bronnen pill hidden + direct nav redirect
+- S04: Upload e2e (modal pre-fill + post-upload status flip)
+- S04: Bekijk versies modal (backdrop click, version list render)
+- S04: Beleid-beheer banner visueel + link werkt
+- S05: CredentialConfigModal Aura tokens
+- S05: Three-state UX (empty → filled → rotating) toast + transition
+- S05: DESIGN.md token conformance check
+- INT-03 (partial): banner Link target wordt gemeente-aware (`/instellingen/data-bronnen/{currentGemeenteCode}` i.p.v. index)
+
+**Requirements affected:** Geen unsatisfied — alle 33 requirements blijven Complete; INT-03 wordt van `partial` naar `wired` gepromoot na deeplink-fix.
+
+**Success criteria:**
+1. Screenshot-set in `.planning/phases/07-visual-qa-aura-conformance/screenshots/` met before/after voor elk van S03, S04, S05 smokes — match DESIGN.md tokens verifieerbaar
+2. Non-superuser login bewijst Data-bronnen pill onzichtbaar + direct `/instellingen/data-bronnen` → `/instellingen` redirect
+3. `beleid-beheer.tsx` banner gebruikt `useCurrentGemeenteCode()` (of equivalent context) om `<Link to="/instellingen/data-bronnen/$gemeenteCode" params={...}>` te renderen wanneer een actieve gemeente bekend is; valt terug naar index wanneer geen context
+4. Lichte regression sweep: M049 backend test corpus blijft groen; geen Storybook regressions
+5. Audit-file `M049-MILESTONE-AUDIT.md` wordt bijgewerkt — S03/S04/S05 verifications flippen van `human_needed`/`partial` naar `passed`; INT-03 wordt `wired`
+
+**Depends on:** M049 phases 03/04/05 (compleet)
+
+### Phase 8: S04.2 Verifier Backfill (GAP-CLOSURE)
+**Goal:** Produceer een formele `04.2-VERIFICATION.md` voor de inserted security-hardening phase zodat audit-trail compleet is. Phase 04.2 stond buiten de oorspronkelijke M049 REQUIREMENTS-traceability maar advanced de Alembic-chain en heeft 42/42 tests + alembic upgrade gedocumenteerd in SUMMARY-only — verifier sign-off ontbreekt.
+
+**Closes gaps (from `M049-MILESTONE-AUDIT.md`):**
+- S04.2: Geen VERIFICATION.md (alleen SUMMARY.md)
+
+**Requirements affected:** Geen M049-REQ — phase 04.2 is een security-insertion buiten M049 scope. Optioneel: voeg `SEC-01` (score-internals-redaction) toe aan REQUIREMENTS.md als post-hoc requirement zodat traceability klopt.
+
+**Success criteria:**
+1. `.planning/phases/04.2-security-hardening-strip-scoring-internals-from-public-api/04.2-VERIFICATION.md` aangemaakt met goal-backward analysis tegen het SUMMARY (5 truths, key-link wiring, requirements-coverage, anti-pattern grep)
+2. Live re-run: `pytest tests/unit/test_score_breakdown_redaction.py tests/integration/test_m049_s04_2_score_internals_redaction.py tests/integration/test_alembic_m049_migration.py -v` returned green
+3. `alembic heads` blijft single (`79117298d1ad`) — chain integrity bewezen na inspectie
+4. Beslissing genoteerd: of `SEC-01` post-hoc requirement toevoegen aan REQUIREMENTS.md, of expliciet documenteren dat S04.2 buiten M049 scope blijft (architectural-debt entry)
+
+**Depends on:** Niet — kan parallel met Phase 7
+
 ## Phase Order
 
 Dependencies dicteren een grotendeels sequentiële volgorde, maar Phase 5 en Phase 6 zijn parallelliseerbaar met elkaar:
 
 ```
-Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 04.1 → (Phase 5 ∥ Phase 6)
+Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 04.1 → (Phase 5 ∥ Phase 6) → (Phase 7 ∥ Phase 8)
 ```
 
 Estimated duur: 3-4 weken (in lijn met landscape doc schatting).
@@ -182,8 +225,10 @@ Estimated duur: 3-4 weken (in lijn met landscape doc schatting).
 | 04.1 | 2/2 | Complete    | 2026-05-16 | Not started | — |
 | 5 | S05 | Encrypted Credentials | 8 | Not started | — |
 | 6 | S06 | ActionItems Deprecation | 4 | Complete (3/3 plans) | 2026-05-16 |
+| 7 | GAP-CLOSURE | Visual QA & Aura Conformance Sweep | 0 (gap closure) | Not started | — |
+| 8 | GAP-CLOSURE | S04.2 Verifier Backfill | 0 (gap closure) | Not started | — |
 
-**Coverage:** 33/33 requirements mapped ✓
+**Coverage:** 33/33 requirements mapped ✓ · Phase 7-8 zijn gap-closure (geen nieuwe REQs)
 
 ---
 *Roadmap created: 2026-05-14*

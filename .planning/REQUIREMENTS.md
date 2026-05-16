@@ -106,7 +106,7 @@ Deferred to post-M049 / latere milestones:
 | UX-06 | S03 | Complete |
 | INT-01 | S04 | Complete |
 | INT-02 | S04 | Complete |
-| INT-03 | S04 | Complete |
+| INT-03 | S04 + Phase 7 (deeplink polish) | Complete (polish pending) |
 | INT-04 | S04 | Complete |
 | CRED-01 | S05 | Complete |
 | CRED-02 | S05 | Complete |
@@ -126,6 +126,7 @@ Deferred to post-M049 / latere milestones:
 - M049 requirements: 33 total
 - Mapped to slices: 33
 - Unmapped: 0 ✓
+- Gap-closure phases (post-audit 2026-05-16): Phase 7 (Visual QA + INT-03 polish), Phase 8 (S04.2 verifier backfill) — sluiten tech-debt items zonder nieuwe REQs toe te voegen
 
 ---
 *Requirements defined: 2026-05-14*
