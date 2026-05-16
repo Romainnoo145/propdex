@@ -14,6 +14,7 @@ from app.admin.data_source_probe_orchestrator import run_opportunistic_probes
 from app.admin.data_sources_schemas import DataSourceRow
 from app.auth.jwt import create_access_token
 from app.jobs.rescore_cascade_job import CASCADE_RESCORE_SOURCE_KEYS
+from app.main import app
 from app.models.policy_document import PolicyDocument
 
 
@@ -71,36 +72,41 @@ async def test_woonvisie_upload_enqueues_both_jobs(
     await test_db.commit()
 
     mock_pool = AsyncMock()
-    monkeypatch.setattr(async_client.app.state, "arq_pool", mock_pool)
+    # Set arq_pool directly on app.state (httpx AsyncClient wraps ASGI transport,
+    # not FastAPI app directly — use app.state instead of async_client.app)
+    original_arq_pool = getattr(app.state, "arq_pool", None)
+    app.state.arq_pool = mock_pool
+    try:
+        pdf_bytes = b"%PDF-1.4 fake"
+        resp = await async_client.post(
+            "/api/policy-documents/gemeente/GM0983?source_key=woonvisie",
+            files={"file": ("woonvisie.pdf", pdf_bytes, "application/pdf")},
+            headers=_superuser_headers(user.id, org.id),
+        )
+        assert resp.status_code == 201, resp.text
 
-    pdf_bytes = b"%PDF-1.4 fake"
-    resp = await async_client.post(
-        "/api/policy-documents/gemeente/GM0983?source_key=woonvisie",
-        files={"file": ("woonvisie.pdf", pdf_bytes, "application/pdf")},
-        headers=_superuser_headers(user.id, org.id),
-    )
-    assert resp.status_code == 201, resp.text
+        doc_id = resp.json()["id"]
 
-    doc_id = resp.json()["id"]
+        # Extract all enqueue_job call arg sets
+        call_jobs = [call.args[0] for call in mock_pool.enqueue_job.call_args_list]
+        assert "document_summary_job" in call_jobs, (
+            f"Expected document_summary_job to be enqueued; got: {call_jobs}"
+        )
+        assert "rescore_parcels_for_document" in call_jobs, (
+            f"Expected rescore_parcels_for_document to be enqueued; got: {call_jobs}"
+        )
 
-    # Extract all enqueue_job call arg sets
-    call_jobs = [call.args[0] for call in mock_pool.enqueue_job.call_args_list]
-    assert "document_summary_job" in call_jobs, (
-        f"Expected document_summary_job to be enqueued; got: {call_jobs}"
-    )
-    assert "rescore_parcels_for_document" in call_jobs, (
-        f"Expected rescore_parcels_for_document to be enqueued; got: {call_jobs}"
-    )
-
-    # Verify rescore was called with correct document_id kwarg
-    rescore_calls = [
-        c for c in mock_pool.enqueue_job.call_args_list
-        if c.args[0] == "rescore_parcels_for_document"
-    ]
-    assert len(rescore_calls) == 1
-    assert rescore_calls[0].kwargs.get("document_id") == doc_id, (
-        f"rescore_parcels_for_document called with wrong document_id: {rescore_calls[0].kwargs}"
-    )
+        # Verify rescore was called with correct document_id kwarg
+        rescore_calls = [
+            c for c in mock_pool.enqueue_job.call_args_list
+            if c.args[0] == "rescore_parcels_for_document"
+        ]
+        assert len(rescore_calls) == 1
+        assert rescore_calls[0].kwargs.get("document_id") == doc_id, (
+            f"rescore_parcels_for_document called with wrong document_id: {rescore_calls[0].kwargs}"
+        )
+    finally:
+        app.state.arq_pool = original_arq_pool
 
 
 # ---------------------------------------------------------------------------
@@ -123,26 +129,29 @@ async def test_non_woonvisie_upload_enqueues_summary_only(
     await test_db.commit()
 
     mock_pool = AsyncMock()
-    monkeypatch.setattr(async_client.app.state, "arq_pool", mock_pool)
+    original_arq_pool = getattr(app.state, "arq_pool", None)
+    app.state.arq_pool = mock_pool
+    try:
+        pdf_bytes = b"%PDF-1.4 fake"
+        resp = await async_client.post(
+            "/api/policy-documents/gemeente/GM0983?source_key=welstandsnota",
+            files={"file": ("welstandsnota.pdf", pdf_bytes, "application/pdf")},
+            headers=_superuser_headers(user.id, org.id),
+        )
+        assert resp.status_code == 201, resp.text
 
-    pdf_bytes = b"%PDF-1.4 fake"
-    resp = await async_client.post(
-        "/api/policy-documents/gemeente/GM0983?source_key=welstandsnota",
-        files={"file": ("welstandsnota.pdf", pdf_bytes, "application/pdf")},
-        headers=_superuser_headers(user.id, org.id),
-    )
-    assert resp.status_code == 201, resp.text
+        call_jobs = [call.args[0] for call in mock_pool.enqueue_job.call_args_list]
+        assert "document_summary_job" in call_jobs, (
+            f"Expected document_summary_job to be enqueued; got: {call_jobs}"
+        )
 
-    call_jobs = [call.args[0] for call in mock_pool.enqueue_job.call_args_list]
-    assert "document_summary_job" in call_jobs, (
-        f"Expected document_summary_job to be enqueued; got: {call_jobs}"
-    )
-
-    rescore_calls = [c for c in mock_pool.enqueue_job.call_args_list
-                     if c.args[0] == "rescore_parcels_for_document"]
-    assert len(rescore_calls) == 0, (
-        f"rescore_parcels_for_document must NOT be called for welstandsnota; got: {rescore_calls}"
-    )
+        rescore_calls = [c for c in mock_pool.enqueue_job.call_args_list
+                         if c.args[0] == "rescore_parcels_for_document"]
+        assert len(rescore_calls) == 0, (
+            f"rescore_parcels_for_document must NOT be called for welstandsnota; got: {rescore_calls}"
+        )
+    finally:
+        app.state.arq_pool = original_arq_pool
 
 
 # ---------------------------------------------------------------------------
@@ -172,17 +181,20 @@ async def test_upload_rescore_enqueue_failure_graceful(
 
     mock_pool = AsyncMock()
     mock_pool.enqueue_job.side_effect = _side_effect
-    monkeypatch.setattr(async_client.app.state, "arq_pool", mock_pool)
-
-    pdf_bytes = b"%PDF-1.4 fake"
-    resp = await async_client.post(
-        "/api/policy-documents/gemeente/GM0983?source_key=woonvisie",
-        files={"file": ("woonvisie_fail.pdf", pdf_bytes, "application/pdf")},
-        headers=_superuser_headers(user.id, org.id),
-    )
-    # Despite enqueue failure, upload must succeed
-    assert resp.status_code == 201, resp.text
-    assert resp.json()["id"] is not None
+    original_arq_pool = getattr(app.state, "arq_pool", None)
+    app.state.arq_pool = mock_pool
+    try:
+        pdf_bytes = b"%PDF-1.4 fake"
+        resp = await async_client.post(
+            "/api/policy-documents/gemeente/GM0983?source_key=woonvisie",
+            files={"file": ("woonvisie_fail.pdf", pdf_bytes, "application/pdf")},
+            headers=_superuser_headers(user.id, org.id),
+        )
+        # Despite enqueue failure, upload must succeed
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["id"] is not None
+    finally:
+        app.state.arq_pool = original_arq_pool
 
 
 # ---------------------------------------------------------------------------
