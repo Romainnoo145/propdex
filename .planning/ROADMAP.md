@@ -188,7 +188,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — INT-03 deeplink gemeente-aware fix (BeleidBeheerWithBanner wrapper + Storybook play for both Link branches)
+- [x] 07-01-PLAN.md — INT-03 deeplink gemeente-aware fix (BeleidBeheerWithBanner wrapper + Storybook play for both Link branches) — shipped 2026-05-16 (commits 7ba5feac, 9d6c7103)
 - [ ] 07-02-PLAN.md — Visual QA sweep + audit closure (10 screenshots S03/S04/S05/non-superuser, DESIGN.md token grep, regression sweep, M049-MILESTONE-AUDIT.md update)
 
 ### Phase 8: S04.2 Verifier Backfill (GAP-CLOSURE)

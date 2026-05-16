@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: "M049 Phase 5 (Encrypted Credentials) eng-reviewed 2026-05-16. Locked-in contract: MultiFernet rotation, generic audit_log tabel, vast credential_name enum per source_key. Ready for /gsd:plan-phase 5."
-stopped_at: "Completed 06-03-PLAN.md (M049/S06 closure: 4 e2e smoke + 1 Storybook play; M049 Phase 6 COMPLETE, all 3 phase-6 plans shipped)"
-last_updated: "2026-05-16T15:30:10.275Z"
+stopped_at: "Completed 07-01-PLAN.md (INT-03 deeplink wired + Storybook play-function coverage; 2 atomic commits under M049/S07: prefix)"
+last_updated: "2026-05-16T16:26:15.982Z"
 last_activity: 2026-05-16 — M049 Phase 04.1 closed; Phase 5 eng-review locked; REQUIREMENTS.md CRED-02 gefixt (commit 2f4534f2)
 progress:
-  total_phases: 8
+  total_phases: 10
   completed_phases: 7
-  total_plans: 21
-  completed_plans: 21
+  total_plans: 23
+  completed_plans: 22
   percent: 83
 ---
 
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 ## Current Position
 
-Phase: 4 of 6 complete (04.1 decimal also closed; P5/P6 pending)
-Plan: 04.1-02 complete (split 367-line test file into two ≤300-line files; 6/6 tests pass; INT-04 gap fully closed)
-Status: M049 Phase 5 (Encrypted Credentials) eng-reviewed 2026-05-16. Locked-in contract: MultiFernet rotation, generic audit_log tabel, vast credential_name enum per source_key. Ready for /gsd:plan-phase 5.
-Last activity: 2026-05-16 — M049 Phase 04.1 closed; Phase 5 eng-review locked; REQUIREMENTS.md CRED-02 gefixt (commit 2f4534f2)
+Phase: 7 of 8 in progress — Plans 1-6 + 04.1 + 04.2 complete; Phase 07 plan 1 (INT-03 deeplink) just landed; plan 2 (visual QA sweep + audit closure) pending
+Plan: 07-01 complete (BeleidBeheerWithBanner gemeente-aware Link + Storybook play-function coverage; INT-03 gap-closure WIRED)
+Status: M049 audit gap INT-03 closed via gemeente-aware banner deeplink. Next: 07-02 visual QA sweep + M049-MILESTONE-AUDIT.md closure (S03/S04/S05 human-needed → passed).
+Last activity: 2026-05-16 — Phase 07 Plan 01 shipped (commits 7ba5feac + 9d6c7103)
 
-Progress: [██████████░] 83% (5/6 phases — 04.1 + 1-4 done; P5 next, P6 last)
+Progress: [██████████] 96% (22/23 plans — only 07-02 visual QA sweep remaining)
 
 ## Performance Metrics
 
@@ -87,6 +87,7 @@ Progress: [██████████░] 83% (5/6 phases — 04.1 + 1-4 don
 | Phase 06-actionitems-deprecation P06-01 | 6m | 3 tasks | 5 files |
 | Phase 06-actionitems-deprecation P06-02 | 8m | 4 tasks | 9 files |
 | Phase 06-actionitems-deprecation P06-03 | 9m 45s | 2 tasks | 2 files |
+| Phase 07-visual-qa-aura-conformance P01 | 4m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -206,6 +207,9 @@ Progress: [██████████░] 83% (5/6 phases — 04.1 + 1-4 don
 - [Phase 06-actionitems-deprecation]: M049/S06 Plan 06-02: ActionItemDetailModal uses AnimatePresence-wrapped conditional render (open && entry !== null) — hooks-before-return safe, exit animations work, null sourceKey renders nothing
 - [Phase 06-actionitems-deprecation]: M049/S06 Plan 06-03: 4 backend e2e smoke tests (3 pass + 1 skip for missing ActionItem DB model) + 1 WithActionItem Storybook play function; CI grep guard against stray /action-items links + routeTree.gen.ts assertion + DB entity audit; welstandsnota used in T1 + WithActionItem story over plan's woonvisie because welstandsnota IS in ACTION_ITEMS_CATALOG (same correction as 06-01)
 - [Phase 06-actionitems-deprecation]: M049/S06 Plan 06-03: DataSourceRow.stories.tsx is NOT in vitest-storybook run (.storybook/main.ts globs only src/stories/**) — WithActionItem play function verified via type-check + structural parity with 4 existing play functions in same file; manual UI execution via npm run storybook on port 6006
+- [Phase 07-visual-qa-aura-conformance]: M049/S07 Plan 07-01: BeleidBeheerWithBanner banner Link conditionally renders /instellingen/data-bronnen/$gemeenteCode deeplink (with params) when useGemeentenSummary().data?.[0]?.gemeente_code is truthy; falls back to /instellingen/data-bronnen index Link otherwise — INT-03 gap closed
+- [Phase 07-visual-qa-aura-conformance]: M049/S07 Plan 07-01: Storybook play-function coverage via local presentational twin in stories file (route file stays source of truth in production) — same precedent as M049/S03 DataSourceRow.stories.tsx; .storybook/main.ts globs only src/stories/**, verification via type-check + structural parity
+- [Phase 07-visual-qa-aura-conformance]: M049/S07 Plan 07-01: Pre-existing 91 TS errors baseline (stash-verified pre/post-change identical) deferred to dedicated TS-strict-cleanup phase per scope-boundary policy; this plan introduces zero new errors
 
 ### Pending Todos
 
@@ -217,6 +221,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-16T15:25:31.221Z
-Stopped at: Completed 06-03-PLAN.md (M049/S06 closure: 4 e2e smoke + 1 Storybook play; M049 Phase 6 COMPLETE, all 3 phase-6 plans shipped)
+Last session: 2026-05-16T16:26:15.979Z
+Stopped at: Completed 07-01-PLAN.md (INT-03 deeplink wired + Storybook play-function coverage; 2 atomic commits under M049/S07: prefix)
 Resume file: None
