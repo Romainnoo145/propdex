@@ -185,6 +185,12 @@ Plans:
 
 **Depends on:** M049 phases 03/04/05 (compleet)
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — INT-03 deeplink gemeente-aware fix (BeleidBeheerWithBanner wrapper + Storybook play for both Link branches)
+- [ ] 07-02-PLAN.md — Visual QA sweep + audit closure (10 screenshots S03/S04/S05/non-superuser, DESIGN.md token grep, regression sweep, M049-MILESTONE-AUDIT.md update)
+
 ### Phase 8: S04.2 Verifier Backfill (GAP-CLOSURE)
 **Goal:** Produceer een formele `04.2-VERIFICATION.md` voor de inserted security-hardening phase zodat audit-trail compleet is. Phase 04.2 stond buiten de oorspronkelijke M049 REQUIREMENTS-traceability maar advanced de Alembic-chain en heeft 42/42 tests + alembic upgrade gedocumenteerd in SUMMARY-only — verifier sign-off ontbreekt.
 
