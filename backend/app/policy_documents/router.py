@@ -27,6 +27,7 @@ from app.policy_documents.schemas import (
     PolicySummariesResponse,
 )
 from app.policy_documents.service import _assert_vendor_org, _resolve_ancestor_chain_by_gemeente
+from app.policy_documents.upload_enqueue import enqueue_post_upload_jobs
 
 logger = logging.getLogger(__name__)
 
@@ -117,17 +118,10 @@ async def upload_policy_document(
         entity_type, entity_code, source_key, doc.filename, doc.file_size, current_user.id,
     )
 
-    # Enqueue AI summarization for PDF uploads
-    if doc.content_type == "application/pdf":
-        arq_pool = getattr(request.app.state, "arq_pool", None)
-        if arq_pool is not None:
-            try:
-                await arq_pool.enqueue_job("document_summary_job", str(doc.id))
-                logger.info("Enqueued document_summary_job for document %s", doc.id)
-            except Exception as enqueue_err:
-                logger.warning("Failed to enqueue document_summary_job for %s: %s", doc.id, enqueue_err)
-        else:
-            logger.warning("ARQ pool not available — skipping AI summary for document %s", doc.id)
+    arq_pool = getattr(request.app.state, "arq_pool", None)
+    await enqueue_post_upload_jobs(
+        arq_pool, document_id=doc.id, source_key=source_key, content_type=doc.content_type
+    )
 
     return PolicyDocumentResponse.model_validate(doc)
 

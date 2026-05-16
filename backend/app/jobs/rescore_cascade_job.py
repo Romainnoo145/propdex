@@ -45,6 +45,8 @@ logger = logging.getLogger(__name__)
 RESCORE_CONCURRENCY = 5
 _EVENT_LOG_PATH = "/tmp/rescore_events.jsonl"
 
+CASCADE_RESCORE_SOURCE_KEYS: frozenset[str] = frozenset({"woonvisie"})
+
 
 def _append_event_log(entry: dict[str, Any]) -> None:
     """Append a JSON line to the rescore event log."""
