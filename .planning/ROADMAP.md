@@ -103,7 +103,7 @@ Plans:
 
 **Requirements**: INT-04 (re-open — materialise rescore, not just UI flip)
 **Depends on:** Phase 4
-**Plans:** 1/1 plans complete
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 04.1-01-PLAN.md — CASCADE_RESCORE_SOURCE_KEYS constant + upload route wire + probe orchestrator wire + 6 integration tests (T1–T6)
@@ -162,7 +162,7 @@ Estimated duur: 3-4 weken (in lijn met landscape doc schatting).
 | 1 | S01 | Datamodel & Source-Key Catalog | 4 | 4/5 | In Progress|  | 2 | S02 | Admin API Layer | 5 | Not started | — |
 | 3 | 3/4 | In Progress|  | Not started | — |
 | 4 | S04 | M045 Upload-flow Integratie | 5 | Not started | — |
-| 04.1 | 1/1 | Complete   | 2026-05-16 | Not started | — |
+| 04.1 | 2/2 | Complete   | 2026-05-16 | Not started | — |
 | 5 | S05 | Encrypted Credentials | 8 | Not started | — |
 | 6 | S06 | ActionItems Deprecation | 4 | Not started | — |
 

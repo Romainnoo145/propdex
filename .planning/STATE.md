@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04.1-01-PLAN.md (CASCADE_RESCORE_SOURCE_KEYS wire-up + upload_enqueue helper + probe orchestrator rescore + 6 integration tests)
-last_updated: "2026-05-16T09:46:17.462Z"
+stopped_at: Completed 04.1-02-PLAN.md (split 367-line test file into two ≤300-line files; 6/6 tests pass; INT-04 gap fully closed)
+last_updated: "2026-05-16T10:04:00.620Z"
 last_activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 14
-  completed_plans: 14
+  total_plans: 15
+  completed_plans: 15
   percent: 88
 ---
 
@@ -80,6 +80,7 @@ Progress: [█████████░] 88% (7/8 plans)
 | Phase 04-m045-upload-flow-integratie P05 | 6m | 2 tasks | 4 files |
 | Phase 04-m045-upload-flow-integratie P04 | 7min | 2 tasks | 3 files |
 | Phase 04.1-manual-upload-rescore P01 | 8min | 3 tasks | 6 files |
+| Phase 04.1-manual-upload-rescore P02 | 4min | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -181,6 +182,7 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 04.1-manual-upload-rescore]: CASCADE_RESCORE_SOURCE_KEYS lives in rescore_cascade_job.py as single gate — M050+ adds source_keys here only, no other wire changes needed
 - [Phase 04.1-manual-upload-rescore]: upload_enqueue.py extracted from router.py to satisfy 300-line rule (301→295 lines); best-effort enqueue pattern (try/except, warnings not raises)
 - [Phase 04.1-manual-upload-rescore]: Integration tests: app.state.arq_pool = mock_pool in try/finally (not monkeypatch.setattr on async_client.app) — httpx AsyncClient has no .app attribute
+- [Phase 04.1-manual-upload-rescore]: 04.1-02: File split at domain boundary (upload vs probe) without conftest.py — helpers with a single consumer stay in that consumer's file; ruff import-sort and unused-variable fix applied as part of split
 
 ### Pending Todos
 
@@ -192,6 +194,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-16T09:46:17.459Z
-Stopped at: Completed 04.1-01-PLAN.md (CASCADE_RESCORE_SOURCE_KEYS wire-up + upload_enqueue helper + probe orchestrator rescore + 6 integration tests)
+Last session: 2026-05-16T10:04:00.617Z
+Stopped at: Completed 04.1-02-PLAN.md (split 367-line test file into two ≤300-line files; 6/6 tests pass; INT-04 gap fully closed)
 Resume file: None
