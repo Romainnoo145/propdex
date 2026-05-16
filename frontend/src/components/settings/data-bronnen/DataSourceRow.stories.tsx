@@ -166,3 +166,41 @@ export const NotApplicable: Story = {
     expect(refreshBtn.getAttribute('data-enabled')).toBe('false')
   },
 }
+
+// ── M049/S06 — view_action_item button (TEST-05) ────────────────────────────
+export const WithActionItem: Story = {
+  name: '5. WithActionItem — view_action_item knop opent ActionItem-modal',
+  args: {
+    gemeenteCode: 'GM0983',
+    row: {
+      source_key: 'welstandsnota',
+      label_nl: 'Welstandsnota',
+      source_type: 'A',
+      status: 'live',
+      last_checked: new Date('2026-05-15T12:00:00Z').toISOString(),
+      error_message: null,
+      configuratie: null,
+      available_actions: [
+        { action: 'view_versions', enabled: true, label_nl: 'Bekijk versies', reason_disabled: null },
+        { action: 'upload', enabled: true, label_nl: 'Upload', reason_disabled: null },
+        { action: 'refresh', enabled: true, label_nl: 'Vernieuw status', reason_disabled: null },
+        { action: 'view_action_item', enabled: true, label_nl: 'Bekijk action item', reason_disabled: null },
+      ],
+    },
+    onUpload: fn(),
+    onViewVersions: fn(),
+    onConfigureCredential: fn(),
+    onViewActionItem: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const actionItemButton = canvas.getByLabelText('Bekijk action item') as HTMLElement
+    expect(actionItemButton).toBeInTheDocument()
+    expect(actionItemButton.getAttribute('data-action')).toBe('view_action_item')
+    expect(actionItemButton.getAttribute('data-enabled')).toBe('true')
+
+    await userEvent.click(actionItemButton)
+    expect(args.onViewActionItem).toHaveBeenCalledTimes(1)
+    expect(args.onViewActionItem).toHaveBeenCalledWith('welstandsnota')
+  },
+}
