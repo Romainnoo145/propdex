@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: "M049 Phase 5 (Encrypted Credentials) eng-reviewed 2026-05-16. Locked-in contract: MultiFernet rotation, generic audit_log tabel, vast credential_name enum per source_key. Ready for /gsd:plan-phase 5."
-stopped_at: Completed 06-01-PLAN.md (ActionItems backend catalog migration; 5 unit + 3 integration tests; 18 regression tests still green)
-last_updated: "2026-05-16T15:00:15.749Z"
+stopped_at: "Completed 06-02-PLAN.md (ActionItems frontend deprecation: TS-twin catalog + Aura modal + DataSourceRow view_action_item branch + SPA-redirect route + legacy ActionItems.tsx deleted; 4 task commits; npm run check clean for new/changed files)"
+last_updated: "2026-05-16T15:12:26.949Z"
 last_activity: 2026-05-16 — M049 Phase 04.1 closed; Phase 5 eng-review locked; REQUIREMENTS.md CRED-02 gefixt (commit 2f4534f2)
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 21
-  completed_plans: 19
+  completed_plans: 20
   percent: 83
 ---
 
@@ -85,6 +85,7 @@ Progress: [██████████░] 83% (5/6 phases — 04.1 + 1-4 don
 | Phase 05-encrypted-credentials P05-02 | 4m | 2 tasks | 5 files |
 | Phase 05-encrypted-credentials PP05-03 | 30min | 3 tasks tasks | 6 files files |
 | Phase 06-actionitems-deprecation P06-01 | 6m | 3 tasks | 5 files |
+| Phase 06-actionitems-deprecation P06-02 | 8m | 4 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -199,6 +200,9 @@ Progress: [██████████░] 83% (5/6 phases — 04.1 + 1-4 don
 - [Phase 05-encrypted-credentials]: M049/S05 Plan 03: EmptyField/FilledField sub-components inline in CredentialConfigModal.tsx (275 lines, < 300-line rule) — no folder-split required
 - [Phase 06-actionitems-deprecation]: M049/S06 Plan 06-01: ActionItems content migrated to backend ACTION_ITEMS_CATALOG (6 gemeente-bound) + INFRASTRUCTURE_ACTION_ITEMS (12 orphans); ActionItem DB entity untouched (zero new migrations); compute_actions signature extended with source_key arg
 - [Phase 06-actionitems-deprecation]: M049/S06 Plan 06-01: view_action_item action always enabled when source_key in ACTION_ITEMS_CATALOG (no source_type/status gating); test fixture welstandsnota chosen because it is both Type-A and in catalog
+- [Phase 06-actionitems-deprecation]: M049/S06 Plan 06-02: ACTION_ITEMS_CATALOG TS-twin verified via 1-shot Python drift script (6/6 catalog keys + 12/12 infra ids match backend verbatim); pattern: import type from lib/types, Record<string, Entry>, JSDoc names backend file
+- [Phase 06-actionitems-deprecation]: M049/S06 Plan 06-02: /instellingen/action-items SPA-redirect route has NO superuser gate — target /instellingen/data-bronnen owns auth; avoids double-redirect for non-superusers
+- [Phase 06-actionitems-deprecation]: M049/S06 Plan 06-02: ActionItemDetailModal uses AnimatePresence-wrapped conditional render (open && entry !== null) — hooks-before-return safe, exit animations work, null sourceKey renders nothing
 
 ### Pending Todos
 
@@ -210,6 +214,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-16T15:00:15.746Z
-Stopped at: Completed 06-01-PLAN.md (ActionItems backend catalog migration; 5 unit + 3 integration tests; 18 regression tests still green)
+Last session: 2026-05-16T15:12:26.946Z
+Stopped at: Completed 06-02-PLAN.md (ActionItems frontend deprecation: TS-twin catalog + Aura modal + DataSourceRow view_action_item branch + SPA-redirect route + legacy ActionItems.tsx deleted; 4 task commits; npm run check clean for new/changed files)
 Resume file: None

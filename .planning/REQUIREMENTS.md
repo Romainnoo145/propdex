@@ -47,7 +47,7 @@
 ### ActionItems Migration
 
 - [x] **MIG-01**: ActionItems pagina content (per-gemeente ActionItem cards) migreert naar Data-bronnen rijen als action-button "Bekijk action item" voor bronnen met action_required status
-- [ ] **MIG-02**: `/instellingen/action-items` route geeft 301 redirect naar `/instellingen/data-bronnen/{user_default_gemeente_code}`
+- [x] **MIG-02**: `/instellingen/action-items` route geeft 301 redirect naar `/instellingen/data-bronnen/{user_default_gemeente_code}`
 - [x] **MIG-03**: ActionItem entity in DB blijft bestaan (referentieel werk), maar UI-paden verdwijnen volledig
 
 ### Testing
@@ -113,7 +113,7 @@ Deferred to post-M049 / latere milestones:
 | CRED-03 | S05 | Complete |
 | CRED-04 | S05 | Complete |
 | MIG-01 | S06 | Complete |
-| MIG-02 | S06 | Pending |
+| MIG-02 | S06 | Complete |
 | MIG-03 | S06 | Complete |
 | TEST-01 | S01 | Complete |
 | TEST-02 | S02 | Complete |
