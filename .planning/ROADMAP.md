@@ -181,7 +181,7 @@ Estimated duur: 3-4 weken (in lijn met landscape doc schatting).
 | 4 | S04 | M045 Upload-flow Integratie | 5 | Not started | — |
 | 04.1 | 2/2 | Complete    | 2026-05-16 | Not started | — |
 | 5 | S05 | Encrypted Credentials | 8 | Not started | — |
-| 6 | S06 | ActionItems Deprecation | 4 | Not started | — |
+| 6 | S06 | ActionItems Deprecation | 4 | Complete (3/3 plans) | 2026-05-16 |
 
 **Coverage:** 33/33 requirements mapped ✓
 

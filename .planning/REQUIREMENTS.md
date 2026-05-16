@@ -56,7 +56,7 @@
 - [x] **TEST-02**: Backend integration tests voor alle 5 nieuwe API endpoints (auth, scoping, status transitions)
 - [x] **TEST-03**: Backend test voor credential encryption roundtrip (Fernet encrypt → DB → decrypt) + key-rotation scenario
 - [x] **TEST-04**: Frontend Storybook plays voor DataSourceRow component (live/broken/missing/configured states)
-- [ ] **TEST-05**: E2E smoke test: admin opent gemeente → ziet 27 bronnen → uploadt PDF → status flips naar live
+- [x] **TEST-05**: E2E smoke test: admin opent gemeente → ziet 27 bronnen → uploadt PDF → status flips naar live
 - [x] **TEST-06**: Pre-merge regression: M045/S05 admin-hub paths blijven werken tot redirect-banner is geverifieerd
 
 ## Future Requirements
@@ -119,7 +119,7 @@ Deferred to post-M049 / latere milestones:
 | TEST-02 | S02 | Complete |
 | TEST-03 | S05 | Complete |
 | TEST-04 | S03 | Complete |
-| TEST-05 | S06 | Pending |
+| TEST-05 | S06 | Complete |
 | TEST-06 | S04 | Complete |
 
 **Coverage:**
