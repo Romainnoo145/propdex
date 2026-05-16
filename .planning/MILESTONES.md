@@ -1,5 +1,28 @@
 # Milestones
 
+## 🆕 M050.5 Feature Tiering & Demo Lockdown (Defined 2026-05-16 — parallel-runnable)
+
+**Status:** Defined, niet gestart. Parallel-runnable met M049 + M050 via separate `.planning/milestones/M050.5-*` paths (geen clobber van M049's active `.planning/REQUIREMENTS.md`/`.planning/ROADMAP.md`).
+
+**Scope:** 3 product-tiers (`demo` / `paid` / `superadmin`). Demo ziet 1 gemeente (Venlo) + totaalscore + factor-namen. Eigendom, marktsignalen, opportunities, building metrics, subsidies, jurisprudentie, rapporten, favorieten, custom-profiel, document-upload allemaal achter Pro-badge gate. Backend-enforced (403/redact) + frontend `<TierGate>` wrapper.
+
+**Driver:** Phase 04.2 dichtte alleen `score_breakdown`. De échte exposure is dat demo-users de hele feature-surface zien — blueprint-risico. M050.5 maakt demo een trailer.
+
+**Locked decisions (2026-05-16):**
+- Tier is org-level enum (`demo` / `paid` / `superadmin`), niet per-user
+- Bestaande orgs met superuser → `superadmin` via migratie, anderen → `demo`; paid handmatig
+- Demo gemeente = Venlo (GM0983)
+- Geen self-service upgrade flow in v1 (mailto:info@klarifai.nl)
+- Geen Stripe/payment-integratie (I-01 staat apart)
+
+**Coordination:** Na Phase 1 (tier-infra) landing → notify M050-agent dat Vindsubsidies-feature met `requires_tier("paid")` ingebakken kan worden. Voorkomt rework.
+
+**Artifacts:**
+- `.planning/milestones/M050.5-REQUIREMENTS.md` — 36 requirements (TIER/API/UI/TEST/MIG)
+- `.planning/milestones/M050.5-ROADMAP.md` — 4 phases (Foundation → Backend ∥ Frontend → Verify)
+
+---
+
 ## 🚧 M049 Data Sources per Gemeente hub (In Progress — kickoff 2026-05-14)
 
 **Status:** Phases 1-4 + 04.1 shipped (15 plans). Phase 5 (Encrypted Credentials) eng-reviewed 2026-05-16 — ready for plan. Phase 6 (ActionItems Deprecation) parallel-eligible met P5.
