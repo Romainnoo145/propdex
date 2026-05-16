@@ -18,7 +18,7 @@
 - [x] **API-01**: `GET /api/admin/data-sources/{gemeente_code}` retourneert alle bronnen voor één gemeente, gestructureerd in 3 secties (cascade_uploads / open_apis / paid_integrations). Per rij: source_key, label, type, status, last_checked, error_message, available_actions
 - [x] **API-02**: `GET /api/admin/data-sources/gemeenten` retourneert lijst van gemeenten met aggregate status (counts per status), gesorteerd op activiteit
 - [x] **API-03**: `POST /api/admin/data-sources/{gemeente_code}/{source_key}/refresh` triggert herevaluatie van bron-status (probe API, recount documents, etc.), idempotent
-- [ ] **API-04**: `POST /api/admin/integration-credentials` slaat encrypted credential op; `DELETE /api/admin/integration-credentials/{id}` roteert/verwijdert; alleen superuser
+- [x] **API-04**: `POST /api/admin/integration-credentials` slaat encrypted credential op; `DELETE /api/admin/integration-credentials/{id}` roteert/verwijdert; alleen superuser
 - [x] **API-05**: Alle nieuwe admin endpoints zijn superuser-gated (vendor-only access). **GEEN organization_id-scoping** — `data_source_status` en `integration_credentials` zijn vendor-managed tabellen. Regular klant-org users krijgen 403 op alle admin/data-sources endpoints. M045/S05 PolicyDocument-tier (waar klant-orgs eigen overrides uploaden) blijft onveranderd TenantMixin.
 
 ### Frontend UX
@@ -41,8 +41,8 @@
 
 - [ ] **CRED-01**: "Configureer credential" modal voor type-C bronnen (BRK, Vindsubsidies, NVM placeholders) met velden per source_key: api_key / client_cert / client_secret / endpoint_url
 - [x] **CRED-02**: Encrypted-at-rest in `integration_credentials` (vendor-managed, geen TenantMixin; Fernet symmetric via `MultiFernet([INTEGRATION_CREDENTIAL_KEY, INTEGRATION_CREDENTIAL_KEY_OLD?])` voor rotatie zonder downtime)
-- [ ] **CRED-03**: UI toont alleen credential-status (configured/missing/expired) — nooit decrypted waarden retourneren in GET responses
-- [ ] **CRED-04**: Credential-rotatie: "Roteren" button verwijdert oude entry + opent modal voor nieuwe waarde; audit-log entry op rotatie
+- [x] **CRED-03**: UI toont alleen credential-status (configured/missing/expired) — nooit decrypted waarden retourneren in GET responses
+- [x] **CRED-04**: Credential-rotatie: "Roteren" button verwijdert oude entry + opent modal voor nieuwe waarde; audit-log entry op rotatie
 
 ### ActionItems Migration
 
@@ -96,7 +96,7 @@ Deferred to post-M049 / latere milestones:
 | API-01 | S02 | Complete |
 | API-02 | S02 | Complete |
 | API-03 | S02 | Complete |
-| API-04 | S05 | Pending |
+| API-04 | S05 | Complete |
 | API-05 | S02 | Complete |
 | UX-01 | S03 | Complete |
 | UX-02 | S03 | Complete |
@@ -110,8 +110,8 @@ Deferred to post-M049 / latere milestones:
 | INT-04 | S04 | Complete |
 | CRED-01 | S05 | Pending |
 | CRED-02 | S05 | Complete |
-| CRED-03 | S05 | Pending |
-| CRED-04 | S05 | Pending |
+| CRED-03 | S05 | Complete |
+| CRED-04 | S05 | Complete |
 | MIG-01 | S06 | Pending |
 | MIG-02 | S06 | Pending |
 | MIG-03 | S06 | Pending |

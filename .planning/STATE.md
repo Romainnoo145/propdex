@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: "M049 Phase 5 (Encrypted Credentials) eng-reviewed 2026-05-16. Locked-in contract: MultiFernet rotation, generic audit_log tabel, vast credential_name enum per source_key. Ready for /gsd:plan-phase 5."
-stopped_at: "Completed 05-01-PLAN.md (encrypted-credentials foundation: cryptography pin, 2 models, 2 migrations, MultiFernet service, 11 unit tests pass, alembic head 79117298d1ad)"
-last_updated: "2026-05-16T10:59:15.551Z"
+stopped_at: "Completed 05-02-PLAN.md (admin API for vendor-managed integration credentials: registry + schemas + router + 9 integration tests pass, 20 tests combined with 05-01)"
+last_updated: "2026-05-16T11:06:16.779Z"
 last_activity: 2026-05-16 — M049 Phase 04.1 closed; Phase 5 eng-review locked; REQUIREMENTS.md CRED-02 gefixt (commit 2f4534f2)
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 18
-  completed_plans: 16
+  completed_plans: 17
   percent: 83
 ---
 
@@ -82,6 +82,7 @@ Progress: [██████████░] 83% (5/6 phases — 04.1 + 1-4 don
 | Phase 04.1-manual-upload-rescore P01 | 8min | 3 tasks | 6 files |
 | Phase 04.1-manual-upload-rescore P02 | 4min | 1 tasks | 3 files |
 | Phase 05-encrypted-credentials P05-01 | 6m | 3 tasks | 11 files |
+| Phase 05-encrypted-credentials P05-02 | 4m | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -187,6 +188,9 @@ Progress: [██████████░] 83% (5/6 phases — 04.1 + 1-4 don
 - [Phase 05-encrypted-credentials]: M049/S05 Plan 01: down_revision = b2a4f6c8e1d3 (current head from Phase 04.2), NOT stale 657143b79099 referenced in plan — Rule 3 auto-fix
 - [Phase 05-encrypted-credentials]: M049/S05 Plan 01: Lazy MultiFernet built on first encrypt/decrypt call + reset_cache() test hook — tests monkeypatch settings before first use without import-time wiring
 - [Phase 05-encrypted-credentials]: M049/S05 Plan 01: AuditLog Python attr event_metadata maps to DB column 'metadata' (DeclarativeBase reserves the bare attribute name)
+- [Phase 05-encrypted-credentials]: M049/S05 Plan 02: _to_read() helper centralises secret-stripped projection — defends TEST-03c regression long-term
+- [Phase 05-encrypted-credentials]: M049/S05 Plan 02: DELETE atomicity — db.add(audit) + db.delete(row) + single commit; no orphan audit on rollback
+- [Phase 05-encrypted-credentials]: M049/S05 Plan 02: source_key path validation loose (Annotated[str, Path]); CREDENTIAL_FIELDS membership is single source of truth (404 GET, 422 POST)
 
 ### Pending Todos
 
@@ -198,6 +202,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-16T10:59:15.549Z
-Stopped at: Completed 05-01-PLAN.md (encrypted-credentials foundation: cryptography pin, 2 models, 2 migrations, MultiFernet service, 11 unit tests pass, alembic head 79117298d1ad)
+Last session: 2026-05-16T11:06:12.632Z
+Stopped at: Completed 05-02-PLAN.md (admin API for vendor-managed integration credentials: registry + schemas + router + 9 integration tests pass, 20 tests combined with 05-01)
 Resume file: None
