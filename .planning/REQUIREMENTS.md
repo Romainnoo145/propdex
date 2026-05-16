@@ -10,8 +10,8 @@
 - [x] **DATA-01**: `DataSourceStatus` SQLAlchemy model met velden (gemeente_code: String(6), source_key: String(64), status: Literal["live"/"broken"/"missing"/"not_applicable"], last_checked: datetime, error_message: nullable, configuratie: JSONB nullable, managed_by_user_id: FK Users — vendor superuser die regel beheert). **GEEN TenantMixin** — vendor-managed catalog (Propdex BV maintains centraal). Unique constraint op (gemeente_code, source_key). Eng-review locked 2026-05-14.
 - [x] **DATA-02**: Alembic migratie creëert `data_source_status` tabel + indices op (gemeente_code) + UQ composite (gemeente_code, source_key). Lege tabel, geen data-backfill.
 - [x] **DATA-03**: Nieuwe data-source-type catalog in `backend/app/policy_documents/data_source_keys.py` + frontend mirror `frontend/src/lib/constants/dataSourceKeys.ts` — 27+ bronnen verdeeld in 3 types: A (cascade-uploads), B (open APIs), C (paid integrations). **APART** van bestaande `source_keys.py` (M045 cascade-level keys) om naming-confusion te voorkomen. Eng-review locked 2026-05-14.
-- [ ] **DATA-04**: `IntegrationCredential` SQLAlchemy model voor encrypted credential storage (source_key, credential_name, encrypted_value via Fernet, created_by_user_id, last_rotated_at). **GEEN TenantMixin** — vendor-managed (Propdex BV brengt eigen BRK/NVM/Vindsubsidies subscriptions; klant-orgs zien deze data shared via vendor-credentials). Unique constraint op (source_key, credential_name).
-- [ ] **DATA-05**: Alembic migratie voor `integration_credentials` + Fernet key configuratie in settings (read from `INTEGRATION_CREDENTIAL_KEY` env, validation faalt bij ontbrekende/zwakke key op app-startup)
+- [x] **DATA-04**: `IntegrationCredential` SQLAlchemy model voor encrypted credential storage (source_key, credential_name, encrypted_value via Fernet, created_by_user_id, last_rotated_at). **GEEN TenantMixin** — vendor-managed (Propdex BV brengt eigen BRK/NVM/Vindsubsidies subscriptions; klant-orgs zien deze data shared via vendor-credentials). Unique constraint op (source_key, credential_name).
+- [x] **DATA-05**: Alembic migratie voor `integration_credentials` + Fernet key configuratie in settings (read from `INTEGRATION_CREDENTIAL_KEY` env, validation faalt bij ontbrekende/zwakke key op app-startup)
 
 ### API Endpoints
 
@@ -40,7 +40,7 @@
 ### Credentials Configuration
 
 - [ ] **CRED-01**: "Configureer credential" modal voor type-C bronnen (BRK, Vindsubsidies, NVM placeholders) met velden per source_key: api_key / client_cert / client_secret / endpoint_url
-- [ ] **CRED-02**: Encrypted-at-rest in `integration_credentials` (vendor-managed, geen TenantMixin; Fernet symmetric via `MultiFernet([INTEGRATION_CREDENTIAL_KEY, INTEGRATION_CREDENTIAL_KEY_OLD?])` voor rotatie zonder downtime)
+- [x] **CRED-02**: Encrypted-at-rest in `integration_credentials` (vendor-managed, geen TenantMixin; Fernet symmetric via `MultiFernet([INTEGRATION_CREDENTIAL_KEY, INTEGRATION_CREDENTIAL_KEY_OLD?])` voor rotatie zonder downtime)
 - [ ] **CRED-03**: UI toont alleen credential-status (configured/missing/expired) — nooit decrypted waarden retourneren in GET responses
 - [ ] **CRED-04**: Credential-rotatie: "Roteren" button verwijdert oude entry + opent modal voor nieuwe waarde; audit-log entry op rotatie
 
@@ -54,7 +54,7 @@
 
 - [x] **TEST-01**: Backend unit tests voor `DataSourceStatus` model: status-enum validation, UQ duplicate-insert IntegrityError, JSONB configuratie roundtrip, catalog completeness (27+ entries, 3 types, no duplicate keys), Alembic up+down clean op `propdex_test`. **Superuser-RBAC** test (geen tenant-isolation want vendor-managed): regular user→403, superuser→200 op admin/data-sources route.
 - [x] **TEST-02**: Backend integration tests voor alle 5 nieuwe API endpoints (auth, scoping, status transitions)
-- [ ] **TEST-03**: Backend test voor credential encryption roundtrip (Fernet encrypt → DB → decrypt) + key-rotation scenario
+- [x] **TEST-03**: Backend test voor credential encryption roundtrip (Fernet encrypt → DB → decrypt) + key-rotation scenario
 - [x] **TEST-04**: Frontend Storybook plays voor DataSourceRow component (live/broken/missing/configured states)
 - [ ] **TEST-05**: E2E smoke test: admin opent gemeente → ziet 27 bronnen → uploadt PDF → status flips naar live
 - [x] **TEST-06**: Pre-merge regression: M045/S05 admin-hub paths blijven werken tot redirect-banner is geverifieerd
@@ -91,8 +91,8 @@ Deferred to post-M049 / latere milestones:
 | DATA-01 | S01 | Complete |
 | DATA-02 | S01 | Complete |
 | DATA-03 | S01 | Complete |
-| DATA-04 | S05 | Pending |
-| DATA-05 | S05 | Pending |
+| DATA-04 | S05 | Complete |
+| DATA-05 | S05 | Complete |
 | API-01 | S02 | Complete |
 | API-02 | S02 | Complete |
 | API-03 | S02 | Complete |
@@ -109,7 +109,7 @@ Deferred to post-M049 / latere milestones:
 | INT-03 | S04 | Complete |
 | INT-04 | S04 | Complete |
 | CRED-01 | S05 | Pending |
-| CRED-02 | S05 | Pending |
+| CRED-02 | S05 | Complete |
 | CRED-03 | S05 | Pending |
 | CRED-04 | S05 | Pending |
 | MIG-01 | S06 | Pending |
@@ -117,7 +117,7 @@ Deferred to post-M049 / latere milestones:
 | MIG-03 | S06 | Pending |
 | TEST-01 | S01 | Complete |
 | TEST-02 | S02 | Complete |
-| TEST-03 | S05 | Pending |
+| TEST-03 | S05 | Complete |
 | TEST-04 | S03 | Complete |
 | TEST-05 | S06 | Pending |
 | TEST-06 | S04 | Complete |

@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: M049
-milestone_name: Data Sources per Gemeente hub
-status: active
-stopped_at: Completed 04.1-02-PLAN.md (split 367-line test file into two ≤300-line files; 6/6 tests pass; INT-04 gap fully closed). Phase 5 (Encrypted Credentials) eng-reviewed 2026-05-16; ready for plan-phase.
-last_updated: "2026-05-16T12:30:00.000Z"
-last_activity: 2026-05-16 — M049 Phase 04.1 closed; Phase 5 eng-review locked (MultiFernet, audit_log tabel, vast credential_name enum); REQUIREMENTS.md CRED-02 gefixt (commit 2f4534f2)
+milestone: v1.0
+milestone_name: milestone
+status: "M049 Phase 5 (Encrypted Credentials) eng-reviewed 2026-05-16. Locked-in contract: MultiFernet rotation, generic audit_log tabel, vast credential_name enum per source_key. Ready for /gsd:plan-phase 5."
+stopped_at: "Completed 05-01-PLAN.md (encrypted-credentials foundation: cryptography pin, 2 models, 2 migrations, MultiFernet service, 11 unit tests pass, alembic head 79117298d1ad)"
+last_updated: "2026-05-16T10:59:15.551Z"
+last_activity: 2026-05-16 — M049 Phase 04.1 closed; Phase 5 eng-review locked; REQUIREMENTS.md CRED-02 gefixt (commit 2f4534f2)
 progress:
-  total_phases: 6
-  completed_phases: 4
-  total_plans: 17
-  completed_plans: 15
-  percent: 67
+  total_phases: 8
+  completed_phases: 5
+  total_plans: 18
+  completed_plans: 16
+  percent: 83
 ---
 
 # Propdex — GSD State
@@ -81,6 +81,7 @@ Progress: [██████████░] 83% (5/6 phases — 04.1 + 1-4 don
 | Phase 04-m045-upload-flow-integratie P04 | 7min | 2 tasks | 3 files |
 | Phase 04.1-manual-upload-rescore P01 | 8min | 3 tasks | 6 files |
 | Phase 04.1-manual-upload-rescore P02 | 4min | 1 tasks | 3 files |
+| Phase 05-encrypted-credentials P05-01 | 6m | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -183,6 +184,9 @@ Progress: [██████████░] 83% (5/6 phases — 04.1 + 1-4 don
 - [Phase 04.1-manual-upload-rescore]: upload_enqueue.py extracted from router.py to satisfy 300-line rule (301→295 lines); best-effort enqueue pattern (try/except, warnings not raises)
 - [Phase 04.1-manual-upload-rescore]: Integration tests: app.state.arq_pool = mock_pool in try/finally (not monkeypatch.setattr on async_client.app) — httpx AsyncClient has no .app attribute
 - [Phase 04.1-manual-upload-rescore]: 04.1-02: File split at domain boundary (upload vs probe) without conftest.py — helpers with a single consumer stay in that consumer's file; ruff import-sort and unused-variable fix applied as part of split
+- [Phase 05-encrypted-credentials]: M049/S05 Plan 01: down_revision = b2a4f6c8e1d3 (current head from Phase 04.2), NOT stale 657143b79099 referenced in plan — Rule 3 auto-fix
+- [Phase 05-encrypted-credentials]: M049/S05 Plan 01: Lazy MultiFernet built on first encrypt/decrypt call + reset_cache() test hook — tests monkeypatch settings before first use without import-time wiring
+- [Phase 05-encrypted-credentials]: M049/S05 Plan 01: AuditLog Python attr event_metadata maps to DB column 'metadata' (DeclarativeBase reserves the bare attribute name)
 
 ### Pending Todos
 
@@ -194,6 +198,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-16T10:04:00.617Z
-Stopped at: Completed 04.1-02-PLAN.md (split 367-line test file into two ≤300-line files; 6/6 tests pass; INT-04 gap fully closed)
+Last session: 2026-05-16T10:59:15.549Z
+Stopped at: Completed 05-01-PLAN.md (encrypted-credentials foundation: cryptography pin, 2 models, 2 migrations, MultiFernet service, 11 unit tests pass, alembic head 79117298d1ad)
 Resume file: None
