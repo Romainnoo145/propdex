@@ -32,6 +32,7 @@ import { Route as AuthenticatedInstellingenScoreRouteImport } from './routes/_au
 import { Route as AuthenticatedInstellingenDataBronnenRouteImport } from './routes/_authenticated/instellingen.data-bronnen'
 import { Route as AuthenticatedInstellingenBeleidBeheerRouteImport } from './routes/_authenticated/instellingen.beleid-beheer'
 import { Route as AuthenticatedInstellingenAdminRouteImport } from './routes/_authenticated/instellingen.admin'
+import { Route as AuthenticatedInstellingenActionItemsRouteImport } from './routes/_authenticated/instellingen.action-items'
 import { Route as AuthenticatedChecklistIdRouteImport } from './routes/_authenticated/checklist.$id'
 import { Route as AuthenticatedInstellingenDataBronnenIndexRouteImport } from './routes/_authenticated/instellingen.data-bronnen.index'
 import { Route as AuthenticatedInstellingenDataBronnenGemeenteCodeRouteImport } from './routes/_authenticated/instellingen.data-bronnen.$gemeenteCode'
@@ -158,6 +159,12 @@ const AuthenticatedInstellingenAdminRoute =
     path: '/admin',
     getParentRoute: () => AuthenticatedInstellingenRoute,
   } as any)
+const AuthenticatedInstellingenActionItemsRoute =
+  AuthenticatedInstellingenActionItemsRouteImport.update({
+    id: '/action-items',
+    path: '/action-items',
+    getParentRoute: () => AuthenticatedInstellingenRoute,
+  } as any)
 const AuthenticatedChecklistIdRoute =
   AuthenticatedChecklistIdRouteImport.update({
     id: '/checklist/$id',
@@ -195,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
   '/checklist/$id': typeof AuthenticatedChecklistIdRoute
+  '/instellingen/action-items': typeof AuthenticatedInstellingenActionItemsRoute
   '/instellingen/admin': typeof AuthenticatedInstellingenAdminRoute
   '/instellingen/beleid-beheer': typeof AuthenticatedInstellingenBeleidBeheerRoute
   '/instellingen/data-bronnen': typeof AuthenticatedInstellingenDataBronnenRouteWithChildren
@@ -221,6 +229,7 @@ export interface FileRoutesByTo {
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth': typeof AuthIndexRoute
   '/checklist/$id': typeof AuthenticatedChecklistIdRoute
+  '/instellingen/action-items': typeof AuthenticatedInstellingenActionItemsRoute
   '/instellingen/admin': typeof AuthenticatedInstellingenAdminRoute
   '/instellingen/beleid-beheer': typeof AuthenticatedInstellingenBeleidBeheerRoute
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
@@ -249,6 +258,7 @@ export interface FileRoutesById {
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
   '/_authenticated/checklist/$id': typeof AuthenticatedChecklistIdRoute
+  '/_authenticated/instellingen/action-items': typeof AuthenticatedInstellingenActionItemsRoute
   '/_authenticated/instellingen/admin': typeof AuthenticatedInstellingenAdminRoute
   '/_authenticated/instellingen/beleid-beheer': typeof AuthenticatedInstellingenBeleidBeheerRoute
   '/_authenticated/instellingen/data-bronnen': typeof AuthenticatedInstellingenDataBronnenRouteWithChildren
@@ -278,6 +288,7 @@ export interface FileRouteTypes {
     | '/auth/google-callback'
     | '/auth/'
     | '/checklist/$id'
+    | '/instellingen/action-items'
     | '/instellingen/admin'
     | '/instellingen/beleid-beheer'
     | '/instellingen/data-bronnen'
@@ -304,6 +315,7 @@ export interface FileRouteTypes {
     | '/auth/google-callback'
     | '/auth'
     | '/checklist/$id'
+    | '/instellingen/action-items'
     | '/instellingen/admin'
     | '/instellingen/beleid-beheer'
     | '/instellingen/score'
@@ -331,6 +343,7 @@ export interface FileRouteTypes {
     | '/auth/google-callback'
     | '/auth/'
     | '/_authenticated/checklist/$id'
+    | '/_authenticated/instellingen/action-items'
     | '/_authenticated/instellingen/admin'
     | '/_authenticated/instellingen/beleid-beheer'
     | '/_authenticated/instellingen/data-bronnen'
@@ -511,6 +524,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInstellingenAdminRouteImport
       parentRoute: typeof AuthenticatedInstellingenRoute
     }
+    '/_authenticated/instellingen/action-items': {
+      id: '/_authenticated/instellingen/action-items'
+      path: '/action-items'
+      fullPath: '/instellingen/action-items'
+      preLoaderRoute: typeof AuthenticatedInstellingenActionItemsRouteImport
+      parentRoute: typeof AuthenticatedInstellingenRoute
+    }
     '/_authenticated/checklist/$id': {
       id: '/_authenticated/checklist/$id'
       path: '/checklist/$id'
@@ -554,6 +574,7 @@ const AuthenticatedInstellingenDataBronnenRouteWithChildren =
   )
 
 interface AuthenticatedInstellingenRouteChildren {
+  AuthenticatedInstellingenActionItemsRoute: typeof AuthenticatedInstellingenActionItemsRoute
   AuthenticatedInstellingenAdminRoute: typeof AuthenticatedInstellingenAdminRoute
   AuthenticatedInstellingenBeleidBeheerRoute: typeof AuthenticatedInstellingenBeleidBeheerRoute
   AuthenticatedInstellingenDataBronnenRoute: typeof AuthenticatedInstellingenDataBronnenRouteWithChildren
@@ -563,6 +584,8 @@ interface AuthenticatedInstellingenRouteChildren {
 
 const AuthenticatedInstellingenRouteChildren: AuthenticatedInstellingenRouteChildren =
   {
+    AuthenticatedInstellingenActionItemsRoute:
+      AuthenticatedInstellingenActionItemsRoute,
     AuthenticatedInstellingenAdminRoute: AuthenticatedInstellingenAdminRoute,
     AuthenticatedInstellingenBeleidBeheerRoute:
       AuthenticatedInstellingenBeleidBeheerRoute,
