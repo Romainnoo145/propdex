@@ -1,5 +1,18 @@
 # Milestones
 
+## 🚧 M049 Data Sources per Gemeente hub (In Progress — kickoff 2026-05-14)
+
+**Status:** Phases 1-4 + 04.1 shipped (15 plans). Phase 5 (Encrypted Credentials) eng-reviewed 2026-05-16 — ready for plan. Phase 6 (ActionItems Deprecation) parallel-eligible met P5.
+
+**Scope:** Vendor-managed credentials infrastructure + admin data-sources UX hub per gemeente. Replaces oude ActionItems pagina met data-bronnen rijen die status (live/missing/expired) tonen per gemeente. Type-A (cascade uploads), Type-B (open APIs), Type-C (paid integrations zoals BRK/Vindsubsidies/NVM met encrypted credentials via Fernet).
+
+**Locked decisions:**
+- 2026-05-14: Vendor-managed credentials (geen TenantMixin) — match pricing-tier model uit partner-briefing (€299/€699/€1.249), BYOK future enterprise-feature
+- 2026-05-14: `IntegrationCredential` klassenaam, `integration_credentials` tabel, UQ op (source_key, credential_name)
+- 2026-05-16: MultiFernet rotation pattern (rolling-deploy compatible), generic audit_log tabel (Phase 5 = first emitter), vast credential_name enum per source_key via CREDENTIAL_FIELDS registry
+
+---
+
 ## v1.48 Score v4.0 Frontend Scaling (Shipped: 2026-05-13)
 
 **Phases completed:** 8 phases, 17 plans, 9 tasks

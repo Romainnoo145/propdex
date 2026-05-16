@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: completed
-stopped_at: Completed 04.1-02-PLAN.md (split 367-line test file into two ≤300-line files; 6/6 tests pass; INT-04 gap fully closed)
-last_updated: "2026-05-16T10:09:36.477Z"
-last_activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
+milestone: M049
+milestone_name: Data Sources per Gemeente hub
+status: active
+stopped_at: Completed 04.1-02-PLAN.md (split 367-line test file into two ≤300-line files; 6/6 tests pass; INT-04 gap fully closed). Phase 5 (Encrypted Credentials) eng-reviewed 2026-05-16; ready for plan-phase.
+last_updated: "2026-05-16T12:30:00.000Z"
+last_activity: 2026-05-16 — M049 Phase 04.1 closed; Phase 5 eng-review locked (MultiFernet, audit_log tabel, vast credential_name enum); REQUIREMENTS.md CRED-02 gefixt (commit 2f4534f2)
 progress:
-  total_phases: 7
-  completed_phases: 5
-  total_plans: 15
+  total_phases: 6
+  completed_phases: 4
+  total_plans: 17
   completed_plans: 15
-  percent: 88
+  percent: 67
 ---
 
 # Propdex — GSD State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** From grondpositie to first spade in one cockpit — no switching between 10 tabs
-**Current focus:** M048 Score v4.0 Frontend Scaling — Phases 1+2+5 done; next: plan Phase 3 (woonvisie popup), 4 (KlimaatLayer bug), or 6 (WijkPolicy schema) — parallel-eligible
+**Current focus:** M049 Data Sources per Gemeente hub — Phases 1-4 + 04.1 shipped; next: plan Phase 5 (Encrypted Credentials) — eng-review locked 2026-05-16, then Phase 6 (ActionItems Deprecation, parallel-eligible met P5)
 
 ## Current Position
 
-Phase: 3 of 8 complete (P3/P4/P7/P8 pending; P6 Wave 0+2+3 shipped — Wave 4 integration next)
-Plan: 07-05 complete (Phase 7 story battery + visual sign-off — pinning UX confirmed; CARDS_PER_PAGE 6→4)
-Status: Phase 7 complete. Ready for Phase 8 (Integration tests + Venlo E2E smoke).
-Last activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
+Phase: 4 of 6 complete (04.1 decimal also closed; P5/P6 pending)
+Plan: 04.1-02 complete (split 367-line test file into two ≤300-line files; 6/6 tests pass; INT-04 gap fully closed)
+Status: M049 Phase 5 (Encrypted Credentials) eng-reviewed 2026-05-16. Locked-in contract: MultiFernet rotation, generic audit_log tabel, vast credential_name enum per source_key. Ready for /gsd:plan-phase 5.
+Last activity: 2026-05-16 — M049 Phase 04.1 closed; Phase 5 eng-review locked; REQUIREMENTS.md CRED-02 gefixt (commit 2f4534f2)
 
-Progress: [█████████░] 88% (7/8 plans)
+Progress: [██████████░] 83% (5/6 phases — 04.1 + 1-4 done; P5 next, P6 last)
 
 ## Performance Metrics
 
