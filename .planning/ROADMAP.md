@@ -37,7 +37,7 @@ M049 consolideert het admin-landschap: M045/S05 PDF-upload-flow + ActionItems pa
 2. Alembic migratie draait clean op propdex_test + propdex zonder data-loss; lege tabel, geen backfill
 3. Data-source-key catalog bevat 27+ entries verdeeld in 3 bron-types (A cascade-uploads / B open APIs / C paid integrations); Python + TypeScript mirror sync via shared definition pattern (hand-maintained twin, zoals M045/S05)
 4. Superuser-RBAC test bewijst: regular user→403, superuser→200 op admin/data-sources route
-5. M045 PolicyDocument-tier (tenant-scoped uploads) blijft onveranderd — backward-compat verified
+5. M445 PolicyDocument-tier (tenant-scoped uploads) blijft onveranderd — backward-compat verified
 
 **Depends on:** Nothing (eerste phase)
 
@@ -74,7 +74,7 @@ M049 consolideert het admin-landschap: M045/S05 PDF-upload-flow + ActionItems pa
 
 **Requirements:** INT-01, INT-02, INT-03, INT-04, TEST-06
 
-**Plans:** 4/5 plans executed
+**Plans:** 5 plans
 
 Plans:
 - [ ] 04-01-PLAN.md — UploadDocumentModal prop extension (initialGemeente/initialSourceKey/onSuccess)
@@ -91,6 +91,22 @@ Plans:
 5. M445 regression-test suite blijft groen
 
 **Depends on:** Phase 3 (UI shell aanwezig om upload-modal in te plugin)
+
+### Phase 04.1: Manual Upload Rescore Wire-up (INSERTED)
+
+**Goal:** Wire `rescore_parcels_for_document` ARQ enqueue into de manual PolicyDocument upload path zodat admin-uploads via M049/S04 hub cascade re-scoring triggeren (parity met weekly auto-ingest cron). Sluit de INT-04 gap waar uploaded docs `status='live'` flippen maar niet doorpropageren naar `scan_results` tot de wekelijkse cron draait.
+
+**Scope:**
+- Enqueue `rescore_parcels_for_document` na de AI summary job in `policy_documents/router.py` upload route
+- Source_key-agnostic gate: no-op voor source_keys zonder geregistreerde extractor; auto-picks up M050+ extractors zodra die landen
+- Dezelfde enqueue vanuit `data_source_probe_orchestrator` op `missing → live` transition (zodat opportunistic probe-on-load ook scoring materialiseert)
+
+**Requirements**: INT-04 (re-open — materialise rescore, not just UI flip)
+**Depends on:** Phase 4
+**Plans:** 1 plan
+
+Plans:
+- [ ] 04.1-01-PLAN.md — CASCADE_RESCORE_SOURCE_KEYS constant + upload route wire + probe orchestrator wire + 6 integration tests (T1–T6)
 
 ### Phase 5: Encrypted Credentials (S05)
 **Goal:** Type-C bronnen (BRK/Vindsubsidies/NVM) hebben "Configureer credential" UX die encrypted-at-rest opslaat via Fernet. M051/M052/M053 kunnen straks credential ophalen via standaard pattern.
@@ -130,7 +146,7 @@ Plans:
 Dependencies dicteren een grotendeels sequentiële volgorde, maar Phase 5 en Phase 6 zijn parallelliseerbaar met elkaar:
 
 ```
-Phase 1 → Phase 2 → Phase 3 → Phase 4 → (Phase 5 ∥ Phase 6)
+Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 04.1 → (Phase 5 ∥ Phase 6)
 ```
 
 Estimated duur: 3-4 weken (in lijn met landscape doc schatting).
@@ -146,6 +162,7 @@ Estimated duur: 3-4 weken (in lijn met landscape doc schatting).
 | 1 | S01 | Datamodel & Source-Key Catalog | 4 | 4/5 | In Progress|  | 2 | S02 | Admin API Layer | 5 | Not started | — |
 | 3 | 3/4 | In Progress|  | Not started | — |
 | 4 | S04 | M045 Upload-flow Integratie | 5 | Not started | — |
+| 04.1 | — | Manual Upload Rescore Wire-up | INT-04 | Not started | — |
 | 5 | S05 | Encrypted Credentials | 8 | Not started | — |
 | 6 | S06 | ActionItems Deprecation | 4 | Not started | — |
 
