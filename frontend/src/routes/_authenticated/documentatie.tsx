@@ -1,78 +1,47 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { staggerContainer, fadeUp } from '@/lib/animations'
-import { Database, ClipboardList } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { DataCatalog } from '@/components/documentation/DataCatalog'
-import { ActionItems } from '@/components/documentation/ActionItems'
 
 export const Route = createFileRoute('/_authenticated/documentatie')({
   component: DocumentatiePage,
 })
 
+/**
+ * /documentatie — overview of data sources per niveau (gemeente, wijk, perceel).
+ *
+ * M049/S06: actiepunten-toggle removed. Action-item content has fully
+ * migrated to /instellingen/data-bronnen action-buttons (per source_key).
+ * Page is now single-tab (DataCatalog only).
+ */
 function DocumentatiePage() {
-  const [activeTab, setActiveTab] = useState<'data' | 'acties'>('data')
-
   return (
     <ResultsShell>
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        animate="show"
-      >
+      <motion.div variants={staggerContainer} initial="hidden" animate="show">
         <motion.div variants={fadeUp} className="mb-8">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p
-                className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400 mb-2"
-                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-              >
-                Documentatie
-              </p>
-              <h1 className="text-[32px] font-black tracking-tight text-[#0E1111]">
-                {activeTab === 'data' ? 'Data & bronnen' : 'Actiepunten'}
-              </h1>
-              <p className="text-[14px] text-slate-500 mt-2 max-w-2xl leading-relaxed" style={{ textWrap: 'pretty' }}>
-                {activeTab === 'data'
-                  ? 'Overzicht van alle databronnen per niveau — gemeente, wijk en perceel. Elke bron toont de herkomst, beschikbaarheid en status.'
-                  : 'Manuele taken die opgepakt moeten worden — API configuratie, externe contacten, en roadmap features.'}
-              </p>
-            </div>
-
-            {/* Toggle */}
-            <div className="flex items-center rounded-full border border-[#0E1111] p-0.5 shrink-0 mt-2">
-              <button
-                onClick={() => setActiveTab('data')}
-                className={`flex items-center justify-center rounded-full p-2 transition-colors ${
-                  activeTab === 'data'
-                    ? 'bg-[#F9A826] text-[#0E1111]'
-                    : 'text-slate-400 hover:text-[#0E1111]'
-                }`}
-                title="Data & bronnen"
-              >
-                <Database size={16} strokeWidth={2} />
-              </button>
-              <button
-                onClick={() => setActiveTab('acties')}
-                className={`flex items-center justify-center rounded-full p-2 transition-colors ${
-                  activeTab === 'acties'
-                    ? 'bg-[#F9A826] text-[#0E1111]'
-                    : 'text-slate-400 hover:text-[#0E1111]'
-                }`}
-                title="Actiepunten"
-              >
-                <ClipboardList size={16} strokeWidth={2} />
-              </button>
-            </div>
-          </div>
+          <p
+            className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400 mb-2"
+            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+          >
+            Documentatie
+          </p>
+          <h1 className="text-[32px] font-black tracking-tight text-[#0E1111]">
+            Data &amp; bronnen
+          </h1>
+          <p
+            className="text-[14px] text-slate-500 mt-2 max-w-2xl leading-relaxed"
+            style={{ textWrap: 'pretty' }}
+          >
+            Overzicht van alle databronnen per niveau — gemeente, wijk en
+            perceel. Elke bron toont de herkomst, beschikbaarheid en status.
+          </p>
         </motion.div>
 
         <motion.div variants={fadeUp} className="pb-8">
-          {activeTab === 'data' ? <DataCatalog /> : <ActionItems />}
+          <DataCatalog />
         </motion.div>
       </motion.div>
     </ResultsShell>
   )
 }
-
