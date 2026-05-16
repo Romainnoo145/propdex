@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04-04-PLAN.md (DataSourceRow integration wiring — Upload + Bekijk versies actions wire to modals)
-last_updated: "2026-05-15T08:20:01.104Z"
+stopped_at: Completed 04.1-01-PLAN.md (CASCADE_RESCORE_SOURCE_KEYS wire-up + upload_enqueue helper + probe orchestrator rescore + 6 integration tests)
+last_updated: "2026-05-16T09:46:17.462Z"
 last_activity: 2026-04-26 — Phase 07 Plan 05 complete — story battery + visual sign-off + CARDS_PER_PAGE 6→4 + badge alignment fix
 progress:
-  total_phases: 6
-  completed_phases: 4
-  total_plans: 13
-  completed_plans: 13
+  total_phases: 7
+  completed_phases: 5
+  total_plans: 14
+  completed_plans: 14
   percent: 88
 ---
 
@@ -79,6 +79,7 @@ Progress: [█████████░] 88% (7/8 plans)
 | Phase 04-m045-upload-flow-integratie P02 | 9min | 1 tasks | 1 files |
 | Phase 04-m045-upload-flow-integratie P05 | 6m | 2 tasks | 4 files |
 | Phase 04-m045-upload-flow-integratie P04 | 7min | 2 tasks | 3 files |
+| Phase 04.1-manual-upload-rescore P01 | 8min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -177,6 +178,9 @@ Progress: [█████████░] 88% (7/8 plans)
 - [Phase 04-m045-upload-flow-integratie]: orchestrator rebuilds only cascade_uploads (Type A) after probe — open_apis and paid_integrations unchanged
 - [Phase 04-m045-upload-flow-integratie]: 04-04: Hooks before early-returns in GemeenteDataSourcesPage — useQueryClient/useRefreshDataSource/useState placed before loading/error guards per React rules of hooks
 - [Phase 04-m045-upload-flow-integratie]: 04-04: GemeenteSummary→GemeenteEntry conversion at call site with provincie_code='' sentinel; handleUploadSuccess double-flush: invalidateQueries + refreshMutation.mutate for INT-04 probe trigger
+- [Phase 04.1-manual-upload-rescore]: CASCADE_RESCORE_SOURCE_KEYS lives in rescore_cascade_job.py as single gate — M050+ adds source_keys here only, no other wire changes needed
+- [Phase 04.1-manual-upload-rescore]: upload_enqueue.py extracted from router.py to satisfy 300-line rule (301→295 lines); best-effort enqueue pattern (try/except, warnings not raises)
+- [Phase 04.1-manual-upload-rescore]: Integration tests: app.state.arq_pool = mock_pool in try/finally (not monkeypatch.setattr on async_client.app) — httpx AsyncClient has no .app attribute
 
 ### Pending Todos
 
@@ -188,6 +192,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-15T08:13:07.981Z
-Stopped at: Completed 04-04-PLAN.md (DataSourceRow integration wiring — Upload + Bekijk versies actions wire to modals)
+Last session: 2026-05-16T09:46:17.459Z
+Stopped at: Completed 04.1-01-PLAN.md (CASCADE_RESCORE_SOURCE_KEYS wire-up + upload_enqueue helper + probe orchestrator rescore + 6 integration tests)
 Resume file: None
