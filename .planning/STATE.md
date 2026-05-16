@@ -84,6 +84,7 @@ Progress: [█████████░] 88% (7/8 plans)
 
 ### Roadmap Evolution
 
+- 2026-05-16: Phase 04.1 inserted after Phase 4 (M049/S04): Manual Upload Rescore Wire-up (URGENT) — close cascade re-score gap for admin-uploaded PolicyDocuments. Goal: parity with weekly auto-ingest cron; source_key-agnostic enqueue auto-picks up M050+ extractors. Discovered during M049/S04 cascade-wiring audit.
 - 2026-04-22: M048 created with 4 phases (Cache Sentinel, Score UI Fix, Woonvisie Popup, KlimaatLayer Bug)
 - 2026-04-24: Office hours scope expansion — 4 new phases added from design doc 20260424-200512:
   - Phase 5: Document-level cache sentinel (woonvisie)
