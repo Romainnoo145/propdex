@@ -9,6 +9,7 @@ export type ActionType =
   | 'configure_credential'
   | 'view_versions'
   | 'refresh'
+  | 'view_action_item'
 
 export interface Action {
   action: ActionType
