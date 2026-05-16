@@ -3,6 +3,7 @@
 Thin HTTP handlers — all business logic lives in parcels_service.py.
 """
 
+import logging
 import uuid
 
 import httpx
@@ -10,11 +11,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_active_user, get_current_organization_id
+from app.auth.dependencies import (
+    get_current_active_user,
+    get_current_org_expose_score_internals,
+    get_current_organization_id,
+)
 from app.core.database import get_db
 from app.middleware.rate_limit import limiter
 from app.models.user import User
-from app.schemas.brk_ownership import BRKOwnership
 from app.scans import parcels_service
 from app.scans.schemas import (
     ParcelAtPointResponse,
@@ -24,9 +28,8 @@ from app.scans.schemas import (
     ParcelRiskProfileResponse,
     ScanResultItem,
 )
+from app.schemas.brk_ownership import BRKOwnership
 from app.services.wijk_service import get_wijken_in_gemeente
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -86,10 +89,13 @@ async def get_parcel_scan_data(
     request: Request,
     parcel_id: uuid.UUID,
     current_user: User = Depends(get_current_active_user),
+    expose_internals: bool = Depends(get_current_org_expose_score_internals),
     db: AsyncSession = Depends(get_db),
 ) -> ScanResultItem:
     """Fetch the latest scan result data for a single parcel."""
-    return await parcels_service.get_parcel_scan_data(db=db, parcel_id=parcel_id)
+    return await parcels_service.get_parcel_scan_data(
+        db=db, parcel_id=parcel_id, expose_internals=expose_internals,
+    )
 
 
 @router.get("/parcels/{parcel_id}/risk-profile", response_model=ParcelRiskProfileResponse)
@@ -136,6 +142,7 @@ async def get_parcel_at_point(
     ),
     current_user: User = Depends(get_current_active_user),
     organization_id: uuid.UUID = Depends(get_current_organization_id),
+    expose_internals: bool = Depends(get_current_org_expose_score_internals),
     db: AsyncSession = Depends(get_db),
 ) -> ParcelAtPointResponse:
     """Resolve the parcel that intersects a clicked WGS84 map point."""
@@ -146,6 +153,7 @@ async def get_parcel_at_point(
         organization_id=organization_id,
         scan_id=scan_id,
         request=request,
+        expose_internals=expose_internals,
     )
 
 

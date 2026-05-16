@@ -35,6 +35,7 @@ from app.scans.helpers import (
     _resolve_parcel_address_from_centroid,
     _resolve_pdok_cadastral_parcel_at_rd,
 )
+from app.scans.redaction import redact_score_breakdown
 from app.scans.schemas import (
     ParcelAtPointResponse,
     ParcelCentroidResponse,
@@ -44,11 +45,11 @@ from app.scans.schemas import (
 )
 from app.services.bekendmaking_matcher import find_parcel_at_point
 from app.services.parcel_addressing import reverse_geocode_rd_point
-from app.services.score_v3_factors import _best_bestemming_type
 from app.services.parcel_scoring import (
     compute_vacancy_confidence,
     extract_building_metrics,
 )
+from app.services.score_v3_factors import _best_bestemming_type
 
 logger = logging.getLogger(__name__)
 
@@ -299,6 +300,8 @@ async def enrich_parcel(
 async def get_parcel_scan_data(
     db: AsyncSession,
     parcel_id: uuid.UUID,
+    *,
+    expose_internals: bool = False,
 ) -> ScanResultItem:
     """Fetch the latest scan result data for a single parcel (by ParcelCache UUID)."""
     query = (
@@ -342,6 +345,10 @@ async def get_parcel_scan_data(
     report_q = select(SavedReport.id).where(SavedReport.source_parcel_id == parcel_id).limit(1)
     has_report = (await db.execute(report_q)).scalar_one_or_none() is not None
 
+    score_breakdown, breakdown_redacted = redact_score_breakdown(
+        score_breakdown, expose_internals=expose_internals
+    )
+
     return ScanResultItem(
         parcel_id=parcel.id,
         parcel_code=parcel.parcel_id,
@@ -355,6 +362,7 @@ async def get_parcel_scan_data(
         score=score,
         score_category=score_category,
         score_breakdown=score_breakdown,
+        score_breakdown_redacted=breakdown_redacted,
         potentie_score=potentie_score,
         risico_score=risico_score,
         vacancy_signal=vacancy_confidence.signal.value if hasattr(vacancy_confidence, "signal") else flags.get("vacancy_signal"),
@@ -637,12 +645,13 @@ async def get_parcel_at_point(
     *,
     scan_id: uuid.UUID | None = None,
     request=None,
+    expose_internals: bool = False,
 ) -> ParcelAtPointResponse:
     """Resolve the parcel that intersects a clicked WGS84 map point.
 
     ``request`` is forwarded to ``_resolve_parcel_address_from_centroid``.
     """
-    from geoalchemy2.functions import ST_AsGeoJSON, ST_AsText, ST_Centroid, ST_Transform
+    from geoalchemy2.functions import ST_Centroid
 
     point_rd = func.ST_Transform(
         func.ST_SetSRID(func.ST_MakePoint(lng, lat), 4326), 28992,
@@ -897,6 +906,10 @@ async def get_parcel_at_point(
     org_score_weights = org_score_weights_row.scalar_one_or_none()
     uses_custom_weights = org_score_weights is not None
 
+    score_breakdown, breakdown_redacted = redact_score_breakdown(
+        score_breakdown, expose_internals=expose_internals
+    )
+
     return ParcelAtPointResponse(
         parcel_id=row["parcel_id"],
         lng=resolved_lng,
@@ -911,6 +924,7 @@ async def get_parcel_at_point(
         score=score_value,
         score_category=score_category,
         score_breakdown=score_breakdown,
+        score_breakdown_redacted=breakdown_redacted,
         potentie_score=potentie_score,
         risico_score=risico_score,
         vacancy_signal=vacancy_signal,

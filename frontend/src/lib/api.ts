@@ -1014,6 +1014,7 @@ export async function fetchParcelAtPoint(
   risico_score?: number | null
   score_category?: string | null
   score_breakdown?: Record<string, unknown> | null
+  score_breakdown_redacted?: boolean
   vacancy_signal?: string | null
   vacancy_confidence?: number | null
   vacancy_reasons?: string[] | null
@@ -1053,6 +1054,7 @@ export async function fetchParcelAtPoint(
     risico_score?: number | null
     score_category?: string | null
     score_breakdown?: Record<string, unknown> | null
+    score_breakdown_redacted?: boolean
     vacancy_signal?: string | null
     market_signals?: {
       listing_duration_days: number

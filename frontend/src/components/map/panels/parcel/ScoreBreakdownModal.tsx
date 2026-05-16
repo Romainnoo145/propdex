@@ -8,7 +8,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, TrendingUp, ShieldAlert, Info, ChevronDown, MapPin } from 'lucide-react'
+import { X, TrendingUp, ShieldAlert, Info, ChevronDown, MapPin, Lock } from 'lucide-react'
 
 /* ── Types ───────────────────────────────────────────────────── */
 
@@ -56,6 +56,8 @@ interface ScoreBreakdownModalProps {
   potentieScore: number | null
   risicScore: number | null
   scoreBreakdown: Record<string, unknown> | null
+  /** Phase 04.2: backend stripped factor weights for this caller */
+  scoreBreakdownRedacted?: boolean
   address: string | null
   isCustomProfile: boolean
   potentieRisicoBalance: number   // 0.0–1.0 from useOrgScoreWeights
@@ -132,6 +134,7 @@ export function ScoreBreakdownModal({
   potentieScore,
   risicScore,
   scoreBreakdown,
+  scoreBreakdownRedacted = false,
   address,
   isCustomProfile,
   potentieRisicoBalance,
@@ -172,6 +175,14 @@ export function ScoreBreakdownModal({
                   <div className="flex items-center gap-1.5 rounded-full bg-[#F2F6F3] px-2.5 py-1">
                     <span className="text-[10px] font-semibold text-[#6B7280]">
                       Custom profiel
+                    </span>
+                  </div>
+                )}
+                {scoreBreakdownRedacted && (
+                  <div className="flex items-center gap-1.5 rounded-full bg-[#FEF3E2] px-2.5 py-1">
+                    <Lock size={11} strokeWidth={2} style={{ color: '#F9A826' }} />
+                    <span className="text-[10px] font-semibold text-[#0E1111]">
+                      Volledige weights in Pro
                     </span>
                   </div>
                 )}

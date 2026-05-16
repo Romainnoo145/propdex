@@ -174,6 +174,13 @@ class ScanResultItem(BaseModel):
         default=None,
         description="Per-factor score contributions for transparency",
     )
+    score_breakdown_redacted: bool = Field(
+        default=False,
+        description=(
+            "True when factor weight fields (gewicht/bijdrage/percentage_of_category/waarde) "
+            "were stripped from score_breakdown for this caller (Phase 04.2 security)."
+        ),
+    )
     vacancy_signal: str | None = Field(
         default=None,
         description="Vacancy classification: leeg_perceel, leegstaand_pand, in_gebruik, onbekend",
@@ -366,6 +373,13 @@ class ParcelAtPointResponse(BaseModel):
     score_breakdown: dict | None = Field(
         default=None,
         description="Per-factor score contributions from scan flags",
+    )
+    score_breakdown_redacted: bool = Field(
+        default=False,
+        description=(
+            "True when factor weight fields (gewicht/bijdrage/percentage_of_category/waarde) "
+            "were stripped from score_breakdown for this caller (Phase 04.2 security)."
+        ),
     )
     potentie_score: float | None = Field(
         default=None,

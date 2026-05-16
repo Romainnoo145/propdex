@@ -282,6 +282,8 @@ export interface ScanResultItem {
   score_category: string | null
   /** Per-factor score contributions for transparency */
   score_breakdown: Record<string, unknown> | null
+  /** Phase 04.2: true when factor weight fields (gewicht/bijdrage/...) were stripped */
+  score_breakdown_redacted?: boolean
   /** Score v3.0 potentie subscore (0-100, null for v2.1 scans) */
   potentie_score?: number | null
   /** Score v3.0 risico subscore (0-100, null for v2.1 scans) */

@@ -74,11 +74,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await app.state.http_client.aclose()
 
 
+_is_production = settings.ENVIRONMENT.lower() == "production"
+
 app = FastAPI(
     title="Propdex API",
     version="0.1.0",
     description="Property Intelligence Platform for Dutch Real Estate Developers",
     lifespan=lifespan,
+    docs_url=None if _is_production else "/docs",
+    redoc_url=None if _is_production else "/redoc",
+    openapi_url=None if _is_production else "/openapi.json",
 )
 
 # Add rate limiter to app state

@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Integer, String, text
+from sqlalchemy import Boolean, Integer, String, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -40,4 +40,14 @@ class Organization(Base, TimestampMixin):
         nullable=True,
         default=None,
         comment="Per-org score weight config: {preset, potentie_risico_balance, potentie_weights, risico_weights}",
+    )
+    expose_score_internals: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=text("false"),
+        comment=(
+            "Phase 04.2 security flag — when False, public scoring API "
+            "redacts factor weights (gewicht/bijdrage/percentage_of_category/waarde). "
+            "Default False for new orgs; demo + trial orgs stay False, paying orgs True."
+        ),
     )

@@ -9,9 +9,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_active_user, get_current_organization_id
+from app.auth.dependencies import (
+    get_current_active_user,
+    get_current_org_expose_score_internals,
+    get_current_organization_id,
+)
 from app.core.database import get_db
-from app.middleware.rate_limit import limiter
+from app.middleware.rate_limit import limiter, org_rate_key
 from app.models.user import User
 from app.scans import results_service
 from app.scans.schemas import (
@@ -54,6 +58,7 @@ async def list_results(
     limit: int = 50,
     current_user: User = Depends(get_current_active_user),
     organization_id: uuid.UUID = Depends(get_current_organization_id),
+    expose_internals: bool = Depends(get_current_org_expose_score_internals),
     db: AsyncSession = Depends(get_db),
 ) -> ScanResultsResponse:
     """List paginated scan results with filtering and sorting."""
@@ -74,11 +79,12 @@ async def list_results(
         sort_order=sort_order,
         offset=offset,
         limit=limit,
+        expose_internals=expose_internals,
     )
 
 
 @router.get("/{scan_id}/tiles/{z}/{x}/{y}.pbf")
-@limiter.limit("120/minute")
+@limiter.limit("600/minute", key_func=org_rate_key)
 async def get_scan_tiles(
     request: Request,
     scan_id: uuid.UUID,

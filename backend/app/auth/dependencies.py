@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.jwt import decode_token
 from app.core.database import get_db
+from app.models.organization import Organization
 from app.models.user import User
 
 # OAuth2 scheme with auto_error=False for custom error handling
@@ -143,3 +144,22 @@ async def get_current_organization_id(request: Request) -> uuid.UUID:
             detail="Could not validate credentials",
         )
     return organization_id
+
+
+async def get_current_org_expose_score_internals(
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> bool:
+    """
+    Resolve the Phase 04.2 `expose_score_internals` flag for the current org.
+
+    Defaults to False (redact) when the org row cannot be found, so that any
+    missing/orphaned context errs on the side of protecting scoring IP.
+    """
+    result = await db.execute(
+        select(Organization.expose_score_internals).where(
+            Organization.id == organization_id
+        )
+    )
+    flag = result.scalar_one_or_none()
+    return bool(flag) if flag is not None else False

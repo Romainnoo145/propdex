@@ -76,9 +76,11 @@ async def test_upgrade_then_downgrade_clean():
             await conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS pg_trgm")
         await reset_engine.dispose()
 
-        # Replay every migration from base -> head so the new revision lands
-        # on a properly-bootstrapped schema (users table exists for our FK).
-        await asyncio.to_thread(command.upgrade, alembic_cfg, "head")
+        # Replay every migration from base -> target so the M049/S01 revision
+        # lands on a properly-bootstrapped schema (users table exists for the
+        # FK). Pin to the M049/S01 revision specifically — not "head" — so
+        # this test stays valid as later migrations stack on top.
+        await asyncio.to_thread(command.upgrade, alembic_cfg, target_revision)
 
         # Verify table + structure
         engine = create_async_engine(

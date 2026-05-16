@@ -24,6 +24,7 @@ from app.scans.helpers import (
     _extract_listing_signal_from_enrichment,
     _normalize_market_signals,
 )
+from app.scans.redaction import redact_score_breakdown
 from app.scans.schemas import (
     FundaSummaryResponse,
     ScanResultItem,
@@ -123,6 +124,7 @@ async def list_results(
     sort_order: str = "desc",
     offset: int = 0,
     limit: int = 50,
+    expose_internals: bool = False,
 ) -> ScanResultsResponse:
     """List paginated scan results with filtering, sorting, and enrichment."""
     limit = min(limit, 100)
@@ -226,6 +228,10 @@ async def list_results(
             listing_signal=listing_signal,
         )
 
+        score_breakdown, breakdown_redacted = redact_score_breakdown(
+            score_breakdown, expose_internals=expose_internals
+        )
+
         result_items.append(
             ScanResultItem(
                 parcel_id=parcel.id,
@@ -240,6 +246,7 @@ async def list_results(
                 score=result.score,
                 score_category=score_category_value,
                 score_breakdown=score_breakdown,
+                score_breakdown_redacted=breakdown_redacted,
                 potentie_score=result.flags.get("scores", {}).get("potentie") if result.flags else None,
                 risico_score=result.flags.get("scores", {}).get("risico") if result.flags else None,
                 vacancy_signal=vacancy_signal,
