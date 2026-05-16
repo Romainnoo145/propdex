@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: "M049 Phase 5 (Encrypted Credentials) eng-reviewed 2026-05-16. Locked-in contract: MultiFernet rotation, generic audit_log tabel, vast credential_name enum per source_key. Ready for /gsd:plan-phase 5."
-stopped_at: "Completed 05-02-PLAN.md (admin API for vendor-managed integration credentials: registry + schemas + router + 9 integration tests pass, 20 tests combined with 05-01)"
-last_updated: "2026-05-16T11:06:16.779Z"
+stopped_at: Completed 05-03-PLAN.md (frontend CredentialConfigModal wired into Type-C data-bronnen rows; M049/S05 backend + frontend complete; CRED-01 closed)
+last_updated: "2026-05-16T12:09:13.228Z"
 last_activity: 2026-05-16 — M049 Phase 04.1 closed; Phase 5 eng-review locked; REQUIREMENTS.md CRED-02 gefixt (commit 2f4534f2)
 progress:
   total_phases: 8
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 18
-  completed_plans: 17
+  completed_plans: 18
   percent: 83
 ---
 
@@ -83,6 +83,7 @@ Progress: [██████████░] 83% (5/6 phases — 04.1 + 1-4 don
 | Phase 04.1-manual-upload-rescore P02 | 4min | 1 tasks | 3 files |
 | Phase 05-encrypted-credentials P05-01 | 6m | 3 tasks | 11 files |
 | Phase 05-encrypted-credentials P05-02 | 4m | 2 tasks | 5 files |
+| Phase 05-encrypted-credentials PP05-03 | 30min | 3 tasks tasks | 6 files files |
 
 ## Accumulated Context
 
@@ -191,6 +192,10 @@ Progress: [██████████░] 83% (5/6 phases — 04.1 + 1-4 don
 - [Phase 05-encrypted-credentials]: M049/S05 Plan 02: _to_read() helper centralises secret-stripped projection — defends TEST-03c regression long-term
 - [Phase 05-encrypted-credentials]: M049/S05 Plan 02: DELETE atomicity — db.add(audit) + db.delete(row) + single commit; no orphan audit on rollback
 - [Phase 05-encrypted-credentials]: M049/S05 Plan 02: source_key path validation loose (Annotated[str, Path]); CREDENTIAL_FIELDS membership is single source of truth (404 GET, 422 POST)
+- [Phase 05-encrypted-credentials]: M049/S05 Plan 03: manual TS-twin of CREDENTIAL_FIELDS (kebab-case object literal, same precedent as dataSourceKeys.ts) — backend + frontend updated in lockstep when M050+ adds source_keys
+- [Phase 05-encrypted-credentials]: M049/S05 Plan 03: dedicated ActionButton render branch for configure_credential (not generic handleClick switch) — keeps refresh spinner state isolated and per-action UX explicit
+- [Phase 05-encrypted-credentials]: M049/S05 Plan 03: rotate flow via DELETE → invalidateQueries (per-sourceKey) → form auto-re-renders empty — no manual state reset needed because state derives purely from GET cache
+- [Phase 05-encrypted-credentials]: M049/S05 Plan 03: EmptyField/FilledField sub-components inline in CredentialConfigModal.tsx (275 lines, < 300-line rule) — no folder-split required
 
 ### Pending Todos
 
@@ -202,6 +207,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-16T11:06:12.632Z
-Stopped at: Completed 05-02-PLAN.md (admin API for vendor-managed integration credentials: registry + schemas + router + 9 integration tests pass, 20 tests combined with 05-01)
+Last session: 2026-05-16T12:09:13.225Z
+Stopped at: Completed 05-03-PLAN.md (frontend CredentialConfigModal wired into Type-C data-bronnen rows; M049/S05 backend + frontend complete; CRED-01 closed)
 Resume file: None

@@ -39,7 +39,7 @@
 
 ### Credentials Configuration
 
-- [ ] **CRED-01**: "Configureer credential" modal voor type-C bronnen (BRK, Vindsubsidies, NVM placeholders) met velden per source_key: api_key / client_cert / client_secret / endpoint_url
+- [x] **CRED-01**: "Configureer credential" modal voor type-C bronnen (BRK, Vindsubsidies, NVM placeholders) met velden per source_key: api_key / client_cert / client_secret / endpoint_url
 - [x] **CRED-02**: Encrypted-at-rest in `integration_credentials` (vendor-managed, geen TenantMixin; Fernet symmetric via `MultiFernet([INTEGRATION_CREDENTIAL_KEY, INTEGRATION_CREDENTIAL_KEY_OLD?])` voor rotatie zonder downtime)
 - [x] **CRED-03**: UI toont alleen credential-status (configured/missing/expired) — nooit decrypted waarden retourneren in GET responses
 - [x] **CRED-04**: Credential-rotatie: "Roteren" button verwijdert oude entry + opent modal voor nieuwe waarde; audit-log entry op rotatie
@@ -108,7 +108,7 @@ Deferred to post-M049 / latere milestones:
 | INT-02 | S04 | Complete |
 | INT-03 | S04 | Complete |
 | INT-04 | S04 | Complete |
-| CRED-01 | S05 | Pending |
+| CRED-01 | S05 | Complete |
 | CRED-02 | S05 | Complete |
 | CRED-03 | S05 | Complete |
 | CRED-04 | S05 | Complete |
