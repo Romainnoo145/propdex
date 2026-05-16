@@ -92,6 +92,16 @@ Plans:
 
 **Depends on:** Phase 3 (UI shell aanwezig om upload-modal in te plugin)
 
+### Phase 04.2: Security Hardening — Strip Scoring Internals from Public API (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 4
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 04.2 to break down)
+
 ### Phase 04.1: Manual Upload Rescore Wire-up (INSERTED)
 
 **Goal:** Wire `rescore_parcels_for_document` ARQ enqueue into de manual PolicyDocument upload path zodat admin-uploads via M049/S04 hub cascade re-scoring triggeren (parity met weekly auto-ingest cron). Sluit de INT-04 gap waar uploaded docs `status='live'` flippen maar niet doorpropageren naar `scan_results` tot de wekelijkse cron draait.
@@ -126,6 +136,13 @@ Plans:
 5. Superuser-only RBAC constraint getest (vendor-managed access)
 
 **Depends on:** Phase 1 (model pattern), Phase 2 (API pattern), Phase 3 (UI pattern)
+
+**Plans:** 3 plans (sequential: wave 1 -> wave 2 -> wave 3)
+
+Plans:
+- [ ] 05-01-PLAN.md — Crypto fundament: cryptography pin, settings validator, AuditLog + IntegrationCredential models, 2 Alembic migrations, credential_crypto service, TEST-03a + TEST-03d unit tests
+- [ ] 05-02-PLAN.md — Admin API: CREDENTIAL_FIELDS registry, Pydantic schemas, /api/admin/integration-credentials router (GET list/per-source, POST, DELETE) with audit emission, TEST-03b + TEST-03c + TEST-03e integration tests
+- [ ] 05-03-PLAN.md — Frontend: TS types + CREDENTIAL_FIELDS mirror + TanStack hooks + CredentialConfigModal (Aura) + wire onConfigureCredential through DataSourceRow + page mount
 
 ### Phase 6: ActionItems Deprecation (S06)
 **Goal:** Oude ActionItems pagina is dood; alle content beschikbaar via Data-bronnen rijen; geen broken links elders in app.
