@@ -38,6 +38,7 @@ interface Props {
   row: DataSourceRowDTO
   onUpload?: (sourceKey: string) => void        // called when Upload button clicked
   onViewVersions?: (sourceKey: string) => void  // called when Bekijk versies clicked
+  onConfigureCredential?: (sourceKey: string) => void // M049/S05: Type-C credential modal
 }
 
 const ACTION_ICON: Record<ActionType, typeof Upload> = {
@@ -73,7 +74,13 @@ const STATUS_ICON: Record<
   },
 }
 
-export function DataSourceRow({ gemeenteCode, row, onUpload, onViewVersions }: Props) {
+export function DataSourceRow({
+  gemeenteCode,
+  row,
+  onUpload,
+  onViewVersions,
+  onConfigureCredential,
+}: Props) {
   const refreshMutation = useRefreshDataSource()
   const isRefreshing =
     refreshMutation.isPending &&
@@ -141,6 +148,7 @@ export function DataSourceRow({ gemeenteCode, row, onUpload, onViewVersions }: P
             }
             onUpload={onUpload}
             onViewVersions={onViewVersions}
+            onConfigureCredential={onConfigureCredential}
           />
         ))}
       </div>
@@ -157,6 +165,7 @@ interface ActionButtonProps {
   onRefresh: () => void
   onUpload?: (sourceKey: string) => void
   onViewVersions?: (sourceKey: string) => void
+  onConfigureCredential?: (sourceKey: string) => void
 }
 
 function ActionButton({
@@ -166,6 +175,7 @@ function ActionButton({
   onRefresh,
   onUpload,
   onViewVersions,
+  onConfigureCredential,
 }: ActionButtonProps) {
   const Icon =
     isRefreshing && action.action === 'refresh' ? Loader2 : ACTION_ICON[action.action]
@@ -196,6 +206,22 @@ function ActionButton({
       <button
         type="button"
         onClick={() => onViewVersions?.(sourceKey)}
+        className={`${baseClass} ${enabledClass}`}
+        aria-label={action.label_nl}
+        title={action.label_nl}
+        data-action={action.action}
+        data-enabled="true"
+      >
+        <Icon size={15} strokeWidth={1.75} />
+      </button>
+    )
+  }
+
+  if (action.action === 'configure_credential' && action.enabled) {
+    return (
+      <button
+        type="button"
+        onClick={() => onConfigureCredential?.(sourceKey)}
         className={`${baseClass} ${enabledClass}`}
         aria-label={action.label_nl}
         title={action.label_nl}

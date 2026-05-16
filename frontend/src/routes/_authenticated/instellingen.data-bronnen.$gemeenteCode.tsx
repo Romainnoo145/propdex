@@ -20,6 +20,7 @@ import {
 } from '@/lib/queries/data-sources-admin'
 import { UploadDocumentModal, type GemeenteEntry } from '@/components/settings/beleid/UploadDocumentModal'
 import { VersionHistoryPanel } from '@/components/settings/beleid/VersionHistoryPanel'
+import { CredentialConfigModal } from '@/components/settings/CredentialConfigModal'
 import { DataSourceRow } from '@/components/settings/data-bronnen/DataSourceRow'
 import { DataSourceSection } from '@/components/settings/data-bronnen/DataSourceSection'
 import { GemeentePicker } from '@/components/settings/data-bronnen/GemeentePicker'
@@ -54,6 +55,9 @@ function GemeenteDataSourcesPage() {
   const refreshMutation = useRefreshDataSource()
   const [openUploadFor, setOpenUploadFor] = useState<string | null>(null)
   const [openVersionsFor, setOpenVersionsFor] = useState<string | null>(null)
+  const [credentialSourceKey, setCredentialSourceKey] = useState<string | null>(
+    null,
+  )
 
   if (dataSourcesQuery.isLoading) {
     return (
@@ -140,6 +144,7 @@ function GemeenteDataSourcesPage() {
                 row={row}
                 onUpload={(sk) => setOpenUploadFor(sk)}
                 onViewVersions={(sk) => setOpenVersionsFor(sk)}
+                onConfigureCredential={(sk) => setCredentialSourceKey(sk)}
               />
             ))}
           </DataSourceSection>
@@ -156,6 +161,7 @@ function GemeenteDataSourcesPage() {
                 row={row}
                 onUpload={(sk) => setOpenUploadFor(sk)}
                 onViewVersions={(sk) => setOpenVersionsFor(sk)}
+                onConfigureCredential={(sk) => setCredentialSourceKey(sk)}
               />
             ))}
           </DataSourceSection>
@@ -172,6 +178,7 @@ function GemeenteDataSourcesPage() {
                 row={row}
                 onUpload={(sk) => setOpenUploadFor(sk)}
                 onViewVersions={(sk) => setOpenVersionsFor(sk)}
+                onConfigureCredential={(sk) => setCredentialSourceKey(sk)}
               />
             ))}
           </DataSourceSection>
@@ -188,6 +195,13 @@ function GemeenteDataSourcesPage() {
         onSuccess={() => {
           if (openUploadFor) handleUploadSuccess(openUploadFor)
         }}
+      />
+
+      {/* CredentialConfigModal — M049/S05 Type-C credentials (BRK / Vindsubsidies / NVM) */}
+      <CredentialConfigModal
+        open={credentialSourceKey !== null}
+        onClose={() => setCredentialSourceKey(null)}
+        sourceKey={credentialSourceKey}
       />
 
       {/* VersionHistoryPanel — modal overlay mode (plan 04-02 extension) */}
