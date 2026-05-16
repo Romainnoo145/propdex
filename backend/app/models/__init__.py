@@ -2,6 +2,7 @@
 
 from app.models.ai_usage_log import AIUsageLog  # noqa: F401
 from app.models.area_scan import AreaScan  # noqa: F401
+from app.models.audit_log import AuditLog  # noqa: F401
 from app.models.base import Base
 from app.models.bulk_query import BulkQuery  # noqa: F401
 from app.models.bulk_request import BulkRequest  # noqa: F401
@@ -22,6 +23,7 @@ from app.models.favorite_note import FavoriteNote  # noqa: F401
 from app.models.funda_listing_snapshot import FundaListingSnapshot  # noqa: F401
 from app.models.gemeente_provincie_map import GemeenteProvincieMap  # noqa: F401
 from app.models.generated_dossier import GeneratedDossier  # noqa: F401
+from app.models.integration_credential import IntegrationCredential  # noqa: F401
 from app.models.jurisprudence_job import JuridischAnalyseJob  # noqa: F401
 from app.models.organization import Organization
 from app.models.parcel_cache import ParcelCache  # noqa: F401
@@ -43,9 +45,11 @@ from app.models.user_notification_state import UserNotificationState  # noqa: F4
 
 __all__ = [
     "AIUsageLog",
+    "AuditLog",
     "Base",
     "ChatConversation",
     "ChatMessage",
+    "IntegrationCredential",
     "Organization",
     "User",
     "RefreshToken",
