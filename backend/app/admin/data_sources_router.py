@@ -9,7 +9,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Annotated, cast
 
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, Request
 from sqlalchemy import BigInteger, func, select, type_coerce
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -92,6 +92,7 @@ async def list_gemeenten(
 @router.get("/{gemeente_code}", response_model=GemeenteDataSourcesPayload)
 async def get_gemeente_sources(
     gemeente_code: GemeenteCodePath,
+    request: Request,
     _: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ) -> GemeenteDataSourcesPayload:
@@ -130,7 +131,13 @@ async def get_gemeente_sources(
         else:
             paid_integrations.append(row)
 
-    cascade_uploads = await run_opportunistic_probes(gemeente_code, cascade_uploads, db, name_map)
+    cascade_uploads = await run_opportunistic_probes(
+        gemeente_code=gemeente_code,
+        cascade_uploads=cascade_uploads,
+        db=db,
+        name_map=name_map,
+        arq_pool=getattr(request.app.state, "arq_pool", None),
+    )
 
     return GemeenteDataSourcesPayload(
         gemeente_code=gemeente_code,

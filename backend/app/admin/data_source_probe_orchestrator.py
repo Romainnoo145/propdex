@@ -1,8 +1,11 @@
 """Opportunistic probe orchestrator for the data-sources GET endpoint."""
 import asyncio
+import logging
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import BigInteger, func, select, type_coerce
+from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin.data_source_probes import compute_lock_key, probe_type_a_cascade
@@ -12,8 +15,12 @@ from app.admin.data_sources_helpers import (
     _synthesize_missing_row,
 )
 from app.admin.data_sources_schemas import DataSourceRow
+from app.jobs.rescore_cascade_job import CASCADE_RESCORE_SOURCE_KEYS
 from app.models.data_source_status import DataSourceStatus
+from app.models.policy_document import PolicyDocument
 from app.policy_documents.data_source_keys import DATA_SOURCE_KEYS
+
+logger = logging.getLogger(__name__)
 
 
 async def run_opportunistic_probes(
@@ -21,6 +28,7 @@ async def run_opportunistic_probes(
     cascade_uploads: list[DataSourceRow],
     db: AsyncSession,
     name_map: dict[str, str],  # passed for future use; currently unused
+    arq_pool: Any | None = None,
 ) -> list[DataSourceRow]:
     """Probe missing Type A rows on GET and update their status in-place.
 
@@ -31,6 +39,9 @@ async def run_opportunistic_probes(
     missing_keys = [row.source_key for row in cascade_uploads if row.status == "missing"]
     if not missing_keys:
         return cascade_uploads
+
+    # Capture previous statuses before mutating — needed for post-commit rescore gate
+    previous_statuses: dict[str, str] = {row.source_key: row.status for row in cascade_uploads}
 
     # Acquire advisory locks sequentially — only probe keys we lock
     locked_keys: list[str] = []
@@ -61,6 +72,37 @@ async def run_opportunistic_probes(
             row.last_checked = datetime.utcnow()
 
     await db.commit()
+
+    # Enqueue rescore for woonvisie rows that transitioned missing → live
+    if arq_pool is not None:
+        for key, probe_result in zip(locked_keys, probe_results, strict=False):
+            if (
+                previous_statuses.get(key) != "live"
+                and probe_result["status"] == "live"
+                and key in CASCADE_RESCORE_SOURCE_KEYS
+            ):
+                doc_id = await db.scalar(
+                    sa_select(PolicyDocument.id).where(
+                        PolicyDocument.entity_type == "gemeente",
+                        PolicyDocument.entity_code == gemeente_code,
+                        PolicyDocument.source_key == key,
+                        PolicyDocument.is_global.is_(True),
+                    ).order_by(PolicyDocument.version_number.desc()).limit(1)
+                )
+                if doc_id is not None:
+                    try:
+                        await arq_pool.enqueue_job(
+                            "rescore_parcels_for_document", document_id=str(doc_id)
+                        )
+                        logger.info(
+                            "Enqueued rescore_parcels_for_document for probe transition %s/%s doc=%s",
+                            gemeente_code, key, doc_id,
+                        )
+                    except Exception as enqueue_err:
+                        logger.warning(
+                            "Failed to enqueue rescore for probe transition %s/%s: %s",
+                            gemeente_code, key, enqueue_err,
+                        )
 
     # Re-fetch all status rows for the gemeente and rebuild cascade_uploads
     db_rows = (
