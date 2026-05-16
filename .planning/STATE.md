@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 status: "M049 Phase 5 (Encrypted Credentials) eng-reviewed 2026-05-16. Locked-in contract: MultiFernet rotation, generic audit_log tabel, vast credential_name enum per source_key. Ready for /gsd:plan-phase 5."
 stopped_at: Completed 05-03-PLAN.md (frontend CredentialConfigModal wired into Type-C data-bronnen rows; M049/S05 backend + frontend complete; CRED-01 closed)
-last_updated: "2026-05-16T12:09:13.228Z"
+last_updated: "2026-05-16T12:16:04.329Z"
 last_activity: 2026-05-16 — M049 Phase 04.1 closed; Phase 5 eng-review locked; REQUIREMENTS.md CRED-02 gefixt (commit 2f4534f2)
 progress:
   total_phases: 8
