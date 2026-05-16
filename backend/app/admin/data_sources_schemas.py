@@ -8,7 +8,13 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.models.data_source_status import DataSourceStatusValue
 
 SourceType = Literal["A", "B", "C"]
-ActionType = Literal["upload", "configure_credential", "view_versions", "refresh"]
+ActionType = Literal[
+    "upload",
+    "configure_credential",
+    "view_versions",
+    "refresh",
+    "view_action_item",
+]
 
 
 class Action(BaseModel):
