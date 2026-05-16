@@ -16,6 +16,7 @@ import {
   AlertCircle,
   AlertTriangle,
   CheckCircle2,
+  ClipboardList,
   History,
   Loader2,
   MinusCircle,
@@ -39,6 +40,7 @@ interface Props {
   onUpload?: (sourceKey: string) => void        // called when Upload button clicked
   onViewVersions?: (sourceKey: string) => void  // called when Bekijk versies clicked
   onConfigureCredential?: (sourceKey: string) => void // M049/S05: Type-C credential modal
+  onViewActionItem?: (sourceKey: string) => void      // M049/S06: ActionItem detail modal
 }
 
 const ACTION_ICON: Record<ActionType, typeof Upload> = {
@@ -46,6 +48,7 @@ const ACTION_ICON: Record<ActionType, typeof Upload> = {
   refresh: RefreshCw,
   view_versions: History,
   configure_credential: Settings2,
+  view_action_item: ClipboardList,
 }
 
 const STATUS_ICON: Record<
@@ -80,6 +83,7 @@ export function DataSourceRow({
   onUpload,
   onViewVersions,
   onConfigureCredential,
+  onViewActionItem,
 }: Props) {
   const refreshMutation = useRefreshDataSource()
   const isRefreshing =
@@ -149,6 +153,7 @@ export function DataSourceRow({
             onUpload={onUpload}
             onViewVersions={onViewVersions}
             onConfigureCredential={onConfigureCredential}
+            onViewActionItem={onViewActionItem}
           />
         ))}
       </div>
@@ -166,6 +171,7 @@ interface ActionButtonProps {
   onUpload?: (sourceKey: string) => void
   onViewVersions?: (sourceKey: string) => void
   onConfigureCredential?: (sourceKey: string) => void
+  onViewActionItem?: (sourceKey: string) => void
 }
 
 function ActionButton({
@@ -176,6 +182,7 @@ function ActionButton({
   onUpload,
   onViewVersions,
   onConfigureCredential,
+  onViewActionItem,
 }: ActionButtonProps) {
   const Icon =
     isRefreshing && action.action === 'refresh' ? Loader2 : ACTION_ICON[action.action]
@@ -222,6 +229,22 @@ function ActionButton({
       <button
         type="button"
         onClick={() => onConfigureCredential?.(sourceKey)}
+        className={`${baseClass} ${enabledClass}`}
+        aria-label={action.label_nl}
+        title={action.label_nl}
+        data-action={action.action}
+        data-enabled="true"
+      >
+        <Icon size={15} strokeWidth={1.75} />
+      </button>
+    )
+  }
+
+  if (action.action === 'view_action_item' && action.enabled) {
+    return (
+      <button
+        type="button"
+        onClick={() => onViewActionItem?.(sourceKey)}
         className={`${baseClass} ${enabledClass}`}
         aria-label={action.label_nl}
         title={action.label_nl}

@@ -21,6 +21,7 @@ import {
 import { UploadDocumentModal, type GemeenteEntry } from '@/components/settings/beleid/UploadDocumentModal'
 import { VersionHistoryPanel } from '@/components/settings/beleid/VersionHistoryPanel'
 import { CredentialConfigModal } from '@/components/settings/CredentialConfigModal'
+import { ActionItemDetailModal } from '@/components/settings/data-bronnen/ActionItemDetailModal'
 import { DataSourceRow } from '@/components/settings/data-bronnen/DataSourceRow'
 import { DataSourceSection } from '@/components/settings/data-bronnen/DataSourceSection'
 import { GemeentePicker } from '@/components/settings/data-bronnen/GemeentePicker'
@@ -56,6 +57,9 @@ function GemeenteDataSourcesPage() {
   const [openUploadFor, setOpenUploadFor] = useState<string | null>(null)
   const [openVersionsFor, setOpenVersionsFor] = useState<string | null>(null)
   const [credentialSourceKey, setCredentialSourceKey] = useState<string | null>(
+    null,
+  )
+  const [actionItemSourceKey, setActionItemSourceKey] = useState<string | null>(
     null,
   )
 
@@ -145,6 +149,7 @@ function GemeenteDataSourcesPage() {
                 onUpload={(sk) => setOpenUploadFor(sk)}
                 onViewVersions={(sk) => setOpenVersionsFor(sk)}
                 onConfigureCredential={(sk) => setCredentialSourceKey(sk)}
+                onViewActionItem={(sk) => setActionItemSourceKey(sk)}
               />
             ))}
           </DataSourceSection>
@@ -162,6 +167,7 @@ function GemeenteDataSourcesPage() {
                 onUpload={(sk) => setOpenUploadFor(sk)}
                 onViewVersions={(sk) => setOpenVersionsFor(sk)}
                 onConfigureCredential={(sk) => setCredentialSourceKey(sk)}
+                onViewActionItem={(sk) => setActionItemSourceKey(sk)}
               />
             ))}
           </DataSourceSection>
@@ -179,6 +185,7 @@ function GemeenteDataSourcesPage() {
                 onUpload={(sk) => setOpenUploadFor(sk)}
                 onViewVersions={(sk) => setOpenVersionsFor(sk)}
                 onConfigureCredential={(sk) => setCredentialSourceKey(sk)}
+                onViewActionItem={(sk) => setActionItemSourceKey(sk)}
               />
             ))}
           </DataSourceSection>
@@ -202,6 +209,13 @@ function GemeenteDataSourcesPage() {
         open={credentialSourceKey !== null}
         onClose={() => setCredentialSourceKey(null)}
         sourceKey={credentialSourceKey}
+      />
+
+      {/* ActionItemDetailModal — M049/S06: surfaces migrated ActionItem content per row */}
+      <ActionItemDetailModal
+        open={actionItemSourceKey !== null}
+        onClose={() => setActionItemSourceKey(null)}
+        sourceKey={actionItemSourceKey}
       />
 
       {/* VersionHistoryPanel — modal overlay mode (plan 04-02 extension) */}
