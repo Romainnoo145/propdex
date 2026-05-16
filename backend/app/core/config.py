@@ -57,6 +57,21 @@ class Settings(BaseSettings):
         default="CHANGE_ME_IN_PRODUCTION",
         description="Secret key for JWT token signing (MUST be changed in production)",
     )
+    INTEGRATION_CREDENTIAL_KEY: str = Field(
+        ...,
+        description=(
+            "Fernet symmetric key for integration_credentials encryption. "
+            "Generate via Fernet.generate_key().decode(). MUST be urlsafe-b64 "
+            "encoding of a 32-byte key."
+        ),
+    )
+    INTEGRATION_CREDENTIAL_KEY_OLD: str | None = Field(
+        default=None,
+        description=(
+            "Previous Fernet key during rotation. When set, MultiFernet "
+            "decrypts via NEW first then OLD. Unset after re-encrypt script."
+        ),
+    )
     ALGORITHM: str = Field(
         default="HS256",
         description="JWT signing algorithm",
@@ -277,6 +292,42 @@ class Settings(BaseSettings):
             raise ValueError(
                 f"VENDOR_ORG_ID must be set in '{self.ENVIRONMENT}' environment. "
                 f"Run: SELECT id FROM organizations WHERE name = 'Klarifai' LIMIT 1"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_integration_credential_key(self) -> "Settings":
+        """Ensure INTEGRATION_CREDENTIAL_KEY (and OLD, if set) is a valid Fernet key.
+
+        Fernet keys MUST be urlsafe-base64 encoding of exactly 32 bytes.
+        Mirrors the spirit of _reject_default_secret_key but is stricter:
+        Fernet itself crashes hard on malformed keys, so we fail at startup
+        instead of at first encrypt/decrypt call.
+        """
+        from base64 import urlsafe_b64decode
+
+        def _check(label: str, value: str) -> None:
+            if value in ("", "changeme", "default", "CHANGE_ME_IN_PRODUCTION"):
+                raise ValueError(
+                    f"{label} must not be empty or a default sentinel value"
+                )
+            try:
+                raw = urlsafe_b64decode(value.encode())
+            except Exception as exc:
+                raise ValueError(
+                    f"{label} is not valid urlsafe-base64: {exc}"
+                ) from exc
+            if len(raw) != 32:
+                raise ValueError(
+                    f"{label} must decode to 32 bytes (got {len(raw)}) - "
+                    f"Fernet requires a 32-byte key"
+                )
+
+        _check("INTEGRATION_CREDENTIAL_KEY", self.INTEGRATION_CREDENTIAL_KEY)
+        if self.INTEGRATION_CREDENTIAL_KEY_OLD is not None:
+            _check(
+                "INTEGRATION_CREDENTIAL_KEY_OLD",
+                self.INTEGRATION_CREDENTIAL_KEY_OLD,
             )
         return self
 
