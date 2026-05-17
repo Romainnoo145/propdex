@@ -1,5 +1,14 @@
 # Milestones
 
+## M049 Data Sources per Gemeente hub (Shipped: 2026-05-17)
+
+**Phases completed:** 10 phases, 23 plans, 7 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+
 ## 🆕 M050.5 Feature Tiering & Demo Lockdown (Defined 2026-05-16 — parallel-runnable)
 
 **Status:** Defined, niet gestart. Parallel-runnable met M049 + M050 via separate `.planning/milestones/M050.5-*` paths (geen clobber van M049's active `.planning/REQUIREMENTS.md`/`.planning/ROADMAP.md`).

@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: "M049 Phase 5 (Encrypted Credentials) eng-reviewed 2026-05-16. Locked-in contract: MultiFernet rotation, generic audit_log tabel, vast credential_name enum per source_key. Ready for /gsd:plan-phase 5."
-stopped_at: "Completed 07-01-PLAN.md (INT-03 deeplink wired + Storybook play-function coverage; 2 atomic commits under M049/S07: prefix)"
-last_updated: "2026-05-16T16:26:15.982Z"
-last_activity: 2026-05-16 — M049 Phase 04.1 closed; Phase 5 eng-review locked; REQUIREMENTS.md CRED-02 gefixt (commit 2f4534f2)
+milestone: M049
+milestone_name: Data Sources per Gemeente hub (SHIPPED)
+status: "M049 SHIPPED 2026-05-17. 8/10 phases complete + Phase 7/7.1 gap-closure. Phase 8 (S04.2 verifier backfill) deferred as accepted tech debt. Ready for next milestone (M050 cascade / M050.5 feature-tiering)."
+stopped_at: "Completed M049 milestone archival (M049-ROADMAP / M049-REQUIREMENTS / M049-MILESTONE-AUDIT in .planning/milestones/; MILESTONES.md entry written)"
+last_updated: "2026-05-17T12:30:00.000Z"
+last_activity: 2026-05-17 — M049 archived; Phase 7.1 closed S05 three-state UX via credential alias resolver + trigger gate flip
 progress:
   total_phases: 10
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 23
-  completed_plans: 22
-  percent: 83
+  completed_plans: 23
+  percent: 100
 ---
 
 # Propdex — GSD State

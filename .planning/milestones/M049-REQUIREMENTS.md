@@ -1,3 +1,12 @@
+# Requirements Archive: M049 Data Sources per Gemeente hub
+
+**Archived:** 2026-05-17
+**Status:** SHIPPED
+
+For current requirements, see `.planning/REQUIREMENTS.md`.
+
+---
+
 # Requirements: Propdex M049 — Data Sources per Gemeente hub
 
 **Defined:** 2026-05-14
