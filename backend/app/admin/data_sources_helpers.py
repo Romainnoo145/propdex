@@ -50,14 +50,13 @@ def compute_actions(source_type: str, status: str, source_key: str) -> list[Acti
     else:  # source_type == "C"
         actions = [
             Action(
-                action="configure_credential", enabled=False,
+                action="configure_credential", enabled=True,
                 label_nl=_ACTION_LABELS["configure_credential"],
-                reason_disabled="Beschikbaar vanaf S05",
             ),
             Action(
                 action="refresh", enabled=False,
                 label_nl=_ACTION_LABELS["refresh"],
-                reason_disabled="Beschikbaar vanaf S05",
+                reason_disabled="Beschikbaar zodra credential geconfigureerd is",
             ),
         ]
 
