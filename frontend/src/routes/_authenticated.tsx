@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { AMBER } from '@/lib/tokens'
+import { AMBER, MINT } from '@/lib/tokens'
 import { createFileRoute, Outlet, redirect, useMatchRoute } from '@tanstack/react-router'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import SideRailNav from '@/components/layout/SideRailNav'
@@ -100,7 +100,7 @@ function AuthenticatedLayout() {
         {/* Background mesh blobs — sidebar absorbs Sage Mint via backdrop-blur */}
         <div
           className="fixed top-[-5%] left-0 w-[60vw] h-[60vw] rounded-full pointer-events-none"
-          style={{ background: '#D1E2D8', opacity: 0.35, filter: 'blur(120px)' }}
+          style={{ background: MINT, opacity: 0.35, filter: 'blur(120px)' }}
         />
         <div
           className="fixed bottom-[-10%] right-[5%] w-[600px] h-[600px] rounded-full pointer-events-none"

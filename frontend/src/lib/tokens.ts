@@ -26,6 +26,7 @@ export const GREEN = '#22C55E'    // --color-aura-green / --color-success
 export const RED = '#EF4444'      // --color-aura-red / --color-error
 
 // ── Core palette ─────────────────────────────────────────────
+export const MINT = '#D1E2D8'     // --color-aura-mint (Sage Mint -- secondary surfaces)
 export const OBSIDIAN = '#0E1111' // --color-aura-obsidian
 export const INK = '#1A1C1E'      // --color-aura-ink
 export const SLATE_MUTED = '#94a3b8' // neutral placeholder

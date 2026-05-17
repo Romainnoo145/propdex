@@ -27,8 +27,8 @@ export const STAGES: PipelineStage[] = [
 ]
 
 export const STAGE_STYLES: Record<PipelineStage, string> = {
-  Gesignaleerd: 'bg-[#D1E2D8]/40 text-[#1A1C1E]',
-  Onderzoek: 'bg-[#F9A826]/20 text-[#F9A826]',
+  Gesignaleerd: 'bg-aura-mint/40 text-aura-ink',
+  Onderzoek: 'bg-aura-amber/20 text-aura-amber',
   Contact: 'bg-blue-50 text-blue-700',
   Besluit: 'bg-purple-50 text-purple-700',
   Afgerond: 'bg-neutral-100 text-neutral-600',
