@@ -176,6 +176,13 @@ M050 is een product-mode-shift van **onderzoekstool → actietool**: eerste brug
 
 **Depends on:** Phase 2 (BRK-data), Phase 5 (brief-status), Phase 5.5 (partner-branding voor preview)
 
+**Plans:** 5 plans
+- [ ] 06-01-PLAN.md — Lifecycle phases data module + LifecycleSideRailNav component + Storybook story (Wave 1)
+- [ ] 06-02-PLAN.md — Conditional route-prefix sidebar swap in _authenticated.tsx (Wave 2)
+- [ ] 06-03-PLAN.md — OpgeslagenPage refactor: single-column full-width cards + BAG-thumbnail + extract SavedParcelCard/PipelineStagePill (Wave 2)
+- [ ] 06-04-PLAN.md — Nested route /opgeslagen/perceel/$parcelId + phase placeholders + sidebar active-phase derivation (Wave 3)
+- [ ] 06-05-PLAN.md — Aura audit + M048 regression smoke + reduced-motion verification (Wave 4)
+
 ---
 
 ### Phase 7: End-to-End Wiring + Tier-Gates (S07)
