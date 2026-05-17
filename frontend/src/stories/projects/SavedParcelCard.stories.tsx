@@ -185,3 +185,13 @@ export const NoThumbnail: Story = {
     expect(noPhoto).toBeTruthy()
   },
 }
+
+// Emulates prefers-reduced-motion: reduce via CSS override (mirrors global rule in styles/index.css:223-252)
+const reducedMotionStyle = '*, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }'
+export const ReducedMotionDegrades: Story = {
+  decorators: [(Story) => <><style>{reducedMotionStyle}</style><Story /></>, withProviders(makeLoadedClient())],
+  play: async () => {
+    // Content still visible when motion is degraded
+    await within(document.body).findByText('Kaldenkerkerweg 18, Venlo')
+  },
+}
