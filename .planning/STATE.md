@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: M049
-milestone_name: Data Sources per Gemeente hub (SHIPPED)
-status: "M049 SHIPPED 2026-05-17. 8/10 phases complete + Phase 7/7.1 gap-closure. Phase 8 (S04.2 verifier backfill) deferred as accepted tech debt. Ready for next milestone (M050 cascade / M050.5 feature-tiering)."
-stopped_at: "Completed M049 milestone archival (M049-ROADMAP / M049-REQUIREMENTS / M049-MILESTONE-AUDIT in .planning/milestones/; MILESTONES.md entry written)"
-last_updated: "2026-05-17T12:30:00.000Z"
-last_activity: 2026-05-17 — M049 archived; Phase 7.1 closed S05 three-state UX via credential alias resolver + trigger gate flip
+milestone: v1.0
+milestone_name: milestone
+status: "M049 audit gap INT-03 closed via gemeente-aware banner deeplink. Next: 07-02 visual QA sweep + M049-MILESTONE-AUDIT.md closure (S03/S04/S05 human-needed → passed)."
+stopped_at: Completed 06-01-PLAN.md (lifecycle phases data module + LifecycleSideRailNav component + Storybook stories)
+last_updated: "2026-05-17T21:13:58.207Z"
+last_activity: 2026-05-16 — Phase 07 Plan 01 shipped (commits 7ba5feac + 9d6c7103)
 progress:
-  total_phases: 10
-  completed_phases: 8
-  total_plans: 23
-  completed_plans: 23
-  percent: 100
+  total_phases: 9
+  completed_phases: 0
+  total_plans: 5
+  completed_plans: 1
+  percent: 96
 ---
 
 # Propdex — GSD State
@@ -88,6 +88,7 @@ Progress: [██████████] 96% (22/23 plans — only 07-02 visua
 | Phase 06-actionitems-deprecation P06-02 | 8m | 4 tasks | 9 files |
 | Phase 06-actionitems-deprecation P06-03 | 9m 45s | 2 tasks | 2 files |
 | Phase 07-visual-qa-aura-conformance P01 | 4m | 2 tasks | 2 files |
+| Phase 06-opgeslagen-cockpit-lifecycle-sidebar P01 | 4 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -210,6 +211,9 @@ Progress: [██████████] 96% (22/23 plans — only 07-02 visua
 - [Phase 07-visual-qa-aura-conformance]: M049/S07 Plan 07-01: BeleidBeheerWithBanner banner Link conditionally renders /instellingen/data-bronnen/$gemeenteCode deeplink (with params) when useGemeentenSummary().data?.[0]?.gemeente_code is truthy; falls back to /instellingen/data-bronnen index Link otherwise — INT-03 gap closed
 - [Phase 07-visual-qa-aura-conformance]: M049/S07 Plan 07-01: Storybook play-function coverage via local presentational twin in stories file (route file stays source of truth in production) — same precedent as M049/S03 DataSourceRow.stories.tsx; .storybook/main.ts globs only src/stories/**, verification via type-check + structural parity
 - [Phase 07-visual-qa-aura-conformance]: M049/S07 Plan 07-01: Pre-existing 91 TS errors baseline (stash-verified pre/post-change identical) deferred to dedicated TS-strict-cleanup phase per scope-boundary policy; this plan introduces zero new errors
+- [Phase 06-opgeslagen-cockpit-lifecycle-sidebar]: Onderzoek icon links to /opgeslagen (list-view home) — doubles as home affordance; Plan 04 does NOT swap this target
+- [Phase 06-opgeslagen-cockpit-lifecycle-sidebar]: search={{ stage: undefined }} required on /opgeslagen Link — opgeslagen route validateSearch enforces stage param at TypeScript level (Rule 3 auto-fix)
+- [Phase 06-opgeslagen-cockpit-lifecycle-sidebar]: lifecycle-sidebar-active layoutId namespace separate from sidebar-active in SideRailNav — prevents cross-component animation interference
 
 ### Pending Todos
 
@@ -221,6 +225,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-16T16:26:15.979Z
-Stopped at: Completed 07-01-PLAN.md (INT-03 deeplink wired + Storybook play-function coverage; 2 atomic commits under M049/S07: prefix)
+Last session: 2026-05-17T21:13:58.204Z
+Stopped at: Completed 06-01-PLAN.md (lifecycle phases data module + LifecycleSideRailNav component + Storybook stories)
 Resume file: None
