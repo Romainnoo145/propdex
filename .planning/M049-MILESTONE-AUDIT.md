@@ -6,14 +6,10 @@ scores:
   requirements: 33/33
   phases: 7/8 verified (04.2 inserted phase has SUMMARY-only)
   integration: 8/9 fully wired (INT-03 banner partial)
-  flows: 4/4 e2e flows traceable; 4 human visual smokes pending
+  flows: 4/4 e2e flows traceable; 7/10 Phase-7 visual smokes captured (3 deferred — see Phase 7 Closure)
 gaps:
   requirements: []
-  integration:
-    - id: "INT-03-deeplink"
-      severity: partial
-      description: "beleid-beheer banner Link target is /instellingen/data-bronnen (index), not gemeente-specific. SUMMARY documents as intentional scope decision."
-      affects_reqs: ["INT-03"]
+  integration: []
   flows: []
 tech_debt:
   - phase: 03-data-sources-ux
@@ -66,11 +62,11 @@ nyquist:
 |---|---|---|---|---|
 | 01-datamodel-source-key-catalog | ✓ | passed | 5/5 | 42-entry catalog (>27); 23/23 tests; no TenantMixin; Python↔TS twin verified |
 | 02-admin-api-layer | ✓ | passed | 7/7 | 15/15 integration tests; advisory-lock idempotency; RBAC verified |
-| 03-data-sources-ux | ✓ | human_needed | 5/6 | All wiring + Aura tokens verbatim; visual smoke pending |
-| 04-m045-upload-flow-integratie | ✓ | passed | 5/5 | INT-01..04 wired; 3 human smokes flagged as routine |
+| 03-data-sources-ux | ✓ | passed | 6/6 | All wiring + Aura tokens verbatim; Phase 7 captured visual smokes (s03-aura-tokens-after, non-superuser tabnav + redirect) |
+| 04-m045-upload-flow-integratie | ✓ | passed | 5/5 | INT-01..04 wired; Phase 7 captured upload-modal + versions-modal + banner-deeplink visual smokes; INT-03 banner now gemeente-aware (M049/S07) |
 | 04.1-manual-upload-rescore | ✓ | passed | 7/7 | Re-verified after 300-line gap closure; 6/6 + 18/18 regression green |
 | **04.2-security-hardening** | **✗** | **summary-only** | — | Inserted (not in M049 REQUIREMENTS); SUMMARY reports 42/42 tests + alembic OK, no verifier sign-off |
-| 05-encrypted-credentials | ✓ | human_needed | 5/5 | 20/20 backend tests; MultiFernet rotation proven; 3 visual smokes deferred |
+| 05-encrypted-credentials | ✓ | partial | 5/5 | 20/20 backend tests; MultiFernet rotation proven; Phase 7 captured modal-opens smoke. Three-state UX (filled/rotating/empty-after-rotate) deferred — surfaced two new backend gaps blocking the form render: Type-C trigger gate hardcoded `enabled=false` + CREDENTIAL_FIELDS short-key vs catalog long-key mismatch. See Phase 7 Closure. |
 | 06-actionitems-deprecation | ✓ | passed | 8/8 | E2E smoke + legacy component deleted; T4 SKIPPED (audit-only) |
 
 ## Requirements Coverage (3-source cross-reference)
@@ -92,14 +88,14 @@ All 33 M049 requirements pass the VERIFICATION.md × SUMMARY frontmatter × REQU
 
 ## Cross-Phase Integration (from integration-checker)
 
-- 9 cross-phase connections checked, 8 fully wired, 1 partial (INT-03 deeplink)
+- 9 cross-phase connections checked, 9/9 fully wired (INT-03 deeplink promoted to wired in M049/S07)
 - 0 orphaned exports
 - 0 unprotected admin endpoints (all `Depends(get_current_superuser)`)
 - 4 E2E flows traceable: onboarding, credential, action-item, legacy-paths
 - Alembic chain integrity verified: `657143b79099 → b2a4f6c8e1d3 → ad5af9028eb1 → 79117298d1ad` (single head)
 
-### INT-03 (partial)
-`/instellingen/beleid-beheer` banner links to `/instellingen/data-bronnen` index instead of `/instellingen/data-bronnen/{currentGemeente}`. Documented in 04-03 SUMMARY as intentional. Affects user lands on gemeente-picker for the first click; not a hard break.
+### INT-03 (wired)
+`/instellingen/beleid-beheer` banner now links to `/instellingen/data-bronnen/$gemeenteCode` when `useGemeentenSummary()` resolves a gemeente, falling back to the index `/instellingen/data-bronnen` when none is known. Resolved in M049/S07 Plan 07-01 (commits `7ba5feac` + `9d6c7103`). Verified in Phase 7 browse session — banner href = `/instellingen/data-bronnen/GM0983` (see `screenshots/s04-banner-after.png`).
 
 ## Nyquist Coverage
 
@@ -147,5 +143,33 @@ Status `tech_debt`: No critical blockers. Either:
 
 ---
 
+## Phase 7 Closure (M049/S07 — 2026-05-17)
+
+**INT-03 promoted from `partial` to `wired`** via M049/S07 Plan 07-01:
+- `frontend/src/routes/_authenticated/instellingen.beleid-beheer.tsx` — banner Link resolves `useGemeentenSummary()` → `<Link to="/instellingen/data-bronnen/$gemeenteCode">`; falls back to index when no gemeente.
+- `frontend/src/components/settings/beleid/BeleidBeheerBanner.stories.tsx` — `WithGemeente` + `WithoutGemeente` play functions cover both branches.
+
+**Visual smokes captured** (`.planning/phases/07-visual-qa-aura-conformance/screenshots/`):
+- S03: `s03-aura-tokens-after.png` (Morning Mist canvas, Pure Glass surface, Plus Jakarta Sans, status pills, amber active tab), `s03-nonsuperuser-tabnav.png` (Data-bronnen pill absent for tom@propdex.nl), `s03-nonsuperuser-redirect.png` (direct nav `/instellingen/data-bronnen` → `/instellingen` confirmed via URL inspection).
+- S04: `s04-upload-after.png` (UploadDocumentModal pre-filled with `GM0983 · Venlo` + `Omgevingsvisie`), `s04-versions-modal.png` (Versiegeschiedenis with v1 row + Bekijk/Download actions), `s04-banner-after.png` (banner with `href=/instellingen/data-bronnen/GM0983`).
+- S05: `s05-credential-modal-empty.png` (modal opens with `Credential configureren · brk-eigendom` header + amber lock icon + `Versleuteld opgeslagen (Fernet, vendor-managed)` subtitle).
+
+**Visual smokes deferred** (3): S05 #8 filled / #9 rotating / #10 empty-after-rotate.
+
+**Two new S05 backend gaps surfaced during Phase 7 visual smoke** (see `.planning/phases/07-visual-qa-aura-conformance/deferred-items.md`):
+1. **Type-C configure_credential trigger gate hardcoded `enabled=false`** in `backend/app/admin/data_sources_helpers.py:50-62`. Was meant to flip on S05 ship; never did. Single-line fix. Phase 7 captured evidence by temporarily flipping the gate in working tree (reverted, not committed).
+2. **CREDENTIAL_FIELDS source_key mismatch** — `backend/app/services/credential_fields.py` registers short keys (`brk`, `vindsubsidies`, `nvm`) while catalog emits long kebab-case (`brk-eigendom`, …). Modal renders header but form fails to populate. Needs eng-review on resolver approach.
+
+**Regression sweep** (`.planning/phases/07-visual-qa-aura-conformance/regression-sweep.txt`):
+- Backend M049 corpus: 44 passed, 1 skipped (intentional `test_e2e_action_item_db_entity_preserved` — audit-only).
+- Frontend `npm run check`: 91 pre-existing TS errors unchanged; zero introduced by Phase 7.
+
+**DESIGN.md token grep** (`.planning/phases/07-visual-qa-aura-conformance/design-token-grep.txt`):
+- Canonical tokens declared in `frontend/src/styles/index.css` @theme.
+- Component-level coverage uneven (some files use raw Tailwind utilities + hex literals rather than `aura-*` token aliases); rendered output remains DESIGN.md-conform per visual evidence. Out-of-scope for Phase 7 closure; flag for a future token-canonicalisation pass.
+
+**Follow-up phase recommended:** A small `M049/S07.1` (or a new gap-closure milestone slot) to (a) flip the configure_credential gate, (b) resolve the CREDENTIAL_FIELDS key mismatch, (c) capture the three remaining S05 three-state UX smokes. Out-of-scope for this phase.
+
 _Audited: 2026-05-16T17:45:00Z_
 _Auditor: Claude (gsd audit-milestone)_
+_Phase 7 closure: 2026-05-17 — Claude (M049/S07)_
