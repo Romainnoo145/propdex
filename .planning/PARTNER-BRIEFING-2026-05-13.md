@@ -16,11 +16,33 @@
 
 ## 1. Wat is Propdex + waarom betalen klanten
 
-Propdex is een Nederlandse property intelligence cockpit voor de voorkant van vastgoedontwikkeling: **van grondpositie tot go/no-go in één platform**. Het integreert scouting, screening, due-diligence en risicoanalyse over alle relevante databronnen (BAG, Kadaster, bestemmingsplannen, omgevingsplannen, klimaat-risico's, bodemonderzoek, energielabels, jurisprudentie, woonvisies en meer) in één kaartgedreven werkomgeving.
+### De visie
 
-**Use-case:** een vastgoedontwikkelaar of kwaliteitsborger die transformatiepotentie van een perceel beoordeelt — moet vandaag schakelen tussen BAG-viewer, Funda, losse PDF-bestemmingsplannen, klimaatviewer, RVO-EP-database, gemeentewebsites voor woonvisies, en handmatige Excel-consolidatie. Propdex doet die aggregatie automatisch met een scoringsmodel (Score v3.0) dat per perceel potentie en risico weergeeft.
+De Nederlandse vastgoedmarkt ondergaat 2026-2030 een fundamentele transitie. De **Omgevingswet** vervangt circa 350 bestemmingsplannen door evenzoveel unieke gemeentelijke omgevingsplannen — elk met eigen bouwregels, maatvoeringen en transformatie-paden. Tegelijk maakt de **Wet kwaliteitsborging voor het bouwen (Wkb, 2024)** een nieuwe categorie professionals — kwaliteitsborgers — data-intensief verantwoordelijk voor wat er gebouwd wordt.
+
+In deze transitie is er één rol leeg: **de aggregator-laag voor transformatie-DD**. Brainbay/NVM bedient makelaars op huidige waarde. Matrixian/Calcasa doen taxatie. Omgevingsloket heeft overheidsmonopolie op vergunningen. Niemand integreert scouting → screening → due-diligence → risico → go/no-go voor transformatie en herontwikkeling.
+
+**Propdex is die aggregator.** Jaar 1-2: DD-cockpit voor vastgoedontwikkelaars en kwaliteitsborgers — "van grondpositie tot go/no-go in één platform". Jaar 2-3: AI-gegenereerde transformatie-scenarios per perceel (woningen / zorg / commercieel / gemengd). Jaar 3-5: de-facto data-laag tussen ontwikkelaars, financiers en gemeentes voor specifieke percelen.
+
+Wie deze aggregator-rol pakt in de transitie, wint de standaardpositie.
+
+### Wat Propdex vandaag concreet doet
+
+Het integreert alle relevante databronnen (BAG, Kadaster, bestemmingsplannen, omgevingsplannen, klimaat-risico's, bodemonderzoek, energielabels, jurisprudentie, woonvisies en meer) in één kaartgedreven werkomgeving — met een scoringsmodel (Score v3.0) dat per perceel potentie en risico weergeeft.
+
+**Use-case:** een vastgoedontwikkelaar of kwaliteitsborger die transformatiepotentie van een perceel beoordeelt — moet vandaag schakelen tussen BAG-viewer, Funda, losse PDF-bestemmingsplannen, klimaatviewer, RVO-EP-database, gemeentewebsites voor woonvisies, en handmatige Excel-consolidatie. Propdex doet die aggregatie automatisch.
 
 **Tijdwinst per perceel-screening:** ruwe inschatting (nog niet markt-gemeten) is dat een grondige DD-screening vandaag 4-8 uur kost per perceel; Propdex brengt dat naar 15-30 minuten plus kennistransfer naar het team. Bij 10-20 percelen per project en 5-30 projecten per jaar betekent dat tientallen uren per maand bespaard per ontwikkelaar.
+
+### Eerste gebruiker — onze partner zelf
+
+De 50%-partner is tegelijk vastgoedontwikkelaar in NL en gebruikt Propdex vanaf dag 1 als pilot-organisatie. Concrete betekenis:
+- **Product wordt gevalideerd in echte DD-workflows** — niet in lab-omstandigheden of fictieve scenarios
+- **Feedback komt uit dagelijks gebruik** — productiteraties worden gestuurd door werkelijke pain-points
+- **Eerste case-study + testimonial-basis** — vóór sales-uitrol naar derde-partij-klanten
+- **Skin-in-the-game** — partner gebruikt wat hij verkoopt, sales-message wordt automatisch authentiek
+
+Dit verandert de "pre-product"-positionering. Propdex heeft (vanaf BV-oprichting) één committed dagelijkse gebruiker met directe vastgoed-DD-relevantie. Externe customer-acquisitie bouwt voort op die referentie.
 
 **Doelmarkt (wedge):**
 
@@ -38,65 +60,82 @@ Propdex is een Nederlandse property intelligence cockpit voor de voorkant van va
 - **Omgevingsloket** — wettelijk monopolie op vergunningen (Art. 16.1 Omgevingswet). Propdex bouwt expliciet géén vergunningchecker.
 - **Status quo** — duct-tape van BAG-viewer + Funda + PDFs + Excel + gemeente-websites. Dit is de daadwerkelijke concurrent. Geen geïntegreerde aggregator bestaat voor transformatie-DD in NL.
 
-**Strategische positie (3-5 jaar horizon, voor partner-context):** Propdex wordt de aggregator-laag voor vastgoed-transformatie-DD onder de Omgevingswet. Met 350+ gemeenten die elk een eigen omgevingsplan-implementatie krijgen tussen 2027-2030, ontstaat een normalisatie-rol die structureel waarde heeft. Aggregator wint die wereld.
-
-**Live op:** `api.propdex.nl` (backend) + `propdex.nl` (frontend, DNS-configuratie afhankelijk van Siteground propagatie). Operationeel niveau: staging-grade. Externe customer-onboarding nog niet productie-ready.
+**Live op:** `api.propdex.nl` (backend, Railway EU West) + `propdex.nl` (frontend, Vercel). Backend + worker actief operationeel met live traffic. DNS gemigreerd naar Cloudflare 2026-05-14 voor enterprise-grade DNS-management, gratis DDoS-bescherming en globale propagatie. Externe customer-onboarding-flow (Stripe + email + legal) nog niet productie-ready — zie §3.
 
 ---
 
 ## 2. Status — wat is af
 
-### M001–M044 — Core scanning + Aura-frontend ✅
-- Map-based perceel-scanning met score-overlay (MapLibre + amber→green gradient op Morning Mist canvas)
-- Multi-tenant authenticatie (FastAPI JWT + Postgres RLS + organization_id-filtering)
-- Aura design system v15.0 — Morning Mist canvas, Plus Jakarta Sans, glass-morphism, Framer Motion floating panels
-- ParcelDetailModal met Intelligence Grid (Potentie 3×3 + Risico paginated + Dossiers 5-tabs)
-- 10 environmental APIs pre-cached per scan: BAG, BRK, BAG-3D, PLU WMS, Natura2000, overstromingsrisico, geluid Lden, luchtkwaliteit NO2+PM10, EP-Online, RVO bodem
-- CBS-statistiek (bevolking, criminaliteit, leeftijd) per wijk
+### Schaal vandaag
 
-### M045–M046 — Unified Document Model + Scoring Fundament ✅ (2026-04-18 / 2026-04-20)
-- Document model + cascade-infrastructuur (PolicyDocument + ARQ-jobs)
-- Score v3.0 opschoning: 58 gewichtspunten gesaneerd, 6 bugs gefixed
-- 63.760 scan_results backfilled via `backfill_scan_scores_v3.py`
-- 171 backend score_v3 + iron-rule tests groen
+| Metric | Stand mei 2026 |
+|---|---|
+| **Productie-percelen verwerkt** | 137.000 (gemeente Venlo, volledige dekking) |
+| **Scoringsresultaten beschikbaar** | 64.000 perceel-analyses met Score v3.0 |
+| **Opgeleverde features (productie-grade)** | 47 (M001–M047 gemerged) |
+| **Geautomatiseerde tests groen** | 275+ (104 unit + 171 integration) |
+| **Externe data-bronnen geïntegreerd** | 10+ overheids- en milieu-API's |
+| **Codebase** | 128.000 regels (277 Python + 388 TypeScript) |
+| **Ontwikkelperiode** | November 2025 — mei 2026 (~6.5 maanden) |
 
-### M047 — Projecttype + Cascade-Infra + POC ✅ (2026-04-20)
-- Projecttype-datamodel (`parcel_project_type` entity, 6 enum-waarden) + CRUD API
-- FACTOR_REGISTRY met conditionele weights per projecttype
-- LLM-determinism infrastructure: `factor_extractor.py`, Anthropic tool-use, temp=0, cache-key op (parcel_id, doc_version_hash, factor_id)
-- Re-scoring cascade ARQ-job (`rescore_parcels_for_document`)
-- POC `woonvisie_match` factor voor Venlo end-to-end
+### Vier afgeronde productie-blokken
 
-### M048 — Score v4.0 Frontend Scaling 🚧 (88% — 7/8 phases complete)
-- Cache Sentinel + Score UI Fix + Woonvisie Popup + KlimaatLayer Bug + Factor Pinning + E2E smoke ✅
-- Document-level cache sentinel + WijkPolicy schema upgrade — *pending* (Phase 5+6)
+**1. Kaartgedreven DD-cockpit voor heel NL**
+Een vastgoedontwikkelaar opent de kaart, ziet alle percelen in een gemeente met score-overlay (potentie + risico), klikt op een perceel en krijgt direct een Intelligence Grid met 9 potentie-kaarten + risico-paginated + 5 dossier-tabs. Stoel-tot-screen workflow voor 27"-monitor-gebruikers. Gebouwd op MapLibre met Aura design system (Morning Mist canvas, Plus Jakarta Sans, glass-morphism).
 
-### Infrastructure ✅
-- Railway-backend (api-production-7f87.up.railway.app), CNAME `api.propdex.nl` geconfigureerd (DNS-propagatie Siteground in afwachting per laatste deploy-notes 2026-04-03)
-- Vercel-frontend met rewrites naar Railway-api
-- PostgreSQL 16 + PostGIS 3.7 op Railway (137K parcels Venlo + 64K scan_results)
-- Redis 8.2.1 op Railway voor ARQ-jobs
+**2. AI-gedreven beleidsdocument-analyse**
+Cascade-infrastructuur die gemeentelijke woonvisies, omgevingsplannen en beleidsdocumenten automatisch normaliseert tot per-perceel inzichten. Powered by Anthropic Claude (haiku 4.5) met deterministische cache — exact 1 LLM-call per document per gemeente, niet per perceel. Validating end-to-end op Venlo woonvisie POC.
+
+**3. Productie-infrastructuur op enterprise-grade**
+- Backend op Railway (FastAPI + ARQ background jobs) met api-domein
+- Frontend op Vercel (React 19 + TanStack Query + Framer Motion)
+- PostgreSQL 16 + PostGIS 3.7 voor geospatial queries
+- Redis voor job-queue + caching
 - Sentry EU error-tracking (backend + frontend)
-- Docker-compose voor dev (port 5434 DB + 6380 Redis + 8000 backend + 9300 frontend)
-- 275+ tests groen (104 unit + 171 integration)
+- Docker-compose voor lokale ontwikkeling
+
+**4. Multi-tenant SaaS-fundament**
+Volledige tenant-isolatie via FastAPI JWT-authenticatie + PostgreSQL Row-Level Security + organization_id-filtering op elke query. 10+ overheids- en milieu-data-bronnen pre-gecached per scan (BAG, Kadaster-eigendom, BAG-3D, Planologisch Web Use, Natura2000, overstromingsrisico, geluid Lden, luchtkwaliteit, EP-Online energielabels, RVO bodem). CBS-statistiek (bevolking, criminaliteit, leeftijd) per wijk.
+
+### Wat nu lopend (vóór commerciële launch)
+
+- **M048 Phase 5+6** (~1 week werk) — document-level cache sentinel + WijkPolicy schema-upgrade voor wijk-gedifferentieerde woonvisie-scoring
+- **Stripe-billing + email-provider + production-monitoring** — zie §3
+
+### Bijlagen
+
+Op aanvraag beschikbaar:
+- Screenshots Discovery-modus (map-first) + Build-management-modus (data-dense)
+- Architectuurdiagram (FastAPI + PostGIS + ARQ + React + MapLibre)
+- Live-demo via beschermd staging-domein
 
 ---
 
 ## 3. Wat ontbreekt vóór commerciële launch
 
-| Gap | Impact | Effort | Prioriteit |
-|---|---|---|---|
-| **Stripe billing-integratie** | Geen self-service betaalflow — geen module in codebase aanwezig. Pilot kan handmatig gefactureerd worden; productie niet. | 1-1.5 week | **Kritiek voor paid launch** |
-| **Resend / AWS SES e-mailverzending** | SMTP-stub aanwezig maar geen werkende provider. Geen invites, wachtwoord-resets, verification-flows mogelijk. | 1-2 dagen | **Kritiek** |
-| **Worker-service stabilisatie Railway** | ARQ-worker crasht silent op startup (2026-04-03 deploy-notes). Cascade-jobs draaien nu niet in productie. | 1-2 dagen | **Kritiek** |
-| **DNS-propagatie `api.propdex.nl`** | CNAME geconfigureerd, awaiting DNS in Siteground per laatste notes. Status onbekend — moet bevestigd worden. | 0.5 dag | Hoog |
-| **Legal-skeletten DPA / Privacy / ToS** | Niet aanwezig in repo. Moet opgesteld + juridisch gereviewed voordat commercieel ondertekend kan worden. | 2 weken doorlooptijd | **Kritiek** |
-| **Google OAuth productie-secrets** | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` zijn leeg in Railway-env. Login werkt nu alleen e-mail/wachtwoord. | 2-4 uur | Hoog |
-| **VENDOR_ORG_ID bootstrap** | Productie heeft geen Klarifai-vendor-organisatie ingericht — blokkeert PolicyDocument-uploads via M045-flow. | 1 uur na DB-restore | Medium |
-| **M048 Phase 5+6 afronden** | Document-level cache sentinel + WijkPolicy schema — vereist voor Venlo-scale productie (anders 100k Claude-calls per gemeente) | 1 week | Hoog |
-| **Production-monitoring + alerting** | Sentry vangt errors. Geen alerting op AI-cost spikes, slow queries, scan-volumes. | 2-3 dagen | Medium |
-| **Backup + DR-test productie-DB** | Railway-PostGIS heeft ingebouwde point-in-time restore. Disaster-recovery scenario nog niet expliciet getest. | 0.5-1 dag | Medium |
-| **Pilot-volume load testing** | App is tot nu toe met dev-volume (Venlo 137K parcels) gevalideerd. Concurrente klanten + multi-tenant load niet getest. | 3-5 dagen | Medium |
+| Gap | Impact | Effort tijd | Effort geld | Prioriteit |
+|---|---|---|---|---|
+| **Stripe billing-integratie** | Geen self-service betaalflow — geen module in codebase aanwezig. Pilot kan handmatig gefactureerd worden; productie niet. | 1-1.5 week | €0 setup + 1.5-2.5% per transactie | **Kritiek voor paid launch** |
+| **Resend / AWS SES e-mailverzending** | SMTP-stub aanwezig maar geen werkende provider. Geen invites, wachtwoord-resets, verification-flows mogelijk. | 1-2 dagen | €0-20/mnd (AWS SES gratis t/m 62k mails of Resend €20/mnd) | **Kritiek** |
+| **Legal-skeletten DPA / Privacy / ToS** | Niet aanwezig in repo. Moet opgesteld + juridisch gereviewed voordat commercieel ondertekend kan worden. | 2 weken doorlooptijd | €2.500-4.000 ondernemingsrechtelijk advocaat | **Kritiek** |
+| **Notaris + SHA + IP-akte (partnership)** | Aandeelhoudersovereenkomst + IP-overdrachtsakte + Propdex BV oprichting via notaris | 2-3 weken | €1.500-2.500 notaris + €1.500-2.500 advocaat | **Kritiek** |
+| **Google OAuth productie-secrets** | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` zijn leeg in Railway-env. Login werkt nu alleen e-mail/wachtwoord. | 2-4 uur | €0 (Google OAuth gratis) | Hoog |
+| **VENDOR_ORG_ID bootstrap** | Productie heeft geen Klarifai-vendor-organisatie ingericht — blokkeert PolicyDocument-uploads via M045-flow. | 1 uur na DB-restore | €0 | Medium |
+| **M048 Phase 5+6 afronden** | Document-level cache sentinel + WijkPolicy schema — vereist voor productie-scale (anders 100k Claude-calls per gemeente in plaats van 1) | 1 week | €0 (eigen werk) | Hoog |
+| **Production-monitoring + alerting** | Sentry vangt errors. Geen alerting op AI-cost spikes, slow queries, scan-volumes. | 2-3 dagen | €0-26/mnd (Sentry Team-tier bij groei) | Medium |
+| **Backup + DR-test productie-DB** | Railway-PostGIS heeft ingebouwde point-in-time restore. Disaster-recovery scenario nog niet expliciet getest. | 0.5-1 dag | €0 (Railway-include) | Medium |
+| **Pilot-volume load testing** | App is met dev-volume (Venlo 137K parcels) gevalideerd. Concurrente klanten + multi-tenant load niet getest. | 3-5 dagen | €0 (eigen werk) | Medium |
+
+### Investerings-samenvatting tot productie-ready
+
+| Categorie | Bedrag | Wanneer |
+|---|---|---|
+| Notaris + advocaat (eenmalig) | **€5.500-9.000** | Vóór Propdex BV operationeel |
+| Engineering-tijd Klarifai (3-4 weken) | Onbetaald in deze fase, valt onder voorwerk | Lopend |
+| Infra-kosten extra (Vercel Pro, Sentry, Resend) | €40-100/mnd vanaf launch | Na launch |
+| Stripe transaction fees | 1.5-2.5% van MRR | Vanaf eerste klant |
+
+**Totaal eenmalige cash-investering vóór launch: ~€5.500-9.000** (puur juridisch). Engineering en infra zijn al gedragen of variabel met klant-volume.
 
 **Geschatte tijd tot productie-ready:** 3-4 weken werk + 2 weken juridisch (parallel-track).
 
@@ -130,14 +169,35 @@ Propdex is een Nederlandse property intelligence cockpit voor de voorkant van va
 
 ### Kosten-roadmap per groeifase
 
-| Fase | Klanten | Setup | Vast/mnd | Variabel/mnd (scan-mix) | **Totaal/mnd** | **Per-klant kost/mnd** |
+**Infrastructuur + variabele AI-kosten** (operationeel — bepaalt bruto-marge):
+
+| Fase | Klanten | Setup | Vast/mnd | Variabel/mnd (scan-mix) | **Totaal infra/mnd** | **Per-klant infra-kost** |
 |---|---|---|---|---|---|---|
 | **Pilot** | 1-5 | Huidige Railway + Vercel free | €26-86 | €5-25 | **€31-111** | ~€20-25 |
 | **Commerciële launch** | 5-25 | + Stripe + Resend (€20/mnd) + Vercel Pro (€20) + Sentry Team (€26) | €100-150 | €25-150 | **€125-300** | ~€10-15 |
 | **Groei** | 25-100 | Railway upgrade + Postgres scale + Redis scale | €200-350 | €150-600 | **€350-950** | ~€7-10 |
 | **Scale** | 100-500 | Railway enterprise of migratie naar AWS/Hetzner, R2 storage actief | €600-1.500 | €600-3.000 | **€1.200-4.500** | ~€8-10 |
 
-**Per-klant kostprijs daalt bij schaal**: van **~€20-25/klant/mnd** (pilot) naar **~€8-10/klant/mnd** (scale). Bij gemiddelde ARPU €600-800/mnd → **bruto-marge 94-96%**. Bij focus op enterprise-tier → 96-98%.
+**Per-klant infra-kost daalt bij schaal**: van **~€20-25/klant/mnd** (pilot) naar **~€8-10/klant/mnd** (scale). Bij gemiddelde ARPU €600-800/mnd → **bruto-marge 94-96%**.
+
+**IP-aflossing aan Klarifai BV** (afzonderlijk — geen bruto-marge-impact, cash-flow-afhankelijk):
+
+| Fase | Maandelijkse IP-termijn | Realiteit | Impact op operationele cash |
+|---|---|---|---|
+| Maand 1-6 (pre-MRR / pre-angel) | €2.083 nominaal | **Opgeschort via cushion-clausule** zolang BV negatieve cash-flow heeft | Nul-druk op BV; achterstand spaart op |
+| Maand 7-12 (early traction / angel-window) | €2.083 nominaal | Termijnen starten zodra MRR voldoende of angel-ronde binnen | Variabel — afhankelijk van klant + funding-tempo |
+| Maand 13-24 (growth + inhaal) | €2.083 + inhaal | Reguliere termijnen + inhaal-betaling opgespaarde achterstand binnen 12 mnd na herstel | Geconcentreerde periode van aflossing |
+| Maand 25-32 (mogelijk uitloop) | tot saldo nul | Bij vertraagde MRR-opbouw loopt schema uit | Klarifai accepteert vertraging |
+
+**Versnelling bij angel-ronde:** zodra externe funding binnenkomt, mag bestuur besluiten tot eenmalige aflossing van het resterende saldo (max 25% van angel-funds). Dat is het meest waarschijnlijke pad voor snelle IP-aflossing in Optie D-strategie.
+
+**Totale Klarifai-vergoeding:** €50.000 over (idealiter) 24 maanden, mogelijk uitlopend tot 32 maanden bij vertraagde adoptie + 50% aandelen in Propdex BV (zie §7).
+
+**Cash-runway-implicatie:** Propdex BV start zonder werkkapitaal. Operationele kosten (infra €30-100/mnd + Stripe-fees + scan-AI-kosten) moeten gedragen worden door de eerste klant-MRR. Dat betekent: **eerste betalende klant binnen 2-4 maanden noodzakelijk**, óf angel-ronde binnen 3-6 maanden. Indien beide tegelijk falen → cushion-clausule houdt BV in stand maar partner moet expliciet evalueren of structuur houdbaar is.
+
+**Werkkapitaal-strategie (Optie D — angel-ronde-first):** partner gaat onmiddellijk na deal-sign angels benaderen, parallel met eerste klant-acquisitie. Twee sporen:
+- **Spoor 1 — Angels:** €100-300k seed-ronde binnen 3-6 maanden. Use of funds: 35% sales, 30% product, 15% legal/ops, 20% IP-versnelling + cash-runway.
+- **Spoor 2 — Klanten:** eerste 3 betalende klanten binnen 2-4 maanden (geen pilot-org partner). Bouwt MRR-basis + referenties voor angel-ronde.
 
 ### Pricing-positionering (voorstel, niet markt-gevalideerd)
 
@@ -163,30 +223,62 @@ Zonder Stripe-billing: handmatig factureren werkt voor 1-3 pilot-klanten maar ni
 
 ## 5. Sprint-roadmap voor commerciële launch
 
-### Sprint 1 (week 1-2) — Productie-blockers
-- M048 Phase 5+6 afronden (document-cache sentinel + WijkPolicy)
-- Worker-service stabiliseren (root cause crash diagnose)
-- DNS `api.propdex.nl` propagatie bevestigen
-- E-mailprovider live (Resend of AWS SES)
-- VENDOR_ORG_ID bootstrap productie
+Twee parallelle sporen vanaf moment van partner-deal-sign: **technisch** (Klarifai) en **juridisch** (advocaat + notaris). Beide moeten ~4-5 weken later samenkomen voor go-live.
 
-### Sprint 2 (week 3-4) — Commerciële launch
-- Stripe checkout-integratie + webhook-handling (Klarifai: directe inrichting in `backend/app/billing/`)
-- Tier-quota enforcement (per-org scan-count tegen tier-limit, hard cap met upgrade-CTA)
-- Stripe customer portal voor self-service abonnement-wijziging
-- Google OAuth productie-secrets + login-flow testen
-- Production-monitoring + alerting (Sentry alerts + CPU/memory + scan-cost-spike-detection)
+### Spoor A — Technisch (Klarifai eigenaar)
 
-### Sprint 3 (parallel) — Juridisch
-- DPA / Privacy Policy / Terms of Service skeletten opstellen
-- Ondernemingsrechtelijk advocaat selecteren voor SHA + statuten + IP-akte
-- Notaris-afspraak voor Propdex BV oprichting
+**Week 1-2 — Productie-blockers wegnemen**
+- M048 Phase 5+6 afronden (document-cache sentinel + WijkPolicy schema)
+- E-mailprovider live (AWS SES of Resend)
+- VENDOR_ORG_ID bootstrap productie + Google OAuth productie-secrets
+- Production-monitoring + alerting opzetten
 
-### Sprint 4 (post-launch) — Groei-features
+**Week 3-4 — Commerciële launch-mechanismen**
+- Stripe checkout-integratie (backend module `app/billing/`) + webhook-handling
+- Tier-quota enforcement (per-org scan-count tegen tier-limit met upgrade-CTA)
+- Stripe customer portal (self-service abonnement-wijziging)
 - Pilot-volume load testing (concurrente klanten + multi-tenant stress)
+
+### Spoor B — Juridisch (advocaat + notaris, parallel-track)
+
+**Week 1 — Selectie + briefing**
+- Ondernemingsrechtelijk advocaat selecteren (SHA + IP-akte specialisatie)
+- Briefingstuk overhandigen (deze partner-briefing + IP-reconstructie)
+- Eerste intake-afspraak
+
+**Week 2-3 — Document-opstelling**
+- Aandeelhoudersovereenkomst (SHA) Klarifai BV + Partner Holding BV → Propdex BV
+- IP-overdrachtsakte Klarifai BV → Propdex BV met 24-mnd termijnen
+- Statuten Propdex BV + managementovereenkomsten
+- DPA / Privacy Policy / Terms of Service voor commerciële klantcontracten
+
+**Week 3-4 — Notaris**
+- Notaris-afspraak voor oprichting Propdex BV + IP-akte
+- Inschrijving KvK + UBO-registratie
+
+### Week 5 — Convergentie naar launch
+
+- Spoor A: alle technische blockers ✅
+- Spoor B: Propdex BV officieel opgericht, SHA getekend ✅
+- Partner: eerste 3 prospects benaderd voor demo's (uit zijn 10-20-lijst)
+- Klarifai: VENDOR_ORG_ID productie-data + cap-table-registratie compleet
+
+### Post-launch (week 6+) — Groei + iteraties
+
+- Eerste 3 betalende klanten binnenhalen (vesting-mijlpaal partner)
+- Partner: angel-pitch-traject parallel (target €100-300k seed binnen 3-6 mnd)
 - Backup + DR-test productie-DB
-- M049+ roadmap (cascade-batches M050-M057, Data Sources per Gemeente hub)
+- M049+ roadmap voortzetten (cascade-batches M050-M057, gemeente-hub)
 - Kwaliteitsborger-specifieke features (Wkb-rapportageformaten) bij eerste W1b-klant
+
+### Wat partner doet (vanaf week 1)
+
+Geen technisch werk verwacht, wel actieve sales-voorbereiding:
+- Lijst van 10-20 prospects opstellen vóór week 5 (concrete bedrijven + contactpersonen)
+- 2-3 angel-contacten identificeren voor pitch-traject post-launch
+- Eigen pilot-org-gebruik intensiveren — werkelijke DD-cases doorlopen voor productiteraties
+
+**Geschatte tijdslijn van deal-sign tot eerste betalende klant: 8-12 weken.**
 
 ---
 
@@ -197,8 +289,9 @@ Zonder Stripe-billing: handmatig factureren werkt voor 1-3 pilot-klanten maar ni
 | 1 | **Wedge-segmentatie** | (a) W1 alleen vastgoedontwikkelaars / (b) W1 ontwikkelaars + kwaliteitsborgers parallel / (c) hele markt aanjagen (gemeentes + makelaars + ontwikkelaars) | **(b) Parallel W1 = ontwikkelaars + kwaliteitsborgers.** Twee sales-motions, geen single-segment risico, zelfde data-laag dus geen extra product-bouw. Gemeentes en makelaars expliciet out-of-scope voor jaar 1 (zie §1) |
 | 2 | **Pricing-model** | (a) Tiered SaaS-abo / (b) Pay-per-scan / (c) Hybride abo + scan-credits | **(c) Hybride.** Starter €299, Team €699, Enterprise €1.249 (binnen €15k/jr markt-plafond) + €1.50/scan boven bundle. Voorspelbaar voor klant, upsell-pad naar enterprise via features (API, branding, priority) en volume. Pricing is hypothese — eerste 3 klanten valideren |
 | 3 | **Eigendomsstructuur** | (a) Binnen Klarifai BV (revenue-share) / (b) Propdex BV apart, beide founders direct / (c) Propdex BV apart, ieder via persoonlijke holding | **(c) Holding-structuur:** Klarifai BV + Partner Holding BV → Propdex BV. Schone cap-table voor angels, management-fees via holdings, fiscaal optimaal, deal met IP-koopprijs makkelijker te structureren. Notariskosten ~€2.5-4k voor SHA+statuten+IP-akte — eenmalig |
-| 4 | **IP-koopprijs voor Klarifai's voorwerk** | (a) €50k / (b) €70k / (c) Andere waarde + onderbouwing | **(a) €50k als uitgestelde foundersvordering** op Propdex BV. Onderbouwd via urenreconstructie (~625 uur @ €80/uur). Niet direct cash uit BV — pas afbetalen bij €X MRR-milestone of bij angel-ronde. Voorkomt liquiditeitsdruk + fictief-loon-risico. Mogelijke step-up naar €70k bij eerste angel-ronde mits waardering ondersteunt |
-| 5 | **Vesting-structuur partner** | (a) Symmetrische reverse vesting 4j+1j cliff beide founders / (b) Asymmetrisch: Klarifai direct vested + partner reverse-vested 24mnd op mijlpalen / (c) Earn-in: partner 0%→50% in 24mnd | **(b) Asymmetrisch.** Klarifai's IP+app+18mnd voorwerk = delivered value op dag 1 (direct vested). Partner's sales-belofte = promised value (reverse-vested). Cap-table 50/50 vanaf dag 1, stemrecht 50/50, dividend 50/50 — vesting raakt alleen wat gebeurt bij vroege uittreding zonder mijlpalen. Concrete mijlpalen in §7 |
+| 4 | **IP-koopprijs voor Klarifai's voorwerk** | (a) €50k vast / (b) Variabel met step-up / (c) Andere waarde + onderbouwing | **(a) €50k vast — 24 maandelijkse termijnen van €2.083, met cushion-clausule.** Onderbouwd via urenreconstructie (~625-800u @ €60-80/uur, ontwikkeling nov 2025 — mei 2026). Termijnen opgeschort tot Propdex BV positieve cash-flow heeft (uit MRR of angel-ronde). Versnelde aflossing optioneel bij angel-ronde (max 25% van ronde). Geen founder-cash-inbreng bij oprichting — strategie is bootstrap-tot-angel. Schema kan in realiteit uitlopen van 24 tot 32 maanden. Geen step-up |
+| 5 | **Vesting-structuur partner** | (a) Symmetrische reverse vesting 4j+1j cliff beide founders / (b) Asymmetrisch: Klarifai direct vested + partner reverse-vested 24mnd op mijlpalen / (c) Earn-in: partner 0%→50% in 24mnd | **(b) Asymmetrisch.** Klarifai's IP+app+6.5mnd voorwerk = delivered value op dag 1 (direct vested). Partner's sales-belofte = promised value (reverse-vested). Cap-table 50/50 vanaf dag 1, stemrecht 50/50, dividend 50/50 — vesting raakt alleen wat gebeurt bij vroege uittreding zonder mijlpalen. Concrete mijlpalen in §7 |
+| 6 | **Werkkapitaal-strategie bij oprichting** | (a) Klarifai brengt cash-agio in / (b) Partner brengt cash in / (c) Bootstrap-tot-angel (geen cash-inbreng) / (d) Hybride beide founders | **(c) Bootstrap-tot-angel.** Geen founder-cash-inbreng bij oprichting — Klarifai-agio zou circulair zijn (cash → BV → terug naar Klarifai via IP-termijn), partner-cash verstoort 50/50-balance. Partner gaat onmiddellijk na deal-sign angels pitchen + eerste klanten landen. Cushion-clausule (§7.2) houdt BV in stand zolang geen MRR is. Target: angel-ronde €100-300k binnen 3-6 maanden, eerste 3 betalende klanten binnen 2-4 maanden |
 
 ---
 
@@ -236,23 +329,24 @@ Onder NL-recht is "gewoon 50/50 en uren factureren later" een hoog-risico-constr
 
 **Tekeningsbevoegdheid:** Statutair vastgelegd dat besluiten boven €5k uitgave, IP-mutaties, aandelenuitgifte, of klantcontracten boven €25k/jaar twee handtekeningen vereisen.
 
-### 7.2 IP-overdracht — Aparte koopakte + uitgestelde foundersvordering
+### 7.2 IP-overdracht — Koopakte + 24-maandelijkse termijnen, bootstrap-tot-angel
 
-Auteursrecht op de bestaande Propdex-codebase, designs, documentatie en domein zit nu bij Klarifai BV (of, indien daadwerkelijk privé ontwikkeld, bij Klarifai's bestuurder privé — wordt geverifieerd vóór notaris). Onder NL-recht moet IP-overdracht aan een nieuwe BV schriftelijk en expliciet geschieden.
+Auteursrecht op de bestaande Propdex-codebase, designs, documentatie en domein zit nu bij Klarifai BV (of, indien daadwerkelijk privé ontwikkeld, bij Klarifai's bestuurder privé — wordt geverifieerd vóór notaris). Onder NL-recht moet IP-overdracht aan een nieuwe BV schriftelijk en expliciet geschieden tegen overeengekomen prijs.
 
-**Mechanisme — uitgestelde foundersvordering:**
+**Mechanisme — vaste koopprijs met gespreide aflossing:**
 
-1. Bij oprichting Propdex BV verkoopt Klarifai BV (of bestuurder privé na voorafgaande inbreng in Klarifai BV) de IP aan Propdex BV tegen overeengekomen koopprijs.
-2. **Voorgestelde koopprijs: €50.000**, onderbouwd via urenreconstructie en marktconforme tariefbenchmark (~625 uur @ €80/uur, gebaseerd op gemiddeld zzp-tarief NL software-developer 2026).
-3. Propdex BV betaalt niet direct — de schuld blijft staan als **uitgestelde foundersvordering** op de balans (achtergestelde lening van Klarifai BV aan Propdex BV).
-4. **Aflossing:** in één van de volgende scenarios:
-   - Eerste angel-ronde: bij funding-event wordt €50k afgelost uit de opgehaalde middelen (mits ronde groot genoeg om dit niet als belangrijkste use-of-funds-positie te tonen)
-   - MRR-milestone: zodra Propdex BV €15.000 MRR bereikt, mag de vordering in termijnen worden afgelost (max 36 mnd vanaf bereiken milestone)
-   - Verkoop / exit: vordering wordt afgelost vóór dividenduitkering naar aandeelhouders bij liquiditeitsevenement
-5. **Step-up bij angel-ronde:** mocht eerste angel-ronde plaatsvinden op waardering die €70k IP-prijs ondersteunt, kan koopprijs eenmalig worden bijgesteld via aandeelhoudersbesluit. Standaard blijft €50k vastgelegd.
-6. **Documentatie:** aparte IP-overdrachts-akte (lijst van repositories, features, domein, designs, datasets), waardebepalingsmemo, leningsovereenkomst Klarifai BV → Propdex BV.
+1. Bij oprichting Propdex BV verkoopt Klarifai BV (of bestuurder privé na voorafgaande inbreng in Klarifai BV) de IP aan Propdex BV tegen vaste koopprijs.
+2. **Koopprijs: €50.000**, onderbouwd via urenreconstructie en marktconforme tariefbenchmark (~625-800 uur @ €60-80/uur, ontwikkeling november 2025 — mei 2026). Onderbouwing in `.planning/IP-RECONSTRUCTIE-2026-05-14.md`.
+3. **Aflossing in 24 maandelijkse termijnen van €2.083,33**. Tegenboeking: achtergestelde schuld Propdex BV → Klarifai BV op balans.
+4. **Cash-flow-cushion clausule — primair beschermingsmechanisme:** maandelijkse termijnen starten formeel vanaf BV-oprichting, maar bij aantoonbare negatieve operationele cash-flow van Propdex BV worden termijnen automatisch opgeschort. Inhaal binnen 12 maanden na herstel van positieve cash-flow. Praktisch betekent dit: zolang Propdex BV niet voldoende MRR heeft om de termijn te dragen zonder eigen vermogen aan te tasten, wordt niet betaald. Schema kan dus in realiteit uitlopen tot 28-32 maanden in plaats van strikt 24.
+5. **Versnelde aflossing bij angel-ronde** (waarschijnlijk pad gegeven Optie D — bootstrap-tot-angel): zodra externe investeringsronde plaatsvindt, mag het bestuur besluiten resterende saldo in één keer af te lossen uit opgehaalde middelen. Aanbevolen: maximaal 25% van angel-ronde gebruiken voor IP-aflossing (anders signaal naar investeerders dat geld vooral founder-afkoop financiert).
+6. **Vaste prijs — geen step-up.** €50.000 is definitief, ongeacht latere bedrijfswaardering of angel-ronde-condities.
+7. **GEEN cash-inbreng door founders bij oprichting.** Propdex BV start zonder werkkapitaal op dag 1. De business-strategie is **bootstrap-tot-angel**: partner gaat onmiddellijk na deal-sign angels pitchen, parallel met eerste klant-acquisitie. Tijdsvenster om angel-ronde binnen te halen: 3-6 maanden. Tot dat moment draait BV in cash-light modus (geen IP-termijnen via cushion-clausule, geen management-fees, minimale infra-kosten uit eerste klant-MRR).
+8. **Documentatie:** aparte IP-overdrachts-akte (lijst van repositories, features, domein, designs, datasets), waardebepalingsmemo, leningsovereenkomst Klarifai BV → Propdex BV met aflossings-schema inclusief cushion-clausule.
 
-**Waarom geen direct cash:** voorkomt liquiditeitsdruk bij oprichting, voorkomt dat verse investeerders het gevoel krijgen dat hun geld primair een foundersafrekening financiert, blijft fiscaal schoon (vordering, geen verkapt loon).
+**Waarom geen founder-cash-inbreng bij oprichting:** Klarifai-agio zou circulair zijn (Klarifai stort cash → BV betaalt het terug als IP-termijn = nul-som). Partner-cash zou een waardevolle inbreng zijn maar verandert deal-structuur naar asymmetrisch in andere richting. Bootstrap-pad respecteert de "puur 50/50 op delivered/promised value" filosofie van de deal — geen extra cash-injecties die de eenvoud verstoren.
+
+**Waarom termijnen ipv direct cash voor IP:** zakelijke koopprijs blijft een schuld (geen verkapt loon, geen Belastingdienst-discussie), maar belast Propdex BV niet ineens met €50k schuld-uitkering. Cushion-clausule beschermt operationele continuïteit.
 
 ### 7.3 Vesting — Asymmetrisch op delivered vs promised value
 
@@ -362,16 +456,17 @@ Bovenstaande is **strategisch raamwerk, geen rechtsgeldige contracten**. Concret
 |---|---|---|---|
 | **Externe klanten willen niet betalen na partner's intro** | Medium-Hoog | Hoog | Nog 0 externe demand-validatie. Mitigatie: partner committeert vóór deal-sign aan lijst van 10-20 prospects om in week 1-4 te benaderen. Eerste-3-klanten-target binnen maand 6 als vesting-floor |
 | **Pricing-positionering klopt niet voor markt** | Medium | Medium | €15k/jr plafond is partner's marktwaarneming, niet hard onderzocht. Mitigatie: eerste 3 verkoopgesprekken zijn explicit price-discovery (€299 t/m €1.249 testen). Bijstellen na pilot-feedback in maand 3 |
-| **IP-overdracht juridisch niet schoon** | Laag-Medium | Hoog | Mitigatie: advocaat-review IP-akte, urenreconstructie + waardebepalingsmemo, expliciete verklaring auteursrechtelijke status (privé vs Klarifai BV). Voorkomt due-diligence-blocker bij angel-ronde |
+| **Bootstrap-tot-angel pad faalt** (geen angel én geen klanten binnen 6 mnd) | Medium | Hoog | Cushion-clausule houdt BV in stand zonder IP-druk. Mitigatie: spoor 1 (angels) en spoor 2 (klanten) parallel vanaf dag 1. Bij dubbel-falen na 6 mnd → formele evaluatie tussen founders (wedge bijstellen, structuur herzien, of vroegtijdig herstructureren) |
+| **IP-overdracht juridisch niet schoon** | Laag-Medium | Hoog | Mitigatie: advocaat-review IP-akte, urenreconstructie + waardebepalingsmemo (`IP-RECONSTRUCTIE-2026-05-14.md`), expliciete verklaring auteursrechtelijke status. Voorkomt due-diligence-blocker bij angel-ronde |
 | **Partner werft geen externe klanten** | Medium | Hoog | Mitigatie: reverse vesting partner = geen klanten ⇒ geen vesting ⇒ aandelen terug naar Klarifai. Eerste mijlpaal op 6 mnd (3 klanten/€3k MRR) is harde floor, gemiste mijlpaal triggert evaluatie |
-| **Concurrent (Brainbay, Matrixian, of nieuwkomer) lanceert vergelijkbare aggregator** | Laag-Medium | Medium | Brainbay/Matrixian zitten in current-value, niet transformatie — andere koper. Nieuwe entrant heeft 18+ mnd tech-debt in te halen. Mitigatie: snelheid product-iteratie + first-mover positionering bij W1-segment |
-| **AI-API-kosten (Claude/Gemini) stijgen of stoppen EU-availability** | Laag | Medium | Mitigatie: marge is 94-96% — kan 5x AI-kostenstijging absorberen voordat bruto-marge onder 80% zakt. Multi-vendor opzet (OpenRouter-routing) maakt switch tussen Anthropic / Google / Mistral EU mogelijk |
-| **DSO / BAG / overheids-API's wijzigen schema** | Medium | Laag-Medium | Overheids-API's hebben formele versionering. Mitigatie: PDOK + BAG hebben backwards-compatibility-windows. Klarifai's adapter-laag absorbeert wijzigingen |
-| **Worker-service blijft instabiel in productie** | Medium | Medium | Reeds bekend uit deploy-notes 2026-04-03. Sprint 1 prioriteit. Mitigatie: root-cause diagnose + container-resource-limits + restart-policies + alerting |
-| **GDPR-incident door fout in retention of audit** | Laag | Hoog | Mitigatie: EU-only stack (Railway, Sentry EU, Cloudflare), legal-review DPA + retention-policy vóór commerciële launch (Sprint 3) |
+| **Concurrent (Brainbay, Matrixian, nieuwkomer) lanceert vergelijkbare aggregator** | Laag-Medium | Medium | Brainbay/Matrixian zitten in current-value, niet transformatie — andere koper. Nieuwe entrant heeft 6+ mnd tech-debt in te halen. Mitigatie: snelheid product-iteratie + first-mover positionering W1-segment |
+| **AI-API-kosten (Claude/Gemini) stijgen of stoppen EU-availability** | Laag | Medium | Marge is 94-96% — kan 5x AI-kostenstijging absorberen voordat bruto-marge onder 80% zakt. Multi-vendor opzet (OpenRouter-routing) maakt switch tussen Anthropic / Google / Mistral EU mogelijk |
+| **DSO / BAG / overheids-API's wijzigen schema** | Medium | Laag-Medium | Overheids-API's hebben formele versionering. PDOK + BAG hebben backwards-compatibility-windows. Klarifai's adapter-laag absorbeert wijzigingen |
+| **Single-region Railway infra** | Laag | Medium | Railway-services (api + worker) draaien stabiel in EU West met live traffic. Geen multi-region failover. Mitigatie: bij €15k+ MRR overwegen Hetzner/AWS multi-AZ migratie. Voor jaar 1 is single-region acceptabel risico |
+| **GDPR-incident door fout in retention of audit** | Laag | Hoog | EU-only stack (Railway, Sentry EU, Cloudflare). Mitigatie: legal-review DPA + retention-policy vóór commerciële launch |
 | **Klarifai single-developer dependency** | Hoog | Hoog | Codebase op GitHub, standaard FastAPI/React stack (geen exotische tech), GSD-methodologie genereert documentatie. Mitigatie post-launch: bij €15k+ MRR eerste freelance backend-engineer onboarding |
-| **Partner haalt eerste mijlpaal wel maar tweede niet** | Medium | Medium | Vesting hybride (klant-aantal én MRR) voorkomt manipulatie. Mitigatie: 3-mnd-cadans-evaluatie geeft vroeg signaal, bij stagnatie tussen mnd 12-18 gezamenlijke pijplijn-review en eventueel bijstelling sales-aanpak |
-| **Deadlock tussen Klarifai en partner op strategische keuze** | Medium | Medium-Hoog | Mitigatie: reserved-matters-lijst (§7.5) + 4-staps-deadlock-ladder. Geen 50/50-stempel zonder uitweg-mechanisme |
+| **Partner haalt eerste mijlpaal wel maar tweede niet** | Medium | Medium | Vesting hybride (klant-aantal én MRR) voorkomt manipulatie. 3-mnd-cadans-evaluatie geeft vroeg signaal, bij stagnatie tussen mnd 12-18 gezamenlijke pijplijn-review |
+| **Deadlock tussen Klarifai en partner op strategische keuze** | Medium | Medium-Hoog | Reserved-matters-lijst (§7.5) + 4-staps-deadlock-ladder. Geen 50/50-stempel zonder uitweg-mechanisme |
 
 ---
 

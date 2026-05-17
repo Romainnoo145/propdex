@@ -29,27 +29,41 @@ From grondpositie to first spade in one cockpit — no switching between 10 tabs
 - ✓ Factor pinning + groep-pages (max 4 per categorie, 2x2 grid, synth-page) — M048/Phase 7
 - ✓ E2E smoke voor Venlo woonvisie pipeline — M048/Phase 8
 - ✓ Test-corpus validation: woonvisie_match generaliseert naar Amsterdam/Rotterdam/Sittard-Geleen (confidence 0.60-0.92) — M048 bonus
+- ✓ `gemeente_data_source_status` model + 27+ source-key catalog in 3 bron-types — M049/S01
+- ✓ Admin API layer (`GET /api/admin/data-sources/{gemeente_code}` + refresh) superuser-gated — M049/S02
+- ✓ Data Sources UX (`/instellingen/data-bronnen/{gemeente_code}`) met 3 secties + status-pills + Aura-tokens — M049/S03
+- ✓ M045/S05 upload-flow integratie in nieuwe hub + legacy-route redirect-banner — M049/S04
+- ✓ Encrypted `IntegrationCredential` model (Fernet + MultiFernet rotation pattern) + admin UX — M049/S05
+- ✓ ActionItems pagina deprecation + content migratie naar Data-bronnen action-buttons — M049/S06
 
-## Current Milestone: M049 Data Sources per Gemeente hub
+## Current Milestone: M050 BRK Actiefase-Wedge
 
-**Goal:** Admin ziet per gemeente één overzicht van alle 27+ scoring-bronnen (3 bron-types A/B/C) met actie-knoppen, status-pills en credential-configuratie. Consolideert M045/S05 admin-hub + ActionItems pagina + bereidt configuratie-UX voor latere integratie-milestones (M051 Subsidies, M052 BRK, M053 NVM).
+**Goal:** Product-mode-shift van onderzoekstool → actietool. Drie-fase-funnel introduceren: Onderzoek → Actie (brief naar eigenaar) → CRM (M053+). Eerste paid Type-C integration (BRK Eigendom persistent) + AI-personalized brief-feature via PostNL master-account-model.
 
 **Target features:**
-- Datamodel `gemeente_data_source_status` met tenant-scoping
-- API endpoint `GET /api/admin/data-sources/{gemeente_code}` met alle 3 bron-types in één payload
-- Frontend route `/instellingen/data-bronnen/{gemeente_code}` met 3 secties
-- M045/S05 upload-flow integreren in nieuwe hub
-- `organization_integration_credentials` encrypted credential store + UX
-- ActionItems pagina deprecation + redirect
+- BRK persistent storage (rechtspersoon-only, 30/90 dgn retention) + 3 nieuwe scoring-factoren (hypotheek_risico, eigendoms_complexiteit, koopwaarde_trend)
+- Brief-template registry + AI-personalisatie via Claude streaming (Pydantic-typed, audit-logged)
+- PostNL Zakelijk master-account dispatch + delivery-tracking webhooks + partner-branding-injection
+- Opgeslagen-tab cockpit transformatie: full-width perceel-cards + lifecycle-sidebar (4-8 icons: Onderzoek → Exploitatie)
+- Tier-gates + quota-enforcement (Demo 0/0 · Paid 25/5 · Enterprise 250/50 — Q8 LOCKED)
+- M050.5 parallel: tier-decorator + quota-counter infra
+
+**Pre-planning artifacts (2026-05-17):**
+- `.planning/milestones/M050-INDEX.md` (hub)
+- `.planning/milestones/M050-ENG-PLAN.md` (6 architectuur-decisions D1-D6 + datamodel + 7-lane worktree-parallelization)
+- `.planning/milestones/M050-DECISIONS-PRE-PLANNING.md` (Q6 PostNL master-account · Q7 retention · Q8 quota-defaults)
 
 ### Active
 
-- [ ] Datamodel `gemeente_data_source_status` met (gemeente_code, source_key, status, configuratie) — M049/S01
-- [ ] API `GET /api/admin/data-sources/{gemeente_code}` aggregated alle 3 bron-types — M049/S02
-- [ ] UX `/instellingen/data-bronnen/{gemeente_code}` met 3 secties + status-pills + acties — M049/S03
-- [ ] M045/S05 upload-flow integratie in nieuwe hub (geen aparte pagina meer) — M049/S04
-- [ ] `organization_integration_credentials` encrypted credential UX (BRK/Vindsubsidies/NVM placeholders) — M049/S05
-- [ ] ActionItems pagina deprecation + content-migratie + redirect — M049/S06
+- [ ] BRK datamodel + retention-life-cycle (Q7 LOCKED) + ARQ cleanup-cron — M050/S01
+- [ ] BRK persist client (Phase 105 ephemeral → persist-mode) met M049 credential-resolver — M050/S02
+- [ ] 3 scoring-factoren live + rescore-cascade trigger op BRK-write — M050/S03
+- [ ] Brief-template registry + 3 templates + preview met perceel-context — M050/S04
+- [ ] AI brief-personalisatie via Claude streaming + audit-log + partner-review verplicht (D7) — M050/S04.5
+- [ ] PostNL dispatch + delivery-tracking webhooks + partner-branding-injection — M050/S05
+- [ ] Admin-UX partner-branding-upload in M049-hub-stijl — M050/S05.5
+- [ ] Opgeslagen-cockpit + lifecycle-sidebar transformatie (V5 wireframe LOCKED) — M050/S06
+- [ ] E2E wiring + tier-gates + feature-flag triad + AVG-audit-trail — M050/S07
 
 ### Out of Scope
 
@@ -59,8 +73,9 @@ From grondpositie to first spade in one cockpit — no switching between 10 tabs
 - Dark mode — Out of scope, sloopt Aura Morning-Mist character
 - Vergunningchecker — wettelijk voorbehouden aan Omgevingsloket
 - Ground-truth kalibratie — Uitgesteld tot M058
-- BRK/NVM/Vindsubsidies betaalde integraties — M051/M052/M053
-- Cascade-batches buiten woonvisie_match POC — M050-M057
+- BRK Eigendom als M050 — eerste paid Type-C integration (overruled landscape volgorde 2026-05-17)
+- NVM/Vindsubsidies betaalde integraties — M053+
+- Cascade-batches buiten woonvisie_match POC — M051-M057
 - Projecttype-gebonden balance / pruning sparse factoren — M050+
 
 ## Context
@@ -95,7 +110,12 @@ From grondpositie to first spade in one cockpit — no switching between 10 tabs
 | CARDS_PER_PAGE 4 ipv 6 (M048 Phase 7) | Steady-state factor projection wint op visuele dichtheid bij 2x2 grid | ✓ Good |
 | Pin-mechanism backend-backed | localStorage skipt cross-device, backend-tabel werkt direct met TenantMixin | ✓ Good |
 | Probe-tool retained voor M050+ | woonvisie_match POC bewees generalisatie; protocol gestandaardiseerd per nieuwe factor | ✓ Good |
-| M049 vóór M050+ cascade-batches | Integratie-milestones (M051/M052/M053) hebben configuratie-UX nodig; als hub later komt → ad-hoc plekken die later refactored moeten | — Pending (M049) |
+| M049 vóór M050+ cascade-batches | Integratie-milestones hebben configuratie-UX nodig; als hub later komt → ad-hoc plekken die later refactored moeten | ✓ Good |
+| M050 = BRK Eigendom-diepte ipv Vindsubsidies | BRK bredere wedge (elke ontwikkelaar wil eigendomsinfo); Vindsubsidies raakt alleen Enterprise-subset met bestaand contract — beslissing 2026-05-17 | — Pending (M050) |
+| M050 PostNL master-account (Q6) | Sales-friction-eliminatie weegt zwaarder dan 5,6% cost-floor; sender-naam dynamisch per partner-branding | — Pending (M050) |
+| M050 AVG retention 30/90 dgn (Q7) | Defensieve baseline; rechtspersoon-only persistent storage; Phase 105 ephemeral pad blijft voor privé-lookups | — Pending (M050) |
+| M050 cockpit = pipeline-cards + workspace-sidebar | Single-column brede cards + perceel-foto thumbnail; sidebar van toplevel-icons → 4-8 lifecycle-icons (V5 wireframe LOCKED) | — Pending (M050/S06) |
+| Partner = klant + reseller terminologie | Partner gebruikt product zelf EN verkoopt door; alle "klant" refs → "partner" in M050 docs 2026-05-17 | ✓ Good |
 
 ---
-*Last updated: 2026-05-14 after M048 shipped + M049 milestone start*
+*Last updated: 2026-05-17 after M049 shipped + M050 milestone start*

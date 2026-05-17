@@ -24,11 +24,53 @@
 - Geen self-service upgrade flow in v1 (mailto:info@klarifai.nl)
 - Geen Stripe/payment-integratie (I-01 staat apart)
 
-**Coordination:** Na Phase 1 (tier-infra) landing → notify M050-agent dat Vindsubsidies-feature met `requires_tier("paid")` ingebakken kan worden. Voorkomt rework.
+**Coordination:** Na Phase 1 (tier-infra) landing → notify M050-agent dat BRK-actiefase-feature met `requires_tier("paid")` ingebakken kan worden. Voorkomt rework. *(2026-05-17: M050 pivot van Vindsubsidies naar BRK Actiefase-Wedge — Vindsubsidies schuift naar later, BRK heeft bredere wedge.)*
 
 **Artifacts:**
 - `.planning/milestones/M050.5-REQUIREMENTS.md` — 36 requirements (TIER/API/UI/TEST/MIG)
 - `.planning/milestones/M050.5-ROADMAP.md` — 4 phases (Foundation → Backend ∥ Frontend → Verify)
+
+---
+
+## 🚧 M050 BRK Actiefase-Wedge (Kickoff 2026-05-17)
+
+**Status:** Roadmap geland. 9 phases (S01-S07 + S04.5 + S05.5) + 39 requirements gedefinieerd. Pre-planning compleet (office-hours + plan-ceo-review + plan-eng-review + design-review). Volgende stap: `/gsd:plan-phase M050/S06` (UI-veilige eerste slice — geen Kadaster DPA / PostNL wachttijden).
+
+**Pivot 2026-05-17:** M050 was Vindsubsidies (per landscape-doc 20260418). Vervangen door BRK Actiefase-Wedge omdat BRK bredere wedge heeft (elke ontwikkelaar wil eigendomsinfo per perceel; Vindsubsidies raakt alleen Enterprise-tier subset met bestaand contract). Vindsubsidies schuift naar latere milestone.
+
+**Karakter:** Product-mode-shift — eerste brug van onderzoekstool naar actietool. BRK = middel (eigenaar + hypotheek-lookup), brief sturen via PostNL Zakelijk = doel. 3 scoring-factoren landen mee (potentie moet kloppen vóór actie kan).
+
+**Scope (8 slices + 2 M050.5-slices parallel):** BRK persistent datamodel + AVG retention · BRK client persist-mode · 3 scoring-factoren (hypotheek_risico, eigendoms_complexiteit, koopwaarde-trend) · brief-template registry (3 templates) · PostNL Zakelijk API + async verzend-job + tracking · opgeslagen-tab stappenplan-cockpit · E2E integratie · admin-UX quota-monitoring. ~8-12 wk realistisch.
+
+**Locked decisions (2026-05-17, zie `.planning/milestones/M050-DECISIONS-PRE-PLANNING.md`):**
+- Q6 PostNL business-model: Propdex master-account, resell via quota (Optie A)
+- Q7 AVG retention: 30 dgn soft → 90 dgn hard delete; 7 jr brief-tracking; rechtspersoon-only persistent
+- Q8 Quota-defaults: Demo 0/0 · Paid 25 BRK + 5 brieven · Enterprise 250/50 · soft 80% hard 100% · reset 1e van maand UTC · geen overage in M050
+
+**Day-1 wall-time-blockers:**
+- PostNL Zakelijk contract-onboarding starten (sandbox-credentials, sender-identity, batch-tarief)
+- Kadaster verwerkersovereenkomst (DPA) traject — 4-8 wk legal, vereist voor production-BRK
+- Privacy Officer review verwerkersovereenkomst-template
+- Pre-sale klant volume-validatie + week 8-12 first-live-user commitment
+
+**Scope-expansion (CEO-review 2026-05-17, mode = SELECTIVE EXPANSION):**
+- E1 ACCEPTED: AI-personalisatie via Claude in S04.5 (klant-review verplicht per D7)
+- E3 ACCEPTED: brief-preview met perceel-context in S04
+- E5 ACCEPTED: klant-branding-upload (logo/voettekst/font) in S05+S05.5
+- E7 DEFERRED: S08 admin-UX quota-monitoring → M052, vervangen door CLI/Postgres-snippets
+- D6 ACCEPTED: PostNL SPOF risk in v1 (geen graceful-degrade-dev, document SLA + incident-protocol)
+- D7 ACCEPTED: AI brief-governance pattern (structured-context + klant-review + audit-log)
+- Netto timeline: 9-13 wk (was 8-12)
+
+**Artifacts:**
+- `.planning/ROADMAP.md` — 9 phases + dependencies + worktree-parallelization
+- `.planning/REQUIREMENTS.md` — 39 REQ-IDs (BRK/SCOR/BRIEF/AI/POST/BRAND/UX/WIRE/TEST) + traceability table
+- `~/.gstack/projects/Romainnoo145-propdex/klarifai-main-design-20260517-131317.md` — `/gstack:office-hours` design-doc (APPROVED)
+- `~/.gstack/projects/Romainnoo145-propdex/ceo-plans/2026-05-17-m050-brk-actiefase.md` — `/plan-ceo-review` CEO-plan (ACTIVE)
+- `.planning/milestones/M050-ENG-PLAN.md` — `/plan-eng-review` (D1-D6 architectuur-decisions + datamodel + failure-modes registry)
+- `.planning/milestones/M050-DECISIONS-PRE-PLANNING.md` — Q6/Q7/Q8 locked + cost-basis research
+- `.planning/milestones/M050-INDEX.md` — hub van alle M050-related docs
+- `.planning/PARTNER-GESPREK-M050-2026-05-17.md` — partner-discussion items (terminologie-fix klant → partner gedaan 2026-05-17)
 
 ---
 
