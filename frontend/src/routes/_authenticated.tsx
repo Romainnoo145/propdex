@@ -4,6 +4,7 @@ import { createFileRoute, Outlet, redirect, useMatchRoute } from '@tanstack/reac
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import SideRailNav from '@/components/layout/SideRailNav'
 import LifecycleSideRailNav from '@/components/layout/LifecycleSideRailNav'
+import { LIFECYCLE_PHASES, type LifecyclePhaseKey } from '@/lib/lifecycle/phases'
 import BottomTabNav from '@/components/layout/BottomTabNav'
 import MapView from '@/components/map/MapView'
 import { MapContext } from '@/lib/MapContext'
@@ -34,6 +35,11 @@ function AuthenticatedLayout() {
   const matchRoute = useMatchRoute()
   const isMapVisible = !!matchRoute({ to: '/map', fuzzy: true })
   const isOpgeslagenRoute = !!matchRoute({ to: '/opgeslagen', fuzzy: true })
+  const phaseMatch = matchRoute({ to: '/opgeslagen/perceel/$parcelId/$phase' }) as { phase?: string } | false
+  const activeLifecyclePhase: LifecyclePhaseKey =
+    phaseMatch && phaseMatch.phase && LIFECYCLE_PHASES.some((p) => p.key === phaseMatch.phase)
+      ? (phaseMatch.phase as LifecyclePhaseKey)
+      : '1-onderzoek'
   const { accessToken } = useAuth()
 
   const accessTokenRef = useRef(accessToken)
@@ -103,7 +109,7 @@ function AuthenticatedLayout() {
 
         {/* Fixed sidebar — floats over the canvas, not in the flow */}
         <div className="hidden md:block">
-          {isOpgeslagenRoute ? <LifecycleSideRailNav activePhaseKey="1-onderzoek" /> : <SideRailNav />}
+          {isOpgeslagenRoute ? <LifecycleSideRailNav activePhaseKey={activeLifecyclePhase} /> : <SideRailNav />}
         </div>
 
         {/* The App Container: floats on the desk with breathing room */}
