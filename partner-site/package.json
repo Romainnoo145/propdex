@@ -1,0 +1,16 @@
+{
+  "name": "propdex-partner-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static deal pages — partner.propdex.nl + invest.propdex.nl. Renders content/*.md to HTML at build time.",
+  "type": "module",
+  "scripts": {
+    "sync": "node sync.mjs",
+    "build": "node build.mjs",
+    "build:full": "npm run sync && npm run build",
+    "dev": "npm run sync && node build.mjs && python3 -m http.server -d public 4173"
+  },
+  "dependencies": {
+    "marked": "^14.1.3"
+  }
+}
