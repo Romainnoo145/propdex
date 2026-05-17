@@ -50,9 +50,9 @@
 
 ### Opgeslagen Cockpit + Sidebar (S06)
 
-- [ ] **UX-01**: Opgeslagen-tab transformeert naar full-width perceel-cards met BAG-thumbnail (geen layout-regression op M048 pin-mechanism + groep-pages).
+- [x] **UX-01**: Opgeslagen-tab transformeert naar full-width perceel-cards met BAG-thumbnail (geen layout-regression op M048 pin-mechanism + groep-pages).
 - [x] **UX-02**: Linker sidebar transformeert van toplevel-icons naar 4-8 lifecycle-icons (1. Onderzoek t/m 6. Exploitatie); active-state per perceel-fase.
-- [ ] **UX-03**: Click op card opent bestaande perceel-detail page; "1. Onderzoek"-tab toont scan-data + M050 brief-feature + BRK-persistent.
+- [x] **UX-03**: Click op card opent bestaande perceel-detail page; "1. Onderzoek"-tab toont scan-data + M050 brief-feature + BRK-persistent.
 - [x] **UX-04**: Aura-tokens consistent: Morning Mist canvas, Pure Glass cards, Plus Jakarta Sans, Warm Amber accent.
 - [x] **UX-05**: `prefers-reduced-motion` fallback respected; `will-change:transform` op floating-panels.
 
@@ -129,9 +129,9 @@ Deferred to later milestones:
 | BRAND-01 | Phase 5.5 | Pending |
 | BRAND-02 | Phase 5.5 | Pending |
 | BRAND-03 | Phase 5.5 | Pending |
-| UX-01 | Phase 6 | Pending |
+| UX-01 | Phase 6 | Complete |
 | UX-02 | Phase 6 | Complete |
-| UX-03 | Phase 6 | Pending |
+| UX-03 | Phase 6 | Complete |
 | UX-04 | Phase 6 | Complete |
 | UX-05 | Phase 6 | Complete |
 | WIRE-01 | Phase 7 | Pending |
