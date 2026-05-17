@@ -3,6 +3,7 @@ import { AMBER } from '@/lib/tokens'
 import { createFileRoute, Outlet, redirect, useMatchRoute } from '@tanstack/react-router'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import SideRailNav from '@/components/layout/SideRailNav'
+import LifecycleSideRailNav from '@/components/layout/LifecycleSideRailNav'
 import BottomTabNav from '@/components/layout/BottomTabNav'
 import MapView from '@/components/map/MapView'
 import { MapContext } from '@/lib/MapContext'
@@ -32,6 +33,7 @@ function AuthenticatedLayout() {
   const [leftPanelOpen, setLeftPanelOpen] = useState(false)
   const matchRoute = useMatchRoute()
   const isMapVisible = !!matchRoute({ to: '/map', fuzzy: true })
+  const isOpgeslagenRoute = !!matchRoute({ to: '/opgeslagen', fuzzy: true })
   const { accessToken } = useAuth()
 
   const accessTokenRef = useRef(accessToken)
@@ -101,7 +103,7 @@ function AuthenticatedLayout() {
 
         {/* Fixed sidebar — floats over the canvas, not in the flow */}
         <div className="hidden md:block">
-          <SideRailNav />
+          {isOpgeslagenRoute ? <LifecycleSideRailNav activePhaseKey="1-onderzoek" /> : <SideRailNav />}
         </div>
 
         {/* The App Container: floats on the desk with breathing room */}
