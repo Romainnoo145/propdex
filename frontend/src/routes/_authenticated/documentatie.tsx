@@ -3,17 +3,22 @@ import { motion } from 'framer-motion'
 import { staggerContainer, fadeUp } from '@/lib/animations'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { DataCatalog } from '@/components/documentation/DataCatalog'
+import { MilestoneActionItems } from '@/components/documentation/MilestoneActionItems'
 
 export const Route = createFileRoute('/_authenticated/documentatie')({
   component: DocumentatiePage,
 })
 
 /**
- * /documentatie — overview of data sources per niveau (gemeente, wijk, perceel).
+ * /documentatie — overview of data sources per niveau (gemeente, wijk, perceel)
+ * + lopende milestone-actiepunten voor planning-fase coördinatie.
  *
  * M049/S06: actiepunten-toggle removed. Action-item content has fully
  * migrated to /instellingen/data-bronnen action-buttons (per source_key).
- * Page is now single-tab (DataCatalog only).
+ *
+ * M050 planning-fase: MilestoneActionItems sectie toegevoegd zodat partner
+ * + Klarifai externe acties (PostNL/Kadaster/legal/partner-gesprek) in de
+ * frontend kan volgen tijdens de bouw-fase.
  */
 function DocumentatiePage() {
   return (
@@ -40,6 +45,13 @@ function DocumentatiePage() {
 
         <motion.div variants={fadeUp} className="pb-8">
           <DataCatalog />
+        </motion.div>
+
+        <motion.div
+          variants={fadeUp}
+          className="border-t border-[#EAEFEF] pt-12 pb-8"
+        >
+          <MilestoneActionItems />
         </motion.div>
       </motion.div>
     </ResultsShell>
