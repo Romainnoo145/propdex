@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: "M049 audit gap INT-03 closed via gemeente-aware banner deeplink. Next: 07-02 visual QA sweep + M049-MILESTONE-AUDIT.md closure (S03/S04/S05 human-needed → passed)."
-stopped_at: Completed 06-03-PLAN.md (SavedParcelCard + PipelineStagePill update + opgeslagen.tsx refactor; 3 commits)
-last_updated: "2026-05-17T21:15:40.203Z"
+stopped_at: Completed 06-02-PLAN.md (sidebar swap in _authenticated.tsx; 1 commit)
+last_updated: "2026-05-17T21:19:01.567Z"
 last_activity: 2026-05-16 — Phase 07 Plan 01 shipped (commits 7ba5feac + 9d6c7103)
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 5
-  completed_plans: 2
+  completed_plans: 3
   percent: 96
 ---
 
@@ -90,6 +90,7 @@ Progress: [██████████] 96% (22/23 plans — only 07-02 visua
 | Phase 07-visual-qa-aura-conformance P01 | 4m | 2 tasks | 2 files |
 | Phase 06-opgeslagen-cockpit-lifecycle-sidebar P01 | 4 | 2 tasks | 3 files |
 | Phase 06-opgeslagen-cockpit-lifecycle-sidebar P06-03 | 35m | 3 tasks | 5 files |
+| Phase 06-opgeslagen-cockpit-lifecycle-sidebar P02 | 2min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -218,6 +219,8 @@ Progress: [██████████] 96% (22/23 plans — only 07-02 visua
 - [Phase 06-opgeslagen-cockpit-lifecycle-sidebar]: PipelineStagePill extended with discriminated-union API (parcelId+currentStage=dropdown vs stage+onClick=display) to preserve backward compat with existing callers
 - [Phase 06-opgeslagen-cockpit-lifecycle-sidebar]: Score modals lifted to OpgeslagenPage level (single PotentieModal+RisicoModal) not per-card to avoid N portal elements
 - [Phase 06-opgeslagen-cockpit-lifecycle-sidebar]: GemeenteGroupAccordion extraction deferred — opgeslagen.tsx at 318 lines within <350 plan limit; follow-up todo created
+- [Phase 06-opgeslagen-cockpit-lifecycle-sidebar]: 06-02: activePhaseKey='1-onderzoek' hardcoded for v1 in layout swap — Plan 04 derives from route params when nested perceel routes land
+- [Phase 06-opgeslagen-cockpit-lifecycle-sidebar]: 06-02: fuzzy: true on matchRoute covers /opgeslagen list view AND all future /opgeslagen/* sub-routes — no changes needed to _authenticated.tsx in Plan 04
 
 ### Pending Todos
 
@@ -229,6 +232,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-17T21:15:40.201Z
-Stopped at: Completed 06-03-PLAN.md (SavedParcelCard + PipelineStagePill update + opgeslagen.tsx refactor; 3 commits)
+Last session: 2026-05-17T21:19:01.565Z
+Stopped at: Completed 06-02-PLAN.md (sidebar swap in _authenticated.tsx; 1 commit)
 Resume file: None
