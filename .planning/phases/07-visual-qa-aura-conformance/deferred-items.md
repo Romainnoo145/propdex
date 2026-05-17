@@ -8,7 +8,7 @@
 - **Reason deferred:** Pre-existing tech debt; this plan's scope is the gemeente-aware Link only. Plan 07-01 acceptance criterion `npm run check exits 0` is impossible without scoping a separate cleanup phase.
 - **Recommendation:** Schedule a dedicated TS-strict-cleanup phase. Most errors trace to TanStack Router required `search` typing + framer-motion `Variants` type tightening — mechanical to fix.
 
-## S05 Type-C credential trigger never enabled after S05 ship (new tech debt)
+## ~~S05 Type-C credential trigger never enabled after S05 ship~~ — RESOLVED in M049/S07.1 (commit `9c9819b5`)
 
 - **Discovered during:** Plan 07-02 Task 1 (visual smoke capture)
 - **Symptom:** `Configureer credential` buttons on all Type-C rows (`brk-eigendom`, `brk-hypotheken`, `brk-beslagen`, `nvm-transactiedata`, `vindsubsidies-database`) rendered with `[disabled]` + `reason_disabled="Beschikbaar vanaf S05"`.
@@ -17,7 +17,7 @@
 - **Fix scope:** Single-line change in `data_sources_helpers.py` (drop `reason_disabled`, flip to `enabled=True`). Trivial.
 - **Recommendation:** Open a follow-up gap-closure phase (or a `M049/S07.1` slice) to flip the gate. Suggested commit: `M049/S07: flip configure_credential gate to enabled=True (post-S05 closure)`.
 
-## S05 CredentialConfigModal source_key mismatch (new tech debt)
+## ~~S05 CredentialConfigModal source_key mismatch~~ — RESOLVED in M049/S07.1 (commit `d96802b9`)
 
 - **Discovered during:** Plan 07-02 Task 1 (after the trigger workaround above)
 - **Symptom:** Modal opens for `brk-eigendom` but toast says **"Unknown source_key 'brk-eigendom'"** and form fields fail to render.
@@ -26,9 +26,9 @@
 - **Fix scope:** Either (a) expand `CREDENTIAL_FIELDS` to key on long forms with aliases for the BRK family, or (b) add a short-key alias resolver in the router. Eng-review decision needed; (a) is closer to the M049 catalog-as-source-of-truth principle.
 - **Recommendation:** Roll the resolution into the same follow-up phase as the trigger-gate fix.
 
-## S05 visual smokes #8 / #9 / #10 — deferred until backend gaps closed
+## ~~S05 visual smokes #8 / #9 / #10~~ — CAPTURED in M049/S07.1
 
-- `s05-credential-modal-filled.png` — requires functioning form (blocked by source_key mismatch above)
-- `s05-credential-modal-rotating.png` — requires successful submit + DELETE flow (blocked)
-- `s05-credential-modal-empty-after-rotate.png` — requires successful rotate (blocked)
-- **Captured instead:** `s05-credential-modal-empty.png` — proves modal opens, Aura tokens render (glass surface, amber lock icon, Plus Jakarta Sans header), and the "Versleuteld opgeslagen (Fernet, vendor-managed)" subtitle is wired. Three-state UX flow itself is not re-tested in Phase 7.
+- `s05-credential-modal-filled.png` ✓ (FILLED state on api_key, `Geconfigureerd 2 uur geleden`, provider label resolved)
+- `s05-credential-modal-rotating.png` ✓ (DELETE in flight)
+- `s05-credential-modal-empty-after-rotate.png` ✓ (form re-rendered empty + `Credential verwijderd` toast)
+- `s05-credential-modal-empty.png` (captured in Phase 7) — modal opens, Aura tokens render, "Versleuteld opgeslagen (Fernet, vendor-managed)" subtitle wired

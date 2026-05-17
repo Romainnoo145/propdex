@@ -6,7 +6,7 @@ scores:
   requirements: 33/33
   phases: 7/8 verified (04.2 inserted phase has SUMMARY-only)
   integration: 8/9 fully wired (INT-03 banner partial)
-  flows: 4/4 e2e flows traceable; 7/10 Phase-7 visual smokes captured (3 deferred — see Phase 7 Closure)
+  flows: 4/4 e2e flows traceable; 10/10 Phase-7 visual smokes captured (S05 three-state UX closed in M049/S07.1)
 gaps:
   requirements: []
   integration: []
@@ -66,7 +66,7 @@ nyquist:
 | 04-m045-upload-flow-integratie | ✓ | passed | 5/5 | INT-01..04 wired; Phase 7 captured upload-modal + versions-modal + banner-deeplink visual smokes; INT-03 banner now gemeente-aware (M049/S07) |
 | 04.1-manual-upload-rescore | ✓ | passed | 7/7 | Re-verified after 300-line gap closure; 6/6 + 18/18 regression green |
 | **04.2-security-hardening** | **✗** | **summary-only** | — | Inserted (not in M049 REQUIREMENTS); SUMMARY reports 42/42 tests + alembic OK, no verifier sign-off |
-| 05-encrypted-credentials | ✓ | partial | 5/5 | 20/20 backend tests; MultiFernet rotation proven; Phase 7 captured modal-opens smoke. Three-state UX (filled/rotating/empty-after-rotate) deferred — surfaced two new backend gaps blocking the form render: Type-C trigger gate hardcoded `enabled=false` + CREDENTIAL_FIELDS short-key vs catalog long-key mismatch. See Phase 7 Closure. |
+| 05-encrypted-credentials | ✓ | passed | 5/5 | 20/20 backend tests; MultiFernet rotation proven; Phase 7 captured modal-opens smoke; Phase 7.1 closed three-state UX (filled/rotating/empty-after-rotate) after fixing Type-C trigger gate + source_key aliasing. See Phase 7.1 Closure. |
 | 06-actionitems-deprecation | ✓ | passed | 8/8 | E2E smoke + legacy component deleted; T4 SKIPPED (audit-only) |
 
 ## Requirements Coverage (3-source cross-reference)
@@ -170,6 +170,30 @@ Status `tech_debt`: No critical blockers. Either:
 
 **Follow-up phase recommended:** A small `M049/S07.1` (or a new gap-closure milestone slot) to (a) flip the configure_credential gate, (b) resolve the CREDENTIAL_FIELDS key mismatch, (c) capture the three remaining S05 three-state UX smokes. Out-of-scope for this phase.
 
+## Phase 7.1 Closure (M049/S07.1 — 2026-05-17)
+
+The two backend gaps surfaced in Phase 7 are resolved and the three deferred S05 visual smokes are captured.
+
+**Backend fixes:**
+- `backend/app/admin/data_sources_helpers.py` (commit `9c9819b5`) — Type-C `Action(configure_credential, enabled=False, reason_disabled="Beschikbaar vanaf S05")` flipped to `enabled=True`. Refresh action still disabled with new reason "Beschikbaar zodra credential geconfigureerd is" (M051+ wires the actual refresh).
+- `backend/app/services/credential_fields.py` (commit `d96802b9`) — added `SOURCE_KEY_TO_PROVIDER` alias map (`brk-eigendom`/`brk-hypotheken`/`brk-beslagen` → `brk`; `nvm-transactiedata` → `nvm`; `vindsubsidies-database` → `vindsubsidies`) + `provider_for()` helper. `valid_names_for()` resolves through it.
+- `backend/app/admin/integration_credentials_router.py` (same commit) — all `in CREDENTIAL_FIELDS` checks resolve through `provider_for()` first. DB rows store `source_key = provider_for(input)` so the BRK family shares one credential namespace at Haal-Centraal.
+
+**Frontend fixes (same commit `d96802b9`):**
+- `frontend/src/lib/constants/credentialFields.ts` — mirror `SOURCE_KEY_TO_PROVIDER` + `providerFor()`. Manual TS-twin pattern per M049/S05 Plan 03.
+- `frontend/src/components/settings/CredentialConfigModal.tsx` — resolve provider before API calls; display label reads provider name (e.g. "BRK (Kadaster)") while the row source_key stays in the prop.
+
+**Visual smokes captured** (commit `<screenshots commit>`):
+- `s05-credential-modal-filled.png` — `API Key: Geconfigureerd 2 uur geleden` + Roteren button + `Credential opgeslagen` toast; header reads `Credential configureren · BRK (Kadaster)` (provider label proves resolution works end-to-end).
+- `s05-credential-modal-rotating.png` — DELETE in flight; form transitions back to EMPTY state.
+- `s05-credential-modal-empty-after-rotate.png` — `Credential verwijderd` toast + EMPTY form ready for re-entry.
+
+**Regression sweep:**
+- `pytest backend/tests/integration/test_integration_credentials_router.py + test_admin_data_sources_router.py + test_admin_data_sources_rbac.py`: 30 passed in 122.72s. Existing short-key inputs unchanged because `SOURCE_KEY_TO_PROVIDER.get(short_key, short_key)` returns the short key.
+
+**S05 row in Phase Verification Matrix promoted from `partial` to `passed`** (5/5).
+
 _Audited: 2026-05-16T17:45:00Z_
 _Auditor: Claude (gsd audit-milestone)_
 _Phase 7 closure: 2026-05-17 — Claude (M049/S07)_
+_Phase 7.1 closure: 2026-05-17 — Claude (M049/S07.1)_
