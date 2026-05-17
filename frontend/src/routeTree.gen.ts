@@ -36,6 +36,8 @@ import { Route as AuthenticatedInstellingenActionItemsRouteImport } from './rout
 import { Route as AuthenticatedChecklistIdRouteImport } from './routes/_authenticated/checklist.$id'
 import { Route as AuthenticatedInstellingenDataBronnenIndexRouteImport } from './routes/_authenticated/instellingen.data-bronnen.index'
 import { Route as AuthenticatedInstellingenDataBronnenGemeenteCodeRouteImport } from './routes/_authenticated/instellingen.data-bronnen.$gemeenteCode'
+import { Route as AuthenticatedOpgeslagenPerceelParcelIdRouteImport } from './routes/_authenticated/opgeslagen.perceel.$parcelId'
+import { Route as AuthenticatedOpgeslagenPerceelParcelIdPhaseRouteImport } from './routes/_authenticated/opgeslagen.perceel.$parcelId.$phase'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -183,6 +185,18 @@ const AuthenticatedInstellingenDataBronnenGemeenteCodeRoute =
     path: '/$gemeenteCode',
     getParentRoute: () => AuthenticatedInstellingenDataBronnenRoute,
   } as any)
+const AuthenticatedOpgeslagenPerceelParcelIdRoute =
+  AuthenticatedOpgeslagenPerceelParcelIdRouteImport.update({
+    id: '/opgeslagen/perceel/$parcelId',
+    path: '/opgeslagen/perceel/$parcelId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedOpgeslagenPerceelParcelIdPhaseRoute =
+  AuthenticatedOpgeslagenPerceelParcelIdPhaseRouteImport.update({
+    id: '/$phase',
+    path: '/$phase',
+    getParentRoute: () => AuthenticatedOpgeslagenPerceelParcelIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -211,6 +225,8 @@ export interface FileRoutesByFullPath {
   '/instellingen/': typeof AuthenticatedInstellingenIndexRoute
   '/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
   '/instellingen/data-bronnen/': typeof AuthenticatedInstellingenDataBronnenIndexRoute
+  '/opgeslagen/perceel/$parcelId': typeof AuthenticatedOpgeslagenPerceelParcelIdRouteWithChildren
+  '/opgeslagen/perceel/$parcelId/$phase': typeof AuthenticatedOpgeslagenPerceelParcelIdPhaseRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -237,6 +253,8 @@ export interface FileRoutesByTo {
   '/instellingen': typeof AuthenticatedInstellingenIndexRoute
   '/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
   '/instellingen/data-bronnen': typeof AuthenticatedInstellingenDataBronnenIndexRoute
+  '/opgeslagen/perceel/$parcelId': typeof AuthenticatedOpgeslagenPerceelParcelIdRouteWithChildren
+  '/opgeslagen/perceel/$parcelId/$phase': typeof AuthenticatedOpgeslagenPerceelParcelIdPhaseRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -267,6 +285,8 @@ export interface FileRoutesById {
   '/_authenticated/instellingen/': typeof AuthenticatedInstellingenIndexRoute
   '/_authenticated/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
   '/_authenticated/instellingen/data-bronnen/': typeof AuthenticatedInstellingenDataBronnenIndexRoute
+  '/_authenticated/opgeslagen/perceel/$parcelId': typeof AuthenticatedOpgeslagenPerceelParcelIdRouteWithChildren
+  '/_authenticated/opgeslagen/perceel/$parcelId/$phase': typeof AuthenticatedOpgeslagenPerceelParcelIdPhaseRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -297,6 +317,8 @@ export interface FileRouteTypes {
     | '/instellingen/'
     | '/instellingen/data-bronnen/$gemeenteCode'
     | '/instellingen/data-bronnen/'
+    | '/opgeslagen/perceel/$parcelId'
+    | '/opgeslagen/perceel/$parcelId/$phase'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -323,6 +345,8 @@ export interface FileRouteTypes {
     | '/instellingen'
     | '/instellingen/data-bronnen/$gemeenteCode'
     | '/instellingen/data-bronnen'
+    | '/opgeslagen/perceel/$parcelId'
+    | '/opgeslagen/perceel/$parcelId/$phase'
   id:
     | '__root__'
     | '/'
@@ -352,6 +376,8 @@ export interface FileRouteTypes {
     | '/_authenticated/instellingen/'
     | '/_authenticated/instellingen/data-bronnen/$gemeenteCode'
     | '/_authenticated/instellingen/data-bronnen/'
+    | '/_authenticated/opgeslagen/perceel/$parcelId'
+    | '/_authenticated/opgeslagen/perceel/$parcelId/$phase'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -552,8 +578,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRouteImport
       parentRoute: typeof AuthenticatedInstellingenDataBronnenRoute
     }
+    '/_authenticated/opgeslagen/perceel/$parcelId': {
+      id: '/_authenticated/opgeslagen/perceel/$parcelId'
+      path: '/opgeslagen/perceel/$parcelId'
+      fullPath: '/opgeslagen/perceel/$parcelId'
+      preLoaderRoute: typeof AuthenticatedOpgeslagenPerceelParcelIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/opgeslagen/perceel/$parcelId/$phase': {
+      id: '/_authenticated/opgeslagen/perceel/$parcelId/$phase'
+      path: '/$phase'
+      fullPath: '/opgeslagen/perceel/$parcelId/$phase'
+      preLoaderRoute: typeof AuthenticatedOpgeslagenPerceelParcelIdPhaseRouteImport
+      parentRoute: typeof AuthenticatedOpgeslagenPerceelParcelIdRoute
+    }
   }
 }
+
+interface AuthenticatedOpgeslagenPerceelParcelIdRouteChildren {
+  AuthenticatedOpgeslagenPerceelParcelIdPhaseRoute: typeof AuthenticatedOpgeslagenPerceelParcelIdPhaseRoute
+}
+
+const AuthenticatedOpgeslagenPerceelParcelIdRouteChildren: AuthenticatedOpgeslagenPerceelParcelIdRouteChildren =
+  {
+    AuthenticatedOpgeslagenPerceelParcelIdPhaseRoute:
+      AuthenticatedOpgeslagenPerceelParcelIdPhaseRoute,
+  }
+
+const AuthenticatedOpgeslagenPerceelParcelIdRouteWithChildren =
+  AuthenticatedOpgeslagenPerceelParcelIdRoute._addFileChildren(
+    AuthenticatedOpgeslagenPerceelParcelIdRouteChildren,
+  )
 
 interface AuthenticatedInstellingenDataBronnenRouteChildren {
   AuthenticatedInstellingenDataBronnenGemeenteCodeRoute: typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
@@ -616,6 +671,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedVerkennerRoute: typeof AuthenticatedVerkennerRoute
   AuthenticatedChecklistIdRoute: typeof AuthenticatedChecklistIdRoute
   AuthenticatedRapportIdRoute: typeof AuthenticatedRapportIdRoute
+  AuthenticatedOpgeslagenPerceelParcelIdRoute: typeof AuthenticatedOpgeslagenPerceelParcelIdRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -634,6 +690,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedVerkennerRoute: AuthenticatedVerkennerRoute,
   AuthenticatedChecklistIdRoute: AuthenticatedChecklistIdRoute,
   AuthenticatedRapportIdRoute: AuthenticatedRapportIdRoute,
+  AuthenticatedOpgeslagenPerceelParcelIdRoute:
+    AuthenticatedOpgeslagenPerceelParcelIdRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
