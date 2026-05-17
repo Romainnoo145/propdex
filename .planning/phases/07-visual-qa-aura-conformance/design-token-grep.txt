@@ -1,0 +1,27 @@
+# DESIGN.md token conformance grep — captured 2026-05-17
+
+Tokens declared in frontend/src/styles/index.css @theme:
+  --color-aura-canvas:   #F2F6F3
+  --color-aura-amber:    #F9A826
+  --color-aura-green:    #22C55E
+  --color-aura-red:      #EF4444
+  --color-aura-obsidian: #0E1111
+  --font-sans:           "Plus Jakarta Sans"
+
+Counts per token across components touched by M049 phases S03/S04/S05:
+File                                                                   | bg-white/ aura-amber aura-obsidian aura-green aura-red backdrop-blur
+----------------------------------------------------------------------+----------------------------------------------------------------
+components/settings/data-bronnen/StatusPill.tsx                        |   0   0   0   0   0   0
+components/settings/data-bronnen/GemeentePicker.tsx                    |   0   0   0   0   0   0
+components/settings/data-bronnen/DataSourceRow.tsx                     |   0   0   0   0   0   0
+components/settings/data-bronnen/DataSourceSection.tsx                 |   0   0   0   0   0   0
+components/settings/data-bronnen/DataSourcesEmptyState.tsx             |   1   0   0   0   0   1
+components/settings/SettingsTabNav.tsx                                 |   0   0   0   0   0   0
+components/settings/beleid/UploadDocumentModal.tsx                     |   0   0   0   0   0   1
+components/settings/beleid/VersionHistoryPanel.tsx                     |   0   0   0   0   0   1
+routes/_authenticated/instellingen.beleid-beheer.tsx                   |   0   0   0   0   0   0
+components/settings/CredentialConfigModal.tsx                          |   4   0   0   0   0   2
+
+Global Plus Jakarta Sans inheritance via Tailwind v4 @theme:
+39:  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+104:  font-family: var(--font-sans);
