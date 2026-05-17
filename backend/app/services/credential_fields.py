@@ -34,7 +34,27 @@ CREDENTIAL_FIELDS: dict[str, list[CredentialField]] = {
     ],
 }
 
+SOURCE_KEY_TO_PROVIDER: dict[str, str] = {
+    "brk-eigendom": "brk",
+    "brk-hypotheken": "brk",
+    "brk-beslagen": "brk",
+    "nvm-transactiedata": "nvm",
+    "vindsubsidies-database": "vindsubsidies",
+}
+
+
+def provider_for(source_key: str) -> str:
+    """Resolve a catalog row source_key to its credential provider key.
+
+    Type-C rows in the data-sources catalog use canonical long kebab-case keys
+    (e.g. ``brk-eigendom``) while the CREDENTIAL_FIELDS registry is keyed by
+    provider (``brk``). All BRK variants share one set of auth credentials at
+    Haal-Centraal, so they all map to the same provider entry.
+    Returns the input unchanged if no alias is registered.
+    """
+    return SOURCE_KEY_TO_PROVIDER.get(source_key, source_key)
+
 
 def valid_names_for(source_key: str) -> set[str]:
     """Return the set of credential_name values valid for ``source_key``."""
-    return {f.name for f in CREDENTIAL_FIELDS.get(source_key, [])}
+    return {f.name for f in CREDENTIAL_FIELDS.get(provider_for(source_key), [])}

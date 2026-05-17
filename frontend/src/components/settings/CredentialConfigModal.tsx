@@ -18,7 +18,10 @@ import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { KeyRound, Lock, RotateCw, X } from 'lucide-react'
 
-import { CREDENTIAL_FIELDS } from '@/lib/constants/credentialFields'
+import {
+  CREDENTIAL_FIELDS,
+  providerFor,
+} from '@/lib/constants/credentialFields'
 import {
   useCreateCredential,
   useCredentialsForSource,
@@ -44,11 +47,12 @@ const SOURCE_LABEL: Record<string, string> = {
 
 export function CredentialConfigModal({ open, onClose, sourceKey }: Props) {
   // Hooks must run before any early-return per React rules.
-  const fields: CredentialField[] = sourceKey
-    ? (CREDENTIAL_FIELDS[sourceKey] ?? [])
+  const provider = sourceKey ? providerFor(sourceKey) : null
+  const fields: CredentialField[] = provider
+    ? (CREDENTIAL_FIELDS[provider] ?? [])
     : []
   const { data: entries = [], isLoading } = useCredentialsForSource(
-    open && sourceKey ? sourceKey : undefined,
+    open && provider ? provider : undefined,
   )
   const createMut = useCreateCredential()
   const deleteMut = useDeleteCredential()
@@ -68,9 +72,9 @@ export function CredentialConfigModal({ open, onClose, sourceKey }: Props) {
 
   const handleSaveField = async (field: CredentialField) => {
     const value = formValues[field.name]?.trim()
-    if (!value) return
+    if (!value || !provider) return
     await createMut.mutateAsync({
-      source_key: sourceKey,
+      source_key: provider,
       credential_name: field.name,
       value,
     })
@@ -79,8 +83,8 @@ export function CredentialConfigModal({ open, onClose, sourceKey }: Props) {
 
   const handleRotate = async (field: CredentialField) => {
     const entry = entriesByName[field.name]
-    if (!entry) return
-    await deleteMut.mutateAsync({ id: entry.id, sourceKey })
+    if (!entry || !provider) return
+    await deleteMut.mutateAsync({ id: entry.id, sourceKey: provider })
     // After delete the GET cache refetches → entry disappears → form reappears.
   }
 
@@ -114,7 +118,8 @@ export function CredentialConfigModal({ open, onClose, sourceKey }: Props) {
           <header className="flex items-center gap-3 mb-1">
             <KeyRound size={22} className="text-[#F9A826]" strokeWidth={1.5} />
             <h2 className="text-xl font-semibold text-[#0E1111]">
-              Credential configureren · {SOURCE_LABEL[sourceKey] ?? sourceKey}
+              Credential configureren ·{' '}
+              {SOURCE_LABEL[provider ?? sourceKey] ?? sourceKey}
             </h2>
           </header>
           <p className="text-sm text-slate-600 mb-6 flex items-center gap-1.5">

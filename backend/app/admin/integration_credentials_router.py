@@ -26,7 +26,7 @@ from app.models.audit_log import AuditLog
 from app.models.integration_credential import IntegrationCredential
 from app.models.user import User
 from app.services.credential_crypto import encrypt
-from app.services.credential_fields import CREDENTIAL_FIELDS, valid_names_for
+from app.services.credential_fields import CREDENTIAL_FIELDS, provider_for, valid_names_for
 
 router = APIRouter(
     prefix="/api/admin/integration-credentials",
@@ -73,8 +73,13 @@ async def list_credentials_for_source(
     _: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ) -> list[CredentialEntryRead]:
-    """List credential entries for one source_key. 404 if not in registry."""
-    if source_key not in CREDENTIAL_FIELDS:
+    """List credential entries for one source_key. 404 if not in registry.
+
+    Aliased catalog row keys (e.g. ``brk-eigendom``) resolve to their provider
+    (``brk``) so the BRK family shares one credential set.
+    """
+    provider = provider_for(source_key)
+    if provider not in CREDENTIAL_FIELDS:
         raise HTTPException(
             status_code=404,
             detail=f"Unknown source_key '{source_key}'",
@@ -82,7 +87,7 @@ async def list_credentials_for_source(
     rows = (
         await db.execute(
             select(IntegrationCredential)
-            .where(IntegrationCredential.source_key == source_key)
+            .where(IntegrationCredential.source_key == provider)
             .order_by(IntegrationCredential.credential_name)
         )
     ).scalars().all()
@@ -105,7 +110,8 @@ async def create_credential(
     - 422 if credential_name not in CREDENTIAL_FIELDS[source_key].
     - 409 on UQ violation (use DELETE-then-POST to rotate).
     """
-    if payload.source_key not in CREDENTIAL_FIELDS:
+    provider = provider_for(payload.source_key)
+    if provider not in CREDENTIAL_FIELDS:
         raise HTTPException(
             status_code=422,
             detail=f"Unknown source_key '{payload.source_key}'",
@@ -115,12 +121,12 @@ async def create_credential(
             status_code=422,
             detail=(
                 f"credential_name '{payload.credential_name}' is not in "
-                f"CREDENTIAL_FIELDS['{payload.source_key}']"
+                f"CREDENTIAL_FIELDS['{provider}']"
             ),
         )
 
     row = IntegrationCredential(
-        source_key=payload.source_key,
+        source_key=provider,
         credential_name=payload.credential_name,
         encrypted_value=encrypt(payload.value),
         created_by_user_id=current.id,

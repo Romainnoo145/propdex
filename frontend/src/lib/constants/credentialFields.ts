@@ -30,3 +30,20 @@ export const CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
 export const TYPE_C_SOURCE_KEYS = Object.keys(CREDENTIAL_FIELDS) as Array<
   keyof typeof CREDENTIAL_FIELDS
 >
+
+/**
+ * Catalog row source_keys (long kebab-case) → credential provider (short).
+ * Backend mirror: `SOURCE_KEY_TO_PROVIDER` in
+ * backend/app/services/credential_fields.py. Keep both in lockstep.
+ */
+export const SOURCE_KEY_TO_PROVIDER: Record<string, string> = {
+  'brk-eigendom': 'brk',
+  'brk-hypotheken': 'brk',
+  'brk-beslagen': 'brk',
+  'nvm-transactiedata': 'nvm',
+  'vindsubsidies-database': 'vindsubsidies',
+}
+
+export function providerFor(sourceKey: string): string {
+  return SOURCE_KEY_TO_PROVIDER[sourceKey] ?? sourceKey
+}
