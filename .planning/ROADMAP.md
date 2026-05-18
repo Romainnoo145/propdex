@@ -82,6 +82,11 @@ M050 is een product-mode-shift van **onderzoekstool → actietool**: eerste brug
 
 **Depends on:** Phase 2 (BRK persist)
 
+**Plans:** 1/3 plans executed
+- [ ] 03-01-PLAN.md — Feature flag M050_S03_FACTORS_ENABLED + scoring_pipeline.enrich_parcel_data_with_brk (D1) + _missing_brk helper + REGRESSION-CRITICAL multi-tenant test (F2) (Wave 1)
+- [ ] 03-02-PLAN.md — FACTOR_REGISTRY extension (3 new entries D2) + Bron literal +brk + _rebalance_risico_weights + 3 factor functions (D4/D5/D6) + 3 REGRESSION-CRITICAL tests (weights, signatures, narrative-honesty) (Wave 2)
+- [ ] 03-03-PLAN.md — compute_score_v3 D3 redistribution + rescore_parcel ARQ job + enqueue_rescore_parcel + brk_router D7 hook + 4 integration tests (persist→rescore E2E, sparse, concurrent dedup, FF-off) (Wave 3)
+
 ---
 
 ### Phase 4: Brief-Template Registry + Preview (S04)

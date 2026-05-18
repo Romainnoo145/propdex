@@ -17,9 +17,9 @@
 
 ### Scoring Factor Cascade
 
-- [ ] **SCOR-01**: 3 nieuwe factoren in `score_v3_factors.py` registry: `hypotheek_risico`, `eigendoms_complexiteit`, `koopwaarde_trend` met conditional weights per projecttype.
+- [x] **SCOR-01**: 3 nieuwe factoren in `score_v3_factors.py` registry: `hypotheek_risico`, `eigendoms_complexiteit`, `koopwaarde_trend` met conditional weights per projecttype.
 - [ ] **SCOR-02**: BRK-write triggert `rescore_cascade_job(parcel_id)` async; frontend React Query refetch toont nieuwe scores binnen 60s.
-- [ ] **SCOR-03**: Sparse-data fallback: parcels zonder BRK-coverage → `silent_neutral` (niet 0). Bestaande 16 score-v3 factoren ongewijzigd (REGRESSION-CRITICAL).
+- [x] **SCOR-03**: Sparse-data fallback: parcels zonder BRK-coverage → `silent_neutral` (niet 0). Bestaande 16 score-v3 factoren ongewijzigd (REGRESSION-CRITICAL).
 
 ### Brief Templates
 
@@ -66,7 +66,7 @@
 
 - [x] **TEST-01**: Backend unit tests voor BRK datamodel + retention-trigger + ARQ cleanup-job (fast-forward clock mock).
 - [x] **TEST-02**: Integration tests voor `brk_persistence_service` + credential-resolver + failure-modes.
-- [ ] **TEST-03**: Backend tests voor 3 nieuwe scoring-factoren + cascade-trigger + sparse-data fallback. REGRESSION-CRITICAL op bestaande 16 factoren + non-BRK rescore-triggers.
+- [x] **TEST-03**: Backend tests voor 3 nieuwe scoring-factoren + cascade-trigger + sparse-data fallback. REGRESSION-CRITICAL op bestaande 16 factoren + non-BRK rescore-triggers.
 - [ ] **TEST-04**: Brief-template variabele-substitutie + idempotency-key UQ + preview-render.
 - [ ] **TEST-05**: AI eval-suite: prompt-injection adversarial cases (100% safe vereist), refusal-fallback, audit-log roundtrip.
 - [ ] **TEST-06**: PostNL happy + retry + permanent-fail + webhook idempotency (duplicate event → 200, geen state-update).
@@ -111,9 +111,9 @@ Deferred to later milestones:
 | BRK-03 | Phase 1 | Complete |
 | BRK-04 | Phase 2 | Complete |
 | BRK-05 | Phase 2 | Complete |
-| SCOR-01 | Phase 3 | Pending |
+| SCOR-01 | Phase 3 | Complete |
 | SCOR-02 | Phase 3 | Pending |
-| SCOR-03 | Phase 3 | Pending |
+| SCOR-03 | Phase 3 | Complete |
 | BRIEF-01 | Phase 4 | Pending |
 | BRIEF-02 | Phase 4 | Pending |
 | BRIEF-03 | Phase 4 | Pending |
@@ -139,7 +139,7 @@ Deferred to later milestones:
 | WIRE-03 | Phase 7 | Pending |
 | TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 2 | Complete |
-| TEST-03 | Phase 3 | Pending |
+| TEST-03 | Phase 3 | Complete |
 | TEST-04 | Phase 4 | Pending |
 | TEST-05 | Phase 4.5 | Pending |
 | TEST-06 | Phase 5 | Pending |

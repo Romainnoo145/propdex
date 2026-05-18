@@ -5,14 +5,14 @@ milestone_name: milestone
 current_phase: 2
 current_plan: 3
 status: completed
-stopped_at: Completed M050/S02 Plan 02-03 — 33 GAPS + 3 REGRESSION-CRITICAL closed, 50 tests green
-last_updated: "2026-05-18T19:08:59.045Z"
+stopped_at: Completed M050/S03 Plan 03-01 — feature flag + BRK materialization + REGRESSION-CRITICAL F2 multi-tenant guard, 5/5 tests green
+last_updated: "2026-05-18T20:08:07.756Z"
 last_activity: 2026-05-18
 progress:
   total_phases: 9
   completed_phases: 3
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 14
+  completed_plans: 12
   percent: 22
 ---
 
@@ -101,6 +101,7 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 | Phase 02-brk-fetch-persist-endpoint P01 | 2m 37s | 3 tasks | 4 files |
 | Phase 02-brk-fetch-persist-endpoint P02 | 5m 41s | 2 tasks | 3 files |
 | Phase 02 P03 | 16m 35s | 3 tasks | 10 files |
+| Phase 03-scoring-factoren-cascade P01 | 6m | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -258,6 +259,10 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 - [Phase 02]: respx → monkeypatch(_call_kadaster) substitute: respx not installed; counter-dict pattern preserves request-level mocking semantics + avoids mTLS SSL test-env setup
 - [Phase 02]: D14 iron rule pinned in TWO files (standalone signature_drift + Phase 105 extension) — eng-plan mandate honored; either file failing surfaces the drift
 - [Phase 02]: Multi-tenant CRITICAL test_org_a_cannot_read_org_b_records green at service-layer (get_latest_for_parcel returns [] for cross-org); cross-org parcel-existence pre-check at endpoint layer remains a future hardening item (CrossOrgParcelAccess class in place but not raised)
+- [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-01: M050_S03_FACTORS_ENABLED default False co-located with M050_BRK_PERSIST_ENABLED — both M050 flags side-by-side in config.py
+- [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-01: BRKRecordDict TypedDict co-located in scoring_pipeline.py (NOT app/schemas/) — pure-function scoring layer stays Pydantic-free; Plan 03-02 imports the TypedDict directly
+- [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-01: enrich_parcel_data_with_brk FF-off path does NOT insert 'brk_records' key — distinct from FF-on + zero rows (which inserts []). Factor functions short-circuit on key absence via parcel_data.get().
+- [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-01: REGRESSION-CRITICAL F2 drift-detection executed end-to-end — removed organization_id filter → regression test failed with 'AVG breach: org_a saw 2 rows' → restored → 5/5 green. Iron-rule pattern verified.
 
 ### Pending Todos
 
@@ -269,6 +274,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-18T18:59:21.792Z
-Stopped at: Completed M050/S02 Plan 02-03 — 33 GAPS + 3 REGRESSION-CRITICAL closed, 50 tests green
+Last session: 2026-05-18T20:08:07.754Z
+Stopped at: Completed M050/S03 Plan 03-01 — feature flag + BRK materialization + REGRESSION-CRITICAL F2 multi-tenant guard, 5/5 tests green
 Resume file: None
