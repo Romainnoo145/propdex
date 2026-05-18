@@ -644,8 +644,8 @@ function DropzoneCard({
         />
       </div>
 
-      {/* Center: ghost icon + upload CTA */}
-      <div className="flex-1 flex flex-col justify-center py-2 gap-1.5">
+      {/* Center: ghost icon + upload CTA — centered (empty-state UX standard) */}
+      <div className="flex-1 flex flex-col items-center justify-center py-2 gap-1.5">
         {isUploading ? (
           <>
             <Loader2 className="size-10 text-amber-400 animate-spin" strokeWidth={1.5} />
