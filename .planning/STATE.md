@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: M050
-milestone_name: BRK Actiefase-Wedge
-status: in_progress
-stopped_at: M050/S06 Opgeslagen-Cockpit + LifecycleSideRailNav shipped. Next: M050/S01 BRK Datamodel + Retention.
-last_updated: "2026-05-18T17:00:00.000Z"
-last_activity: 2026-05-18 — M050 milestone registered in GSD-state. Eng-plan locked for S01.
+milestone: v1.0
+milestone_name: milestone
+status: planning
+stopped_at: "Completed 01-01-PLAN.md (M050/S01 BRK datamodel: migration + model + register) — next: 01-02 BRK persistence service"
+last_updated: "2026-05-18T14:08:04.786Z"
+last_activity: 2026-05-18 — M050 GSD state-sync; S01 eng-review locked (8 decisions D1-D8 captured)
 progress:
   total_phases: 9
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 8
+  completed_plans: 6
   percent: 11
 ---
 
@@ -93,6 +93,7 @@ Progress: [█░░░░░░░░░] 11% (1/9 slices — S06 done)
 | Phase 06-opgeslagen-cockpit-lifecycle-sidebar P02 | 2min | 1 tasks | 1 files |
 | Phase 06-opgeslagen-cockpit-lifecycle-sidebar P04 | 7min | 3 tasks | 4 files |
 | Phase 06-opgeslagen-cockpit-lifecycle-sidebar P05 | ~2h | 3 tasks | 6 files |
+| Phase 01-brk-datamodel-retention P01 | 3m 30s | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -229,6 +230,9 @@ Progress: [█░░░░░░░░░] 11% (1/9 slices — S06 done)
 - [Phase 06-opgeslagen-cockpit-lifecycle-sidebar / 06-05]: LifecycleSideRailNav scope corrected to matchRoute('/opgeslagen/perceel/$parcelId') — fuzzy '/opgeslagen' was too broad; list view stays on standard SideRailNav
 - [Phase 06-opgeslagen-cockpit-lifecycle-sidebar / 06-05]: ReducedMotionDegrades story uses CSS decorator (animation-duration: 0.01ms override) not Storybook viewport — OS media query cannot be forced from Storybook
 - [Phase 06-opgeslagen-cockpit-lifecycle-sidebar / 06-05]: M048 UX nits (pin jump, ghost-arrow pagination) logged as separate todo — NOT S06 regressions; scope boundary maintained
+- [Phase 01-brk-datamodel-retention]: M050/S01 P01: ix_brk_ownership_records_organization_id explicitly declared in migration (parity with TenantMixin index=True) — Alembic schema matches create_all output, no drift between dev DB and test-fixture DB
+- [Phase 01-brk-datamodel-retention]: M050/S01 P01: raw_brk_response typed as dict[str, object] | None (not bare dict) — new-code baseline stricter than existing 25 pre-existing mypy [type-arg] errors in models/
+- [Phase 01-brk-datamodel-retention]: M050/S01 P01: Alembic revision = readable slug '20260518_m050_s01' (Alembic accepts arbitrary unique strings) — first migration under new date-based naming convention
 
 ### Pending Todos
 
@@ -240,6 +244,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-18T00:00:00.000Z
-Stopped at: Completed 06-05-PLAN.md (regression + Aura audit gate; smoke PASS; M050/S06 all 5 plans DONE)
+Last session: 2026-05-18T14:08:04.784Z
+Stopped at: Completed 01-01-PLAN.md (M050/S01 BRK datamodel: migration + model + register) — next: 01-02 BRK persistence service
 Resume file: None
