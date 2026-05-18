@@ -5,14 +5,14 @@ milestone_name: milestone
 current_phase: 2
 current_plan: 3
 status: completed
-stopped_at: Completed M050/S03 Plan 03-02 — 3 BRK factors + FACTOR_REGISTRY rebalance + 3 REGRESSION-CRITICAL guards (33/33 + 5/5 green)
-last_updated: "2026-05-18T20:19:07.029Z"
+stopped_at: Completed M050/S03 Plan 03-03 — D3 + D7 + rescore_parcel + 8 integration tests (63/63 green incl. 17 BRK + 29 regression + 9 unit redistribution)
+last_updated: "2026-05-18T20:45:09.691Z"
 last_activity: 2026-05-18
 progress:
   total_phases: 9
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 14
-  completed_plans: 13
+  completed_plans: 14
   percent: 22
 ---
 
@@ -103,6 +103,7 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 | Phase 02 P03 | 16m 35s | 3 tasks | 10 files |
 | Phase 03-scoring-factoren-cascade P01 | 6m | 3 tasks | 5 files |
 | Phase 03-scoring-factoren-cascade P02 | 7m | 3 tasks | 6 files |
+| Phase 03-scoring-factoren-cascade P03-03 | 22m | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -267,6 +268,9 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 - [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-02: 13 existing risico factors integer-rebalanced via _rebalance_risico_weights(target_sum=80) — largest-remainder method, alphabetical tie-break. 7 keys received +1 bonus (shortfall=7). Result pinned in REGRESSION-CRITICAL test #2.
 - [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-02: D6 narrative-honesty enforced by banned-substring check (case-insensitive) on toelichting_kort + toelichting_lang across all 4 age buckets + missing path. Function NAME score_koopwaarde_trend allowed; narrative TEXT uses 'koopsom-vermelding' / 'actualiteits-proxy' / 'waarde-ontwikkeling' alternatives.
 - [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-02: DEFAULT_WEIGHTS['risico_weights'] dict updated in lockstep with FACTOR_REGISTRY (sum=100 invariant holds at both layers). Single-source-of-truth refactor deferred — would touch rescore-job + presets, out of plan scope.
+- [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-03: D3 GUARD on default_weight equality prevents x1.25 over-inflation when _apply_missing_data_strategy already zeroed BRK weights (>20% missing). D3 only fires when missing-strategy did NOT touch the BRK factor.
+- [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-03: rescore_parcel JOIN ParcelCache.parcel_id (IMKAD str) -> ScanResult (UUID FK) — matches M047/S05 _process_parcel JOIN pattern. enqueue_rescore_parcel uses deterministic _job_id='rescore:{org}:{parcel}' for F7 ARQ-native dedup.
+- [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-03: NEW app/core/arq.py::get_arq_pool FastAPI dependency centralises app.state.arq_pool access. brk_router D7 hook wraps enqueue_rescore_parcel in try/except (best-effort — NEVER raises out of 200 path). All 6 S02 exception mappings preserved verbatim.
 
 ### Pending Todos
 
@@ -278,6 +282,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-18T20:18:54.945Z
-Stopped at: Completed M050/S03 Plan 03-02 — 3 BRK factors + FACTOR_REGISTRY rebalance + 3 REGRESSION-CRITICAL guards (33/33 + 5/5 green)
+Last session: 2026-05-18T20:45:09.688Z
+Stopped at: Completed M050/S03 Plan 03-03 — D3 + D7 + rescore_parcel + 8 integration tests (63/63 green incl. 17 BRK + 29 regression + 9 unit redistribution)
 Resume file: None

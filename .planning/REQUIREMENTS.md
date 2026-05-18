@@ -18,7 +18,7 @@
 ### Scoring Factor Cascade
 
 - [x] **SCOR-01**: 3 nieuwe factoren in `score_v3_factors.py` registry: `hypotheek_risico`, `eigendoms_complexiteit`, `koopwaarde_trend` met conditional weights per projecttype.
-- [ ] **SCOR-02**: BRK-write triggert `rescore_cascade_job(parcel_id)` async; frontend React Query refetch toont nieuwe scores binnen 60s.
+- [x] **SCOR-02**: BRK-write triggert `rescore_cascade_job(parcel_id)` async; frontend React Query refetch toont nieuwe scores binnen 60s.
 - [x] **SCOR-03**: Sparse-data fallback: parcels zonder BRK-coverage → `silent_neutral` (niet 0). Bestaande 16 score-v3 factoren ongewijzigd (REGRESSION-CRITICAL).
 
 ### Brief Templates
@@ -112,7 +112,7 @@ Deferred to later milestones:
 | BRK-04 | Phase 2 | Complete |
 | BRK-05 | Phase 2 | Complete |
 | SCOR-01 | Phase 3 | Complete |
-| SCOR-02 | Phase 3 | Pending |
+| SCOR-02 | Phase 3 | Complete |
 | SCOR-03 | Phase 3 | Complete |
 | BRIEF-01 | Phase 4 | Pending |
 | BRIEF-02 | Phase 4 | Pending |
