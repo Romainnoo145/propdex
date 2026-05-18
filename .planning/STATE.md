@@ -2,16 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
+current_phase: 1
+current_plan: 3
+status: verifying
 stopped_at: "Completed 01-03-PLAN.md (M050/S01 BRK test coverage — 44 tests, 24 GAPS + 2 regressions closed); S01 wave 3 (testing) complete; next: M050/S02 BRK Bevragen client + persist write-path"
-last_updated: "2026-05-18T14:41:24.166Z"
-last_activity: 2026-05-18 — M050 GSD state-sync; S01 eng-review locked (8 decisions D1-D8 captured)
+last_updated: "2026-05-18T15:04:11.442Z"
+last_activity: 2026-05-18
 progress:
   total_phases: 9
   completed_phases: 2
   total_plans: 8
   completed_plans: 8
-  percent: 11
+  percent: 22
 ---
 
 # Propdex — GSD State
@@ -25,12 +27,12 @@ See: .planning/PROJECT.md (updated 2026-05-18 — Tranche 2 strategy pivot locke
 
 ## Current Position
 
-Phase: 1 (M050/S01 BRK Datamodel + Retention) — eng-plan LOCKED 2026-05-18, ready for /gsd:plan-phase
-Plan: —
-Status: M050 milestone state-synced 2026-05-18. S06 (cockpit + lifecycle sidebar) shipped early as foundation. S01 (BRK datamodel) next — eng-review draft in .planning/milestones/M050-S01-ENG-PLAN.md.
-Last activity: 2026-05-18 — M050 GSD state-sync; S01 eng-review locked (8 decisions D1-D8 captured)
+Phase: 1 of 9 (M050/S01 BRK Datamodel + Retention) — complete 2026-05-18
+Plan: 3 of 3 in current phase
+Status: Phase 01 verified (9/9 must-haves passed). Next: M050/S02 BRK Client Persist-Mode + M049 credential-resolver — needs /plan-eng-review then /gsd:plan-phase.
+Last activity: 2026-05-18
 
-Progress: [█░░░░░░░░░] 11% (1/9 slices — S06 done)
+Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 
 ## Performance Metrics
 
