@@ -34,7 +34,7 @@ function AuthenticatedLayout() {
   const [leftPanelOpen, setLeftPanelOpen] = useState(false)
   const matchRoute = useMatchRoute()
   const isMapVisible = !!matchRoute({ to: '/map', fuzzy: true })
-  const isOpgeslagenRoute = !!matchRoute({ to: '/opgeslagen', fuzzy: true })
+  const isOpgeslagenRoute = !!matchRoute({ to: '/opgeslagen/perceel/$parcelId', fuzzy: true })
   const phaseMatch = matchRoute({ to: '/opgeslagen/perceel/$parcelId/$phase' }) as { phase?: string } | false
   const activeLifecyclePhase: LifecyclePhaseKey =
     phaseMatch && phaseMatch.phase && LIFECYCLE_PHASES.some((p) => p.key === phaseMatch.phase)
