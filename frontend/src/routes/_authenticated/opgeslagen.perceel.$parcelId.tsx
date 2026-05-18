@@ -1,6 +1,5 @@
-import { createFileRoute, useNavigate, useParams, Link } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
 import { useMemo } from 'react'
-import { ArrowLeft } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { useParcelFavorites } from '@/hooks/useFavorites'
 import { FavoriteParcelWorkspaceView } from '@/components/projects/FavoriteParcelWorkspaceView'
@@ -43,43 +42,9 @@ function OpgeslagenPerceelPage() {
     )
   }
 
-  return (
-    <ResultsShell fullWidth>
-      {/* AANPAK header — single focus per scherm rule (Minimal Calm Intelligence) */}
-      <div className="mb-4 px-6 pt-6">
-        <Link
-          to="/opgeslagen"
-          search={{ stage: undefined }}
-          className="inline-flex items-center gap-2 text-[12px] text-slate-500 hover:text-aura-ink mb-3 transition-colors"
-        >
-          <ArrowLeft size={14} strokeWidth={1.5} /> Opgeslagen
-        </Link>
-        <h1 className="text-[24px] font-semibold text-aura-ink">
-          {parcel.address ?? 'Perceel'}
-        </h1>
-        <p className="text-[13px] text-slate-500 mt-1">
-          AANPAK · 1. Onderzoek — scan-data, scoring, en de eerste actie-stappen.
-        </p>
-      </div>
-
-      {/* M050 slot placeholders (functionaliteit komt uit S04+/S01-S02) */}
-      <div className="mx-6 mb-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="bg-white/60 backdrop-blur-[24px] border border-white/40 rounded-[20px] p-4 flex items-center gap-3">
-          <div className="text-[14px] font-medium text-aura-ink">Brief sturen</div>
-          <div className="ml-auto text-[11px] text-slate-400 uppercase tracking-wide">
-            Komt later (M050/S04)
-          </div>
-        </div>
-        <div className="bg-white/60 backdrop-blur-[24px] border border-white/40 rounded-[20px] p-4 flex items-center gap-3">
-          <div className="text-[14px] font-medium text-aura-ink">BRK Eigendom (persistent)</div>
-          <div className="ml-auto text-[11px] text-slate-400 uppercase tracking-wide">
-            Komt later (M050/S01-S02)
-          </div>
-        </div>
-      </div>
-
-      {/* PORTFOLIO WORKSPACE — existing 1922-line component mounted as-is */}
-      <FavoriteParcelWorkspaceView favorite={parcel} onBack={handleClose} onOpenMap={handleOpenMap} />
-    </ResultsShell>
-  )
+  // FavoriteParcelWorkspaceView is a self-contained dossier (1922 lines) with its
+  // own header (parcel number + stage + scores + action buttons) and width-management.
+  // Render it bare — no wrapping ResultsShell, no extra headers, no slot placeholders.
+  // The lifecycle sidebar handles workspace entry/exit; the workspace handles its content.
+  return <FavoriteParcelWorkspaceView favorite={parcel} onBack={handleClose} onOpenMap={handleOpenMap} />
 }
