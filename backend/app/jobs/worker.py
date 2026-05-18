@@ -23,7 +23,7 @@ from app.jobs.jurisprudence_analysis import (
     tegenstander_backfill_job,
 )
 from app.jobs.pdf_parsing import pdf_parsing_job
-from app.jobs.rescore_cascade_job import rescore_parcels_for_document
+from app.jobs.rescore_cascade_job import rescore_parcel, rescore_parcels_for_document
 from app.jobs.rescore_weights import rescore_weights_job
 from app.jobs.ruling_ingestion import ruling_ingestion_job
 
@@ -65,6 +65,7 @@ class WorkerSettings:
         tegenstander_backfill_job,
         rescore_weights_job,
         rescore_parcels_for_document,
+        rescore_parcel,  # M050/S03 — per-parcel rescore after BRK persist
         weekly_policy_auto_ingest_job,
         brk_retention_cleanup_job,  # M050/S01 — daily 03:00 UTC retention
     ]

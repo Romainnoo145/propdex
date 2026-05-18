@@ -112,6 +112,24 @@ def _flush_credential_cache():
     credential_resolver._clear_cache_for_tests()
 
 
+@pytest.fixture(autouse=True)
+def _set_arq_pool_mock():
+    """M050/S03 D7 hook depends on ``app.state.arq_pool`` — set a mock so the
+    pre-existing endpoint tests don't trip the new ``get_arq_pool`` dependency.
+    The endpoint wraps the enqueue in try/except, so a no-op mock is enough.
+    """
+    from unittest.mock import AsyncMock
+
+    from app.main import app
+
+    previous = getattr(app.state, "arq_pool", None)
+    mock_pool = AsyncMock()
+    mock_pool.enqueue_job = AsyncMock(return_value=None)
+    app.state.arq_pool = mock_pool
+    yield
+    app.state.arq_pool = previous
+
+
 async def _seed_brk_credential(test_db) -> None:
     test_db.add(
         IntegrationCredential(

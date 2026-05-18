@@ -21,12 +21,15 @@ from __future__ import annotations
 
 import logging
 
+from arq.connections import ArqRedis
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
+from app.core.arq import get_arq_pool
 from app.core.database import get_db
 from app.government_apis.base import GovernmentAPIError
+from app.jobs.rescore_cascade_job import enqueue_rescore_parcel
 from app.models.user import User
 from app.schemas.brk_ownership_record import BRKOwnershipRecordRead
 from app.services.brk_fetch_service import (
@@ -63,10 +66,11 @@ async def persist_brk_for_parcel(
     parcel_id: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    arq_pool: ArqRedis = Depends(get_arq_pool),
 ) -> list[BRKOwnershipRecordRead]:
-    """D9 return shape; D12 typed-exception → HTTP status mapping."""
+    """D9 return shape; D12 typed-exception → HTTP status mapping; M050/S03 D7 hook."""
     try:
-        return await fetch_and_persist(
+        records = await fetch_and_persist(
             db=db,
             organization_id=current_user.organization_id,
             parcel_id=parcel_id,
@@ -94,3 +98,22 @@ async def persist_brk_for_parcel(
         raise HTTPException(
             status_code=502, detail="upstream BRK error"
         ) from exc
+
+    # M050/S03 D7 — enqueue rescore AFTER successful persist commit.
+    # Best-effort: NEVER blocks the 200 response. Idempotent via ARQ _job_id.
+    try:
+        await enqueue_rescore_parcel(
+            arq_pool=arq_pool,
+            organization_id=current_user.organization_id,
+            parcel_id=parcel_id,
+        )
+    except Exception as exc:
+        logger.warning(
+            "M050/S03 D7 enqueue_rescore_parcel failed (non-blocking) "
+            "parcel=%s org=%s err=%s",
+            parcel_id,
+            current_user.organization_id,
+            exc,
+        )
+
+    return records

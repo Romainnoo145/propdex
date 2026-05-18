@@ -246,3 +246,150 @@ async def rescore_parcels_for_document(ctx: dict[str, Any], *, document_id: str)
         "errors": error_count,
         "duration_ms": duration_ms,
     }
+
+
+# ---------------------------------------------------------------------------
+# M050/S03 — per-parcel rescore job (D7 hook target)
+# ---------------------------------------------------------------------------
+
+
+async def rescore_parcel(
+    ctx: dict[str, Any],
+    *,
+    organization_id: str,
+    parcel_id: str,
+) -> dict[str, Any]:
+    """ARQ job — recompute Score v3 for one ``(org, parcel)`` pair.
+
+    Triggered after BRK persist (D7) via ``enqueue_rescore_parcel``. Idempotent
+    via ARQ ``_job_id='rescore:{org}:{parcel}'`` — concurrent enqueues collapse.
+
+    Pipeline (steps mirror M050/S03 ENG-PLAN D1+D8+D9):
+
+        1. Load latest ScanResult for the parcel (JOIN ParcelCache on the
+           IMKAD-string identifier since ``ScanResult.parcel_id`` is the
+           ``parcel_cache.id`` UUID, NOT the IMKAD string).
+        2. Call ``enrich_parcel_data_with_brk(flags, org_uuid, db)`` to
+           materialize ``flags['brk_records']`` (Plan 03-01). FF-off makes
+           this a no-op.
+        3. Call ``compute_score_v3(flags)`` — D3 redistribution runs internally.
+        4. Write the projected ``score_breakdown`` back into ``scan_result.flags``
+           and bump ``flags['m050_s03_factors_at'] = datetime.utcnow().isoformat()``
+           so the frontend (M050/S06) can detect freshness.
+        5. Commit + return a summary dict for the ARQ result-store.
+
+    Args:
+        ctx: ARQ context dict (unused — required by the ARQ job signature).
+        organization_id: caller org UUID stringified (ARQ JSON-serialises args).
+        parcel_id: IMKAD parcel identifier (e.g. ``NL.IMKAD.xxx``).
+
+    Returns:
+        Dict with ``parcel_id``, ``updated``, ``breakdown_keys``,
+        ``m050_s03_factors_at``, ``duration_ms`` — surfaced in the ARQ
+        result-store for observability.
+    """
+    # Local imports to avoid circular-import surprises during worker bootstrap
+    from app.models.parcel_cache import ParcelCache
+    from app.models.scan_result import ScanResult
+    from app.services.score_v3 import compute_score_v3
+    from app.services.scoring_pipeline import enrich_parcel_data_with_brk
+
+    org_uuid = uuid.UUID(organization_id)
+    engine = create_async_engine(
+        settings.DATABASE_URL,
+        pool_size=5,
+        max_overflow=10,
+        echo=False,
+    )
+    session_factory = async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autocommit=False,
+        autoflush=False,
+    )
+
+    started_at = time.time()
+    try:
+        async with session_factory() as db:
+            # ScanResult.parcel_id is parcel_cache.id (UUID), so we resolve via
+            # ParcelCache.parcel_id (the IMKAD string).
+            stmt = (
+                select(ScanResult)
+                .join(ParcelCache, ParcelCache.id == ScanResult.parcel_id)
+                .where(ParcelCache.parcel_id == parcel_id)
+                .order_by(ScanResult.created_at.desc())
+                .limit(1)
+            )
+            result = await db.execute(stmt)
+            scan = result.scalar_one_or_none()
+            if scan is None:
+                logger.warning(
+                    "rescore_parcel: no scan_result for parcel=%s org=%s",
+                    parcel_id,
+                    organization_id,
+                )
+                return {
+                    "parcel_id": parcel_id,
+                    "updated": False,
+                    "reason": "no_scan_result",
+                }
+
+            flags = dict(scan.flags or {})
+            flags["parcel_id"] = parcel_id
+            flags = await enrich_parcel_data_with_brk(flags, org_uuid, db)
+            score_result = compute_score_v3(flags)
+            flags["score_breakdown"] = {
+                k: {
+                    "genormaliseerde_score": v.genormaliseerde_score,
+                    "gewicht": v.gewicht,
+                    "bijdrage": v.bijdrage,
+                    "categorie": v.categorie,
+                    "toelichting_kort": v.toelichting_kort,
+                    "missing": v.missing,
+                }
+                for k, v in score_result.score_breakdown.items()
+            }
+            flags["m050_s03_factors_at"] = datetime.utcnow().isoformat()
+            scan.flags = flags
+            await db.commit()
+    finally:
+        await engine.dispose()
+
+    return {
+        "parcel_id": parcel_id,
+        "updated": True,
+        "breakdown_keys": list(score_result.score_breakdown.keys()),
+        "m050_s03_factors_at": flags["m050_s03_factors_at"],
+        "duration_ms": int((time.time() - started_at) * 1000),
+    }
+
+
+async def enqueue_rescore_parcel(
+    arq_pool: Any,
+    organization_id: uuid.UUID,
+    parcel_id: str,
+) -> str | None:
+    """Enqueue ``rescore_parcel`` with deterministic ``_job_id`` for F7 dedup.
+
+    ``_job_id='rescore:{org}:{parcel}'`` — concurrent enqueues for the same
+    ``(org, parcel)`` collapse to ONE execution via ARQ's job_id-uniqueness
+    guarantee (the second enqueue returns ``None`` while the first job is
+    queued or running).
+
+    Args:
+        arq_pool: ``arq.connections.ArqRedis`` pool.
+        organization_id: caller org UUID.
+        parcel_id: IMKAD parcel identifier.
+
+    Returns:
+        ``job_id`` string on successful enqueue; ``None`` on dedup-collapse.
+    """
+    job_id = f"rescore:{organization_id}:{parcel_id}"
+    job = await arq_pool.enqueue_job(
+        "rescore_parcel",
+        organization_id=str(organization_id),
+        parcel_id=parcel_id,
+        _job_id=job_id,
+    )
+    return job_id if job is not None else None
