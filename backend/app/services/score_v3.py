@@ -479,10 +479,13 @@ def compute_score_v3(
         score_constructieve_staat,
         score_criminaliteit,
         score_demografie,
+        score_eigendoms_complexiteit,  # M050/S03
         score_funda_frictie,
         score_funderingsrisico,
         score_geluid,
+        score_hypotheek_risico,  # M050/S03
         score_juridisch_klimaat,
+        score_koopwaarde_trend,  # M050/S03
         score_leegstand,
         score_luchtkwaliteit,
         score_max_hoogte_bereikt,
@@ -521,6 +524,10 @@ def compute_score_v3(
         "overstromingsrisico": score_overstromingsrisico(parcel_data),
         "geluid": score_geluid(parcel_data),
         "luchtkwaliteit": score_luchtkwaliteit(parcel_data),
+        # M050/S03 — 3 new BRK risico factors (D3 sparse-redistributable)
+        "hypotheek_risico": score_hypotheek_risico(parcel_data),
+        "eigendoms_complexiteit": score_eigendoms_complexiteit(parcel_data),
+        "koopwaarde_trend": score_koopwaarde_trend(parcel_data),
     }
 
     # Apply registry weights for project_type (P1: normalized to 100 per category)
@@ -546,6 +553,53 @@ def compute_score_v3(
     # Re-sync percentage_of_category after redistribution (gewicht may have changed)
     for factor in breakdown.values():
         factor.percentage_of_category = round(factor.gewicht / 100.0, 4)
+
+    # M050/S03 D3 — sparse-data runtime redistribution for 3 new BRK risico factors.
+    # When any of {hypotheek_risico, eigendoms_complexiteit, koopwaarde_trend} is
+    # missing (brk_records=[] or factor-specific input None), exclude its
+    # default_weight from the risico-category total (100) and rescale gewicht +
+    # bijdrage of non-missing risico factors proportionally so they sum back to 100.
+    # Missing BRK factors stay in breakdown with missing=True (frontend cards can
+    # show 'BRK-data nodig'); their bijdrage stays 0 — only non-missing risico
+    # factors receive the rescale multiplier.
+    #
+    # NOTE: only fires when the existing `_apply_missing_data_strategy` did NOT
+    # already zero-out the BRK factor weights (which happens above the 20% missing
+    # threshold). When `_apply_missing_data_strategy` ran, the non-missing risico
+    # gewicht already sums to ~100 — running D3 on top would over-inflate (×1.25).
+    # Detect by checking whether the missing BRK factor still has its
+    # default_weight (i.e. `_apply_missing_data_strategy` did NOT touch it).
+    missing_brk_keys = {
+        k for k in _SPARSE_REDISTRIBUTABLE_RISICO
+        if k in breakdown
+        and breakdown[k].missing
+        and breakdown[k].gewicht == float(FACTOR_REGISTRY[k].default_weight)
+    }
+    if missing_brk_keys:
+        missing_weight = sum(
+            FACTOR_REGISTRY[k].default_weight for k in missing_brk_keys
+        )
+        active_weight = 100 - missing_weight
+        if active_weight > 0:
+            scale = 100.0 / active_weight
+            for k, factor in breakdown.items():
+                if (
+                    factor.categorie == "risico"
+                    and k not in missing_brk_keys
+                    and not factor.missing
+                ):
+                    factor.gewicht = round(factor.gewicht * scale, 4)
+                    factor.bijdrage = round(
+                        factor.genormaliseerde_score * factor.gewicht, 4
+                    )
+                    factor.percentage_of_category = round(factor.gewicht / 100.0, 4)
+            # Also zero the bijdrage of the BRK-missing factors (parity with
+            # _apply_missing_data_strategy: missing factors should have bijdrage 0).
+            for k in missing_brk_keys:
+                factor = breakdown[k]
+                factor.gewicht = 0.0
+                factor.bijdrage = 0.0
+                factor.percentage_of_category = 0.0
 
     # Cascade factor: woonvisie_match (payload pre-extracted, may be None).
     # Added after redistribution so it doesn't interfere with missing-data strategy
