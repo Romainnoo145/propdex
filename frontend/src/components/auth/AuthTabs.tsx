@@ -102,7 +102,7 @@ export function AuthTabs({
 
       {/* Demo op aanvraag — opens mail client met prefilled aanvraag */}
       <div className="text-center text-[12px] text-[#6b7680] leading-relaxed">
-        Propdex is op aanvraag voor ontwikkelaars en kwaliteitsborgers.<br />
+        Geïnteresseerd in Propdex?<br />
         <a
           href={REQUEST_DEMO_MAILTO}
           className="font-bold text-[#0E1111] underline underline-offset-[3px] decoration-[1.5px] hover:text-[#F9A826] hover:decoration-[#F9A826]"
