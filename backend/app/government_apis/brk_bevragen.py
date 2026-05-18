@@ -13,12 +13,16 @@ Rate limiting: Conservative limits (2 concurrent, 200/hour) as this is a paid AP
 import logging
 import ssl
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import httpx
 
 from app.core.config import settings
 from app.government_apis.base import GovernmentAPIError, handle_api_response
 from app.government_apis.rate_limiter import brk_limiter
+
+if TYPE_CHECKING:
+    from app.services.credential_resolver import BrkCredentials
 
 logger = logging.getLogger(__name__)
 
@@ -55,14 +59,32 @@ class BRKBevragenClient:
     """Client for Kadaster BRK Bevragen API (eigendomsdata).
 
     Provides access to property ownership and cadastral object data via mTLS:
-    - Kadastraal object: Cadastral parcel details (geometry, area, municipality)
-    - Eigendom: Ownership and rights data (eigenaren, zakelijke rechten)
+    - Kadastraal object: parcel details (geometry, area, municipality)
+    - Eigendom: ownership + rights data (eigenaren, zakelijke rechten)
 
-    CRITICAL: This client NEVER caches or stores eigendomsdata (Kadaster Tier 3 terms).
-    All data is returned directly to caller for immediate display only.
+    Channel separation (M050/S02 ENG-PLAN D11 — both consumers documented):
 
-    Authentication: PKIOverheid mTLS certificate + X-Api-Key header
+    1. Ephemeral channel — Phase 105 BRK Eigendom Modal
+       Consumer: app/services/property_aggregator.py:fetch_brk_ownership (line ~644)
+       Contract: response returned directly to caller for IMMEDIATE display only.
+       MUST NOT be persisted. BRKOwnership.never_cache=True is the defense-in-depth
+       marker. AVG Tier-3 never-store applies in full. Untouched by S02.
+
+    2. Persist channel — M050/S02 BRK Fetch + Persist Endpoint
+       Consumer: app/services/brk_fetch_service.fetch_and_persist
+       Contract: response MAY be persisted to brk_ownership_records ONLY when:
+         (a) settings.M050_BRK_PERSIST_ENABLED is True (D4 runtime gate)
+         (b) Kadaster DPA (verwerkersovereenkomst) signed
+         (c) eigenaar_type IN ('rechtspersoon', 'overheid') ONLY — DB CHECK + service
+             strip together enforce AVG defense-in-depth (D1, D2, D8).
+       Gating lives in brk_persistence_service.persist_record, NOT this client.
+
+    Authentication: PKIOverheid mTLS certificate + X-Api-Key header.
     Endpoint: https://api.brk.kadaster.nl/esd-eto/bevragen/v2
+
+    D14 IRON RULE: get_eigendom signature is REGRESSION-CRITICAL — DO NOT change.
+    Phase 105 (fetch_brk_ownership) MUST keep returning BRKOwnership shape; the
+    BRKOwnershipRecordRead shape is reserved for the persist channel only.
     """
 
     BASE_URL = "https://api.brk.kadaster.nl/esd-eto/bevragen/v2"
@@ -275,6 +297,26 @@ class BRKBevragenClient:
             logger.info(f"BRK get_beslagen: {identificatie}")
             response = await client.get(url, headers=headers)
             return handle_api_response(response, source="brk-bevragen")
+
+
+def build_brk_client(creds: "BrkCredentials") -> "BRKBevragenClient":
+    """Per-request BRK client factory (M050/S02 D6).
+
+    Today: returns a fresh BRKBevragenClient. The client still reads
+    settings.BRK_API_KEY for the X-Api-Key header. The `creds` arg is accepted now
+    to lock the callsite contract for S02; api_key becomes load-bearing inside the
+    client when settings.BRK_API_KEY is removed in a future hardening pass
+    (deferred per ENG-PLAN §NOT in scope — "storing client cert + private key in
+    integration_credentials -> deferred to InfoSec-review hardening phase").
+
+    Args:
+        creds: BrkCredentials resolved via credential_resolver.get_brk_credentials()
+
+    Returns:
+        BRKBevragenClient: mTLS cert/key still loaded from disk via env vars (D7).
+    """
+    _ = creds  # noqa: F841 — callsite shape locked for future env-key removal
+    return BRKBevragenClient()
 
 
 # Module-level singleton instance
