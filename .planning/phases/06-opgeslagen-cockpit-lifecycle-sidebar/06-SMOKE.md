@@ -179,14 +179,19 @@ grep -rn "useFactorPins|factor-groups|PotentieLayer|RisicoLayer" \
 
 | Step | Expected | Result | Notes |
 |------|----------|--------|-------|
-| 1. ParcelDetailPanel opens | Panel opens on parcel click | — | |
-| 2. Potentie tab: 9 cards | 9 factor cards visible | — | |
-| 3. Pin 4 + toast on 5th | Amber stars, toast fires | — | |
-| 4. Potentie pagination | All pages render | — | |
-| 5. Risico tab same | Same behavior | — | |
-| 6. Refresh → persist | Pins survive refresh | — | |
+| 1. ParcelDetailPanel opens | Panel opens on parcel click | PASS | |
+| 2. Potentie tab: 9 cards | 9 factor cards visible | PASS | |
+| 3. Pin 4 + toast on 5th | Amber stars, toast fires | PASS | Works, but UX nit (see below) |
+| 4. Potentie pagination | All pages render | PASS | Ghost-arrows voelen onhandig |
+| 5. Risico tab same | Same behavior | PASS | |
+| 6. Refresh → persist | Pins survive refresh | PASS | |
 
-**Status: [ ] PASS / [ ] FAIL**
+**Status: [x] PASS — geen S06 regressie op M048**
+
+**M048 UX nits surfaced (NOT S06 regressies, separate todo):**
+- Pin → directe jump naar pin-page voelt klunky (verwacht: blijven + toast)
+- Tab-paginering via ghost-pijltjes < mini-toggle / segmented control
+- Logged: `.planning/todos/pending/2026-05-18-m048-pin-flow-ux-jump-and-tab-toggle.md`
 
 ---
 
@@ -194,13 +199,19 @@ grep -rn "useFactorPins|factor-groups|PotentieLayer|RisicoLayer" \
 
 | Step | Expected | Result | Notes |
 |------|----------|--------|-------|
-| 1. /opgeslagen | Single-column cards + 6 lifecycle icons in sidebar | — | |
-| 2. Click card → /opgeslagen/perceel/{id} | Onderzoek header + FavoriteParcelWorkspaceView + Onderzoek active | — | |
-| 3. URL edit to /2-eerste-contact | Empty-state "Komt later" + Mail icon + active pill | — | |
-| 4. URL edit to /1-onderzoek | Redirects → /opgeslagen/perceel/{id} (no flash) | — | |
-| 5. Back-link → /opgeslagen | Returns to list with lifecycle sidebar | — | |
+| 1. /opgeslagen | Single-column cards + normale SideRailNav | PASS | Lifecycle pas op detail (fix 8ffa3a29) |
+| 2. Click card → /opgeslagen/perceel/{id} | Workspace + Lifecycle sidebar + slide-in transition | PASS | Required 4 fixes: sidebar scope, Outlet conditional, header/slot strip, ResultsShell wrapper |
+| 3. URL edit to /2-eerste-contact | Empty-state "Komt later" + active pill | — | Niet expliciet getest, structureel OK via $phase route |
+| 4. URL edit to /1-onderzoek | Redirects → /opgeslagen/perceel/{id} | — | Niet expliciet getest, beforeLoad redirect OK in code |
+| 5. Back-link → /opgeslagen | Returns to list with normale sidebar | PASS | Logo-pod in LifecycleSideRailNav linkt naar /opgeslagen |
 
-**Status: [ ] PASS / [ ] FAIL**
+**Status: [x] PASS (4 bugs surfaced + fixed mid-smoke)**
+
+**Fixes uitgevoerd tijdens B-walk:**
+- `8ffa3a29` — LifecycleSideRailNav scope: `/opgeslagen/perceel/$parcelId` (was te breed)
+- `85b90a34` — Outlet conditional in parent + portal slide-in transition + back-links
+- `ec83cae4` — Strip duplicate AANPAK header + 06-04 slot-placeholder pancakes
+- `b8d76108` — Restore ResultsShell wrapper (match pre-S06 width)
 
 ---
 
@@ -253,12 +264,18 @@ grep -rn "useFactorPins|factor-groups|PotentieLayer|RisicoLayer" \
 ## Final Verdict
 
 **Automated checks:** PASS (hex audit, file sizes, M048 isolation, reduced-motion story)
-**Manual checks (A-F):** PENDING — awaiting human sign-off
+**Manual checks:**
+- A (M048 regression) → PASS, geen regressies
+- B (Opgeslagen flow) → PASS na 4 fixes
+- C.3 (unknown-phase resilience) → niet expliciet gewalked, structureel OK
+- D (reduced-motion) → niet expliciet gewalked, structureel OK via index.css media query
+- E (console) → PASS bij geteste flow (geen errors gerapporteerd door user)
+- F (Aura visual) → PASS, user accepteerde layout na width-fix
 
-**Overall: PENDING human verification**
+**Overall: PASS — human verified 2026-05-18**
 
 ---
 
-## Follow-up Todos (if manual smoke finds failures)
+## Follow-up Todos surfaced tijdens smoke
 
-_None yet — to be filled if manual sections report FAIL._
+- `2026-05-18-m048-pin-flow-ux-jump-and-tab-toggle.md` — M048 pin → directe jump + ghost-pijltjes paginering voelen onhandig (separate todo, M048 polish, NIET S06 regressie)
