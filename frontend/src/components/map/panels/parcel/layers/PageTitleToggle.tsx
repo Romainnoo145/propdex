@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import { cn } from '@/lib/utils'
 
 interface PageTitleToggleProps {
@@ -23,7 +24,7 @@ export function PageTitleToggle({ pages, activeIndex, onSelect, className }: Pag
   return (
     <div
       className={cn(
-        'flex items-end gap-4 flex-wrap border-b border-slate-200 mt-2 mb-3',
+        'flex items-end gap-3 flex-wrap border-b border-slate-200 mt-2 mb-3',
         className,
       )}
     >
@@ -31,20 +32,27 @@ export function PageTitleToggle({ pages, activeIndex, onSelect, className }: Pag
         const isActive = i === activeIndex
         const title = page.title ?? `Pagina ${i + 1}`
         return (
-          <button
-            key={`${title}-${i}`}
-            type="button"
-            onClick={() => onSelect(i)}
-            aria-current={isActive ? 'page' : undefined}
-            className={cn(
-              'pb-2 -mb-px text-[10px] tracking-[0.15em] uppercase transition-all border-b-2',
-              isActive
-                ? 'text-aura-ink font-black border-aura-amber'
-                : 'text-slate-400 font-semibold border-transparent hover:text-aura-ink',
+          <Fragment key={`${title}-${i}`}>
+            {i > 0 && (
+              <span
+                aria-hidden="true"
+                className="w-px h-3 bg-slate-200 mb-2 shrink-0"
+              />
             )}
-          >
-            {title}
-          </button>
+            <button
+              type="button"
+              onClick={() => onSelect(i)}
+              aria-current={isActive ? 'page' : undefined}
+              className={cn(
+                'pb-2 -mb-px text-[10px] tracking-[0.15em] uppercase transition-all border-b-2',
+                isActive
+                  ? 'text-aura-ink font-black border-aura-amber'
+                  : 'text-slate-400 font-semibold border-transparent hover:text-aura-ink',
+              )}
+            >
+              {title}
+            </button>
+          </Fragment>
         )
       })}
     </div>
