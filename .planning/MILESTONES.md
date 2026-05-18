@@ -32,9 +32,26 @@
 
 ---
 
-## 🚧 M050 BRK Actiefase-Wedge (Kickoff 2026-05-17)
+## 🚧 M050 BRK Actiefase-Wedge (Kickoff 2026-05-17, GSD-registered 2026-05-18)
 
-**Status:** Roadmap geland. 9 phases (S01-S07 + S04.5 + S05.5) + 39 requirements gedefinieerd. Pre-planning compleet (office-hours + plan-ceo-review + plan-eng-review + design-review). Volgende stap: `/gsd:plan-phase M050/S06` (UI-veilige eerste slice — geen Kadaster DPA / PostNL wachttijden).
+**Status:** 1/9 slices shipped (S06 cockpit foundation). S01 (BRK datamodel) eng-review LOCKED 2026-05-18 — 8 decisions captured (D1-D8). Volgende stap: `/gsd:plan-phase 1` (= M050/S01).
+
+**Shipped:**
+- ✓ S06 Opgeslagen-Cockpit + LifecycleSideRailNav (2026-05-18) — 5 plans, 8 commits, smoke PASS, M048 regression-free
+
+**Active / Locked:**
+- ◆ S01 BRK Datamodel + Retention — eng-plan locked 2026-05-18 (`.planning/milestones/M050-S01-ENG-PLAN.md`). Ready for /gsd:plan-phase.
+
+**S01 locked decisions (2026-05-18):**
+- D1 Tier 3 conflict: feature-flag `M050_BRK_PERSIST_ENABLED=false` + DB CHECK `eigenaar_type IN (rechtspersoon, overheid)`
+- D2 `raw_brk_response` JSONB: strip-at-write redact natuurlijke personen
+- D3 Soft-delete: service-layer primary + cron safety-net for orphans
+- D4 Feature-flag scope: write-path only (read-path werkt, schema bestaat altijd)
+- D5 UNIQUE (org, parcel, fetched_at): historie bewust (voedt S03 koopwaarde_trend)
+- D6 Observability: structured-log + Sentry alert >1000 deletes/run
+- D7 Service-file naming: `brk_persistence_service.py` (matcht milestone-plan, geen split)
+- D8 `eigenaar_naam` nullability: TEXT NULL + service-layer reject NULL bij rechtspersoon
+- Migration naming: vanaf S01 date-based prefix (`YYYYMMDD_*`), oude prefixes blijven ongerenamed
 
 **Pivot 2026-05-17:** M050 was Vindsubsidies (per landscape-doc 20260418). Vervangen door BRK Actiefase-Wedge omdat BRK bredere wedge heeft (elke ontwikkelaar wil eigendomsinfo per perceel; Vindsubsidies raakt alleen Enterprise-tier subset met bestaand contract). Vindsubsidies schuift naar latere milestone.
 

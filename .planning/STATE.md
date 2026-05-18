@@ -1,36 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: completed
-stopped_at: Completed 06-05-PLAN.md (regression + Aura audit gate; smoke PASS; M050/S06 all 5 plans DONE)
-last_updated: "2026-05-18T13:02:30.985Z"
-last_activity: 2026-05-18 — Phase 06 Plan 05 shipped (smoke PASS, M048 regression-free confirmed)
+milestone: M050
+milestone_name: BRK Actiefase-Wedge
+status: in_progress
+stopped_at: M050/S06 Opgeslagen-Cockpit + LifecycleSideRailNav shipped. Next: M050/S01 BRK Datamodel + Retention.
+last_updated: "2026-05-18T17:00:00.000Z"
+last_activity: 2026-05-18 — M050 milestone registered in GSD-state. Eng-plan locked for S01.
 progress:
   total_phases: 9
   completed_phases: 1
   total_plans: 5
   completed_plans: 5
-  percent: 96
+  percent: 11
 ---
 
 # Propdex — GSD State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-22)
+See: .planning/PROJECT.md (updated 2026-05-18 — Tranche 2 strategy pivot locked)
 
-**Core value:** From grondpositie to first spade in one cockpit — no switching between 10 tabs
-**Current focus:** M049 Data Sources per Gemeente hub — Phases 1-4 + 04.1 shipped; next: plan Phase 5 (Encrypted Credentials) — eng-review locked 2026-05-16, then Phase 6 (ActionItems Deprecation, parallel-eligible met P5)
+**Core value:** Onderzoek → Actie funnel in één cockpit. Tranche 1 (M001-M050): van grondpositie tot bouw. Tranche 2 (M060-M110, roadmap): verhuur tot exit. Intelligence-first across full lifecycle.
+**Current focus:** M050 BRK Actiefase-Wedge — eerste paid Type-C integration (Kadaster BRK) + actiefase (brief naar eigenaar via PostNL). 9 slices, ~9-13 wk.
 
 ## Current Position
 
-Phase: 06-opgeslagen-cockpit-lifecycle-sidebar COMPLETE — all 5 plans shipped + smoke-gated
-Plan: 06-05 complete (regression + Aura audit gate; 8 commits including 4 mid-smoke bug fixes)
-Status: M050/S06 complete — lifecycle cockpit /opgeslagen/perceel/$parcelId shipped + smoke-gated. Next: M050 S01-S04 (BRK Eigendom persistent panel, Brief, Bezichtiging, Vergunning slots).
-Last activity: 2026-05-18 — Phase 06 Plan 05 shipped (smoke PASS, M048 regression-free confirmed)
+Phase: 1 (M050/S01 BRK Datamodel + Retention) — eng-plan LOCKED 2026-05-18, ready for /gsd:plan-phase
+Plan: —
+Status: M050 milestone state-synced 2026-05-18. S06 (cockpit + lifecycle sidebar) shipped early as foundation. S01 (BRK datamodel) next — eng-review draft in .planning/milestones/M050-S01-ENG-PLAN.md.
+Last activity: 2026-05-18 — M050 GSD state-sync; S01 eng-review locked (8 decisions D1-D8 captured)
 
-Progress: [██████████] 96% (22/23 plans — only 07-02 visual QA sweep remaining)
+Progress: [█░░░░░░░░░] 11% (1/9 slices — S06 done)
 
 ## Performance Metrics
 
