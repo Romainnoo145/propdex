@@ -42,9 +42,12 @@ function OpgeslagenPerceelPage() {
     )
   }
 
-  // FavoriteParcelWorkspaceView is a self-contained dossier (1922 lines) with its
-  // own header (parcel number + stage + scores + action buttons) and width-management.
-  // Render it bare — no wrapping ResultsShell, no extra headers, no slot placeholders.
-  // The lifecycle sidebar handles workspace entry/exit; the workspace handles its content.
-  return <FavoriteParcelWorkspaceView favorite={parcel} onBack={handleClose} onOpenMap={handleOpenMap} />
+  // Mirror pre-S06 workspace-mode rendering: ResultsShell (no fullWidth) gives the
+  // max-w-5xl reading container the workspace was always designed for. Without it
+  // the dossier stretches to viewport width and feels wrong.
+  return (
+    <ResultsShell>
+      <FavoriteParcelWorkspaceView favorite={parcel} onBack={handleClose} onOpenMap={handleOpenMap} />
+    </ResultsShell>
+  )
 }
