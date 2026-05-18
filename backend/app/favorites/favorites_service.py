@@ -23,6 +23,8 @@ from app.models.parcel_cache import ParcelCache
 from app.models.parcel_favorite import ParcelFavorite
 from app.models.report import SavedReport
 from app.models.scan_result import ScanResult
+from app.models.user import User
+from app.services.brk_persistence_service import soft_delete_for_org_parcel
 
 logger = logging.getLogger(__name__)
 
@@ -404,6 +406,29 @@ async def delete_favorite(
                 "Soft-deleted report %s for parcel=%s user=%s",
                 report.id, parcel_id, user_id,
             )
+
+    # M050/S01 D3 primary trigger — soft-delete BRK records for this (org, parcel).
+    # ParcelFavorite is user-scoped (no organization_id column), so org-id is
+    # resolved via the user's organization. Idempotent + no-op when no BRK rows
+    # exist (S01 launches with empty table). Wrapped in try/except so a service
+    # failure never blocks the favorite deletion — orphan-cron catches up.
+    try:
+        org_lookup = await db.execute(
+            select(User.organization_id).where(User.id == user_id)
+        )
+        organization_id = org_lookup.scalar_one_or_none()
+        if organization_id is not None:
+            await soft_delete_for_org_parcel(
+                db=db,
+                organization_id=organization_id,
+                parcel_id=fav.parcel_id,
+            )
+    except Exception:  # noqa: BLE001 — never block favorite deletion on BRK soft-delete failure
+        logger.exception(
+            "BRK soft-delete failed for parcel=%s user=%s — favorite delete continues; "
+            "orphan-cron will catch up",
+            parcel_id, user_id,
+        )
 
     await db.delete(fav)
     await db.commit()
