@@ -13,19 +13,35 @@ interface AuthTabsProps {
   onRegister: (data: RegisterData) => Promise<void>
   onLoginSuccess: () => void
   onRegisterSuccess: () => void
-  onDemoLogin: () => void | Promise<void>
-  demoLoading: boolean
-  demoError: string | null
 }
+
+const REQUEST_ACCOUNT_MAILTO = [
+  'mailto:info@klarifai.nl',
+  '?subject=', encodeURIComponent('Propdex demo-toegang aanvragen'),
+  '&body=', encodeURIComponent(
+    [
+      'Hi Romano,',
+      '',
+      'Ik wil graag een Propdex demo-account aanvragen.',
+      '',
+      'Naam:',
+      'Bedrijf:',
+      'Functie:',
+      'Telefoon:',
+      '',
+      'Korte toelichting over wat ik zoek in Propdex:',
+      '',
+      '',
+      'Met vriendelijke groet,',
+    ].join('\n'),
+  ),
+].join('')
 
 export function AuthTabs({
   onLogin,
   onRegister,
   onLoginSuccess,
   onRegisterSuccess,
-  onDemoLogin,
-  demoLoading,
-  demoError,
 }: AuthTabsProps) {
   const [activeTab, setActiveTab] = useState<TabType>('login')
 
@@ -84,23 +100,16 @@ export function AuthTabs({
       {/* Google */}
       <GoogleButton />
 
-      {/* Demo login — inline text link */}
+      {/* Request account — opens mail client with prefilled aanvraag */}
       <div className="text-center text-[12px] text-[#6b7680]">
         Nog geen account?{' '}
-        <button
-          type="button"
-          onClick={() => onDemoLogin()}
-          disabled={demoLoading}
-          className="font-bold text-[#0E1111] underline underline-offset-[3px] decoration-[1.5px] hover:text-[#F9A826] hover:decoration-[#F9A826] disabled:opacity-60 disabled:cursor-wait"
+        <a
+          href={REQUEST_ACCOUNT_MAILTO}
+          className="font-bold text-[#0E1111] underline underline-offset-[3px] decoration-[1.5px] hover:text-[#F9A826] hover:decoration-[#F9A826] no-underline-hover"
         >
-          {demoLoading ? 'Bezig met inloggen…' : 'Bekijk eerst de demo'}
-        </button>
+          Vraag toegang aan
+        </a>
       </div>
-      {demoError && (
-        <p role="alert" className="text-center text-[12px] text-red-500">
-          {demoError}
-        </p>
-      )}
     </div>
   )
 }

@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { AuthTabs } from '@/components/auth/AuthTabs'
 import { useAuth } from '@/lib/auth/useAuth'
@@ -6,9 +5,6 @@ import { useAuth } from '@/lib/auth/useAuth'
 interface AuthSearch {
   redirect?: string
 }
-
-const DEMO_EMAIL = 'demo@klarifai.nl'
-const DEMO_PASSWORD = 'Propdexdemo456!'
 
 export const Route = createFileRoute('/auth/')({
   validateSearch: (search: Record<string, unknown>): AuthSearch => ({
@@ -26,24 +22,9 @@ function AuthPage() {
   const { login, register } = useAuth()
   const search = Route.useSearch()
   const navigate = useNavigate()
-  const [demoLoading, setDemoLoading] = useState(false)
-  const [demoError, setDemoError] = useState<string | null>(null)
 
   const handleSuccess = () => {
     navigate({ to: search.redirect || '/map' })
-  }
-
-  const handleDemoLogin = async () => {
-    setDemoError(null)
-    setDemoLoading(true)
-    try {
-      await login(DEMO_EMAIL, DEMO_PASSWORD)
-      handleSuccess()
-    } catch (err) {
-      setDemoError(err instanceof Error ? err.message : 'Demo login mislukt')
-    } finally {
-      setDemoLoading(false)
-    }
   }
 
   return (
@@ -115,9 +96,6 @@ function AuthPage() {
               onRegister={register}
               onLoginSuccess={handleSuccess}
               onRegisterSuccess={handleSuccess}
-              onDemoLogin={handleDemoLogin}
-              demoLoading={demoLoading}
-              demoError={demoError}
             />
           </div>
         </div>
