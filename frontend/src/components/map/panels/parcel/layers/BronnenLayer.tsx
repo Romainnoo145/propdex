@@ -546,7 +546,7 @@ function DropzoneCard({
         </div>
 
         {/* Center: icon + count */}
-        <div className="flex-1 flex flex-col items-center justify-center py-2 gap-1">
+        <div className="flex-1 flex flex-col justify-center py-2 gap-1">
           <GhostIcon className="size-8 text-amber-600 opacity-40 group-hover:opacity-60 transition-opacity" strokeWidth={1.5} />
           <p className="text-sm font-black text-amber-900 tracking-tight leading-none">
             {card.documents.length} {card.documents.length === 1 ? 'BESTAND' : 'BESTANDEN'}
@@ -589,8 +589,8 @@ function DropzoneCard({
         </div>
 
         {/* Center: data value */}
-        <div className="flex-1 flex flex-col items-center justify-center py-2">
-          <p className="text-xl font-black tracking-tighter leading-none text-slate-900 text-center">
+        <div className="flex-1 flex flex-col justify-center py-2">
+          <p className="text-xl font-black tracking-tighter leading-none text-slate-900">
             {card.value}
           </p>
         </div>
@@ -645,7 +645,7 @@ function DropzoneCard({
       </div>
 
       {/* Center: ghost icon + upload CTA */}
-      <div className="flex-1 flex flex-col items-center justify-center py-2 gap-1.5">
+      <div className="flex-1 flex flex-col justify-center py-2 gap-1.5">
         {isUploading ? (
           <>
             <Loader2 className="size-10 text-amber-400 animate-spin" strokeWidth={1.5} />

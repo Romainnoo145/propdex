@@ -23,7 +23,7 @@ export function PageTitleToggle({ pages, activeIndex, onSelect, className }: Pag
   return (
     <div
       className={cn(
-        'flex items-end gap-4 flex-wrap border-b border-slate-200 mt-4 mb-3',
+        'flex items-end gap-4 flex-wrap border-b border-slate-200 mt-2 mb-3',
         className,
       )}
     >
@@ -39,8 +39,8 @@ export function PageTitleToggle({ pages, activeIndex, onSelect, className }: Pag
             className={cn(
               'pb-2 -mb-px text-[10px] tracking-[0.15em] uppercase transition-all border-b-2',
               isActive
-                ? 'text-aura-ink font-bold border-aura-amber'
-                : 'text-slate-400 font-medium border-transparent hover:text-aura-ink',
+                ? 'text-aura-ink font-black border-aura-amber'
+                : 'text-slate-400 font-semibold border-transparent hover:text-aura-ink',
             )}
           >
             {title}
