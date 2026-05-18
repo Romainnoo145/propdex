@@ -58,6 +58,16 @@ class ScoreV3Result:
 # Critical risk factors that get -10% penalty when missing
 _CRITICAL_RISK_FACTORS = {"funderingsrisico", "bodemverontreiniging", "asbest"}
 
+# M050/S03 D3: 3 new BRK risico-factors participate in runtime redistribution.
+# compute_score_v3 (Plan 03-03) excludes these from category-sum when missing=True
+# and rescales remaining 13 active risico-factors. NOT added to
+# _CRITICAL_RISK_FACTORS — no -10% penalty when missing.
+_SPARSE_REDISTRIBUTABLE_RISICO: frozenset[str] = frozenset({
+    "hypotheek_risico",
+    "eigendoms_complexiteit",
+    "koopwaarde_trend",
+})
+
 
 # M048/Phase 7 GROUP-01: bron-groep voor frontend UI-pagination.
 # Metadata-only — geen runtime scoring impact. Lookup via FACTOR_REGISTRY[key].bron.
@@ -68,6 +78,7 @@ Bron = Literal[
     "klimaat",
     "juridisch",
     "planologisch",
+    "brk",  # M050/S03 — BRK Eigendom-driven risico factors
 ]
 
 
@@ -81,6 +92,59 @@ class FactorRegistryEntry:
     weight_by_projecttype: dict[str, int] | None  # None = use default_weight for all
     data_source: str  # human-readable provenance string
     bron: Bron  # M048/Phase 7 GROUP-01 — UI-only bron-groep for pagination
+
+
+def _rebalance_risico_weights(
+    current_weights: dict[str, int],
+    target_sum: int = 80,
+) -> dict[str, int]:
+    """Integer rebalance via largest-remainder method (M050/S03 D2).
+
+    Used during one-time pre-S03 → post-S03 registry migration to scale 13 existing
+    risico-factor weights from sum=100 to sum=80, freeing 20 weight-units for the
+    3 new BRK risico-factors. Public for reuse by future weight calibrations
+    (M050/S03 Carry-2).
+
+    Algorithm:
+        1. raw = {k: w * target_sum / 100 for k, w in current_weights.items()}
+        2. floor_weights = {k: int(raw[k]) for k in raw}
+        3. remainders = {k: raw[k] - floor_weights[k] for k in raw}
+        4. shortfall = target_sum - sum(floor_weights.values())
+        5. Sort keys by (-remainder, key) — largest-remainder wins, ties broken
+           alphabetically for determinism.
+        6. Allocate +1 to the top `shortfall` keys.
+
+    Args:
+        current_weights: existing factor weights summing to 100.
+        target_sum: post-rebalance sum (80 for S03).
+
+    Returns:
+        new_weights dict, integer-valued, summing to target_sum.
+
+    Raises:
+        AssertionError: if input weights do not sum to 100 OR
+            output weights do not sum to target_sum (F6 invariant).
+    """
+    if not current_weights:
+        return {}
+    input_sum = sum(current_weights.values())
+    assert input_sum == 100, (
+        f"_rebalance_risico_weights input must sum to 100, got {input_sum}"
+    )
+    raw = {k: w * target_sum / 100 for k, w in current_weights.items()}
+    floor_weights = {k: int(v) for k, v in raw.items()}
+    remainders = {k: raw[k] - floor_weights[k] for k in raw}
+    shortfall = target_sum - sum(floor_weights.values())
+    # Sort by (-remainder, key) so largest remainder wins; alphabetical tie-break
+    sorted_keys = sorted(remainders.keys(), key=lambda k: (-remainders[k], k))
+    new_weights = dict(floor_weights)
+    for k in sorted_keys[:shortfall]:
+        new_weights[k] = new_weights[k] + 1
+    output_sum = sum(new_weights.values())
+    assert output_sum == target_sum, (
+        f"_rebalance_risico_weights output sum {output_sum} != {target_sum} (F6)"
+    )
+    return new_weights
 
 
 FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
@@ -165,11 +229,13 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         data_source="Gemeentelijke woonvisie (LLM-extracted)",
         bron="gemeente_beleid",
     ),
-    # --- RISICO (13 factors, sum default_weight = 100) ---
+    # --- RISICO (16 factors, sum default_weight = 100) ---
+    # M050/S03 D2: 13 existing factors rebalanced via _rebalance_risico_weights
+    # (largest-remainder, target_sum=80) freeing 20 weight-units for 3 new BRK factors.
     "funderingsrisico": FactorRegistryEntry(
         id="funderingsrisico",
         category="risico",
-        default_weight=16,
+        default_weight=13,  # was 16, rebalanced by M050/S03 D2
         weight_by_projecttype=None,
         data_source="PDOK Funderingsrisicogebieden + BAG",
         bron="fysiek",
@@ -177,7 +243,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "asbest": FactorRegistryEntry(
         id="asbest",
         category="risico",
-        default_weight=7,
+        default_weight=6,  # was 7, rebalanced by M050/S03 D2
         weight_by_projecttype=None,
         data_source="BAG",
         bron="fysiek",
@@ -185,7 +251,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "bodemverontreiniging": FactorRegistryEntry(
         id="bodemverontreiniging",
         category="risico",
-        default_weight=8,
+        default_weight=6,  # was 8, rebalanced by M050/S03 D2
         weight_by_projecttype=None,
         data_source="Bodemloket",
         bron="fysiek",
@@ -193,7 +259,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "monument": FactorRegistryEntry(
         id="monument",
         category="risico",
-        default_weight=6,
+        default_weight=5,  # was 6, rebalanced by M050/S03 D2
         weight_by_projecttype=None,
         data_source="RCE API + Bestemmingsplan",
         bron="juridisch",
@@ -201,7 +267,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "bestemmingswijziging": FactorRegistryEntry(
         id="bestemmingswijziging",
         category="risico",
-        default_weight=9,
+        default_weight=7,  # was 9, rebalanced by M050/S03 D2
         weight_by_projecttype=None,
         data_source="Bestemmingsplan / Ruimtelijkeplannen.nl",
         bron="planologisch",
@@ -209,7 +275,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "constructieve_staat": FactorRegistryEntry(
         id="constructieve_staat",
         category="risico",
-        default_weight=8,
+        default_weight=6,  # was 8, rebalanced by M050/S03 D2
         weight_by_projecttype=None,
         data_source="BAG + EP-Online",
         bron="fysiek",
@@ -217,7 +283,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "juridisch_klimaat": FactorRegistryEntry(
         id="juridisch_klimaat",
         category="risico",
-        default_weight=9,
+        default_weight=7,  # was 9, rebalanced by M050/S03 D2
         weight_by_projecttype=None,
         data_source="Rechtspraak.nl",
         bron="juridisch",
@@ -225,7 +291,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "criminaliteit": FactorRegistryEntry(
         id="criminaliteit",
         category="risico",
-        default_weight=7,
+        default_weight=6,  # was 7, rebalanced by M050/S03 D2
         weight_by_projecttype=None,
         data_source="CBS dataderden",
         bron="markt",  # closest fit — sociaal would require expanding enum
@@ -233,7 +299,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "max_hoogte_bereikt": FactorRegistryEntry(
         id="max_hoogte_bereikt",
         category="risico",
-        default_weight=6,
+        default_weight=5,  # was 6, rebalanced by M050/S03 D2
         weight_by_projecttype=None,
         data_source="PLU WMS + 3D BAG",
         bron="fysiek",
@@ -241,7 +307,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "natura2000": FactorRegistryEntry(
         id="natura2000",
         category="risico",
-        default_weight=6,
+        default_weight=5,  # was 6, rebalanced by M050/S03 D2
         weight_by_projecttype=None,
         data_source="PDOK Natura2000 WFS",
         bron="klimaat",
@@ -249,7 +315,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "overstromingsrisico": FactorRegistryEntry(
         id="overstromingsrisico",
         category="risico",
-        default_weight=7,
+        default_weight=5,  # was 7, rebalanced by M050/S03 D2
         weight_by_projecttype=None,
         data_source="Rijkswaterstaat Overstromingen WMS",
         bron="klimaat",
@@ -257,7 +323,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "geluid": FactorRegistryEntry(
         id="geluid",
         category="risico",
-        default_weight=6,
+        default_weight=5,  # was 6, rebalanced by M050/S03 D2
         weight_by_projecttype=None,
         data_source="RIVM Geluidbelasting Lden WMS",
         bron="klimaat",
@@ -265,10 +331,35 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "luchtkwaliteit": FactorRegistryEntry(
         id="luchtkwaliteit",
         category="risico",
-        default_weight=5,
+        default_weight=4,  # was 5, rebalanced by M050/S03 D2
         weight_by_projecttype=None,
         data_source="RIVM Luchtkwaliteit NSL WMS",
         bron="klimaat",
+    ),
+    # --- M050/S03 BRK-driven risico factors (sum=20) ---
+    "hypotheek_risico": FactorRegistryEntry(
+        id="hypotheek_risico",
+        category="risico",
+        default_weight=10,
+        weight_by_projecttype=None,
+        data_source="BRK Eigendom (Kadaster)",
+        bron="brk",
+    ),
+    "eigendoms_complexiteit": FactorRegistryEntry(
+        id="eigendoms_complexiteit",
+        category="risico",
+        default_weight=6,
+        weight_by_projecttype=None,
+        data_source="BRK Eigendom (Kadaster)",
+        bron="brk",
+    ),
+    "koopwaarde_trend": FactorRegistryEntry(
+        id="koopwaarde_trend",
+        category="risico",
+        default_weight=4,
+        weight_by_projecttype=None,
+        data_source="BRK Eigendom (Kadaster)",
+        bron="brk",
     ),
 }
 
@@ -327,19 +418,24 @@ DEFAULT_WEIGHTS: dict[str, Any] = {
         "woonvisie_match": 12,
     },
     "risico_weights": {
-        "funderingsrisico": 16,
-        "asbest": 7,
-        "bodemverontreiniging": 8,
-        "monument": 6,
-        "bestemmingswijziging": 9,
-        "constructieve_staat": 8,
-        "juridisch_klimaat": 9,
-        "criminaliteit": 7,
-        "max_hoogte_bereikt": 6,
-        "natura2000": 6,
-        "overstromingsrisico": 7,
-        "geluid": 6,
-        "luchtkwaliteit": 5,
+        # M050/S03 D2: rebalanced (largest-remainder, sum=80) + 3 new BRK factors (sum=20).
+        "funderingsrisico": 13,
+        "asbest": 6,
+        "bodemverontreiniging": 6,
+        "monument": 5,
+        "bestemmingswijziging": 7,
+        "constructieve_staat": 6,
+        "juridisch_klimaat": 7,
+        "criminaliteit": 6,
+        "max_hoogte_bereikt": 5,
+        "natura2000": 5,
+        "overstromingsrisico": 5,
+        "geluid": 5,
+        "luchtkwaliteit": 4,
+        # M050/S03 — 3 new BRK risico-factors
+        "hypotheek_risico": 10,
+        "eigendoms_complexiteit": 6,
+        "koopwaarde_trend": 4,
     },
     "potentie_risico_balance": 0.7,
     "score_threshold": 50,
