@@ -1436,3 +1436,144 @@ def _missing_brk(reason: str, weight: int) -> FactorResult:
         missing=True,
         data_bronnen=["brk_ownership_records"],
     )
+
+
+# ---------------------------------------------------------------------------
+# M050/S03 — BRK risico-factor functions
+# ---------------------------------------------------------------------------
+
+
+def score_hypotheek_risico(parcel_data: dict) -> FactorResult:
+    """Factor R14: Hypotheek-risico. Default gewicht=10 (M050/S03 D2 + D4).
+
+    D3: empty BRK records → _missing_brk (runtime redistribution kicks in).
+    D4: binary on any-True. Multi-owner parcels: ANY mortgaged owner flags risico.
+    Empty input keys (heeft_hypotheek=None) treated as falsy (F3 defensive).
+    """
+    records = parcel_data.get("brk_records") or []
+    if not records:
+        return _missing_brk(
+            "Geen BRK-data — eigendomspositie onbekend",
+            weight=10,
+        )
+    n_with = sum(1 for r in records if r.get("heeft_hypotheek"))
+    n_total = len(records)
+    score = 1.0 if n_with > 0 else 0.0
+    return FactorResult(
+        waarde={"n_with_hypotheek": n_with, "n_total": n_total},
+        genormaliseerde_score=score,
+        gewicht=10,
+        bijdrage=score * 10,
+        categorie="risico",
+        toelichting_kort=(
+            f"{n_with}/{n_total} eigenaren met hypotheek"
+            if n_with else "Geen hypotheek geregistreerd"
+        ),
+        toelichting_lang=(
+            f"BRK toont {n_with} van {n_total} eigenaren met hypotheek-vermelding. "
+            "Onderhandeling vereist mogelijk hypotheek-vrije levering."
+            if n_with else
+            f"Geen van de {n_total} eigenaren heeft een hypotheek geregistreerd."
+        ),
+        missing=False,
+        data_bronnen=["brk_ownership_records"],
+    )
+
+
+def score_eigendoms_complexiteit(parcel_data: dict) -> FactorResult:
+    """Factor R15: Eigendoms-complexiteit. Default gewicht=6 (M050/S03 D2 + D5).
+
+    D5 (user-locked): count distinct (eigenaar_naam, kvk_nummer). Ignores
+    aandeel + zakelijk_recht_type (user-explicit decision).
+    Buckets: 1 → 0.0, 2 → 0.5, ≥3 → 1.0.
+    F4: all-NULL eigenaar_naam+kvk_nummer collapse to {(None, None)} → n_owners=1.
+    """
+    records = parcel_data.get("brk_records") or []
+    if not records:
+        return _missing_brk(
+            "Geen BRK-data — eigendomspositie onbekend",
+            weight=6,
+        )
+    unique_owners = {
+        (r.get("eigenaar_naam"), r.get("kvk_nummer")) for r in records
+    }
+    n_owners = len(unique_owners)
+    if n_owners <= 1:
+        score = 0.0
+    elif n_owners == 2:
+        score = 0.5
+    else:
+        score = 1.0
+    return FactorResult(
+        waarde={"n_owners": n_owners},
+        genormaliseerde_score=score,
+        gewicht=6,
+        bijdrage=score * 6,
+        categorie="risico",
+        toelichting_kort=f"{n_owners} verschillende eigenaren",
+        toelichting_lang=(
+            f"BRK toont {n_owners} unieke eigenaren. "
+            "Eén eigenaar — eenvoudige onderhandelingspositie."
+            if n_owners == 1 else
+            f"BRK toont {n_owners} unieke eigenaren. "
+            "Multi-owner deal vereist coördinatie met meerdere partijen."
+        ),
+        missing=False,
+        data_bronnen=["brk_ownership_records"],
+    )
+
+
+def score_koopwaarde_trend(parcel_data: dict) -> FactorResult:
+    """Factor R16: Koopsom-actualiteit (NOT 'tren'+'d' — M050/S03 D6 narrative honesty).
+
+    Default gewicht=4 (D2). koopjaar-age proxy from most-recent record (fetched_at DESC).
+    Buckets: <5y → 0.3, 5–15y → 0.5, 15–25y → 0.7, >25y → 0.9.
+    NULL koopjaar OR no records → missing=True.
+    F5: future-koopjaar (age<0, data error) → missing=True (chosen behaviour).
+
+    NARRATIVE HONESTY RULE (D6, REGRESSION-CRITICAL test #4):
+    toelichting_kort + toelichting_lang MUST NOT contain the banned substring
+    (case-insensitive). This factor is a koopjaar-age proxy, not a real
+    price-development signal. Use 'actualiteit' / 'koopsom-vermelding' /
+    'verouderd' / 'recente koop' / 'waarde-ontwikkeling' — NEVER the banned word.
+    """
+    from datetime import datetime
+    records = parcel_data.get("brk_records") or []
+    if not records:
+        return _missing_brk("Koopjaar onbekend — geen BRK-data", weight=4)
+    most_recent = max(records, key=lambda r: r.get("fetched_at") or "")
+    koopjaar = most_recent.get("koopjaar")
+    if koopjaar is None:
+        return _missing_brk("Geen koopjaar geregistreerd", weight=4)
+    current_year = datetime.utcnow().year
+    age = current_year - int(koopjaar)
+    if age < 0:
+        # F5: future koopjaar = data error
+        return _missing_brk("Ongeldige koopjaar-data", weight=4)
+    if age < 5:
+        score, qualifier = 0.3, "recente koop"
+    elif age < 15:
+        score, qualifier = 0.5, "actuele koopsom-vermelding"
+    elif age < 25:
+        score, qualifier = 0.7, "koopsom mogelijk verouderd"
+    else:
+        score, qualifier = 0.9, "koopsom waarschijnlijk sterk verouderd"
+    return FactorResult(
+        waarde={
+            "koopjaar": koopjaar,
+            "age_jaar": age,
+            "koopsom": most_recent.get("koopsom"),
+        },
+        genormaliseerde_score=score,
+        gewicht=4,
+        bijdrage=score * 4,
+        categorie="risico",
+        toelichting_kort=f"Koop in {koopjaar} ({age}j geleden) — {qualifier}",
+        toelichting_lang=(
+            f"Meest recente BRK-record toont koop in {koopjaar} "
+            f"({age} jaar geleden). Dit is een actualiteits-proxy van de koopsom, "
+            "geen waarde-ontwikkeling over tijd."
+        ),
+        missing=False,
+        data_bronnen=["brk_ownership_records"],
+    )
