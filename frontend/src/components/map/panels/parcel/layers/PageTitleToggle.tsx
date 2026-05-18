@@ -16,7 +16,7 @@ interface PageTitleToggleProps {
  * of obsidian.
  *
  *   CategoryTabs (parent): obsidian active pill, 13px, h-12
- *   PageTitleToggle (sub): white active pill, 12px, h-9  ← rust-wit, parent dominant
+ *   PageTitleToggle (sub): white pill + amber border, 12px, h-9  ← subtle amber accent
  *
  * Spring layoutId on the active pill so switching pages animates the
  * background instead of cutting between cells.
@@ -59,7 +59,7 @@ export function PageTitleToggle({ pages, activeIndex, onSelect, className }: Pag
             {isActive && (
               <motion.div
                 layoutId={`page-toggle-${instanceId}`}
-                className="absolute inset-0 rounded-full bg-white shadow-sm"
+                className="absolute inset-0 rounded-full bg-white border-[1.5px] border-aura-amber"
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}
