@@ -257,6 +257,21 @@ class Settings(BaseSettings):
         ),
     )
 
+    # M050/S03 scoring-factoren cascade feature flag (D8 — mirrors M050_BRK_PERSIST_ENABLED).
+    # When False: enrich_parcel_data_with_brk short-circuits + 3 new BRK risico-factors
+    # (hypotheek_risico, eigendoms_complexiteit, koopwaarde_trend) return missing=True.
+    M050_S03_FACTORS_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "M050_S03_FACTORS_ENABLED — M050/S03 scoring-factoren cascade: when True, "
+            "enrich_parcel_data_with_brk materializes BRK rows into "
+            "parcel_data['brk_records'] and the 3 new BRK risico-factors "
+            "(hypotheek_risico, eigendoms_complexiteit, koopwaarde_trend) become "
+            "active. Default False — matches M050-ENG-PLAN D4 env-flag triad until "
+            "M050/S07 wiring."
+        ),
+    )
+
     # M045 — Document model configuration
     VENDOR_ORG_ID: UUID | None = Field(
         default=None,
