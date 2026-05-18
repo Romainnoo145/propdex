@@ -1398,3 +1398,41 @@ def score_luchtkwaliteit(parcel_data: dict) -> FactorResult:
         data_bronnen=["RIVM Luchtkwaliteit NSL WMS"],
         missing=False,
     )
+
+
+# ---------------------------------------------------------------------------
+# M050/S03 — BRK risico-factors helpers
+# ---------------------------------------------------------------------------
+
+
+def _missing_brk(reason: str, weight: int) -> FactorResult:
+    """DRY missing-BRK FactorResult builder for the 3 new S03 risico-factors (D3).
+
+    Returns a ``missing=True`` FactorResult so ``compute_score_v3``'s D3
+    runtime redistribution drops the factor from the risico-category total
+    and rescales the remaining 13 active risico-factoren. The 3 S03 factors
+    (hypotheek_risico, eigendoms_complexiteit, koopwaarde_trend) are NOT
+    members of ``_CRITICAL_RISK_FACTORS`` — sparse BRK data therefore
+    never triggers the −10% missing-critical penalty.
+
+    Args:
+        reason: Short Dutch narrative for ``toelichting_kort`` (e.g.
+            ``"Geen BRK-data — eigendomspositie onbekend"``).
+        weight: Default weight for the factor (10 / 6 / 4, see ENG-PLAN D2).
+
+    Returns:
+        ``FactorResult`` with ``missing=True``, score ``0.0``, bijdrage
+        ``0.0``, categorie ``"risico"``, data_bronnen
+        ``["brk_ownership_records"]``.
+    """
+    return FactorResult(
+        waarde=None,
+        genormaliseerde_score=0.0,
+        gewicht=weight,
+        bijdrage=0.0,
+        categorie="risico",
+        toelichting_kort=reason,
+        toelichting_lang=f"{reason}. BRK-data nodig voor deze factor.",
+        missing=True,
+        data_bronnen=["brk_ownership_records"],
+    )
