@@ -1,4 +1,5 @@
-import { Fragment } from 'react'
+import { useId } from 'react'
+import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
 interface PageTitleToggleProps {
@@ -9,18 +10,16 @@ interface PageTitleToggleProps {
 }
 
 /**
- * Sub-nav for paginated bron-pages inside ParcelDetailPanel — sits below the
- * Potentie / Risico / Dossiers CategoryTabs and uses the SAME typographic
- * family (Plus Jakarta Sans, title-case, body-size) so the panel reads as one
- * coherent navigation system instead of mixing newspaper-headline labels with
- * the warm CategoryTabs aesthetic.
+ * Sub-nav for paginated bron-pages inside ParcelDetailPanel. Sits below the
+ * Potentie / Risico / Dossiers CategoryTabs and mirrors its segmented-pill
+ * pattern — same shape language, swapped accent: amber active pill instead
+ * of obsidian.
  *
- * Hierarchy:
- *   CategoryTabs (parent)    → obsidian pill, 13px, bold
- *   PageTitleToggle (sub)    → amber underline, 12px, bold-on-baseline
- *   Card titles (content)    → uppercase tracked label, the "content register"
+ *   CategoryTabs (parent): obsidian active pill, 13px, h-12
+ *   PageTitleToggle (sub): amber active pill, 12px, h-9  ← visual hierarchy
  *
- * Three registers, no collisions.
+ * Spring layoutId on the active pill so switching pages animates the
+ * background instead of cutting between cells.
  */
 
 function toTitleCase(value: string): string {
@@ -30,12 +29,13 @@ function toTitleCase(value: string): string {
 }
 
 export function PageTitleToggle({ pages, activeIndex, onSelect, className }: PageTitleToggleProps) {
+  const instanceId = useId()
   if (pages.length === 0) return null
 
   return (
     <div
       className={cn(
-        'flex items-end gap-3 flex-wrap border-b border-slate-200 mt-2 mb-3',
+        'flex w-full h-9 rounded-full p-1 bg-[#F2F6F3] mt-2 mb-3',
         className,
       )}
     >
@@ -44,27 +44,27 @@ export function PageTitleToggle({ pages, activeIndex, onSelect, className }: Pag
         const rawTitle = page.title ?? `Pagina ${i + 1}`
         const title = toTitleCase(rawTitle)
         return (
-          <Fragment key={`${rawTitle}-${i}`}>
-            {i > 0 && (
-              <span
-                aria-hidden="true"
-                className="w-px h-3 bg-slate-200 mb-2 shrink-0"
+          <button
+            key={`${rawTitle}-${i}`}
+            type="button"
+            onClick={() => onSelect(i)}
+            aria-current={isActive ? 'page' : undefined}
+            className={cn(
+              'relative flex-1 h-full min-w-0 rounded-full flex items-center justify-center transition-colors text-[12px]',
+              isActive
+                ? 'text-white font-bold'
+                : 'text-slate-400 font-semibold hover:text-slate-600',
+            )}
+          >
+            {isActive && (
+              <motion.div
+                layoutId={`page-toggle-${instanceId}`}
+                className="absolute inset-0 rounded-full bg-aura-amber"
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}
-            <button
-              type="button"
-              onClick={() => onSelect(i)}
-              aria-current={isActive ? 'page' : undefined}
-              className={cn(
-                'pb-2 -mb-px text-[12px] transition-all border-b-2',
-                isActive
-                  ? 'text-aura-ink font-bold border-aura-amber'
-                  : 'text-slate-400 font-semibold border-transparent hover:text-aura-ink',
-              )}
-            >
-              {title}
-            </button>
-          </Fragment>
+            <span className="relative z-10 truncate px-1">{title}</span>
+          </button>
         )
       })}
     </div>
