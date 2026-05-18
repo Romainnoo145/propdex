@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "M049 audit gap INT-03 closed via gemeente-aware banner deeplink. Next: 07-02 visual QA sweep + M049-MILESTONE-AUDIT.md closure (S03/S04/S05 human-needed → passed)."
-stopped_at: Completed 06-04-PLAN.md (nested perceel routes + sidebar active-phase wiring; 2 commits)
-last_updated: "2026-05-17T21:28:21.610Z"
-last_activity: 2026-05-16 — Phase 07 Plan 01 shipped (commits 7ba5feac + 9d6c7103)
+status: "M050/S06 complete — lifecycle cockpit /opgeslagen/perceel/$parcelId shipped + smoke-gated. All 5 plans DONE. Next milestone: M050 S01-S04 (BRK/Brief/Bezichtiging/Vergunning slots in cockpit)."
+stopped_at: Completed 06-05-PLAN.md (regression + Aura audit gate; 8 commits + 4 mid-smoke fixes)
+last_updated: "2026-05-18T00:00:00.000Z"
+last_activity: 2026-05-18 — Phase 06 Plan 05 shipped (M050/S06 complete, all 5 plans done)
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 5
-  completed_plans: 4
-  percent: 96
+  completed_plans: 5
+  percent: 100
 ---
 
 # Propdex — GSD State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 ## Current Position
 
-Phase: 7 of 8 in progress — Plans 1-6 + 04.1 + 04.2 complete; Phase 07 plan 1 (INT-03 deeplink) just landed; plan 2 (visual QA sweep + audit closure) pending
-Plan: 07-01 complete (BeleidBeheerWithBanner gemeente-aware Link + Storybook play-function coverage; INT-03 gap-closure WIRED)
-Status: M049 audit gap INT-03 closed via gemeente-aware banner deeplink. Next: 07-02 visual QA sweep + M049-MILESTONE-AUDIT.md closure (S03/S04/S05 human-needed → passed).
-Last activity: 2026-05-16 — Phase 07 Plan 01 shipped (commits 7ba5feac + 9d6c7103)
+Phase: 06-opgeslagen-cockpit-lifecycle-sidebar COMPLETE — all 5 plans shipped + smoke-gated
+Plan: 06-05 complete (regression + Aura audit gate; 8 commits including 4 mid-smoke bug fixes)
+Status: M050/S06 complete — lifecycle cockpit /opgeslagen/perceel/$parcelId shipped + smoke-gated. Next: M050 S01-S04 (BRK Eigendom persistent panel, Brief, Bezichtiging, Vergunning slots).
+Last activity: 2026-05-18 — Phase 06 Plan 05 shipped (smoke PASS, M048 regression-free confirmed)
 
 Progress: [██████████] 96% (22/23 plans — only 07-02 visual QA sweep remaining)
 
@@ -92,6 +92,7 @@ Progress: [██████████] 96% (22/23 plans — only 07-02 visua
 | Phase 06-opgeslagen-cockpit-lifecycle-sidebar P06-03 | 35m | 3 tasks | 5 files |
 | Phase 06-opgeslagen-cockpit-lifecycle-sidebar P02 | 2min | 1 tasks | 1 files |
 | Phase 06-opgeslagen-cockpit-lifecycle-sidebar P04 | 7min | 3 tasks | 4 files |
+| Phase 06-opgeslagen-cockpit-lifecycle-sidebar P05 | ~2h | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -225,6 +226,9 @@ Progress: [██████████] 96% (22/23 plans — only 07-02 visua
 - [Phase 06-opgeslagen-cockpit-lifecycle-sidebar]: FavoriteParcelWorkspaceView actual props { favorite, onBack, onOpenMap } — plan spec wrong; adapted call site without touching component
 - [Phase 06-opgeslagen-cockpit-lifecycle-sidebar]: routeTree.gen.ts updated manually since vite codegen only runs in dev/build; registers both new routes with parent-child hierarchy
 - [Phase 06-opgeslagen-cockpit-lifecycle-sidebar]: beforeLoad + throw redirect() pattern used for 1-onderzoek slug redirect — avoids in-render navigate() and StrictMode warnings
+- [Phase 06-opgeslagen-cockpit-lifecycle-sidebar / 06-05]: LifecycleSideRailNav scope corrected to matchRoute('/opgeslagen/perceel/$parcelId') — fuzzy '/opgeslagen' was too broad; list view stays on standard SideRailNav
+- [Phase 06-opgeslagen-cockpit-lifecycle-sidebar / 06-05]: ReducedMotionDegrades story uses CSS decorator (animation-duration: 0.01ms override) not Storybook viewport — OS media query cannot be forced from Storybook
+- [Phase 06-opgeslagen-cockpit-lifecycle-sidebar / 06-05]: M048 UX nits (pin jump, ghost-arrow pagination) logged as separate todo — NOT S06 regressions; scope boundary maintained
 
 ### Pending Todos
 
@@ -236,6 +240,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-17T21:28:21.608Z
-Stopped at: Completed 06-04-PLAN.md (nested perceel routes + sidebar active-phase wiring; 2 commits)
+Last session: 2026-05-18T00:00:00.000Z
+Stopped at: Completed 06-05-PLAN.md (regression + Aura audit gate; smoke PASS; M050/S06 all 5 plans DONE)
 Resume file: None
