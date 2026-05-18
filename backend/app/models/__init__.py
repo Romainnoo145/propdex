@@ -4,6 +4,7 @@ from app.models.ai_usage_log import AIUsageLog  # noqa: F401
 from app.models.area_scan import AreaScan  # noqa: F401
 from app.models.audit_log import AuditLog  # noqa: F401
 from app.models.base import Base
+from app.models.brk_ownership_record import BrkOwnershipRecord  # noqa: F401
 from app.models.bulk_query import BulkQuery  # noqa: F401
 from app.models.bulk_request import BulkRequest  # noqa: F401
 from app.models.cached_response import CachedAPIResponse
@@ -47,6 +48,7 @@ __all__ = [
     "AIUsageLog",
     "AuditLog",
     "Base",
+    "BrkOwnershipRecord",
     "ChatConversation",
     "ChatMessage",
     "IntegrationCredential",
