@@ -5,14 +5,14 @@ milestone_name: milestone
 current_phase: 2
 current_plan: 3
 status: completed
-stopped_at: Completed M050/S03 Plan 03-01 — feature flag + BRK materialization + REGRESSION-CRITICAL F2 multi-tenant guard, 5/5 tests green
-last_updated: "2026-05-18T20:08:07.756Z"
+stopped_at: Completed M050/S03 Plan 03-02 — 3 BRK factors + FACTOR_REGISTRY rebalance + 3 REGRESSION-CRITICAL guards (33/33 + 5/5 green)
+last_updated: "2026-05-18T20:19:07.029Z"
 last_activity: 2026-05-18
 progress:
   total_phases: 9
   completed_phases: 3
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
   percent: 22
 ---
 
@@ -102,6 +102,7 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 | Phase 02-brk-fetch-persist-endpoint P02 | 5m 41s | 2 tasks | 3 files |
 | Phase 02 P03 | 16m 35s | 3 tasks | 10 files |
 | Phase 03-scoring-factoren-cascade P01 | 6m | 3 tasks | 5 files |
+| Phase 03-scoring-factoren-cascade P02 | 7m | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -263,6 +264,9 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 - [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-01: BRKRecordDict TypedDict co-located in scoring_pipeline.py (NOT app/schemas/) — pure-function scoring layer stays Pydantic-free; Plan 03-02 imports the TypedDict directly
 - [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-01: enrich_parcel_data_with_brk FF-off path does NOT insert 'brk_records' key — distinct from FF-on + zero rows (which inserts []). Factor functions short-circuit on key absence via parcel_data.get().
 - [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-01: REGRESSION-CRITICAL F2 drift-detection executed end-to-end — removed organization_id filter → regression test failed with 'AVG breach: org_a saw 2 rows' → restored → 5/5 green. Iron-rule pattern verified.
+- [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-02: 13 existing risico factors integer-rebalanced via _rebalance_risico_weights(target_sum=80) — largest-remainder method, alphabetical tie-break. 7 keys received +1 bonus (shortfall=7). Result pinned in REGRESSION-CRITICAL test #2.
+- [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-02: D6 narrative-honesty enforced by banned-substring check (case-insensitive) on toelichting_kort + toelichting_lang across all 4 age buckets + missing path. Function NAME score_koopwaarde_trend allowed; narrative TEXT uses 'koopsom-vermelding' / 'actualiteits-proxy' / 'waarde-ontwikkeling' alternatives.
+- [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-02: DEFAULT_WEIGHTS['risico_weights'] dict updated in lockstep with FACTOR_REGISTRY (sum=100 invariant holds at both layers). Single-source-of-truth refactor deferred — would touch rescore-job + presets, out of plan scope.
 
 ### Pending Todos
 
@@ -274,6 +278,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-18T20:08:07.754Z
-Stopped at: Completed M050/S03 Plan 03-01 — feature flag + BRK materialization + REGRESSION-CRITICAL F2 multi-tenant guard, 5/5 tests green
+Last session: 2026-05-18T20:18:54.945Z
+Stopped at: Completed M050/S03 Plan 03-02 — 3 BRK factors + FACTOR_REGISTRY rebalance + 3 REGRESSION-CRITICAL guards (33/33 + 5/5 green)
 Resume file: None
