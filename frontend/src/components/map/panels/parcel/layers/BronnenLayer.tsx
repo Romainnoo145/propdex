@@ -533,7 +533,7 @@ function DropzoneCard({
       >
         {/* Top: title + data badge or green dot */}
         <div className="flex justify-between items-start gap-1">
-          <p className="text-[10px] font-black text-amber-900/70 uppercase tracking-[0.15em] leading-tight truncate flex-1">
+          <p className="text-[9px] font-bold text-amber-900/70 uppercase tracking-[0.08em] leading-tight truncate flex-1">
             {card.label}
           </p>
           {hasApiData ? (
@@ -582,7 +582,7 @@ function DropzoneCard({
       >
         {/* Top: title + green dot */}
         <div className="flex justify-between items-start gap-1">
-          <p className="text-[10px] font-black text-slate-900 uppercase tracking-[0.15em] leading-tight truncate flex-1">
+          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.08em] leading-tight truncate flex-1">
             {card.label}
           </p>
           <span className="size-2 rounded-full bg-emerald-400 shrink-0 mt-0.5" />
@@ -634,7 +634,7 @@ function DropzoneCard({
     >
       {/* Top: title + status dot */}
       <div className="flex justify-between items-start gap-1">
-        <p className="text-[10px] font-black text-slate-900 uppercase tracking-[0.15em] leading-tight truncate flex-1">
+        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.08em] leading-tight truncate flex-1">
           {card.label}
         </p>
         <span
