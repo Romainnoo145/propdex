@@ -13,6 +13,7 @@ from arq.worker import Worker, get_kwargs
 from app.core.config import settings
 from app.jobs.area_scan import area_scan_job
 from app.jobs.auto_ingest_job import weekly_policy_auto_ingest_job
+from app.jobs.brk_retention_cleanup_job import brk_retention_cleanup_job
 from app.jobs.change_monitor import daily_change_monitor_job
 from app.jobs.document_summary import document_summary_job
 from app.jobs.funda_snapshot import funda_snapshot_job
@@ -65,6 +66,7 @@ class WorkerSettings:
         rescore_weights_job,
         rescore_parcels_for_document,
         weekly_policy_auto_ingest_job,
+        brk_retention_cleanup_job,  # M050/S01 — daily 03:00 UTC retention
     ]
     redis_settings = get_redis_settings()
     max_jobs = 5  # Max concurrent jobs
@@ -81,6 +83,7 @@ class WorkerSettings:
             minute=0,
             unique=True,
         ),
+        cron(brk_retention_cleanup_job, hour=3, minute=0, unique=True),  # M050/S01 daily 03:00 UTC
     ]
 
 
