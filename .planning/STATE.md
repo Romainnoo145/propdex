@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 current_phase: 2
-current_plan: 1
+current_plan: 2
 status: completed
-stopped_at: Completed 02-01-PLAN.md (M050/S02 wave 1 — credential resolver + quota stub + BRK client factory + D15 cache index)
-last_updated: "2026-05-18T16:48:40.038Z"
+stopped_at: Completed 02-02-PLAN.md (M050/S02 wave 2 — brk_fetch_service + persist endpoint)
+last_updated: "2026-05-18T16:59:05.185Z"
 last_activity: 2026-05-18
 progress:
   total_phases: 9
   completed_phases: 2
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
   percent: 22
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-18 — Tranche 2 strategy pivot locke
 ## Current Position
 
 Phase: 2 of 9 (M050/S02 BRK Fetch + Persist Endpoint) — wave 1 shipped 2026-05-18
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Plan 02-01 complete (3/3 tasks, D1+D6+D7+D8+D11+D14+D15 honored). Next: Plan 02-02 brk_fetch_service + POST /api/parcels/{id}/brk/persist.
 Last activity: 2026-05-18
 
@@ -99,6 +99,7 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 | Phase 01-brk-datamodel-retention P02 | 7m 14s | 3 tasks | 7 files |
 | Phase 01-brk-datamodel-retention P03 | 12m 38s | 3 tasks | 10 files |
 | Phase 02-brk-fetch-persist-endpoint P01 | 2m 37s | 3 tasks | 4 files |
+| Phase 02-brk-fetch-persist-endpoint P02 | 5m 41s | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -250,6 +251,9 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 - [Phase 02-brk-fetch-persist-endpoint]: M050/S02 Plan 02-01: vendor-managed credential resolver — NO organization_id filter on integration_credentials lookup; SOLE documented exception to CLAUDE.md multi-tenant rule (eng-review locks 2026-05-14/16)
 - [Phase 02-brk-fetch-persist-endpoint]: M050/S02 Plan 02-01: TYPE_CHECKING forward-ref for BrkCredentials in brk_bevragen.py — keeps runtime import direction clean (resolver→model), typing import direction reversed (bevragen←resolver type only at type-check time)
 - [Phase 02-brk-fetch-persist-endpoint]: M050/S02 Plan 02-01: build_brk_client(creds) accepts BrkCredentials but discards it today (_ = creds, # noqa: F841) — callsite shape locked for future env-key removal hardening pass (deferred per ENG-PLAN §NOT in scope)
+- [Phase 02-brk-fetch-persist-endpoint]: D5 lock-key = hashlib.sha256(f'{uuid}:{parcel_id}').digest()[:8] → signed bigint — Python hash() per-process random, unsafe for cross-process advisory locks
+- [Phase 02-brk-fetch-persist-endpoint]: D4 two-txn boundary inside single AsyncSession via db.commit() between phases — Txn1 lock+cache, HTTP outside any txn, Txn2 persist, quota hook AFTER Txn2 commit (non-blocking try/except)
+- [Phase 02-brk-fetch-persist-endpoint]: D9 empty-list semantics — only-NatuurlijkPersoon upstream response returns 200 OK + [] (HTTP did happen, quota spent); cache-HIT path returns 200 OK + cached array without spending quota
 
 ### Pending Todos
 
@@ -261,6 +265,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-18T16:48:33.268Z
-Stopped at: Completed 02-01-PLAN.md (M050/S02 wave 1 — credential resolver + quota stub + BRK client factory + D15 cache index)
+Last session: 2026-05-18T16:59:05.183Z
+Stopped at: Completed 02-02-PLAN.md (M050/S02 wave 2 — brk_fetch_service + persist endpoint)
 Resume file: None
