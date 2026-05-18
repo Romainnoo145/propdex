@@ -74,10 +74,12 @@ function OpgeslagenPerceelPhasePage() {
         </div>
 
         <div className="bg-white/60 backdrop-blur-[24px] border border-white/40 rounded-[24px] p-8 text-center">
-          <p className="text-[15px] text-aura-ink font-medium mb-2">Komt later — onderdeel van M053+</p>
+          <p className="text-[15px] text-aura-ink font-medium mb-2">
+            Komt later — onderdeel van {phaseDef.plannedMilestone}
+          </p>
           <p className="text-[13px] text-slate-500">
-            Deze fase wordt geactiveerd zodra de CRM-flow live is. Voor nu houden alle opgeslagen
-            percelen de status &quot;1. Onderzoek&quot;.
+            Deze fase wordt geactiveerd zodra de bijbehorende milestone is geshipped. Voor nu
+            blijven opgeslagen percelen in fase &quot;1. Onderzoek&quot;.
           </p>
         </div>
       </div>
