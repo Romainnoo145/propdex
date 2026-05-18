@@ -1,9 +1,8 @@
 import { useState, useRef, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { toast } from 'sonner'
+import { PageTitleToggle } from '@/components/map/panels/parcel/layers/PageTitleToggle'
 import {
-  ChevronLeft,
-  ChevronRight,
   FileText,
   ClipboardCheck,
   MapPin,
@@ -812,6 +811,9 @@ export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
         onChange={handleFileChange}
       />
 
+      {/* ── Dossier Page Toggle ────────────────────────────── */}
+      <PageTitleToggle pages={pages} activeIndex={page} onSelect={setPage} className="px-1" />
+
       {/* ── Dossier Hero ───────────────────────────────────── */}
       <div className="bg-slate-50/50 border-b border-slate-100 px-6 py-5 rounded-[20px]">
         <AnimatePresence mode="wait">
@@ -882,30 +884,6 @@ export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
         </AnimatePresence>
       </div>
 
-      {/* ── Pagination ─────────────────────────────────────── */}
-      <div className="flex items-center justify-center gap-3 mt-4">
-        <button
-          type="button"
-          onClick={() => setPage((p) => Math.max(0, p - 1))}
-          disabled={page === 0}
-          className="p-1 rounded-full hover:bg-slate-100 disabled:opacity-20 transition-colors"
-          aria-label="Vorige pagina"
-        >
-          <ChevronLeft className="size-4 text-slate-400" />
-        </button>
-        <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest tabular-nums">
-          {page + 1} / {totalPages}
-        </span>
-        <button
-          type="button"
-          onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-          disabled={page >= totalPages - 1}
-          className="p-1 rounded-full hover:bg-slate-100 disabled:opacity-20 transition-colors"
-          aria-label="Volgende pagina"
-        >
-          <ChevronRight className="size-4 text-slate-400" />
-        </button>
-      </div>
     </div>
   )
 }

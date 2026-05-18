@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, useSpring, useTransform, AnimatePresence } from 'framer-motion'
-import { Flame, TrendingUp, CircleHelp, ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react'
+import { Flame, TrendingUp, CircleHelp, type LucideIcon } from 'lucide-react'
+import { PageTitleToggle } from '@/components/map/panels/parcel/layers/PageTitleToggle'
 import type { ScanResultItem, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/types/scan'
 import { isScoreV3 } from '@/lib/score'
 import { TruncatedText } from '../TruncatedText'
@@ -417,9 +418,7 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
 
       {/* ── Factor Cards Grid with page transition ────────── */}
       <div className="flex-1 mt-4 relative flex flex-col">
-        <h3 className="text-[10px] font-black tracking-[0.15em] uppercase text-slate-500 mb-2">
-          {currentPage?.title ?? ''}
-        </h3>
+        <PageTitleToggle pages={pages} activeIndex={page} onSelect={setPage} />
         <AnimatePresence mode="wait">
           <motion.div
             key={page}
@@ -453,31 +452,6 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
             })}
           </motion.div>
         </AnimatePresence>
-      </div>
-
-      {/* ── Pagination Footer ──────────────────────────────── */}
-      <div className="flex items-center justify-center gap-3 mt-4">
-        <button
-          type="button"
-          onClick={() => setPage((p) => Math.max(0, p - 1))}
-          disabled={page === 0}
-          className="p-1 rounded-full hover:bg-slate-100 disabled:opacity-20 transition-colors"
-          aria-label="Vorige pagina"
-        >
-          <ChevronLeft className="size-4 text-slate-400" />
-        </button>
-        <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest tabular-nums">
-          {page + 1} / {pages.length}
-        </span>
-        <button
-          type="button"
-          onClick={() => setPage((p) => Math.min(pages.length - 1, p + 1))}
-          disabled={page >= pages.length - 1}
-          className="p-1 rounded-full hover:bg-slate-100 disabled:opacity-20 transition-colors"
-          aria-label="Volgende pagina"
-        >
-          <ChevronRight className="size-4 text-slate-400" />
-        </button>
       </div>
 
       {hasWoonvisieData && (
