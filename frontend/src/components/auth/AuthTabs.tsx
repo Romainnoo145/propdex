@@ -15,21 +15,21 @@ interface AuthTabsProps {
   onRegisterSuccess: () => void
 }
 
-const REQUEST_ACCOUNT_MAILTO = [
+const REQUEST_DEMO_MAILTO = [
   'mailto:info@klarifai.nl',
-  '?subject=', encodeURIComponent('Propdex demo-toegang aanvragen'),
+  '?subject=', encodeURIComponent('Propdex demo aanvragen'),
   '&body=', encodeURIComponent(
     [
       'Hi Romano,',
       '',
-      'Ik wil graag een Propdex demo-account aanvragen.',
+      'Ik ben geïnteresseerd in een Propdex demo. Graag plan ik een korte sessie in om het platform te zien.',
       '',
       'Naam:',
       'Bedrijf:',
       'Functie:',
       'Telefoon:',
       '',
-      'Korte toelichting over wat ik zoek in Propdex:',
+      'Wat ik hoop te zien in de demo:',
       '',
       '',
       'Met vriendelijke groet,',
@@ -100,14 +100,14 @@ export function AuthTabs({
       {/* Google */}
       <GoogleButton />
 
-      {/* Request account — opens mail client with prefilled aanvraag */}
-      <div className="text-center text-[12px] text-[#6b7680]">
-        Nog geen account?{' '}
+      {/* Demo op aanvraag — opens mail client met prefilled aanvraag */}
+      <div className="text-center text-[12px] text-[#6b7680] leading-relaxed">
+        Propdex is op aanvraag voor ontwikkelaars en kwaliteitsborgers.<br />
         <a
-          href={REQUEST_ACCOUNT_MAILTO}
-          className="font-bold text-[#0E1111] underline underline-offset-[3px] decoration-[1.5px] hover:text-[#F9A826] hover:decoration-[#F9A826] no-underline-hover"
+          href={REQUEST_DEMO_MAILTO}
+          className="font-bold text-[#0E1111] underline underline-offset-[3px] decoration-[1.5px] hover:text-[#F9A826] hover:decoration-[#F9A826]"
         >
-          Vraag toegang aan
+          Vraag een demo aan
         </a>
       </div>
     </div>
