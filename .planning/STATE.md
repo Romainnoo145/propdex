@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 current_phase: 2
-current_plan: 2
+current_plan: 3
 status: completed
-stopped_at: Completed 02-02-PLAN.md (M050/S02 wave 2 — brk_fetch_service + persist endpoint)
-last_updated: "2026-05-18T16:59:05.185Z"
+stopped_at: Completed M050/S02 Plan 02-03 — 33 GAPS + 3 REGRESSION-CRITICAL closed, 50 tests green
+last_updated: "2026-05-18T18:59:30.613Z"
 last_activity: 2026-05-18
 progress:
   total_phases: 9
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 11
-  completed_plans: 10
+  completed_plans: 11
   percent: 22
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-18 — Tranche 2 strategy pivot locke
 ## Current Position
 
 Phase: 2 of 9 (M050/S02 BRK Fetch + Persist Endpoint) — wave 1 shipped 2026-05-18
-Plan: 2 of 3 in current phase
+Plan: 3 of 3 in current phase
 Status: Plan 02-01 complete (3/3 tasks, D1+D6+D7+D8+D11+D14+D15 honored). Next: Plan 02-02 brk_fetch_service + POST /api/parcels/{id}/brk/persist.
 Last activity: 2026-05-18
 
@@ -100,6 +100,7 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 | Phase 01-brk-datamodel-retention P03 | 12m 38s | 3 tasks | 10 files |
 | Phase 02-brk-fetch-persist-endpoint P01 | 2m 37s | 3 tasks | 4 files |
 | Phase 02-brk-fetch-persist-endpoint P02 | 5m 41s | 2 tasks | 3 files |
+| Phase 02 P03 | 16m 35s | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -254,6 +255,9 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 - [Phase 02-brk-fetch-persist-endpoint]: D5 lock-key = hashlib.sha256(f'{uuid}:{parcel_id}').digest()[:8] → signed bigint — Python hash() per-process random, unsafe for cross-process advisory locks
 - [Phase 02-brk-fetch-persist-endpoint]: D4 two-txn boundary inside single AsyncSession via db.commit() between phases — Txn1 lock+cache, HTTP outside any txn, Txn2 persist, quota hook AFTER Txn2 commit (non-blocking try/except)
 - [Phase 02-brk-fetch-persist-endpoint]: D9 empty-list semantics — only-NatuurlijkPersoon upstream response returns 200 OK + [] (HTTP did happen, quota spent); cache-HIT path returns 200 OK + cached array without spending quota
+- [Phase 02]: respx → monkeypatch(_call_kadaster) substitute: respx not installed; counter-dict pattern preserves request-level mocking semantics + avoids mTLS SSL test-env setup
+- [Phase 02]: D14 iron rule pinned in TWO files (standalone signature_drift + Phase 105 extension) — eng-plan mandate honored; either file failing surfaces the drift
+- [Phase 02]: Multi-tenant CRITICAL test_org_a_cannot_read_org_b_records green at service-layer (get_latest_for_parcel returns [] for cross-org); cross-org parcel-existence pre-check at endpoint layer remains a future hardening item (CrossOrgParcelAccess class in place but not raised)
 
 ### Pending Todos
 
@@ -265,6 +269,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-18T16:59:05.183Z
-Stopped at: Completed 02-02-PLAN.md (M050/S02 wave 2 — brk_fetch_service + persist endpoint)
+Last session: 2026-05-18T18:59:21.792Z
+Stopped at: Completed M050/S02 Plan 02-03 — 33 GAPS + 3 REGRESSION-CRITICAL closed, 50 tests green
 Resume file: None

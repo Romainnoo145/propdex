@@ -65,7 +65,7 @@
 ### Testing
 
 - [x] **TEST-01**: Backend unit tests voor BRK datamodel + retention-trigger + ARQ cleanup-job (fast-forward clock mock).
-- [ ] **TEST-02**: Integration tests voor `brk_persistence_service` + credential-resolver + failure-modes.
+- [x] **TEST-02**: Integration tests voor `brk_persistence_service` + credential-resolver + failure-modes.
 - [ ] **TEST-03**: Backend tests voor 3 nieuwe scoring-factoren + cascade-trigger + sparse-data fallback. REGRESSION-CRITICAL op bestaande 16 factoren + non-BRK rescore-triggers.
 - [ ] **TEST-04**: Brief-template variabele-substitutie + idempotency-key UQ + preview-render.
 - [ ] **TEST-05**: AI eval-suite: prompt-injection adversarial cases (100% safe vereist), refusal-fallback, audit-log roundtrip.
@@ -138,7 +138,7 @@ Deferred to later milestones:
 | WIRE-02 | Phase 7 | Pending |
 | WIRE-03 | Phase 7 | Pending |
 | TEST-01 | Phase 1 | Complete |
-| TEST-02 | Phase 2 | Pending |
+| TEST-02 | Phase 2 | Complete |
 | TEST-03 | Phase 3 | Pending |
 | TEST-04 | Phase 4 | Pending |
 | TEST-05 | Phase 4.5 | Pending |
