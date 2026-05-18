@@ -2,11 +2,22 @@
 
 ## What This Is
 
-Dutch property intelligence cockpit for vastgoedontwikkelaars and kwaliteitsborgers. End-to-end platform from scouting → screening → due diligence → risico-analyse → go/no-go → vergunningenbeheer tot aan bouwfase. Multi-tenant SaaS (NL/BE).
+Dutch property intelligence + management cockpit. Multi-tenant SaaS (NL/BE).
+
+**Phased platform (strategy pivot 2026-05-18):**
+
+| Tranche | Scope | Status |
+|---------|-------|--------|
+| **Tranche 1 — Onderzoekstool** (current) | Scouting → screening → due diligence → go/no-go → vergunning → bouw | Shipping (M001-M050) |
+| **Tranche 2 — Actie + Beheer-tool** (planned) | Verhuur → Beheer (MJOP/verduurzaming/mutaties) → Exit (verkoop/herfinanciering) | Roadmap M060-M110 |
+
+Tranche 1 is voor vastgoedontwikkelaars + kwaliteitsborgers. Tranche 2 voegt beleggers, makelaars (onderverhuur-flow), eigenaren en VvE-beheerders toe als target users — terwijl de intelligence-laag (transformation potential, scoring, cascade-docs) door alle fases heen zichtbaar blijft. **One platform, intelligence-first.**
 
 ## Core Value
 
-From grondpositie to first spade in one cockpit — no switching between 10 tabs.
+**Tranche 1:** Van grondpositie tot first spade in één cockpit — no switching between 10 tabs.
+
+**Tranche 2 (toegevoegd 2026-05-18):** Pand blijft in Propdex tot aan exit. Beheer-flow inherits intelligence-context (scoring, BRK, scan-data) die concurrenten niet hebben — Twinq/Vastgoedpro doen beheer maar zonder transformatie-data; Calcasa/Matrixian doen waarde maar zonder operationele flow.
 
 ## Requirements
 
@@ -68,7 +79,7 @@ From grondpositie to first spade in one cockpit — no switching between 10 tabs
 ### Out of Scope
 
 - B2C particulieren — Omgevingsloket (Art. 16.1 wettelijk monopolie) is gratis; wij bouwen voor professionals
-- Makelaars — Brainbay/NVM bedient die markt; wij doen transformatiepotentie, niet current value
+- ~~Makelaars — Brainbay/NVM bedient die markt; wij doen transformatiepotentie, niet current value~~ **REVISED 2026-05-18**: makelaars (i.h.b. onderverhuur-workflow) zijn target-users binnen **Tranche 2** (M090 Verhuur-milestone). Brainbay/NVM blijven concurrenten op pure transactie-CRM; Propdex's wedge in dit segment = intelligence-context vanuit Tranche 1 (eigendom, scoring, beleid) gekoppeld aan operationele flow.
 - Mobile app — Desktop-first (27" monitor, 6-8h/day target users)
 - Dark mode — Out of scope, sloopt Aura Morning-Mist character
 - Vergunningchecker — wettelijk voorbehouden aan Omgevingsloket
@@ -116,6 +127,7 @@ From grondpositie to first spade in one cockpit — no switching between 10 tabs
 | M050 AVG retention 30/90 dgn (Q7) | Defensieve baseline; rechtspersoon-only persistent storage; Phase 105 ephemeral pad blijft voor privé-lookups | — Pending (M050) |
 | M050 cockpit = pipeline-cards + workspace-sidebar | Single-column brede cards + perceel-foto thumbnail; sidebar van toplevel-icons → 4-8 lifecycle-icons (V5 wireframe LOCKED) | — Pending (M050/S06) |
 | Partner = klant + reseller terminologie | Partner gebruikt product zelf EN verkoopt door; alle "klant" refs → "partner" in M050 docs 2026-05-17 | ✓ Good |
+| **Tranche 2 pivot 2026-05-18** | Propdex evolueert van onderzoekstool naar onderzoek + actie + beheer platform. Verhuur/Beheer/Exit toegevoegd als M060-M110 milestones, parallel-able per dev-team. Lifecycle-sidebar van 6 → 8 fases. Makelaars + beleggers + eigenaren toegevoegd als target users (was: out-of-scope). One-way door — locked. | — Pending (M060+) |
 
 ---
-*Last updated: 2026-05-17 after M049 shipped + M050 milestone start*
+*Last updated: 2026-05-18 — Tranche 2 strategy pivot locked*
