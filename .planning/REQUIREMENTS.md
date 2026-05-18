@@ -11,7 +11,7 @@
 
 - [x] **BRK-01**: `brk_ownership_records` SQLAlchemy model met velden per ENG-PLAN datamodel (organization_id, parcel_id, eigenaar_type, eigenaar_naam NULL-voor-privé, kvk_nummer, statutaire_zetel, zakelijk_recht_type, aandeel, koopsom, koopjaar, heeft_hypotheek, raw_brk_response JSONB, fetched_at, soft_deleted_at, hard_delete_after). UNIQUE op (organization_id, parcel_id, fetched_at). TenantMixin via organization_id-FK.
 - [x] **BRK-02**: Alembic migratie + indices (`idx_brk_org_parcel`, partial `idx_brk_hard_delete` WHERE soft_deleted_at IS NOT NULL).
-- [ ] **BRK-03**: ARQ cron-job `brk_retention_cleanup_job` daily — hard-delete rows waar `hard_delete_after < NOW()`. Soft-delete trigger op unfavorite-actie (`+30 dgn soft → +60 dgn extra hard`).
+- [x] **BRK-03**: ARQ cron-job `brk_retention_cleanup_job` daily — hard-delete rows waar `hard_delete_after < NOW()`. Soft-delete trigger op unfavorite-actie (`+30 dgn soft → +60 dgn extra hard`).
 - [ ] **BRK-04**: `brk_persistence_service.fetch_or_use_persisted(parcel_id, org_id, choice)` — cached row binnen retention-window zonder nieuwe Kadaster-call; M049 credential-resolver (`IntegrationCredential` source_key='brk').
 - [ ] **BRK-05**: Failure-modes per ENG-PLAN registry: Kadaster 5xx/429/credential-expired → user-facing errors + log.
 
@@ -108,7 +108,7 @@ Deferred to later milestones:
 |-------------|-------|--------|
 | BRK-01 | Phase 1 | Complete |
 | BRK-02 | Phase 1 | Complete |
-| BRK-03 | Phase 1 | Pending |
+| BRK-03 | Phase 1 | Complete |
 | BRK-04 | Phase 2 | Pending |
 | BRK-05 | Phase 2 | Pending |
 | SCOR-01 | Phase 3 | Pending |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: "Completed 01-01-PLAN.md (M050/S01 BRK datamodel: migration + model + register) — next: 01-02 BRK persistence service"
-last_updated: "2026-05-18T14:08:04.786Z"
+stopped_at: "Completed 01-02-PLAN.md (M050/S01 BRK persistence service + ARQ retention cron + favorites D3 hook) — next: 01-03 tests"
+last_updated: "2026-05-18T14:18:39.399Z"
 last_activity: 2026-05-18 — M050 GSD state-sync; S01 eng-review locked (8 decisions D1-D8 captured)
 progress:
   total_phases: 9
   completed_phases: 1
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
   percent: 11
 ---
 
@@ -94,6 +94,7 @@ Progress: [█░░░░░░░░░] 11% (1/9 slices — S06 done)
 | Phase 06-opgeslagen-cockpit-lifecycle-sidebar P04 | 7min | 3 tasks | 4 files |
 | Phase 06-opgeslagen-cockpit-lifecycle-sidebar P05 | ~2h | 3 tasks | 6 files |
 | Phase 01-brk-datamodel-retention P01 | 3m 30s | 1 tasks | 3 files |
+| Phase 01-brk-datamodel-retention P02 | 7m 14s | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -233,6 +234,11 @@ Progress: [█░░░░░░░░░] 11% (1/9 slices — S06 done)
 - [Phase 01-brk-datamodel-retention]: M050/S01 P01: ix_brk_ownership_records_organization_id explicitly declared in migration (parity with TenantMixin index=True) — Alembic schema matches create_all output, no drift between dev DB and test-fixture DB
 - [Phase 01-brk-datamodel-retention]: M050/S01 P01: raw_brk_response typed as dict[str, object] | None (not bare dict) — new-code baseline stricter than existing 25 pre-existing mypy [type-arg] errors in models/
 - [Phase 01-brk-datamodel-retention]: M050/S01 P01: Alembic revision = readable slug '20260518_m050_s01' (Alembic accepts arbitrary unique strings) — first migration under new date-based naming convention
+- [Phase 01-brk-datamodel-retention]: M050/S01 P02: ParcelFavorite is user-scoped (no organization_id column) — D3 hook + find_orphaned_records resolve org_id via User.organization_id (Rule 1 plan-interface adaptation)
+- [Phase 01-brk-datamodel-retention]: M050/S01 P02: M050_BRK_PERSIST_ENABLED=False default gates persist_record() only (D4 write-path-only) — read + retention always live, FeatureDisabled raised by service-layer
+- [Phase 01-brk-datamodel-retention]: M050/S01 P02: strip_raw_brk_response recurses into list items (not only top-level filter) — defensive against nested natuurlijk_persoon inside deeper dicts; survivor dicts also scrubbed
+- [Phase 01-brk-datamodel-retention]: M050/S01 P02: favorites D3 hook wrapped in try/except — never blocks favorite deletion on BRK soft-delete failure; orphan-cron is the safety-net (per ENG-PLAN D3 design)
+- [Phase 01-brk-datamodel-retention]: M050/S01 P02: CursorResult[Any] cast pattern for UPDATE/DELETE rowcount under SQLAlchemy 2.x async — reusable for S02 persist write-path
 
 ### Pending Todos
 
@@ -244,6 +250,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-18T14:08:04.784Z
-Stopped at: Completed 01-01-PLAN.md (M050/S01 BRK datamodel: migration + model + register) — next: 01-02 BRK persistence service
+Last session: 2026-05-18T14:18:22.150Z
+Stopped at: Completed 01-02-PLAN.md (M050/S01 BRK persistence service + ARQ retention cron + favorites D3 hook) — next: 01-03 tests
 Resume file: None
