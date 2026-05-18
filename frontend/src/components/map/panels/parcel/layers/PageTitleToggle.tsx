@@ -8,22 +8,25 @@ interface PageTitleToggleProps {
 }
 
 /**
- * Horizontal pill-chip toggle for paginated sections inside ParcelDetailPanel.
- * Used by PotentieLayer / RisicoLayer / BronnenLayer to switch between bron-pages.
+ * Section-divider tab strip. The labels ARE the divider between the hero
+ * above and the card grid below — they sit on a slate baseline; the active
+ * label breaks that baseline with a thicker amber stroke (magazine pattern).
  *
- * Visual:
- *  - Active chip: warm amber wash (bg-aura-amber/15 + text-aura-amber). Soft,
- *    not heavy. Reads as "selected" without dominating the panel.
- *  - Inactive chip: slate ghost text (medium weight), becomes a white/60 pill
- *    on hover so the affordance is obvious.
- *  - Generous vertical margin (my-4) so toggles don't crowd the cards above/below.
- *  - Centered as a strip, wraps if the parent is narrow.
+ * Left-aligned (not centered) — first label sits flush with the panel inset
+ * so it visually anchors to the surrounding content instead of floating.
+ *
+ * Used by PotentieLayer / RisicoLayer / BronnenLayer to switch bron-pages.
  */
 export function PageTitleToggle({ pages, activeIndex, onSelect, className }: PageTitleToggleProps) {
   if (pages.length === 0) return null
 
   return (
-    <div className={cn('flex items-center justify-center gap-1 flex-wrap my-4', className)}>
+    <div
+      className={cn(
+        'flex items-end gap-4 flex-wrap border-b border-slate-200 mt-4 mb-3',
+        className,
+      )}
+    >
       {pages.map((page, i) => {
         const isActive = i === activeIndex
         const title = page.title ?? `Pagina ${i + 1}`
@@ -34,10 +37,10 @@ export function PageTitleToggle({ pages, activeIndex, onSelect, className }: Pag
             onClick={() => onSelect(i)}
             aria-current={isActive ? 'page' : undefined}
             className={cn(
-              'px-3 py-1.5 rounded-full text-[10px] font-bold tracking-[0.1em] uppercase transition-all',
+              'pb-2 -mb-px text-[10px] tracking-[0.15em] uppercase transition-all border-b-2',
               isActive
-                ? 'bg-aura-amber/15 text-aura-amber'
-                : 'text-slate-400 font-medium hover:bg-white/60 hover:text-aura-ink',
+                ? 'text-aura-ink font-bold border-aura-amber'
+                : 'text-slate-400 font-medium border-transparent hover:text-aura-ink',
             )}
           >
             {title}
