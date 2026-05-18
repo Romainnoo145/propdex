@@ -246,6 +246,17 @@ class Settings(BaseSettings):
         ),
     )
 
+    # M050/S01 BRK persist feature flag (D4 write-path-only gate)
+    # Default False until Kadaster DPA signed. When False, persist_record() raises FeatureDisabled.
+    # Read-path + retention cron + soft-delete trigger always work regardless of this flag.
+    M050_BRK_PERSIST_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "Gate for brk_persistence_service.persist_record() write path. "
+            "False until Kadaster DPA signed. Read path + retention cron unaffected."
+        ),
+    )
+
     # M045 — Document model configuration
     VENDOR_ORG_ID: UUID | None = Field(
         default=None,
