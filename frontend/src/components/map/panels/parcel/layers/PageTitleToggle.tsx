@@ -12,9 +12,10 @@ interface PageTitleToggleProps {
  * Used by PotentieLayer / RisicoLayer / BronnenLayer to switch between bron-pages.
  *
  * Visual:
- *  - Active chip: solid obsidian background + white text (matches lifecycle-sidebar
- *    active-pill aesthetic).
- *  - Inactive chip: slate ghost text, becomes a white pill on hover.
+ *  - Active chip: warm amber wash (bg-aura-amber/15 + text-aura-amber). Soft,
+ *    not heavy. Reads as "selected" without dominating the panel.
+ *  - Inactive chip: slate ghost text (medium weight), becomes a white/60 pill
+ *    on hover so the affordance is obvious.
  *  - Generous vertical margin (my-4) so toggles don't crowd the cards above/below.
  *  - Centered as a strip, wraps if the parent is narrow.
  */
@@ -35,8 +36,8 @@ export function PageTitleToggle({ pages, activeIndex, onSelect, className }: Pag
             className={cn(
               'px-3 py-1.5 rounded-full text-[10px] font-bold tracking-[0.1em] uppercase transition-all',
               isActive
-                ? 'bg-aura-obsidian text-white shadow-sm'
-                : 'text-slate-400 hover:bg-white/60 hover:text-aura-ink',
+                ? 'bg-aura-amber/15 text-aura-amber'
+                : 'text-slate-400 font-medium hover:bg-white/60 hover:text-aura-ink',
             )}
           >
             {title}
