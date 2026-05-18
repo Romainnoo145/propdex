@@ -48,6 +48,11 @@ M050 is een product-mode-shift van **onderzoekstool → actietool**: eerste brug
 
 **Depends on:** Nothing
 
+**Plans:** 3 plans
+- [ ] 01-01-PLAN.md — Alembic migration + SQLAlchemy model BrkOwnershipRecord + register in models/__init__ (Wave 1)
+- [ ] 01-02-PLAN.md — Feature flag + Pydantic schemas + brk_persistence_service (D2 strip / D3 soft-delete / D4 FF / D8 NULL-reject) + ARQ retention cron + favorites_service D3 hook (Wave 2)
+- [ ] 01-03-PLAN.md — Unit + integration + multi-tenant + regression tests (24 GAPS + 2 IRON-RULE regressions, including Phase 105 ephemeral untouched + favorites flow resilient) (Wave 3)
+
 ---
 
 ### Phase 2: BRK Persist Client (S02)
@@ -221,4 +226,4 @@ M050 is een product-mode-shift van **onderzoekstool → actietool**: eerste brug
 
 ---
 
-*Last updated: 2026-05-17 op M050 kickoff*
+*Last updated: 2026-05-18 — Phase 1 (M050/S01) plan-phase output landed (3 plans, 3 waves)*
