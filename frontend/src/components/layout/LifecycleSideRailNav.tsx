@@ -23,15 +23,23 @@ export default function LifecycleSideRailNav({ activePhaseKey }: Props) {
       aria-label="Lifecycle-navigatie"
       className="fixed left-0 top-0 bottom-0 w-[130px] flex flex-col items-center justify-between py-10 z-[100]"
     >
-      {/* Top: Logo */}
+      {/* Top: Logo → exit workspace, back to /opgeslagen list */}
       <div className="w-full flex justify-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full overflow-hidden">
+        <Link
+          to="/opgeslagen"
+          search={{ stage: undefined }}
+          aria-label="Terug naar opgeslagen lijst"
+          className="group relative flex h-16 w-16 items-center justify-center rounded-full overflow-hidden hover:ring-2 hover:ring-aura-amber/40 transition-all"
+        >
           <img
             src="/images/propdex-logo.svg"
             alt="Propdex"
             className="h-16 w-16"
           />
-        </div>
+          <span className="pointer-events-none absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-aura-obsidian/90 backdrop-blur-md px-2.5 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+            Terug naar opgeslagen
+          </span>
+        </Link>
       </div>
 
       {/* Middle: Lifecycle phase icons */}

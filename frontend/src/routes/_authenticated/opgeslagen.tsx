@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, useMatchRoute, Outlet } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { staggerContainer, fadeUp } from '@/lib/animations'
@@ -78,6 +78,8 @@ type ScoreModalState = { parcelCacheId: string | null; type: 'potentie' | 'risic
 
 function OpgeslagenPage() {
   const navigate = useNavigate()
+  const matchRoute = useMatchRoute()
+  const isWorkspaceActive = !!matchRoute({ to: '/opgeslagen/perceel/$parcelId', fuzzy: true })
   const { stage: stageFilter } = Route.useSearch()
   const { data: favorites, isLoading } = useParcelFavorites()
   const [expandedGemeenten, setExpandedGemeenten] = useState<Set<string>>(new Set())
@@ -126,6 +128,22 @@ function OpgeslagenPage() {
       else next.add(naam)
       return next
     })
+  }
+
+  // Workspace portal: child route (/opgeslagen/perceel/$parcelId/*) renders here via Outlet.
+  // Slide-in transition gives the "entering the parcel workspace" feel.
+  if (isWorkspaceActive) {
+    return (
+      <motion.div
+        key="workspace"
+        initial={{ opacity: 0, x: 32 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
+        className="h-full"
+      >
+        <Outlet />
+      </motion.div>
+    )
   }
 
   if (isLoading) {

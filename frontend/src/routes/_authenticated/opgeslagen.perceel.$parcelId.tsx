@@ -1,5 +1,6 @@
-import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, useParams, Link } from '@tanstack/react-router'
 import { useMemo } from 'react'
+import { ArrowLeft } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { useParcelFavorites } from '@/hooks/useFavorites'
 import { FavoriteParcelWorkspaceView } from '@/components/projects/FavoriteParcelWorkspaceView'
@@ -46,9 +47,18 @@ function OpgeslagenPerceelPage() {
     <ResultsShell fullWidth>
       {/* AANPAK header — single focus per scherm rule (Minimal Calm Intelligence) */}
       <div className="mb-4 px-6 pt-6">
-        <h1 className="text-[24px] font-semibold text-aura-ink">AANPAK · 1. Onderzoek</h1>
+        <Link
+          to="/opgeslagen"
+          search={{ stage: undefined }}
+          className="inline-flex items-center gap-2 text-[12px] text-slate-500 hover:text-aura-ink mb-3 transition-colors"
+        >
+          <ArrowLeft size={14} strokeWidth={1.5} /> Opgeslagen
+        </Link>
+        <h1 className="text-[24px] font-semibold text-aura-ink">
+          {parcel.address ?? 'Perceel'}
+        </h1>
         <p className="text-[13px] text-slate-500 mt-1">
-          Scan-data, scoring, en de eerste actie-stappen voor dit perceel.
+          AANPAK · 1. Onderzoek — scan-data, scoring, en de eerste actie-stappen.
         </p>
       </div>
 
