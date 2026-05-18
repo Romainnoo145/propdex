@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "M050/S06 complete — lifecycle cockpit /opgeslagen/perceel/$parcelId shipped + smoke-gated. All 5 plans DONE. Next milestone: M050 S01-S04 (BRK/Brief/Bezichtiging/Vergunning slots in cockpit)."
-stopped_at: Completed 06-05-PLAN.md (regression + Aura audit gate; 8 commits + 4 mid-smoke fixes)
-last_updated: "2026-05-18T00:00:00.000Z"
-last_activity: 2026-05-18 — Phase 06 Plan 05 shipped (M050/S06 complete, all 5 plans done)
+status: completed
+stopped_at: Completed 06-05-PLAN.md (regression + Aura audit gate; smoke PASS; M050/S06 all 5 plans DONE)
+last_updated: "2026-05-18T13:02:30.985Z"
+last_activity: 2026-05-18 — Phase 06 Plan 05 shipped (smoke PASS, M048 regression-free confirmed)
 progress:
   total_phases: 9
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
   completed_plans: 5
-  percent: 100
+  percent: 96
 ---
 
 # Propdex — GSD State
