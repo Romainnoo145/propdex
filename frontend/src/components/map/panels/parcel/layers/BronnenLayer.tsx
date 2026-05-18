@@ -155,7 +155,7 @@ function buildPages(
       ],
     },
     {
-      title: 'ACQUISITIE DOSSIER',
+      title: 'ACQUISITIE',
       Icon: FolderOpen,
       cards: [
         {
@@ -208,7 +208,7 @@ function buildPages(
       ],
     },
     {
-      title: 'TECHNISCH DOSSIER',
+      title: 'TECHNISCH',
       Icon: Hammer,
       cards: [
         {
@@ -259,7 +259,7 @@ function buildPages(
       ],
     },
     {
-      title: 'JURIDISCH DOSSIER',
+      title: 'JURIDISCH',
       Icon: Scale,
       cards: [
         {
@@ -292,7 +292,7 @@ function buildPages(
       ],
     },
     {
-      title: 'PLANOLOGISCH DOSSIER',
+      title: 'PLANOLOGISCH',
       Icon: Landmark,
       cards: [
         {
@@ -811,9 +811,6 @@ export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
         onChange={handleFileChange}
       />
 
-      {/* ── Dossier Page Toggle ────────────────────────────── */}
-      <PageTitleToggle pages={pages} activeIndex={page} onSelect={setPage} className="px-1" />
-
       {/* ── Dossier Hero ───────────────────────────────────── */}
       <div className="bg-slate-50/50 border-b border-slate-100 px-6 py-5 rounded-[20px]">
         <AnimatePresence mode="wait">
@@ -858,8 +855,11 @@ export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
         </AnimatePresence>
       </div>
 
+      {/* ── Dossier Page Toggle (above upload-card grid) ───── */}
+      <PageTitleToggle pages={pages} activeIndex={page} onSelect={setPage} className="mt-4" />
+
       {/* ── Card Grid ──────────────────────────────────────── */}
-      <div className="flex-1 mt-4 relative">
+      <div className="flex-1 relative">
         <AnimatePresence mode="wait">
           <motion.div
             key={page}

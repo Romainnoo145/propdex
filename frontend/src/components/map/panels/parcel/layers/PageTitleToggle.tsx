@@ -21,7 +21,7 @@ export function PageTitleToggle({ pages, activeIndex, onSelect, className }: Pag
   if (pages.length === 0) return null
 
   return (
-    <div className={cn('flex items-center gap-2 flex-wrap mb-2', className)}>
+    <div className={cn('flex items-center justify-center gap-2 flex-wrap mb-2', className)}>
       {pages.map((page, i) => {
         const isActive = i === activeIndex
         const title = page.title ?? `Pagina ${i + 1}`
