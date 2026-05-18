@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 1
-current_plan: 3
-status: verifying
-stopped_at: "Completed 01-03-PLAN.md (M050/S01 BRK test coverage — 44 tests, 24 GAPS + 2 regressions closed); S01 wave 3 (testing) complete; next: M050/S02 BRK Bevragen client + persist write-path"
-last_updated: "2026-05-18T15:04:11.442Z"
+current_phase: 2
+current_plan: 1
+status: completed
+stopped_at: Completed 02-01-PLAN.md (M050/S02 wave 1 — credential resolver + quota stub + BRK client factory + D15 cache index)
+last_updated: "2026-05-18T16:48:40.038Z"
 last_activity: 2026-05-18
 progress:
   total_phases: 9
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 11
+  completed_plans: 9
   percent: 22
 ---
 
@@ -27,9 +27,9 @@ See: .planning/PROJECT.md (updated 2026-05-18 — Tranche 2 strategy pivot locke
 
 ## Current Position
 
-Phase: 1 of 9 (M050/S01 BRK Datamodel + Retention) — complete 2026-05-18
-Plan: 3 of 3 in current phase
-Status: Phase 01 verified (9/9 must-haves passed). Next: M050/S02 BRK Client Persist-Mode + M049 credential-resolver — needs /plan-eng-review then /gsd:plan-phase.
+Phase: 2 of 9 (M050/S02 BRK Fetch + Persist Endpoint) — wave 1 shipped 2026-05-18
+Plan: 1 of 3 in current phase
+Status: Plan 02-01 complete (3/3 tasks, D1+D6+D7+D8+D11+D14+D15 honored). Next: Plan 02-02 brk_fetch_service + POST /api/parcels/{id}/brk/persist.
 Last activity: 2026-05-18
 
 Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
@@ -98,6 +98,7 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 | Phase 01-brk-datamodel-retention P01 | 3m 30s | 1 tasks | 3 files |
 | Phase 01-brk-datamodel-retention P02 | 7m 14s | 3 tasks | 7 files |
 | Phase 01-brk-datamodel-retention P03 | 12m 38s | 3 tasks | 10 files |
+| Phase 02-brk-fetch-persist-endpoint P01 | 2m 37s | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -246,6 +247,9 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 - [Phase 01-brk-datamodel-retention]: M050/S01 P03: patched_cron_factory fixture monkeypatches async_session_factory in cron module to bind the production-DB factory to test engine — cron's own session sees test fixtures without DI refactor of the cron itself
 - [Phase 01-brk-datamodel-retention]: M050/S01 P03: Phase 105 regression uses 404 path (unknown parcel_id) — proves no-row-written + no-persist_record-call without PDOK/PostGIS setup; happy-path is S02 territory
 - [Phase 01-brk-datamodel-retention]: M050/S01 P03: Signature-drift regression guard via inspect.signature on get_parcel_eigendom — fails CI if anyone refactors the Phase 105 ephemeral endpoint under M050+ before AVG-Tier-3 re-review
+- [Phase 02-brk-fetch-persist-endpoint]: M050/S02 Plan 02-01: vendor-managed credential resolver — NO organization_id filter on integration_credentials lookup; SOLE documented exception to CLAUDE.md multi-tenant rule (eng-review locks 2026-05-14/16)
+- [Phase 02-brk-fetch-persist-endpoint]: M050/S02 Plan 02-01: TYPE_CHECKING forward-ref for BrkCredentials in brk_bevragen.py — keeps runtime import direction clean (resolver→model), typing import direction reversed (bevragen←resolver type only at type-check time)
+- [Phase 02-brk-fetch-persist-endpoint]: M050/S02 Plan 02-01: build_brk_client(creds) accepts BrkCredentials but discards it today (_ = creds, # noqa: F841) — callsite shape locked for future env-key removal hardening pass (deferred per ENG-PLAN §NOT in scope)
 
 ### Pending Todos
 
@@ -257,6 +261,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-18T14:35:02.649Z
-Stopped at: Completed 01-03-PLAN.md (M050/S01 BRK test coverage — 44 tests, 24 GAPS + 2 regressions closed); S01 wave 3 (testing) complete; next: M050/S02 BRK Bevragen client + persist write-path
+Last session: 2026-05-18T16:48:33.268Z
+Stopped at: Completed 02-01-PLAN.md (M050/S02 wave 1 — credential resolver + quota stub + BRK client factory + D15 cache index)
 Resume file: None
