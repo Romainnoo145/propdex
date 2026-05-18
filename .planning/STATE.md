@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: "Completed 01-02-PLAN.md (M050/S01 BRK persistence service + ARQ retention cron + favorites D3 hook) — next: 01-03 tests"
-last_updated: "2026-05-18T14:18:39.399Z"
+stopped_at: "Completed 01-03-PLAN.md (M050/S01 BRK test coverage — 44 tests, 24 GAPS + 2 regressions closed); S01 wave 3 (testing) complete; next: M050/S02 BRK Bevragen client + persist write-path"
+last_updated: "2026-05-18T14:35:14.165Z"
 last_activity: 2026-05-18 — M050 GSD state-sync; S01 eng-review locked (8 decisions D1-D8 captured)
 progress:
   total_phases: 9
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
   percent: 11
 ---
 
@@ -95,6 +95,7 @@ Progress: [█░░░░░░░░░] 11% (1/9 slices — S06 done)
 | Phase 06-opgeslagen-cockpit-lifecycle-sidebar P05 | ~2h | 3 tasks | 6 files |
 | Phase 01-brk-datamodel-retention P01 | 3m 30s | 1 tasks | 3 files |
 | Phase 01-brk-datamodel-retention P02 | 7m 14s | 3 tasks | 7 files |
+| Phase 01-brk-datamodel-retention P03 | 12m 38s | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -239,6 +240,10 @@ Progress: [█░░░░░░░░░] 11% (1/9 slices — S06 done)
 - [Phase 01-brk-datamodel-retention]: M050/S01 P02: strip_raw_brk_response recurses into list items (not only top-level filter) — defensive against nested natuurlijk_persoon inside deeper dicts; survivor dicts also scrubbed
 - [Phase 01-brk-datamodel-retention]: M050/S01 P02: favorites D3 hook wrapped in try/except — never blocks favorite deletion on BRK soft-delete failure; orphan-cron is the safety-net (per ENG-PLAN D3 design)
 - [Phase 01-brk-datamodel-retention]: M050/S01 P02: CursorResult[Any] cast pattern for UPDATE/DELETE rowcount under SQLAlchemy 2.x async — reusable for S02 persist write-path
+- [Phase 01-brk-datamodel-retention]: M050/S01 P03: Mock-clock without freezegun — inject hard_delete_after = datetime.utcnow() - timedelta(days=1) directly into the row; project does not depend on freezegun; pattern reusable for S02 hard-delete window tests
+- [Phase 01-brk-datamodel-retention]: M050/S01 P03: patched_cron_factory fixture monkeypatches async_session_factory in cron module to bind the production-DB factory to test engine — cron's own session sees test fixtures without DI refactor of the cron itself
+- [Phase 01-brk-datamodel-retention]: M050/S01 P03: Phase 105 regression uses 404 path (unknown parcel_id) — proves no-row-written + no-persist_record-call without PDOK/PostGIS setup; happy-path is S02 territory
+- [Phase 01-brk-datamodel-retention]: M050/S01 P03: Signature-drift regression guard via inspect.signature on get_parcel_eigendom — fails CI if anyone refactors the Phase 105 ephemeral endpoint under M050+ before AVG-Tier-3 re-review
 
 ### Pending Todos
 
@@ -250,6 +255,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-18T14:18:22.150Z
-Stopped at: Completed 01-02-PLAN.md (M050/S01 BRK persistence service + ARQ retention cron + favorites D3 hook) — next: 01-03 tests
+Last session: 2026-05-18T14:35:02.649Z
+Stopped at: Completed 01-03-PLAN.md (M050/S01 BRK test coverage — 44 tests, 24 GAPS + 2 regressions closed); S01 wave 3 (testing) complete; next: M050/S02 BRK Bevragen client + persist write-path
 Resume file: None
