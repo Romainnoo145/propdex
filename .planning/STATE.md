@@ -5,14 +5,14 @@ milestone_name: milestone
 current_phase: 2
 current_plan: 3
 status: completed
-stopped_at: Completed M050/S06 Phase 8 Plan 08-01 — brk_read_service + GET endpoint + REGRESSION-CRITICAL multi-tenant test (14/14 green, drift-detection verified)
-last_updated: "2026-05-19T11:13:05.257Z"
+stopped_at: Completed Phase 08 Plan 08-06 — FavoriteParcelWorkspaceView 1922-LOC monolith split into 9 cockpit files + 20-test parity guard (4 commits, 20/20 green)
+last_updated: "2026-05-19T11:20:24.551Z"
 last_activity: 2026-05-19
 progress:
   total_phases: 10
   completed_phases: 4
   total_plans: 22
-  completed_plans: 16
+  completed_plans: 17
   percent: 22
 ---
 
@@ -106,6 +106,7 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 | Phase 03-scoring-factoren-cascade P03-03 | 22m | 3 tasks | 11 files |
 | Phase 08-brk-fase-2-wire-up P04 | 9m | 2 tasks | 5 files |
 | Phase 08-brk-fase-2-wire-up P01 | 9m 54s | 3 tasks | 6 files |
+| Phase 08-brk-fase-2-wire-up P06 | 17min | 4 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -282,6 +283,9 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 - [Phase 08-brk-fase-2-wire-up]: 08-01: multi-owner same-MAX(fetched_at) branch exercised via mocked AsyncSession — DB UNIQUE constraint uq_brk_org_parcel_fetched blocks ORM same-timestamp inserts; mock-DB pattern proves defensive correctness without DB pollution
 - [Phase 08-brk-fase-2-wire-up]: 08-01: test_query_includes_org_filter slices WHERE-clause text specifically — SELECT clause references all columns including organization_id; substring match on full SQL would false-positive even with filter removed
 - [Phase 08-brk-fase-2-wire-up]: 08-01: cross-org GET returns 200+[] (NIET 403, NIET 404) — silent isolation per ENG-PLAN AD2; 403/404 would leak existence; empty list indistinguishable from no-data parcel
+- [Phase 08-brk-fase-2-wire-up]: Plan 08-06: Split 1922-LOC FavoriteParcelWorkspaceView into 9 cockpit files (all ≤300 LOC) — plan-spec target was 6 files but shell-overflow needed 3 extra extractions (ParcelWorkspaceHeader/WorkspaceContactModal/DossierSection/ActivityTimelineCard)
+- [Phase 08-brk-fase-2-wire-up]: Plan 08-06: Parity test adapted to project node-env unit project — pure-logic structural assertions + composition snapshot (regex-assert OnderzoekPhaseView.tsx imports via fs.readFile) instead of @testing-library/react; matches RisicoLayer.factor-coverage.test.tsx precedent
+- [Phase 08-brk-fase-2-wire-up]: Plan 08-06: AANPAK CTA copy preserved VERBATIM in cockpit-derivations.ts including BRK CTAs — iron-rule canary in parity test pins pre-08-07 baseline; Plan 08-07 explicitly fails this canary when it lands 'Stap door naar Contact' copy
 
 ### Pending Todos
 
@@ -293,6 +297,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-19T11:13:05.254Z
-Stopped at: Completed M050/S06 Phase 8 Plan 08-01 — brk_read_service + GET endpoint + REGRESSION-CRITICAL multi-tenant test (14/14 green, drift-detection verified)
+Last session: 2026-05-19T11:20:24.549Z
+Stopped at: Completed Phase 08 Plan 08-06 — FavoriteParcelWorkspaceView 1922-LOC monolith split into 9 cockpit files + 20-test parity guard (4 commits, 20/20 green)
 Resume file: None
