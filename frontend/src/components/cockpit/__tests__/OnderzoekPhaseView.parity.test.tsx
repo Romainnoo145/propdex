@@ -18,7 +18,11 @@
  *   6. Score modal opens on score click — PotentieModal/RisicoModal still imported by
  *      shell (verified by composition snapshot below)
  *   7. AANPAK card renders with current next-step text — deriveNextStep returns
- *      pre-08-07 baseline copy (BRK CTA "Vraag eigendomsinfo op" still present)
+ *      post-08-07 Contact-handoff copy ("Klaar met onderzoek? / Stap door naar Contact").
+ *      Pre-08-07 BRK CTA copy has been replaced (canary updated as part of Plan 08-07
+ *      per AD1: "fase-overgang IS de gate, geen score-drempel"). The new canary
+ *      pins the Contact-handoff route target so a future change cannot silently
+ *      regress the fase-1 → fase-2 handoff.
  */
 import { describe, expect, it } from 'vitest'
 import {
@@ -184,23 +188,49 @@ describe('OnderzoekPhaseView feature parity (REGRESSION-CRITICAL)', () => {
       expect(step.detail).toBeTruthy()
     })
 
-    it('AANPAK BRK CTA preserved verbatim — pre-08-07 baseline (Onderzoek + missing eigendom)', () => {
-      // Plan 08-07 will REPLACE this copy with "Stap door naar Contact" — this
-      // assertion is the iron-rule canary that proves 08-06 did NOT pre-empt 08-07.
+    it('AANPAK Contact-handoff CTA present for Onderzoek stage (post-08-07 — BRK CTA removed per AD1)', () => {
+      // Plan 08-07 replaced the BRK CTA with "Stap door naar Contact" — this
+      // assertion is the iron-rule canary that pins the new copy + route target
+      // and proves no future plan can silently regress the handoff back to a
+      // BRK-on-fase-1 anti-pattern.
       const cards = flattenCards(buildPages(baseFavorite))
       const missing = deriveMissingCards(cards)
       const step = deriveNextStep(baseFavorite, cards, missing)
-      expect(step.title).toBe('Controleer eigendom')
-      expect(step.detail).toContain('BRK eigendom ontbreekt nog')
+      expect(step.kind).toBe('contact-handoff')
+      expect(step.title).toBe('Klaar met onderzoek?')
+      expect(step.detail).toContain('Stap door naar Contact')
+      if (step.kind !== 'contact-handoff') throw new Error('expected contact-handoff')
+      expect(step.cta).toBeDefined()
+      expect(step.cta.label).toBe('Naar Contact-fase →')
+      expect(step.cta.to).toBe('/opgeslagen/perceel/$parcelId/$phase')
+      expect(step.cta.params.phase).toBe('2-contact')
     })
 
-    it('AANPAK BRK CTA preserved verbatim for Gesignaleerd + has_report path', () => {
+    it('AANPAK BRK CTA REMOVED from Gesignaleerd + has_report path (post-08-07 — falls through to rapport review)', () => {
+      // Pre-08-07 baseline returned "Vraag eigendomsinfo op" / "BRK eigendom ophalen"
+      // for this path. After 08-07 the BRK-specific branch is removed → falls
+      // through to the rapport-review default.
       const fav: FavoriteResponse = { ...baseFavorite, pipeline_stage: 'Gesignaleerd', has_report: true, report_id: 'r1' }
       const cards = flattenCards(buildPages(fav))
       const missing = deriveMissingCards(cards)
       const step = deriveNextStep(fav, cards, missing)
-      expect(step.title).toBe('Vraag eigendomsinfo op')
-      expect(step.detail).toContain('BRK eigendom ophalen')
+      expect(step.title).not.toBe('Vraag eigendomsinfo op')
+      expect(step.detail).not.toContain('BRK eigendom ophalen')
+      // Falls through to the rapport-review branch
+      expect(step.title).toBe('Bekijk je rapport en plan opvolging')
+    })
+
+    it('AANPAK Contact-handoff has NO score-threshold gate (AD1 — fase-overgang IS the gate)', () => {
+      // AD1: handoff fires on ANY fase-1 parcel, regardless of potentie/risico scores.
+      const lowScore: FavoriteResponse = { ...baseFavorite, potentie_score: 5, risico_score: 95 }
+      const highScore: FavoriteResponse = { ...baseFavorite, potentie_score: 95, risico_score: 5 }
+      for (const fav of [lowScore, highScore]) {
+        const cards = flattenCards(buildPages(fav))
+        const missing = deriveMissingCards(cards)
+        const step = deriveNextStep(fav, cards, missing)
+        expect(step.kind).toBe('contact-handoff')
+        expect(step.title).toBe('Klaar met onderzoek?')
+      }
     })
   })
 

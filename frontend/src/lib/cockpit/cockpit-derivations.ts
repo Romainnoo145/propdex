@@ -2,9 +2,11 @@
  * Cockpit derivation logic — next-step + missing-cards + activity rows.
  * Extracted from FavoriteParcelWorkspaceView.tsx 2026-05-19 (Plan 08-06 split, M050/S06 cont.).
  *
- * Pure helpers. PRESERVES current next-step CTA copy verbatim — Plan 08-07 will
- * replace the BRK CTA ("Vraag eigendomsinfo op" / "Controleer eigendom") with the
- * "Stap door naar Contact" copy. DO NOT modify the strings in this file in Plan 08-06.
+ * Pure helpers. Plan 08-07 (M050/S06 cont., AD1) REPLACED the BRK persist CTA on
+ * fase-1 (Onderzoek) with a Contact-handoff CTA — BRK lives on fase-2 per the
+ * "fase-overgang IS the gate, geen score-drempel" rule. The handoff fires on ANY
+ * fase-1 parcel regardless of scores. See iron-rule canary in
+ * __tests__/OnderzoekPhaseView.parity.test.tsx.
  */
 import type { ParcelDocumentMeta } from '@/lib/types/document'
 import type { FavoriteResponse } from '@/lib/types/portfolio'
@@ -35,25 +37,42 @@ export function deriveMissingCards(cards: DossierCardWithContext[]): DossierCard
   )
 }
 
+/**
+ * Discriminated next-step shape.
+ *
+ * - kind 'default': passive copy-only suggestion (legacy shape).
+ * - kind 'contact-handoff': fires on ANY fase-1 (Onderzoek) parcel — surfaces a
+ *   navigation CTA to the Contact phase. Per Plan 08-07 / AD1, no score-threshold
+ *   gating. The fase-overgang IS the gate.
+ */
+export type NextStep =
+  | { kind: 'default'; title: string; detail: string }
+  | {
+      kind: 'contact-handoff'
+      title: string
+      detail: string
+      cta: {
+        kind: 'route'
+        to: '/opgeslagen/perceel/$parcelId/$phase'
+        params: { phase: '2-contact' }
+        label: string
+      }
+    }
+
 export function deriveNextStep(
   favorite: FavoriteResponse,
   allCards: DossierCardWithContext[],
   missingCards: DossierCardWithContext[],
-): { title: string; detail: string } {
+): NextStep {
   const missingKeys = new Set(missingCards.map((card) => card.key))
   const correspondenceCount =
     allCards.find((card) => card.key === 'correspondentie')?.documents.length ?? 0
 
-  // If report exists, next step shifts to review / dossier completeness
+  // If report exists, next step shifts to review / dossier completeness.
+  // Plan 08-07 / AD1: BRK persist branch removed (BRK lives on fase-2).
   if (favorite.has_report && favorite.pipeline_stage === 'Gesignaleerd') {
-    if (missingKeys.has('eigendom')) {
-      return {
-        title: 'Vraag eigendomsinfo op',
-        detail:
-          'Het rapport staat klaar. Volgende stap: BRK eigendom ophalen zodat je weet wie de eigenaar is en hoe je kunt benaderen.',
-      }
-    }
     return {
+      kind: 'default',
       title: 'Bekijk je rapport en plan opvolging',
       detail:
         "Je rapport is gegenereerd. Loop de risico's en potentie door en bepaal of dit perceel naar de onderzoeksfase gaat.",
@@ -63,12 +82,14 @@ export function deriveNextStep(
   if (favorite.pipeline_stage === 'Afgerond') {
     if (favorite.afgerond_reden === 'Gekocht') {
       return {
+        kind: 'default',
         title: 'Werk het vervolgdossier uit',
         detail:
           'Leg overdracht, uitvoeringsstukken en verdere correspondentie vast zodat het perceel direct projectklaar blijft.',
       }
     }
     return {
+      kind: 'default',
       title: 'Bewaar leerpunten compact',
       detail:
         'Zet de afwijzingsreden, eventuele heropeningssignalen en relevante stukken overzichtelijk weg voor later.',
@@ -82,12 +103,14 @@ export function deriveNextStep(
       missingKeys.has('fundering')
     ) {
       return {
+        kind: 'default',
         title: 'Maak het besluitdossier compleet',
         detail:
           'Er ontbreken nog technische stukken die je nodig hebt om stevig te kunnen kopen, parkeren of afwijzen.',
       }
     }
     return {
+      kind: 'default',
       title: 'Bundel het beslisdossier',
       detail:
         'Zet quickscan, eigendom, technische checks en correspondentie naast elkaar voor een scherp investeringsbesluit.',
@@ -97,6 +120,7 @@ export function deriveNextStep(
   if (favorite.pipeline_stage === 'Contact') {
     if (correspondenceCount === 0) {
       return {
+        kind: 'default',
         title: 'Leg de eerste outreach vast',
         detail:
           'Sla mail, brief of gespreksnotities op in Correspondentie zodat opvolging niet buiten het perceeldossier valt.',
@@ -104,49 +128,41 @@ export function deriveNextStep(
     }
     if (missingKeys.has('eigendom')) {
       return {
+        kind: 'default',
         title: 'Rond het eigenaarsspoor af',
         detail:
           'Vraag eigendomsinformatie op voordat je verder escaleert in contact of onderhandeling.',
       }
     }
     return {
+      kind: 'default',
       title: 'Plan de opvolging',
       detail:
         'Werk het volgende contactmoment uit en koppel nieuwe reacties of stukken direct terug aan het dossier.',
     }
   }
 
+  // Fase-1 (Onderzoek) → Fase-2 (Contact) handoff.
+  // Plan 08-07 / AD1: BRK persist branch removed; handoff fires unconditionally
+  // on Onderzoek. The fase-overgang IS the gate (no score threshold).
   if (favorite.pipeline_stage === 'Onderzoek') {
-    if (missingKeys.has('eigendom')) {
-      return {
-        title: 'Controleer eigendom',
-        detail:
-          'BRK eigendom ontbreekt nog. Pak dat eerst op voordat je outreach of biedstrategie aanscherpt.',
-      }
-    }
-    if (missingKeys.has('quickscan')) {
-      return {
-        title: 'Genereer rapport',
-        detail:
-          'Zorg dat de quickscan of rapportlaag gevuld is zodat je van signalen naar inhoudelijke toetsing gaat.',
-      }
-    }
-    if (missingKeys.has('vergunninghistorie')) {
-      return {
-        title: 'Controleer vergunninghistorie',
-        detail:
-          'Vergunningen en bekendmakingen geven snel scherpte op haalbaarheid, risico en timing.',
-      }
-    }
     return {
-      title: 'Werk toe naar contact',
+      kind: 'contact-handoff',
+      title: 'Klaar met onderzoek?',
       detail:
-        'De basis ligt er. Vertaal de bevindingen nu naar een eerste benadering of onderbouwde afwijzing.',
+        'Stap door naar Contact om eigendom op te vragen en outreach voor te bereiden.',
+      cta: {
+        kind: 'route',
+        to: '/opgeslagen/perceel/$parcelId/$phase',
+        params: { phase: '2-contact' },
+        label: 'Naar Contact-fase →',
+      },
     }
   }
 
   if (missingKeys.has('quickscan')) {
     return {
+      kind: 'default',
       title: 'Genereer rapport',
       detail:
         'Start met een quickscan zodat dit perceel van een ruwe signalering naar een toetsbaar acquisitiedossier gaat.',
@@ -155,6 +171,7 @@ export function deriveNextStep(
 
   if (missingKeys.has('bestemmingscheck')) {
     return {
+      kind: 'default',
       title: 'Bevestig de bestemmingsruimte',
       detail:
         'Leg eerst vast wat planologisch wel en niet kan, zodat de rest van het dossier richting krijgt.',
@@ -162,6 +179,7 @@ export function deriveNextStep(
   }
 
   return {
+    kind: 'default',
     title: 'Zet door naar Onderzoek',
     detail:
       'De eerste basisinformatie staat klaar. Verzamel nu eigendom, vergunninghistorie en technische checks.',
@@ -191,7 +209,7 @@ export function deriveContactFollowUp(
     return {
       title: 'Start met eigenaar + eerste outreach',
       detail:
-        'Nog geen eigendomsinformatie of contactspoor vastgelegd. Vraag BRK eigendom op en leg de eerste benadering direct vast.',
+        'Nog geen eigendomsinformatie of contactspoor vastgelegd. Haal eigendomsinformatie op en leg de eerste benadering direct vast.',
     }
   }
 
