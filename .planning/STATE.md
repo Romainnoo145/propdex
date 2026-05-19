@@ -5,14 +5,14 @@ milestone_name: milestone
 current_phase: 2
 current_plan: 3
 status: completed
-stopped_at: Completed Phase 08 Plan 08-06 — FavoriteParcelWorkspaceView 1922-LOC monolith split into 9 cockpit files + 20-test parity guard (4 commits, 20/20 green)
-last_updated: "2026-05-19T11:20:24.551Z"
+stopped_at: Completed Phase 08 Plan 08-07 — BRK persist-CTA removed from fase-1; Contact-handoff Link wired in AanpakCard (27/27 cockpit tests green; UX-06 requirement complete)
+last_updated: "2026-05-19T11:32:18.341Z"
 last_activity: 2026-05-19
 progress:
   total_phases: 10
   completed_phases: 4
   total_plans: 22
-  completed_plans: 17
+  completed_plans: 18
   percent: 22
 ---
 
@@ -107,6 +107,7 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 | Phase 08-brk-fase-2-wire-up P04 | 9m | 2 tasks | 5 files |
 | Phase 08-brk-fase-2-wire-up P01 | 9m 54s | 3 tasks | 6 files |
 | Phase 08-brk-fase-2-wire-up P06 | 17min | 4 tasks | 13 files |
+| Phase 08-brk-fase-2-wire-up P07 | 8m 3s | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -286,6 +287,8 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 - [Phase 08-brk-fase-2-wire-up]: Plan 08-06: Split 1922-LOC FavoriteParcelWorkspaceView into 9 cockpit files (all ≤300 LOC) — plan-spec target was 6 files but shell-overflow needed 3 extra extractions (ParcelWorkspaceHeader/WorkspaceContactModal/DossierSection/ActivityTimelineCard)
 - [Phase 08-brk-fase-2-wire-up]: Plan 08-06: Parity test adapted to project node-env unit project — pure-logic structural assertions + composition snapshot (regex-assert OnderzoekPhaseView.tsx imports via fs.readFile) instead of @testing-library/react; matches RisicoLayer.factor-coverage.test.tsx precedent
 - [Phase 08-brk-fase-2-wire-up]: Plan 08-06: AANPAK CTA copy preserved VERBATIM in cockpit-derivations.ts including BRK CTAs — iron-rule canary in parity test pins pre-08-07 baseline; Plan 08-07 explicitly fails this canary when it lands 'Stap door naar Contact' copy
+- [Phase 08-brk-fase-2-wire-up]: Plan 08-07: BRK persist-CTA removed from fase-1 AANPAK card; replaced with unconditional Contact-handoff Link (AD1 fase-overgang IS the gate); NextStep discriminated union introduced in cockpit-derivations.ts
+- [Phase 08-brk-fase-2-wire-up]: Plan 08-07: Iron-rule canary in OnderzoekPhaseView.parity.test.tsx UPDATED (not deleted) — re-pins new Contact-handoff copy + route target so future plans cannot silently regress to BRK-on-fase-1
 
 ### Pending Todos
 
@@ -297,6 +300,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-19T11:20:24.549Z
-Stopped at: Completed Phase 08 Plan 08-06 — FavoriteParcelWorkspaceView 1922-LOC monolith split into 9 cockpit files + 20-test parity guard (4 commits, 20/20 green)
+Last session: 2026-05-19T11:32:18.339Z
+Stopped at: Completed Phase 08 Plan 08-07 — BRK persist-CTA removed from fase-1; Contact-handoff Link wired in AanpakCard (27/27 cockpit tests green; UX-06 requirement complete)
 Resume file: None
