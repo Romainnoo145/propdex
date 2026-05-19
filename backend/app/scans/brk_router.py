@@ -41,6 +41,7 @@ from app.services.brk_persistence_service import (
     FeatureDisabled,
     ValidationError,
 )
+from app.services.brk_read_service import read_for_parcel
 from app.services.credential_resolver import CredentialNotConfigured
 
 logger = logging.getLogger(__name__)
@@ -117,3 +118,28 @@ async def persist_brk_for_parcel(
         )
 
     return records
+
+
+@router.get(
+    "/{parcel_id}/brk",
+    response_model=list[BRKOwnershipRecordRead],
+    status_code=status.HTTP_200_OK,
+    summary="Read persisted BRK records voor een perceel (M050/S06)",
+    description=(
+        "Read-only retrieval van eerder-persisted BRK records. Returns lege list "
+        "als nog niet persisted of als alleen natuurlijk-persoon records bestonden "
+        "(AVG strip). Org-scoped via current_user.organization_id. "
+        "Cross-org access returns [] (geen leak van bestaan)."
+    ),
+)
+async def get_brk_for_parcel(
+    parcel_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[BRKOwnershipRecordRead]:
+    """M050/S06 read-path. Pure DB read; no Kadaster call; multi-tenant by org_id."""
+    return await read_for_parcel(
+        db=db,
+        organization_id=current_user.organization_id,
+        parcel_id=parcel_id,
+    )
