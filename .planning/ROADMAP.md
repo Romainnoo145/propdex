@@ -1,33 +1,32 @@
-# Roadmap: Propdex M050 — BRK Actiefase-Wedge
+# Roadmap: Propdex M050 — BRK Lookup-Wedge
 
 ## Overview
 
-M050 is een product-mode-shift van **onderzoekstool → actietool**: eerste brug van research-platform naar een drie-fase-funnel (Onderzoek → Actie → CRM). Concreet betekent dit (a) BRK Eigendom als eerste paid integration met persistent storage + retention-policy, (b) 3 nieuwe scoring-factoren (`hypotheek_risico`, `eigendoms_complexiteit`, `koopwaarde_trend`), (c) brief-naar-eigenaar feature met AI-personalisatie + PostNL dispatch, en (d) een nieuwe opgeslagen-tab cockpit met lifecycle-sidebar.
+M050 levert de research/lookup-helft van Propdex's "Onderzoek → Actie" funnel: BRK Eigendom als eerste paid Type-C integration met persistent storage + retention-policy, 3 nieuwe BRK-driven scoring-factoren, een nieuwe opgeslagen-cockpit met lifecycle-sidebar, en een dedicated lifecycle-fase 2 (Contact) als BRK-home.
+
+**Originele scope was "BRK Actiefase-Wedge"** — inclusief brief-send pipeline (templates + AI + PostNL + branding + tier-gates). Tijdens M050-execution shipte alleen de lookup-helft. De brief-send actie-helft is op 2026-05-19 losgekoppeld en als afzonderlijke M051 milestone gedefinieerd. Zie `.planning/vM050-MILESTONE-AUDIT.md` voor het audit-rapport dat de split triggerde.
 
 **Source of truth:**
-- `.planning/milestones/M050-INDEX.md` (hub-doc)
-- `.planning/milestones/M050-ENG-PLAN.md` (6 architectuur-decisions D1-D6 + datamodel + slice-volgorde)
-- `.planning/milestones/M050-DECISIONS-PRE-PLANNING.md` (Q6/Q7/Q8 locked)
-- `~/.gstack/projects/Romainnoo145-propdex/ceo-plans/2026-05-17-m050-brk-actiefase.md` (SELECTIVE EXPANSION)
+- `.planning/milestones/M050-INDEX.md` (origineel hub-doc — vermeldt zowel lookup als brief-send; lookup-helft is hier shipped)
+- `.planning/milestones/M050-ENG-PLAN.md` (6 architectuur-decisions D1-D6 — BRK-helft D1-D5 toegepast in M050; D6 streaming + D7 partner-review zijn M051-territory)
+- `.planning/milestones/M050-DECISIONS-PRE-PLANNING.md` (Q6/Q7/Q8 LOCKED — Q7 retention shipped; Q6/Q8 zijn M051)
+- `~/.gstack/projects/Romainnoo145-propdex/ceo-plans/2026-05-17-m050-brk-actiefase.md` (origineel SELECTIVE EXPANSION CEO-plan)
 
-**Karakter:** Eerste paid Type-C integration. Vereist Kadaster verwerkersovereenkomst (4-8 wk legal-track parallel) + PostNL Zakelijk master-account-onboarding. Loopt parallel met M050.5 (tier-gating + quota-infra).
+**Karakter:** Eerste paid Type-C integration. Vereist Kadaster verwerkersovereenkomst (4-8 wk legal-track parallel) — production-pad gated tot DPA signed. Loopt parallel met M050.5 (tier-gating + quota-infra).
 
-**Phase / Slice naming:** GSD-CLI gebruikt integer phase-numbers (1-9). In commits + conversatie gebruiken we Propdex slice-aliassen (S01..S07 + decimal S04.5/S05.5). Phase 1 ≡ S01, etc.
+**Phase / Slice naming:** GSD-CLI gebruikt integer phase-numbers. In commits + conversatie gebruiken we Propdex slice-aliassen (S01, S02, S03, S06 + S06-cont). Phase 8 ≡ M050/S06-cont (BRK Fase-2 Wire-up).
 
-**Parallel milestone:** M050.5 (`.planning/milestones/M050.5-ROADMAP.md`) levert tier-decorator + quota-counter. M050.5/S02 moet landen vóór M050/S07 tier-gates kan wiren.
+**Parallel milestone:** M050.5 (`.planning/milestones/M050.5-ROADMAP.md`) levert tier-decorator + quota-counter — relevant voor M051 brief-send Phase 5 tier-gates.
+
+**Successor:** M051 (`.planning/milestones/M051-ROADMAP.md`) — brief-send actiefase pipeline.
 
 ## Phases
 
-- [ ] **Phase 1: BRK Datamodel + Retention** (S01) — `brk_ownership_records` + Alembic migratie + retention-life-cycle (30 dgn soft → 90 dgn hard) + ARQ cleanup-cron
-- [ ] **Phase 2: BRK Persist Client** (S02) — Phase 105 ephemeral lookup wrappen tot persist-mode, met M049 credential-resolver
-- [ ] **Phase 3: Scoring-Factoren Cascade** (S03) — 3 nieuwe factoren live in score_v3_factors registry + rescore_cascade_job trigger op BRK-write
-- [ ] **Phase 4: Brief-Template Registry + Preview** (S04) — 3 templates (cold-outreach / follow-up / verkenning) + variabele-substitutie + brief-preview met perceel-context
-- [ ] **Phase 4.5: AI Brief-Personalisatie** (S04.5) — Claude streaming + Pydantic-schema (BriefPersonalizationInput) + `escape_for_prompt` safety + `ai_generation_audit` log + partner-review verplicht
-- [ ] **Phase 5: PostNL Dispatch + Delivery** (S05) — PostNL Zakelijk client + async ARQ verzend-job + delivery-tracking webhooks (idempotent via external_event_id) + partner-branding-injection (logo/voettekst/font per org)
-- [ ] **Phase 5.5: Partner-Branding Admin** (S05.5) — Admin-UX branding-upload in M049-hub-stijl (logo/voettekst/lettertype/bedrijfsnaam-op-envelop)
-- [ ] **Phase 6: Opgeslagen-Cockpit + Lifecycle Sidebar** (S06) — Bestaande opgeslagen-tab transformeert tot stappenplan-cockpit: full-width perceel-cards (+ perceel-image thumbnail) + sidebar transformeert van toplevel-icons naar 4-8 lifecycle-icons (1. Onderzoek t/m 6. Exploitatie)
-- [ ] **Phase 7: End-to-End Wiring + Tier-Gates** (S07) — Integration tests + tier-gate decorators (depends op M050.5/S02) + feature-flag triad (M050_BACKEND/FRONTEND/M050_5_TIER_ENFORCEMENT) + AVG-audit trail verificatie
-- [ ] **Phase 8: BRK Fase-2 Wire-up** (M050/S06 cont.) — Verplaats BRK persist-CTA van fase 1 (Onderzoek) naar fase 2 (Contact); nieuw `GET /api/parcels/{id}/brk` endpoint; render 3 BRK factoren in RisicoLayer na rescore; split 1922-LOC FavoriteParcelWorkspaceView in ≤300-LOC componenten
+- [x] **Phase 1: BRK Datamodel + Retention** (S01) — `brk_ownership_records` + Alembic migratie + retention-life-cycle (30 dgn soft → 90 dgn hard) + ARQ cleanup-cron
+- [x] **Phase 2: BRK Persist Client** (S02) — Phase 105 ephemeral lookup wrappen tot persist-mode, met M049 credential-resolver
+- [x] **Phase 3: Scoring-Factoren Cascade** (S03) — 3 nieuwe factoren live in score_v3_factors registry + rescore_cascade_job trigger op BRK-write
+- [x] **Phase 6: Opgeslagen-Cockpit + Lifecycle Sidebar** (S06) — Bestaande opgeslagen-tab transformeert tot stappenplan-cockpit: full-width perceel-cards (+ perceel-image thumbnail) + sidebar transformeert van toplevel-icons naar 4-8 lifecycle-icons (1. Onderzoek t/m 6. Exploitatie)
+- [x] **Phase 8: BRK Fase-2 Wire-up** (M050/S06 cont.) — Verplaats BRK persist-CTA van fase 1 (Onderzoek) naar fase 2 (Contact); nieuw `GET /api/parcels/{id}/brk` endpoint; render 3 BRK factoren in RisicoLayer na rescore; split 1922-LOC FavoriteParcelWorkspaceView in ≤300-LOC componenten
 
 ## Phase Details
 
@@ -49,10 +48,7 @@ M050 is een product-mode-shift van **onderzoekstool → actietool**: eerste brug
 
 **Depends on:** Nothing
 
-**Plans:** 3 plans
-- [ ] 01-01-PLAN.md — Alembic migration + SQLAlchemy model BrkOwnershipRecord + register in models/__init__ (Wave 1)
-- [ ] 01-02-PLAN.md — Feature flag + Pydantic schemas + brk_persistence_service (D2 strip / D3 soft-delete / D4 FF / D8 NULL-reject) + ARQ retention cron + favorites_service D3 hook (Wave 2)
-- [ ] 01-03-PLAN.md — Unit + integration + multi-tenant + regression tests (24 GAPS + 2 IRON-RULE regressions, including Phase 105 ephemeral untouched + favorites flow resilient) (Wave 3)
+**Status:** Complete (passed 9/9 must-haves) — VERIFICATION.md in `.planning/phases/01-brk-datamodel-retention/`
 
 ---
 
@@ -67,6 +63,8 @@ M050 is een product-mode-shift van **onderzoekstool → actietool**: eerste brug
 3. Failure-modes (Kadaster 5xx / 429 / credential-expired) gemapt naar user-facing errors per ENG-PLAN failure-modes registry
 
 **Depends on:** Phase 1 (datamodel)
+
+**Status:** Complete (passed 25/25 must-haves) — VERIFICATION.md in `.planning/phases/02-brk-fetch-persist-endpoint/`
 
 ---
 
@@ -83,84 +81,7 @@ M050 is een product-mode-shift van **onderzoekstool → actietool**: eerste brug
 
 **Depends on:** Phase 2 (BRK persist)
 
-**Plans:** 1/3 plans executed
-- [ ] 03-01-PLAN.md — Feature flag M050_S03_FACTORS_ENABLED + scoring_pipeline.enrich_parcel_data_with_brk (D1) + _missing_brk helper + REGRESSION-CRITICAL multi-tenant test (F2) (Wave 1)
-- [ ] 03-02-PLAN.md — FACTOR_REGISTRY extension (3 new entries D2) + Bron literal +brk + _rebalance_risico_weights + 3 factor functions (D4/D5/D6) + 3 REGRESSION-CRITICAL tests (weights, signatures, narrative-honesty) (Wave 2)
-- [ ] 03-03-PLAN.md — compute_score_v3 D3 redistribution + rescore_parcel ARQ job + enqueue_rescore_parcel + brk_router D7 hook + 4 integration tests (persist→rescore E2E, sparse, concurrent dedup, FF-off) (Wave 3)
-
----
-
-### Phase 4: Brief-Template Registry + Preview (S04)
-**Goal:** 3 brief-templates met variabele-substitutie + perceel-context-preview vóór AI-personalisatie.
-
-**Requirements:** BRIEF-01, BRIEF-02, BRIEF-03, TEST-04
-
-**Success criteria:**
-1. Templates `cold-outreach`, `follow-up`, `verkenning` rendered met variabele-fill (eigenaar-aanhef, perceel-adres, project-context)
-2. Brief-preview toont perceel-foto (BAG) + key-facts naast template; partner ziet wat eindgebruiker krijgt
-3. `brief_messages` tabel met `draft_idempotency_key` voorkomt dubbele submits (UQ-constraint)
-
-**Depends on:** Phase 1 (datamodel context)
-
----
-
-### Phase 4.5: AI Brief-Personalisatie (S04.5)
-**Goal:** Claude-streaming personaliseert brief-template met partner-review-verplichting; alle outputs audit-logged.
-
-**Requirements:** AI-01, AI-02, AI-03, AI-04, TEST-05
-
-**Eng-review beslissingen (D1, D6, D7):**
-- Pydantic-schema `BriefPersonalizationInput` (D1) — typed-only, geen freeform-prompt
-- `app/ai/safety.py::escape_for_prompt()` voor adversarial input mitigation
-- `ai_generation_audit` tabel logt input_hash + ai_output_raw + partner_edited_output + refused-flag
-- Streaming via Anthropic SDK + FastAPI `StreamingResponse` (D6) voor first-token <2s UX
-- Klant-review-step verplicht (D7) — geen direct-send pad
-
-**Success criteria:**
-1. AI-output streaming start <2s, full completion <15s; tokens-as-they-arrive in frontend (typewriter effect)
-2. Eigenaar-naam altijd escaped via `escape_for_prompt`; adversarial-prompt-injection eval-set scoort 100% safe
-3. Audit-log compleet: every generation row capture-bare (input_hash + output + model + refused + duration_ms)
-4. Refusal-pad: Claude refuses → fallback naar standaard-template + banner; geen silent-failure
-5. Partner edit + Approve verplicht vóór `POST /briefs/{id}/send`
-
-**Depends on:** Phase 4 (template + preview)
-
----
-
-### Phase 5: PostNL Dispatch + Delivery (S05)
-**Goal:** Approved briefs gaan via PostNL Zakelijk master-account, met partner-branding-injection en idempotent delivery-tracking.
-
-**Requirements:** POST-01, POST-02, POST-03, POST-04, BRAND-01, TEST-06
-
-**Eng-review beslissingen (D2, D3, Q6 LOCKED):**
-- Atomic UPDATE quota (`WHERE count < limit RETURNING`) bij brief-send (D2) — voorkomt race-condition
-- Webhook idempotency via `brief_delivery_events.external_event_id` UQ + `ON CONFLICT DO NOTHING` (D3)
-- Master-account-model (Q6) — Propdex tekent één PostNL contract, sender-naam dynamisch per partner-branding
-- SPOF accepted v1 (D6 CEO-decision) — geen graceful-degrade PostNL outage in v1
-
-**Success criteria:**
-1. `POST /briefs/{id}/send` enqueue'd `postnl_dispatch_job` binnen 500ms (atomic-quota-update + INSERT)
-2. ARQ-job genereert PDF (template + partner-branding + AI-content) + verstuurt via PostNL API; status="sent" + `postnl_message_id` opgeslagen
-3. Webhook `POST /webhooks/postnl` idempotent: duplicate event → 200 zonder dubbele state-update
-4. Retry-pattern: PostNL 5xx → ARQ retry 3x exp-backoff; permanent 4xx → status="failed" + alert
-5. Out-of-order events handled via `occurred_at` ordering
-
-**Depends on:** Phase 4 (brief-content), Phase 4.5 (AI-output of standaard-template)
-
----
-
-### Phase 5.5: Partner-Branding Admin (S05.5)
-**Goal:** Partner uploadt logo/voettekst/font/bedrijfsnaam in M049-hub-stijl; injection in Phase 5 PDF-build.
-
-**Requirements:** BRAND-02, BRAND-03, TEST-07
-
-**Success criteria:**
-1. Admin-UX in M049-data-bronnen-hub: nieuwe sectie "Partner-branding" met upload/preview
-2. `partner_branding` tabel UNIQUE per organization_id (één branding per org)
-3. Logo-upload valideert <1MB + correct file-type; fout → "Logo te groot/wrong type"
-4. Phase 5 PDF-build leest `partner_branding.bedrijfsnaam_op_envelop` voor PostNL sender-identity
-
-**Depends on:** Phase 5 (consumer)
+**Status:** Complete (passed 4/4 backend must-haves; 1 human-verification item — frontend refetch ≤60s deferred to manual QA, non-blocking) — VERIFICATION.md in `.planning/phases/03-scoring-factoren-cascade/`
 
 ---
 
@@ -173,7 +94,7 @@ M050 is een product-mode-shift van **onderzoekstool → actietool**: eerste brug
 - /opgeslagen blijft bestaand layout met FULL-WIDTH perceel-cards (+ perceel-image thumbnail)
 - Click → bestaande perceel-detail page (geen nieuwe modal)
 - Linker sidebar TRANSFORMEERT: toplevel-icons → 4-8 lifecycle-icons (1. Onderzoek t/m 6. Exploitatie)
-- "1. Onderzoek" = bestaande detail-page content + M050 brief-sturen + BRK-persistent
+- "1. Onderzoek" = bestaande detail-page content + BRK-persistent
 - Sidebar-design-polish + exacte lifecycle-icon-keuze deferred naar implementatie
 
 **Pre-start check:** M048-coordination (pin-mechanism + groep-pages mogen niet breken)
@@ -181,38 +102,13 @@ M050 is een product-mode-shift van **onderzoekstool → actietool**: eerste brug
 **Success criteria:**
 1. Opgeslagen-tab toont full-width perceel-cards met BAG-thumbnail; geen layout-regression op pin-mechanism
 2. Sidebar transformatie: lifecycle-icons rendered met active-state per perceel-fase
-3. Click op card opent bestaande perceel-detail page; "Onderzoek"-tab toont scan-data + brief-feature
+3. Click op card opent bestaande perceel-detail page; "Onderzoek"-tab toont scan-data
 4. Aura-tokens consistent: Morning Mist canvas, Pure Glass cards, Plus Jakarta Sans
 5. prefers-reduced-motion fallback respected; `will-change:transform` op floating-panels
 
-**Depends on:** Phase 2 (BRK-data), Phase 5 (brief-status), Phase 5.5 (partner-branding voor preview)
+**Depends on:** Phase 2 (BRK-data)
 
-**Plans:** 4/5 plans executed
-- [ ] 06-01-PLAN.md — Lifecycle phases data module + LifecycleSideRailNav component + Storybook story (Wave 1)
-- [ ] 06-02-PLAN.md — Conditional route-prefix sidebar swap in _authenticated.tsx (Wave 2)
-- [ ] 06-03-PLAN.md — OpgeslagenPage refactor: single-column full-width cards + BAG-thumbnail + extract SavedParcelCard/PipelineStagePill (Wave 1)
-- [ ] 06-04-PLAN.md — Nested route /opgeslagen/perceel/$parcelId + phase placeholders + sidebar active-phase derivation (Wave 3)
-- [ ] 06-05-PLAN.md — Aura audit + M048 regression smoke + reduced-motion verification (Wave 4)
-
----
-
-### Phase 7: End-to-End Wiring + Tier-Gates (S07)
-**Goal:** Alle slices gewired, tier-gates ingebakken, feature-flag-triad clean toggle, AVG-audit-trail verifieerd.
-
-**Requirements:** WIRE-01, WIRE-02, WIRE-03, TEST-08
-
-**Eng-review beslissingen (D4, D5):**
-- Env-flag triad: `M050_BACKEND_ENABLED`, `M050_FRONTEND_ENABLED`, `M050_5_TIER_ENFORCEMENT_ENABLED` (D4)
-- Sync BRK-call + DB-write, async rescore via existing `rescore_cascade_job.py` (D5)
-
-**Success criteria:**
-1. Tier-gate decorators op `/parcels/{id}/brk-lookup` + `/briefs/{id}/send` — Demo→403, Paid→25/5 quota, Enterprise→250/50
-2. Feature-flag triad clean toggle: backend off → 404, frontend off → cockpit shows scan-mode-only, tier-enforcement off → unlimited (dev-mode)
-3. E2E happy-path: opgeslagen → BRK → scoring-refresh → brief-template → AI-personalize → partner-approve → PostNL → webhook → delivered (alle stappen <13 wk realistisch)
-4. AVG-audit: SAR-procedure documented, right-to-erasure override soft-delete bewezen, sub-processor-chain documented in verwerkersovereenkomst-template
-5. Regression-suite: Phase 105 ephemeral BRK-modal + bestaande 16 score-v3 factoren + rescore_cascade_job (non-BRK triggers) — alle groen
-
-**Depends on:** Phase 1-6, M050.5/S02 (quota-counter)
+**Status:** Complete (passed 5/5 must-haves; modified door Phase 8 split — parity-pinned via regression test) — VERIFICATION.md in `.planning/phases/06-opgeslagen-cockpit-lifecycle-sidebar/`
 
 ---
 
@@ -242,30 +138,31 @@ M050 is een product-mode-shift van **onderzoekstool → actietool**: eerste brug
 
 **Depends on:** Phase 3 (BRK factoren live), Phase 6 (cockpit shell + sidebar live)
 
-**Plans:** 8 plans
-- [ ] 08-01-PLAN.md — Backend GET /brk + brk_read_service + 14 unit/integration/regression tests incl. multi-tenant IRON-RULE (Wave 1)
-- [ ] 08-02-PLAN.md — Frontend BRK hooks (useBrkRecords, usePersistBrk, useRescorePoll) + errorMapping util + 13 hook tests (Wave 2)
-- [ ] 08-03-PLAN.md — Fase 2 components (ContactPhaseView + BrkPersistPanel + BrkOwnerCard + BrkHypotheekCard + BrkKoopwaardeTimeline + RescoreProgressBanner) + 17 component tests (Wave 3)
-- [ ] 08-04-PLAN.md — RisicoLayer FACTOR_LABELS + formatFactorValue extension voor 3 BRK keys + REGRESSION-CRITICAL 25-factor completeness test + parallel backend drift-detector (Wave 1)
-- [ ] 08-05-PLAN.md — phases.ts enable 2-contact + $phase route ContactPhaseView dispatch + REGRESSION-CRITICAL phases-3-8-disabled test (Wave 4 — depends on 08-03 for ContactPhaseView module resolution)
-- [ ] 08-06-PLAN.md — FavoriteParcelWorkspaceView SPLIT (5 cockpit components + 2 lib/cockpit helpers + DELETE monolith) + REGRESSION-CRITICAL parity test (Wave 1)
-- [ ] 08-07-PLAN.md — AANPAK card BRK CTA REMOVED + "Stap door naar Contact" handoff CTA + 4 unit tests (Wave 2)
-- [ ] 08-08-PLAN.md — Backend integration E2E + REGRESSION-CRITICAL Phase 105 modal + LifecycleSideRailNav scope + frontend E2E flow tests (Wave 5)
+**Status:** Complete (passed 7/7 must-haves) — VERIFICATION.md in `.planning/phases/08-brk-fase-2-wire-up/`
 
 ---
 
-## Out of Scope (deferred per CEO-review)
+## Moved to M051 (Brief-Send Pipeline)
+
+The following phases were originally part of M050 BRK Actiefase-Wedge but were never planned or executed. On 2026-05-19, after milestone audit revealed 23/45 unsatisfied requirements, they were re-scoped as M051 — Brief-Send Pipeline (see `.planning/milestones/M051-ROADMAP.md`).
+
+- ~~**Phase 4: Brief-Template Registry + Preview** (S04)~~ → M051 Phase 1
+- ~~**Phase 4.5: AI Brief-Personalisatie** (S04.5)~~ → M051 Phase 2
+- ~~**Phase 5: PostNL Dispatch + Delivery** (S05)~~ → M051 Phase 3
+- ~~**Phase 5.5: Partner-Branding Admin** (S05.5)~~ → M051 Phase 4
+- ~~**Phase 7: End-to-End Wiring + Tier-Gates** (S07)~~ → M051 Phase 5
+
+Requirements that moved: BRIEF-01..03, AI-01..04, POST-01..05, BRAND-01..03, WIRE-01..03, TEST-04..08 (23 total).
+
+## Out of Scope (deferred per CEO-review — still valid)
 
 - **S08 Admin-UX quota-monitoring** → DEFER M052 (E7 accepted). Interim: CLI-script + Postgres-query-snippets in `.planning/M050-OPS-RUNBOOK.md`
-- **Graceful-degrade PostNL outage PDF-fallback** → D6 SPOF accepted v1, M051+ als trigger
 - **Multi-channel outreach** (email/WhatsApp/SMS/LinkedIn) → M053+
 - **Reply-tracking inbound mail** → M053
 - **A/B-test brieven** → M054+
 - **Per-tenant feature-flag toggle** (DB-driven) → premature
 - **Redis-cached quota-counter** → premature (atomic-UPDATE schaalt prima)
 
-## Worktree Parallelization (per ENG-PLAN)
+---
 
-7 lanes (A-G). Phase 1 (week 1-3): Lanes A (M050.5) + B (BRK) + C (Brief+AI) parallel in worktrees. Phase 2 (week 4-7): D (PostNL) na C-merge, E (Cockpit) na B+D-merge. Phase 3 (week 8-11): F wires. Phase 4 (week 11-13): G verification + GA-prep.
-
-*Last updated: 2026-05-19 — Phase 8 broken down via /gsd:plan-phase: 8 plans in 5 waves (W1: 08-01/04/06, W2: 08-02/07, W3: 08-03, W4: 08-05, W5: 08-08) — 08-05 rev'd to wave 4 (depends on 08-03 ContactPhaseView for module resolution); 08-04 25-factor coverage + backend drift-detector. All 6 phase-8 requirements distributed (UX-06/07/08, WIRE-04/05, TEST-09).*
+*Last updated: 2026-05-19 — Milestone split: 5 brief-send phases re-scoped to M051. Lookup-helft alle 5 phases (1, 2, 3, 6, 8) complete + verified. Audit-rapport in `.planning/vM050-MILESTONE-AUDIT.md`.*

@@ -1,11 +1,14 @@
-# Requirements: Propdex M050 — BRK Actiefase-Wedge
+# Requirements: Propdex M050 — BRK Lookup-Wedge
 
 **Defined:** 2026-05-17
-**Core Value:** Onderzoek → Actie funnel — actiegericht werken kan pas als vooronderzoek klopt; M050 levert beide in één cockpit.
+**Re-scoped:** 2026-05-19 (brief-send half split to M051)
+**Core Value:** Onderzoek-helft van de "Onderzoek → Actie" funnel — BRK Eigendom als eerste paid Type-C integration, met persistent storage + risico-scoring + dedicated lifecycle-fase 2 (Contact) UI.
 
-**Source of truth:** `.planning/milestones/M050-INDEX.md` (hub) · `.planning/milestones/M050-ENG-PLAN.md` (architectuur) · `.planning/milestones/M050-DECISIONS-PRE-PLANNING.md` (Q6/Q7/Q8 LOCKED)
+**Source of truth:** `.planning/milestones/M050-INDEX.md` (origineel hub-doc) · `.planning/milestones/M050-ENG-PLAN.md` (architectuur D1-D5 voor BRK-helft) · `.planning/milestones/M050-DECISIONS-PRE-PLANNING.md` (Q7 LOCKED retention)
 
-## M050 Requirements
+**Successor:** M051 — Brief-Send Pipeline. Originele brief-send requirements (23) verhuisd naar `.planning/milestones/M051-REQUIREMENTS.md`.
+
+## M050 Requirements (BRK Lookup-Wedge — all shipped)
 
 ### BRK Persistence & Retention
 
@@ -21,38 +24,11 @@
 - [x] **SCOR-02**: BRK-write triggert `rescore_cascade_job(parcel_id)` async; frontend React Query refetch toont nieuwe scores binnen 60s.
 - [x] **SCOR-03**: Sparse-data fallback: parcels zonder BRK-coverage → `silent_neutral` (niet 0). Bestaande 16 score-v3 factoren ongewijzigd (REGRESSION-CRITICAL).
 
-### Brief Templates
-
-- [ ] **BRIEF-01**: `brief_messages` tabel + `brief_template_service` registry met 3 templates (cold-outreach / follow-up / verkenning) + variabele-substitutie (eigenaar-aanhef, perceel-adres, project-context).
-- [ ] **BRIEF-02**: Brief-preview UI toont perceel-foto (BAG) + key-facts naast template; partner ziet wat eindgebruiker krijgt vóór AI-step.
-- [ ] **BRIEF-03**: `draft_idempotency_key` UQ-constraint voorkomt dubbele submits.
-
-### AI Brief Personalization
-
-- [ ] **AI-01**: Pydantic-schema `BriefPersonalizationInput` (D1) — typed-only structured input, geen freeform-prompt; output validation.
-- [ ] **AI-02**: `app/ai/safety.py::escape_for_prompt()` voor adversarial input mitigation; eigenaar-naam altijd escaped.
-- [ ] **AI-03**: Claude streaming via Anthropic SDK + FastAPI `StreamingResponse` (D6) — first-token <2s, full <15s, typewriter UX.
-- [ ] **AI-04**: `ai_generation_audit` tabel logt input_hash + ai_output_raw + partner_edited_output + refused-flag + duration_ms. Partner-review-step verplicht (D7) — geen direct-send pad.
-
-### PostNL Delivery
-
-- [ ] **POST-01**: `postnl_client.py` PostNL Zakelijk API client (master-account model per Q6 LOCKED); sender-identity dynamic per partner-branding.
-- [ ] **POST-02**: ARQ `postnl_dispatch_job` async — PDF-build (template + branding + content) + PostNL API send + status="sent" + `postnl_message_id`.
-- [ ] **POST-03**: Atomic UPDATE quota (D2) bij brief-send `WHERE count < limit RETURNING` — voorkomt race-condition tussen concurrent sends.
-- [ ] **POST-04**: Webhook `POST /webhooks/postnl` idempotent via `brief_delivery_events.external_event_id` UQ + `ON CONFLICT DO NOTHING` (D3). Out-of-order events handled via `occurred_at` ordering.
-- [ ] **POST-05**: Retry-pattern: PostNL 5xx → ARQ retry 3x exp-backoff; permanent 4xx → status="failed" + alert.
-
-### Partner Branding
-
-- [ ] **BRAND-01**: `partner_branding` tabel UNIQUE per organization_id (logo_url, voettekst, lettertype, bedrijfsnaam_op_envelop NOT NULL, contactpersoon_naam, contactpersoon_functie).
-- [ ] **BRAND-02**: Admin-UX branding-upload in M049-data-bronnen-hub-stijl; logo-upload valideert <1MB + correct file-type.
-- [ ] **BRAND-03**: Phase 5 PDF-build leest `partner_branding.bedrijfsnaam_op_envelop` voor PostNL sender-identity.
-
 ### Opgeslagen Cockpit + Sidebar (S06)
 
 - [x] **UX-01**: Opgeslagen-tab transformeert naar full-width perceel-cards met BAG-thumbnail (geen layout-regression op M048 pin-mechanism + groep-pages).
 - [x] **UX-02**: Linker sidebar transformeert van toplevel-icons naar 4-8 lifecycle-icons (1. Onderzoek t/m 6. Exploitatie); active-state per perceel-fase.
-- [x] **UX-03**: Click op card opent bestaande perceel-detail page; "1. Onderzoek"-tab toont scan-data + M050 brief-feature + BRK-persistent.
+- [x] **UX-03**: Click op card opent bestaande perceel-detail page; "1. Onderzoek"-tab toont scan-data + BRK-persistent.
 - [x] **UX-04**: Aura-tokens consistent: Morning Mist canvas, Pure Glass cards, Plus Jakarta Sans, Warm Amber accent.
 - [x] **UX-05**: `prefers-reduced-motion` fallback respected; `will-change:transform` op floating-panels.
 
@@ -63,26 +39,26 @@
 - [x] **UX-08**: Rescore-polling UX in fase 2: inline banner "Onderzoeksscore wordt bijgewerkt…" → 2s × 30 ticks (60s window) → success-banner met link terug naar fase 1, of timeout-banner zonder retry-loop (AD3).
 - [x] **WIRE-04**: Nieuw `GET /api/parcels/{parcel_id}/brk` endpoint met hard org-filter + `soft_deleted_at IS NULL` filter + multi-owner support (latest fetch-cycle anchor). Cross-org returns `[]` (no leak van bestaan).
 - [x] **WIRE-05**: `FavoriteParcelWorkspaceView.tsx` (1922 LOC) gesplitst in ≥5 componenten ≤300 LOC conform CLAUDE.md regel; feature-parity REGRESSION-CRITICAL test verifieert 5 dossier-tabs + scores + upload + projectnotities-grid intact.
-- [x] **TEST-09**: REGRESSION-CRITICAL multi-tenant isolation voor BRK read-pad: cross-org GET `/api/parcels/{id}/brk` returns `[]` (NIET 403). Plus regression op Phase 105 ephemeral BRK modal (different schema BRKOwnership vs BRKOwnershipRecordRead) en LifecycleSideRailNav scope-rule.
-
-### End-to-End Wiring + Tier-Gates
-
-- [ ] **WIRE-01**: Tier-gate decorators op `/parcels/{id}/brk-lookup` + `/briefs/{id}/send` — Demo 0/0, Paid 25/5, Enterprise 250/50 quota (Q8 LOCKED). Soft 80% warning, hard 100% block.
-- [ ] **WIRE-02**: Env-flag triad: `M050_BACKEND_ENABLED`, `M050_FRONTEND_ENABLED`, `M050_5_TIER_ENFORCEMENT_ENABLED` (D4) — clean toggle.
-- [ ] **WIRE-03**: AVG-audit-trail: SAR-procedure documented, right-to-erasure override soft-delete bewezen, sub-processor-chain in verwerkersovereenkomst-template.
 
 ### Testing
 
 - [x] **TEST-01**: Backend unit tests voor BRK datamodel + retention-trigger + ARQ cleanup-job (fast-forward clock mock).
 - [x] **TEST-02**: Integration tests voor `brk_persistence_service` + credential-resolver + failure-modes.
 - [x] **TEST-03**: Backend tests voor 3 nieuwe scoring-factoren + cascade-trigger + sparse-data fallback. REGRESSION-CRITICAL op bestaande 16 factoren + non-BRK rescore-triggers.
-- [ ] **TEST-04**: Brief-template variabele-substitutie + idempotency-key UQ + preview-render.
-- [ ] **TEST-05**: AI eval-suite: prompt-injection adversarial cases (100% safe vereist), refusal-fallback, audit-log roundtrip.
-- [ ] **TEST-06**: PostNL happy + retry + permanent-fail + webhook idempotency (duplicate event → 200, geen state-update).
-- [ ] **TEST-07**: Partner-branding CRUD + asset-validation (logo size/type).
-- [ ] **TEST-08**: E2E multi-tenant isolation (CRITICAL): cross-org BRK + brief access → 404 (niet 403, voorkomt leak van bestaan). Quota soft+hard cap. Monthly reset cron. Tier-gate enforcement triad off/on.
+- [x] **TEST-09**: REGRESSION-CRITICAL multi-tenant isolation voor BRK read-pad: cross-org GET `/api/parcels/{id}/brk` returns `[]` (NIET 403). Plus regression op Phase 105 ephemeral BRK modal (different schema BRKOwnership vs BRKOwnershipRecordRead) en LifecycleSideRailNav scope-rule.
 
-## Future Requirements
+## Moved to M051
+
+23 originele M050 requirements zijn op 2026-05-19 verhuisd naar M051 (Brief-Send Pipeline). Zie `.planning/milestones/M051-REQUIREMENTS.md`:
+
+- **BRIEF-01..03** — Brief templates (was M050 Phase 4)
+- **AI-01..04** — AI personalisatie (was M050 Phase 4.5)
+- **POST-01..05** — PostNL dispatch (was M050 Phase 5)
+- **BRAND-01..03** — Partner branding (was M050 Phase 5.5)
+- **WIRE-01..03** — Tier-gates + env-flag triad + AVG-audit (was M050 Phase 7)
+- **TEST-04..08** — Testing voor bovenstaande
+
+## Future Requirements (still M050+'s general backlog)
 
 Deferred to later milestones:
 
@@ -97,18 +73,17 @@ Deferred to later milestones:
 
 ### Brief-Optimization
 - **BRIEF-FUT-01**: A/B-test brieven met response-tracking — M054+
-- **BRIEF-FUT-02**: Graceful-degrade PostNL outage met PDF-fallback download — M051+ als trigger
+- **BRIEF-FUT-02**: Graceful-degrade PostNL outage met PDF-fallback download — M052+ als trigger
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Per-tenant feature-flag toggle (DB-driven) | Premature — env-triad volstaat voor M050 |
+| Per-tenant feature-flag toggle (DB-driven) | Premature — env-triad volstaat |
 | LaunchDarkly/external feature-flag service | Premature — env-vars sufficient bij Propdex-scale |
 | Redis-cached quota-counter | Premature — atomic Postgres UPDATE schaalt prima |
 | Multi-eigenaar handling (rechtspersoon met meerdere directies) | Edge case — M053+ |
-| Brief co-signing partner-credentialing | Partner-relatie nog te vroeg — M053+ |
-| Webhook-events generieke abstraction | Premature — M051+ als 2e webhook-source verschijnt |
+| Webhook-events generieke abstraction | Premature — M052+ als 2e webhook-source verschijnt |
 | BRK natuurlijke-persoon eigendom persistent storage | AVG-bescherming — `eigenaar_naam=NULL` opslag; Phase 105 ephemeral pad blijft |
 
 ## Traceability
@@ -123,43 +98,27 @@ Deferred to later milestones:
 | SCOR-01 | Phase 3 | Complete |
 | SCOR-02 | Phase 3 | Complete |
 | SCOR-03 | Phase 3 | Complete |
-| BRIEF-01 | Phase 4 | Pending |
-| BRIEF-02 | Phase 4 | Pending |
-| BRIEF-03 | Phase 4 | Pending |
-| AI-01 | Phase 4.5 | Pending |
-| AI-02 | Phase 4.5 | Pending |
-| AI-03 | Phase 4.5 | Pending |
-| AI-04 | Phase 4.5 | Pending |
-| POST-01 | Phase 5 | Pending |
-| POST-02 | Phase 5 | Pending |
-| POST-03 | Phase 5 | Pending |
-| POST-04 | Phase 5 | Pending |
-| POST-05 | Phase 5 | Pending |
-| BRAND-01 | Phase 5.5 | Pending |
-| BRAND-02 | Phase 5.5 | Pending |
-| BRAND-03 | Phase 5.5 | Pending |
 | UX-01 | Phase 6 | Complete |
 | UX-02 | Phase 6 | Complete |
 | UX-03 | Phase 6 | Complete |
 | UX-04 | Phase 6 | Complete |
 | UX-05 | Phase 6 | Complete |
-| WIRE-01 | Phase 7 | Pending |
-| WIRE-02 | Phase 7 | Pending |
-| WIRE-03 | Phase 7 | Pending |
+| UX-06 | Phase 8 | Complete |
+| UX-07 | Phase 8 | Complete |
+| UX-08 | Phase 8 | Complete |
+| WIRE-04 | Phase 8 | Complete |
+| WIRE-05 | Phase 8 | Complete |
 | TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 2 | Complete |
 | TEST-03 | Phase 3 | Complete |
-| TEST-04 | Phase 4 | Pending |
-| TEST-05 | Phase 4.5 | Pending |
-| TEST-06 | Phase 5 | Pending |
-| TEST-07 | Phase 5.5 | Pending |
-| TEST-08 | Phase 7 | Pending |
+| TEST-09 | Phase 8 | Complete |
 
 **Coverage:**
-- M050 requirements: 39 total (8 testing + 31 functional)
-- Mapped to phases: 39 / 39 ✓
+- M050 requirements (post-split): 22 total (4 testing + 18 functional)
+- Mapped to phases: 22 / 22 ✓
+- Complete: 22 / 22 ✓
 - Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-05-17*
+*Requirements defined: 2026-05-17 · Re-scoped: 2026-05-19 (brief-half split to M051)*
 *Pre-planning artifacts: M050-INDEX.md · M050-ENG-PLAN.md · M050-DECISIONS-PRE-PLANNING.md*

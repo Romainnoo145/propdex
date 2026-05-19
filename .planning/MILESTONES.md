@@ -1,5 +1,22 @@
 # Milestones
 
+## 🆕 M051 Brief-Send Pipeline (Defined 2026-05-19 — split from M050)
+
+**Status:** Defined, niet gestart. Kickoff gated op (a) Kadaster DPA progress (M050 BRK persist dormant tot DPA), (b) PostNL Zakelijk legal-track (~4 wk lead-time), (c) M050.5/S02 quota-counter merged.
+
+**Scope:** Eigenaar-outreach pipeline na BRK lookup — templates (cold-outreach / follow-up / verkenning) + Claude streaming AI-personalisatie (D1+D6+D7) + PostNL Zakelijk dispatch (atomic quota D2 + webhook idempotency D3) + partner-branding admin (logo/voettekst/font/bedrijfsnaam) + tier-gate triad (D4) + AVG-audit trail.
+
+**Origin:** Losgekoppeld van M050 BRK Actiefase-Wedge na milestone-audit op 2026-05-19. M050 shipte alleen BRK lookup-helft (5/10 phases, 22/45 reqs); brief-send-actie-helft (23 reqs) hier opnieuw neergezet als M051. Architectuur-decisions D1-D7 + Q6/Q8 LOCKED uit `M050-ENG-PLAN.md` blijven authoritative.
+
+**Artifacts:**
+- `.planning/milestones/M051-INDEX.md` (hub-doc + origin + dependencies + kickoff-checklist)
+- `.planning/milestones/M051-ROADMAP.md` — 5 phases (Brief-Template → AI → PostNL → Partner-Branding → Wiring+Tier-Gates)
+- `.planning/milestones/M051-REQUIREMENTS.md` — 23 requirements
+
+**Volgende stap:** Verwerkersovereenkomst-track Kadaster bevestigen → bij DPA-signed kickoff `/gsd:new-milestone M051` en `/gsd:plan-phase 1` (= M051/S01 Brief-Template).
+
+---
+
 ## M049 Data Sources per Gemeente hub (Shipped: 2026-05-17)
 
 **Phases completed:** 10 phases, 23 plans, 7 tasks
@@ -32,12 +49,20 @@
 
 ---
 
-## 🚧 M050 BRK Actiefase-Wedge (Kickoff 2026-05-17, GSD-registered 2026-05-18)
+## ✅ M050 BRK Lookup-Wedge (Shipped 2026-05-19, awaiting archive)
 
-**Status:** 1/9 slices shipped (S06 cockpit foundation). S01 (BRK datamodel) eng-review LOCKED 2026-05-18 — 8 decisions captured (D1-D8). Volgende stap: `/gsd:plan-phase 1` (= M050/S01).
+**Status:** Lookup-helft COMPLETE — 5/5 phases shipped + verified passed. Re-scoped 2026-05-19 (was "BRK Actiefase-Wedge" met 10 phases — brief-send-helft losgekoppeld als M051). Audit-rapport: `.planning/vM050-MILESTONE-AUDIT.md`. Awaiting `/gsd:complete-milestone` na audit-re-run op rescoped scope.
 
-**Shipped:**
-- ✓ S06 Opgeslagen-Cockpit + LifecycleSideRailNav (2026-05-18) — 5 plans, 8 commits, smoke PASS, M048 regression-free
+**Shipped (5 phases, 22 plans, 22 requirements):**
+- ✓ Phase 1 BRK Datamodel + Retention (S01) — 2026-05-18 · 9/9 must-haves
+- ✓ Phase 2 BRK Fetch+Persist Endpoint (S02) — 2026-05-18 · 25/25 must-haves
+- ✓ Phase 3 Scoring-Factoren Cascade (S03) — 2026-05-18 · 4/4 backend + 1 human-QA deferred
+- ✓ Phase 6 Opgeslagen-Cockpit + LifecycleSideRailNav (S06) — 2026-05-18 · 5/5 must-haves, M048 regression-free
+- ✓ Phase 8 BRK Fase-2 Wire-up (S06-cont) — 2026-05-19 · 7/7 must-haves, DEF-01 resolved (backend schema field for cascade_rescored_at)
+
+**Moved to M051 (Brief-Send Pipeline) on 2026-05-19:**
+- Phases 4, 4.5, 5, 5.5, 7 (brief-templates / AI / PostNL / branding / wiring+tier-gates)
+- 23 requirements (BRIEF-01..03, AI-01..04, POST-01..05, BRAND-01..03, WIRE-01..03, TEST-04..08)
 
 **Active / Locked:**
 - ◆ S01 BRK Datamodel + Retention — eng-plan locked 2026-05-18 (`.planning/milestones/M050-S01-ENG-PLAN.md`). Ready for /gsd:plan-phase.

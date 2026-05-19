@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-current_phase: 2
-current_plan: 3
-status: completed
-stopped_at: Completed Phase 08 Plan 08-08 — 31 NEW tests (6 backend E2E + 7 Phase 105 regression + 4 sidebar scope + 14 frontend composition) green; Phase 8 BRK Fase-2 Wire-up FINAL plan complete; 3 commits
-last_updated: "2026-05-19T12:48:17.487Z"
+milestone: M050
+milestone_name: BRK Lookup-Wedge
+current_phase: 8
+current_plan: 8
+status: milestone_complete_pending_archive
+stopped_at: M050 audit 2026-05-19 — brief-send-half split to M051. Lookup-half all 5 phases (1, 2, 3, 6, 8) verified passed. All 22 in-scope requirements satisfied. Ready for /gsd:complete-milestone after audit re-run on rescoped M050.
+last_updated: "2026-05-19T13:00:00.000Z"
 last_activity: 2026-05-19
 progress:
-  total_phases: 10
+  total_phases: 5
   completed_phases: 5
   total_plans: 22
   completed_plans: 22
-  percent: 22
+  percent: 100
 ---
 
 # Propdex — GSD State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-18 — Tranche 2 strategy pivot locked)
 
 **Core value:** Onderzoek → Actie funnel in één cockpit. Tranche 1 (M001-M050): van grondpositie tot bouw. Tranche 2 (M060-M110, roadmap): verhuur tot exit. Intelligence-first across full lifecycle.
-**Current focus:** M050 BRK Actiefase-Wedge — eerste paid Type-C integration (Kadaster BRK) + actiefase (brief naar eigenaar via PostNL). 9 slices, ~9-13 wk.
+**Current focus:** M050 BRK Lookup-Wedge — eerste paid Type-C integration (Kadaster BRK), persistent storage, scoring-cascade, en lifecycle-fase 2 (Contact) UI. 5 phases shipped 2026-05-17 t/m 2026-05-19. Brief-send-helft losgekoppeld als M051.
 
 ## Current Position
 
-Phase: 2 of 9 (M050/S02 BRK Fetch + Persist Endpoint) — wave 1 shipped 2026-05-18
-Plan: 3 of 3 in current phase
-Status: Plan 02-01 complete (3/3 tasks, D1+D6+D7+D8+D11+D14+D15 honored). Next: Plan 02-02 brk_fetch_service + POST /api/parcels/{id}/brk/persist.
+Milestone: M050 BRK Lookup-Wedge — ALLE 5 phases verified passed.
+Status: Awaiting audit re-run + `/gsd:complete-milestone` to archive M050.
+Next milestone: M051 — Brief-Send Pipeline (defined 2026-05-19; kickoff gated op Kadaster DPA + PostNL Zakelijk legal-track).
 Last activity: 2026-05-19
 
-Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
+Progress: [██████████] 100% (5/5 phases — S01 + S02 + S03 + S06 + S06-cont done)
 
 ## Performance Metrics
 
