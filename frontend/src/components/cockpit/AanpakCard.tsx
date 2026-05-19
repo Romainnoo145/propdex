@@ -3,21 +3,24 @@
  * Extracted from FavoriteParcelWorkspaceView.tsx 2026-05-19 (Plan 08-06 split,
  * M050/S06 cont.).
  *
- * PRE-SPLIT BASELINE: this card surfaces the deriveNextStep() copy (which may
- * include the BRK CTA "Vraag eigendomsinfo op" / "Controleer eigendom") and a
- * "Genereer rapport" or "Bekijk rapport"+"Neem contact op" CTA cluster. Plan
- * 08-07 will REPLACE the BRK CTA references with "Stap door naar Contact"
- * navigation — DO NOT pre-empt that change in Plan 08-06.
+ * Plan 08-07 (M050/S06 cont., AD1): BRK persist CTA on fase-1 is replaced by a
+ * Contact-handoff Link to /opgeslagen/perceel/$parcelId/$phase with
+ * phase='2-contact'. BRK lives on fase-2; the fase-overgang IS the gate
+ * (no score threshold). The card renders the Contact-handoff CTA when
+ * deriveNextStep returns kind === 'contact-handoff'.
  */
 import { AnimatePresence, motion } from 'framer-motion'
-import { ClipboardCheck, FileText, Loader2, Mail, Sparkles, ScrollText } from 'lucide-react'
+import { ArrowRight, ClipboardCheck, FileText, Loader2, Mail, Sparkles, ScrollText } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { Link } from '@tanstack/react-router'
 import type { FavoriteResponse } from '@/lib/types/portfolio'
+import type { NextStep } from '@/lib/cockpit/cockpit-derivations'
 
 interface AanpakCardProps {
-  nextStep: { title: string; detail: string }
+  nextStep: NextStep
   favorite: FavoriteResponse
+  parcelId: string
   onGenerateReport: () => void
   onOpenContact: () => void
   isGeneratingReport: boolean
@@ -68,6 +71,7 @@ function WorkspaceInsightCard({
 export function AanpakCard({
   nextStep,
   favorite,
+  parcelId,
   onGenerateReport,
   onOpenContact,
   isGeneratingReport,
@@ -77,7 +81,22 @@ export function AanpakCard({
       <div className="rounded-[20px] border border-[#F1E1B0] bg-[#FFF8E8] px-4 py-4">
         <p className="text-[16px] font-bold tracking-tight text-[#0E1111]">{nextStep.title}</p>
         <p className="mt-2 text-[14px] leading-6 text-slate-600">{nextStep.detail}</p>
-        {!favorite.has_report ? (
+        {nextStep.kind === 'contact-handoff' ? (
+          // Plan 08-07 / AD1: fase-1 → fase-2 handoff CTA. NO score-threshold gate.
+          // BRK persist now lives on fase-2 (Contact); this Link is the only fase-1
+          // CTA when kind === 'contact-handoff'. Target: { phase: '2-contact' }
+          // (literal value sourced via nextStep.cta.params.phase — see deriveNextStep
+          // in @/lib/cockpit/cockpit-derivations as single source of truth).
+          <Link
+            to={nextStep.cta.to}
+            params={{ parcelId, phase: nextStep.cta.params.phase }}
+            search={{ stage: undefined }}
+            className="mt-4 inline-flex min-h-[40px] items-center gap-2 rounded-full border border-[#0E1111] bg-[#F9A826] px-5 text-[13px] font-semibold text-[#0E1111] transition-colors hover:bg-[#F4B44A]"
+          >
+            <ArrowRight size={14} />
+            {nextStep.cta.label}
+          </Link>
+        ) : !favorite.has_report ? (
           <motion.button
             type="button"
             onClick={onGenerateReport}

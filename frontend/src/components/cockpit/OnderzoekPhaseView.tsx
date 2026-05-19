@@ -217,6 +217,7 @@ export function OnderzoekPhaseView({
       <AanpakCard
         nextStep={nextStep}
         favorite={favorite}
+        parcelId={favorite.parcel_id}
         onGenerateReport={handleGenerateReport}
         onOpenContact={() => setShowContactModal(true)}
         isGeneratingReport={generateReport.isPending}
