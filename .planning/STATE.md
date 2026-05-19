@@ -5,14 +5,14 @@ milestone_name: milestone
 current_phase: 2
 current_plan: 3
 status: completed
-stopped_at: Completed Phase 08 Plan 08-02 — 3 React Query hooks (useBrkRecords / usePersistBrk / useRescorePoll) + mapBrkError util + BRKOwnershipRecordRead TS type, 42/42 unit tests green, 3 commits
-last_updated: "2026-05-19T11:34:58.877Z"
+stopped_at: Completed Phase 08 Plan 08-03 — 6 fase-2 components (ContactPhaseView dispatcher + 5 sub-components) all ≤300 LOC, 24/24 unit tests green, 4 commits, AD4 Particuliere eigenaar verbatim, DEF-01 polling-URL alias logged
+last_updated: "2026-05-19T11:49:17.626Z"
 last_activity: 2026-05-19
 progress:
   total_phases: 10
   completed_phases: 4
   total_plans: 22
-  completed_plans: 19
+  completed_plans: 20
   percent: 22
 ---
 
@@ -109,6 +109,7 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 | Phase 08-brk-fase-2-wire-up P06 | 17min | 4 tasks | 13 files |
 | Phase 08-brk-fase-2-wire-up P07 | 8m 3s | 2 tasks | 5 files |
 | Phase 08-brk-fase-2-wire-up P02 | 8m 41s | 3 tasks | 7 files |
+| Phase 08-brk-fase-2-wire-up P03 | 9m 51s | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -295,6 +296,11 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 - [Phase 08-brk-fase-2-wire-up]: 08-02: useRescorePoll uses runKey-scoped terminal state + phase-derived-from-props — avoids React 19 react-hooks/set-state-in-effect cascade-render lint failure; single justified eslint-disable for intentional tick-reset (matches PipelineStagePill / JuridischKlimaatModalContent precedent)
 - [Phase 08-brk-fase-2-wire-up]: 08-02: mapBrkError 503 disambiguation case-insensitive on 'credential' substring; 403 + 404 collapse to identical 'Perceel niet in jouw portfolio' copy (AD2 silent-isolation iron-rule pinned by canary test mapBrkError(403).title === mapBrkError(404).title)
 - [Phase 08-brk-fase-2-wire-up]: 08-02: Polling endpoint GET /api/parcels/{parcelId}/scan is forward-looking; backend route doesn't yet exist (Plan 08-03 wires it or adapts /api/scans/parcels/{id}/scan-data). Hook decoupled via shouldStopOnSuccess predicate — endpoint-shape change is one line
+- [Phase 08-brk-fase-2-wire-up]: 08-03: Tests use pure-derivation + structural source-text assertion pattern (node-env unit project, no jsdom/RTL) — matches Plan 08-02 deviation #2 + Plan 08-06 parity precedent. Pure helpers derivePersistPanelState / deriveBannerView / deriveContactDispatch exported alongside components.
+- [Phase 08-brk-fase-2-wire-up]: 08-03: BrkPersistPanel 5-state discriminated union (kind: idle/loading/error/empty/success). Branch order pending → error → records-present-success → success-empty → idle is load-bearing: records.length>0 wins over isSuccess flag so SUCCESS chip survives subsequent renders.
+- [Phase 08-brk-fase-2-wire-up]: 08-03: BrkOwnerCard uses explicit eigenaar_type === 'rechtspersoon' AND eigenaar_type === 'overheid' literal branches (not generic isRechtspersoon boolean) — satisfies plan grep AC and acts as drift canary if backend Pydantic Literal narrows further.
+- [Phase 08-brk-fase-2-wire-up]: 08-03: RescoreProgressBanner + ContactPhaseView Links pass search={{ stage: undefined }} to /opgeslagen/perceel/ — matches Phase 6 STATE pattern for parent /opgeslagen route validateSearch. Pre-existing .tsx errors unfixed (scope-boundary).
+- [Phase 08-brk-fase-2-wire-up]: 08-03: Polling endpoint URL alias deferred to Plan 08-05/08-08 — logged as DEF-01 in deferred-items.md. useRescorePoll calls /api/parcels/{id}/scan (404 today); real endpoint /api/scans/parcels/{id}/scan-data. Plan 08-03 is component-layer-only; rewire belongs in router-dispatch or E2E plan.
 
 ### Pending Todos
 
@@ -306,6 +312,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-19T11:34:58.874Z
-Stopped at: Completed Phase 08 Plan 08-02 — 3 React Query hooks (useBrkRecords / usePersistBrk / useRescorePoll) + mapBrkError util + BRKOwnershipRecordRead TS type, 42/42 unit tests green, 3 commits
+Last session: 2026-05-19T11:49:01.158Z
+Stopped at: Completed Phase 08 Plan 08-03 — 6 fase-2 components (ContactPhaseView dispatcher + 5 sub-components) all ≤300 LOC, 24/24 unit tests green, 4 commits, AD4 Particuliere eigenaar verbatim, DEF-01 polling-URL alias logged
 Resume file: None

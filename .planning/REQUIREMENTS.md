@@ -59,7 +59,7 @@
 ### BRK Fase-2 Wire-up (Phase 8 — M050/S06 cont.)
 
 - [x] **UX-06**: Lifecycle-fase 2 (Contact) enabled in `phases.ts`; BRK persist-CTA verplaatst van fase 1 (Onderzoek) naar fase 2; fase 1 AANPAK card krijgt "Stap door naar Contact" copy. Geen score-drempel.
-- [ ] **UX-07**: Empty BRK response (alleen-natuurlijk-persoon eigenaar) → "Particuliere eigenaar" infoblok met AVG-uitleg + outreach-suggestie via BAG-adres/makelaar (NIET silent fail, AD4).
+- [x] **UX-07**: Empty BRK response (alleen-natuurlijk-persoon eigenaar) → "Particuliere eigenaar" infoblok met AVG-uitleg + outreach-suggestie via BAG-adres/makelaar (NIET silent fail, AD4).
 - [x] **UX-08**: Rescore-polling UX in fase 2: inline banner "Onderzoeksscore wordt bijgewerkt…" → 2s × 30 ticks (60s window) → success-banner met link terug naar fase 1, of timeout-banner zonder retry-loop (AD3).
 - [x] **WIRE-04**: Nieuw `GET /api/parcels/{parcel_id}/brk` endpoint met hard org-filter + `soft_deleted_at IS NULL` filter + multi-owner support (latest fetch-cycle anchor). Cross-org returns `[]` (no leak van bestaan).
 - [x] **WIRE-05**: `FavoriteParcelWorkspaceView.tsx` (1922 LOC) gesplitst in ≥5 componenten ≤300 LOC conform CLAUDE.md regel; feature-parity REGRESSION-CRITICAL test verifieert 5 dossier-tabs + scores + upload + projectnotities-grid intact.
