@@ -71,7 +71,7 @@ function generateOneLiner(cards: PageCard[], isV3: boolean): string {
 
 /* ── Factor display mapping ───────────────────────────────── */
 
-const FACTOR_LABELS: Record<string, string> = {
+export const FACTOR_LABELS: Record<string, string> = {
   funderingsrisico: 'FUNDERING',
   asbest: 'ASBEST',
   bodemverontreiniging: 'BODEM',
@@ -81,6 +81,10 @@ const FACTOR_LABELS: Record<string, string> = {
   juridisch_klimaat: 'JURIDISCH',
   criminaliteit: 'CRIMINALITEIT',
   max_hoogte_bereikt: 'HOOGTE',
+  // M050/S03 BRK risico factors (Phase 8 wire-up — backend shipped in 03-02)
+  hypotheek_risico: 'HYPOTHEEK',
+  eigendoms_complexiteit: 'EIGENDOMSCOMPL.',
+  koopwaarde_trend: 'KOOPWAARDE',
 }
 
 function riskLevel(score: number): string {
@@ -89,7 +93,7 @@ function riskLevel(score: number): string {
   return 'LAAG'
 }
 
-function formatFactorValue(name: string, factor: ScoreFactorV3): { value: string; sub: string } {
+export function formatFactorValue(name: string, factor: ScoreFactorV3): { value: string; sub: string } {
   const w = factor.waarde as Record<string, unknown> | boolean | string | null
   const s = factor.genormaliseerde_score
 
@@ -160,6 +164,57 @@ function formatFactorValue(name: string, factor: ScoreFactorV3): { value: string
         value: atMax ? 'BEREIKT' : 'RUIMTE',
         sub: detail || (atMax ? 'Max bereikt' : 'Optopping mogelijk'),
       }
+    }
+    // M050/S03 BRK risico factors (Phase 8 wire-up)
+    case 'hypotheek_risico': {
+      // backend waarde: {n_with_hypotheek, n_total}; binary semantic = ANY owner mortgaged
+      const has =
+        factor.waarde === true ||
+        factor.waarde === 'ja' ||
+        factor.waarde === 'Ja' ||
+        (typeof factor.waarde === 'object' &&
+          factor.waarde !== null &&
+          Number((factor.waarde as Record<string, unknown>).n_with_hypotheek ?? 0) > 0)
+      return {
+        value: has ? 'Ja' : 'Nee',
+        sub: has ? 'Hypotheek-registratie aanwezig' : 'Geen hypotheek',
+      }
+    }
+    case 'eigendoms_complexiteit': {
+      // backend waarde: {n_owners} dict OR legacy string ('enkelvoudig' | 'gedeeld' | ...)
+      if (
+        typeof factor.waarde === 'object' &&
+        factor.waarde !== null &&
+        'n_owners' in (factor.waarde as object)
+      ) {
+        const n = Number((factor.waarde as Record<string, unknown>).n_owners ?? 0)
+        if (n <= 1) return { value: 'Enkelvoudig', sub: '1 eigenaar' }
+        if (n === 2) return { value: 'Gedeeld', sub: '2 eigenaren' }
+        return { value: 'Complex', sub: `${n} eigenaren` }
+      }
+      const v = String(factor.waarde ?? '—')
+      return { value: v.charAt(0).toUpperCase() + v.slice(1), sub: '' }
+    }
+    case 'koopwaarde_trend': {
+      // backend waarde: dict {koopjaar, age_jaar?, koopsom} OR int koopjaar fallback
+      if (
+        factor.waarde &&
+        typeof factor.waarde === 'object' &&
+        'koopjaar' in (factor.waarde as object)
+      ) {
+        const v = factor.waarde as { koopjaar: number | null; koopsom: number | null }
+        const jaar = v.koopjaar !== null && v.koopjaar !== undefined ? String(v.koopjaar) : '—'
+        const sum =
+          v.koopsom !== null && v.koopsom !== undefined
+            ? new Intl.NumberFormat('nl-NL', {
+                style: 'currency',
+                currency: 'EUR',
+                maximumFractionDigits: 0,
+              }).format(v.koopsom)
+            : ''
+        return { value: jaar, sub: sum }
+      }
+      return { value: String(factor.waarde ?? '—'), sub: 'koopjaar' }
     }
     default:
       return { value: '—', sub: '' }
