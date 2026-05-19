@@ -90,6 +90,7 @@ export function RescoreProgressBanner(props: RescoreProgressBannerProps) {
         <Link
           to="/opgeslagen/perceel/$parcelId"
           params={{ parcelId }}
+          search={{ stage: undefined }}
           className="inline-flex items-center gap-1.5 text-[12px] font-medium text-emerald-700 hover:text-emerald-900"
         >
           Bekijk fase 1
