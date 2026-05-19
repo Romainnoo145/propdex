@@ -43,7 +43,7 @@ export interface LifecyclePhase {
 
 export const LIFECYCLE_PHASES: readonly LifecyclePhase[] = [
   { key: '1-onderzoek',  order: 1, label: '1. Onderzoek',  shortLabel: 'Onderzoek',  icon: Search,      enabled: true,  plannedMilestone: 'M001-M050' },
-  { key: '2-contact',    order: 2, label: '2. Contact',    shortLabel: 'Contact',    icon: Mail,        enabled: false, plannedMilestone: 'M050/S04' },
+  { key: '2-contact',    order: 2, label: '2. Contact',    shortLabel: 'Contact',    icon: Mail,        enabled: true,  plannedMilestone: 'M050/S06 cont. (Phase 8)' },
   { key: '3-bod',        order: 3, label: '3. Bod',        shortLabel: 'Bod',        icon: Handshake,   enabled: false, plannedMilestone: 'M060' },
   { key: '4-vergunning', order: 4, label: '4. Vergunning', shortLabel: 'Vergunning', icon: FileCheck,   enabled: false, plannedMilestone: 'M070' },
   { key: '5-bouw',       order: 5, label: '5. Bouw',       shortLabel: 'Bouw',       icon: Hammer,      enabled: false, plannedMilestone: 'M080' },
