@@ -84,7 +84,7 @@ completed: 2026-05-19
 
 ## Task Commits
 
-1. **Task 1: Replace BRK CTA branch with Contact-handoff in deriveNextStep** — `1fc02b40` (feat)
+1. **Task 1: Replace BRK CTA branch with Contact-handoff in deriveNextStep** — `8242da95` (feat)
 2. **Task 2: Render Contact-handoff CTA in AanpakCard + composition tests** — `4e309cda` (feat)
 
 ## Files Created/Modified
@@ -123,7 +123,7 @@ completed: 2026-05-19
 - **Fix:** Rephrased the line to "Haal eigendomsinformatie op" — semantic intent preserved, BRK-vendor-name removed from user-facing copy.
 - **Files modified:** `frontend/src/lib/cockpit/cockpit-derivations.ts`
 - **Verification:** Acceptance grep returns clean; deriveContactFollowUp 'Eigendom staat klaar' branch + score-based default branches untouched.
-- **Committed in:** `1fc02b40` (Task 1 commit)
+- **Committed in:** `8242da95` (Task 1 commit)
 
 **2. [Rule 3 - Blocking] Acceptance grep `phase: '2-contact'` would fail when route target is sourced dynamically**
 
@@ -185,7 +185,7 @@ None — pure frontend copy + wire-up change.
 - [x] Pre-existing TS error count unchanged at 94 (zero new errors)
 - [x] All Task 1 acceptance criteria pass (5/5)
 - [x] All Task 2 acceptance criteria pass (7/7)
-- [x] Task 1 commit `1fc02b40` exists in git log
+- [x] Task 1 commit `8242da95` exists in git log
 - [x] Task 2 commit `4e309cda` exists in git log
 
 ---
