@@ -5,8 +5,8 @@ milestone_name: milestone
 current_phase: 2
 current_plan: 3
 status: completed
-stopped_at: Completed M050/S06 Phase 8 Plan 08-04 — RisicoLayer BRK wire-up + 25-factor registry drift-detection (6 backend + 12 frontend tests)
-last_updated: "2026-05-19T11:12:37.473Z"
+stopped_at: Completed M050/S06 Phase 8 Plan 08-01 — brk_read_service + GET endpoint + REGRESSION-CRITICAL multi-tenant test (14/14 green, drift-detection verified)
+last_updated: "2026-05-19T11:13:05.257Z"
 last_activity: 2026-05-19
 progress:
   total_phases: 10
@@ -278,6 +278,10 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 - [Phase 08-brk-fase-2-wire-up]: 08-04: Backend FACTOR_REGISTRY frozenset == frontend KNOWN_25_FACTOR_KEYS array kept in sync via paired source-of-truth comments; backend test is the canary (fails first on rename)
 - [Phase 08-brk-fase-2-wire-up]: 08-04: Added vitest 'unit' project (node env) alongside existing Storybook project — pure-logic tests only; Storybook remains React rendering test surface per project convention
 - [Phase 08-brk-fase-2-wire-up]: 08-04: formatFactorValue BRK cases defensive — accept both backend dict shapes (n_with_hypotheek/n_owners/koopjaar+koopsom) AND legacy primitive shapes (bool/string/int) for non-breaking future evolution
+- [Phase 08-brk-fase-2-wire-up]: 08-01: read_for_parcel signature pinned kwarg-only via test_signature_drift_guard — prevents accidental positional misuse swapping organization_id with parcel_id (both stringable UUIDs)
+- [Phase 08-brk-fase-2-wire-up]: 08-01: multi-owner same-MAX(fetched_at) branch exercised via mocked AsyncSession — DB UNIQUE constraint uq_brk_org_parcel_fetched blocks ORM same-timestamp inserts; mock-DB pattern proves defensive correctness without DB pollution
+- [Phase 08-brk-fase-2-wire-up]: 08-01: test_query_includes_org_filter slices WHERE-clause text specifically — SELECT clause references all columns including organization_id; substring match on full SQL would false-positive even with filter removed
+- [Phase 08-brk-fase-2-wire-up]: 08-01: cross-org GET returns 200+[] (NIET 403, NIET 404) — silent isolation per ENG-PLAN AD2; 403/404 would leak existence; empty list indistinguishable from no-data parcel
 
 ### Pending Todos
 
@@ -289,6 +293,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-19T11:12:21.323Z
-Stopped at: Completed M050/S06 Phase 8 Plan 08-04 — RisicoLayer BRK wire-up + 25-factor registry drift-detection (6 backend + 12 frontend tests)
+Last session: 2026-05-19T11:13:05.254Z
+Stopped at: Completed M050/S06 Phase 8 Plan 08-01 — brk_read_service + GET endpoint + REGRESSION-CRITICAL multi-tenant test (14/14 green, drift-detection verified)
 Resume file: None
