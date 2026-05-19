@@ -109,6 +109,7 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 
 ### Roadmap Evolution
 
+- 2026-05-19: Phase 8 added (M050/S06 cont.): BRK Fase-2 Wire-up. Verplaatst BRK persist-CTA van fase 1 (Onderzoek) naar fase 2 (Contact); nieuw GET /api/parcels/{id}/brk endpoint; split FavoriteParcelWorkspaceView (1922 LOC) in ≤300-LOC componenten. Triggered door /plan-eng-review die ontdekte dat Phase 6 (cockpit shell) al verified-shipped was maar BRK-functionaliteit nooit gewired werd. Eng-plan LOCKED: `.planning/milestones/M050-S06-ENG-PLAN.md` + gespiegeld als `.planning/phases/08-brk-fase-2-wire-up/08-ENG-PLAN.md`.
 - 2026-05-16: Phase 04.1 inserted after Phase 4 (M049/S04): Manual Upload Rescore Wire-up (URGENT) — close cascade re-score gap for admin-uploaded PolicyDocuments. Goal: parity with weekly auto-ingest cron; source_key-agnostic enqueue auto-picks up M050+ extractors. Discovered during M049/S04 cascade-wiring audit.
 - 2026-04-22: M048 created with 4 phases (Cache Sentinel, Score UI Fix, Woonvisie Popup, KlimaatLayer Bug)
 - 2026-04-24: Office hours scope expansion — 4 new phases added from design doc 20260424-200512:

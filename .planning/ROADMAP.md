@@ -27,6 +27,7 @@ M050 is een product-mode-shift van **onderzoekstool → actietool**: eerste brug
 - [ ] **Phase 5.5: Partner-Branding Admin** (S05.5) — Admin-UX branding-upload in M049-hub-stijl (logo/voettekst/lettertype/bedrijfsnaam-op-envelop)
 - [ ] **Phase 6: Opgeslagen-Cockpit + Lifecycle Sidebar** (S06) — Bestaande opgeslagen-tab transformeert tot stappenplan-cockpit: full-width perceel-cards (+ perceel-image thumbnail) + sidebar transformeert van toplevel-icons naar 4-8 lifecycle-icons (1. Onderzoek t/m 6. Exploitatie)
 - [ ] **Phase 7: End-to-End Wiring + Tier-Gates** (S07) — Integration tests + tier-gate decorators (depends op M050.5/S02) + feature-flag triad (M050_BACKEND/FRONTEND/M050_5_TIER_ENFORCEMENT) + AVG-audit trail verificatie
+- [ ] **Phase 8: BRK Fase-2 Wire-up** (M050/S06 cont.) — Verplaats BRK persist-CTA van fase 1 (Onderzoek) naar fase 2 (Contact); nieuw `GET /api/parcels/{id}/brk` endpoint; render 3 BRK factoren in RisicoLayer na rescore; split 1922-LOC FavoriteParcelWorkspaceView in ≤300-LOC componenten
 
 ## Phase Details
 
@@ -215,6 +216,36 @@ M050 is een product-mode-shift van **onderzoekstool → actietool**: eerste brug
 
 ---
 
+### Phase 8: BRK Fase-2 Wire-up (M050/S06 cont.)
+**Goal:** Activeer lifecycle-fase 2 (Contact) als BRK-home. Verplaats BRK persist-CTA van fase 1 (Onderzoek) naar fase 2, voeg nieuwe `GET /api/parcels/{id}/brk` read-endpoint toe, render 3 BRK risico-factoren in RisicoLayer na rescore, en split de 1922-LOC `FavoriteParcelWorkspaceView.tsx` in ≤300-LOC componenten conform CLAUDE.md regel.
+
+**Requirements:** UX-06, UX-07, UX-08, WIRE-04, TEST-09 *(to be added to REQUIREMENTS.md)*
+
+**Eng-plan (LOCKED 2026-05-19):** `.planning/milestones/M050-S06-ENG-PLAN.md`
+
+**Architectuur-decisions (AD1–AD6):**
+- AD1: BRK volledig naar lifecycle-fase 2. Fase 1 verliest BRK-CTA, krijgt "Stap door naar Contact" copy. Geen score-drempel — fase-overgang IS de gate.
+- AD2: Nieuw `GET /api/parcels/{id}/brk` endpoint hydreert fase-2 op page-load.
+- AD3: Polling 2s × 30 ticks (60s window) met inline banner "Onderzoeksscore wordt bijgewerkt…" → succes-link terug naar fase 1.
+- AD4: Empty BRK response (alleen natuurlijk-persoon) → "Particuliere eigenaar" infoblok met AVG-uitleg + outreach-suggestie.
+- AD5: Split `FavoriteParcelWorkspaceView.tsx` (1922 LOC) in 6 componenten ≤300 LOC.
+- AD6: `ContactPhaseView.tsx` als top-level fase-2 component, 4 sub-componenten voor BRK display.
+
+**Success criteria:**
+1. `GET /api/parcels/{id}/brk` endpoint live met org-filter + soft-delete-filter; cross-org returns [] (geen leak van bestaan)
+2. Lifecycle-fase 2 (`2-contact`) enabled in `phases.ts`; navigate vanaf fase-1 AANPAK-card naar `/opgeslagen/perceel/{id}/2-contact` werkt
+3. BRK persist-CTA in fase 2: success-path + 7 typed error-states + empty-response UX (AD4)
+4. Rescore-polling banner: voltooid binnen 60s window OF timeout-message
+5. RisicoLayer toont 3 nieuwe factor-cards (hypotheek_risico, eigendoms_complexiteit, koopwaarde_trend) na BRK persist
+6. `FavoriteParcelWorkspaceView.tsx` gesplitst in ≥5 files, alle ≤300 LOC, feature-parity met pre-split (5 dossier-tabs + scores + upload)
+7. REGRESSION: Phase 105 ephemeral BRK-modal werkt; LifecycleSideRailNav scope-rule blijft `/opgeslagen/perceel/$parcelId/*` only; 19 score-factoren unchanged
+
+**Depends on:** Phase 3 (BRK factoren live), Phase 6 (cockpit shell + sidebar live)
+
+**Plans:** 0 plans (run /gsd:plan-phase 8 to break down — eng-plan biedt 8 plan-tasks als basis)
+
+---
+
 ## Out of Scope (deferred per CEO-review)
 
 - **S08 Admin-UX quota-monitoring** → DEFER M052 (E7 accepted). Interim: CLI-script + Postgres-query-snippets in `.planning/M050-OPS-RUNBOOK.md`
@@ -229,6 +260,4 @@ M050 is een product-mode-shift van **onderzoekstool → actietool**: eerste brug
 
 7 lanes (A-G). Phase 1 (week 1-3): Lanes A (M050.5) + B (BRK) + C (Brief+AI) parallel in worktrees. Phase 2 (week 4-7): D (PostNL) na C-merge, E (Cockpit) na B+D-merge. Phase 3 (week 8-11): F wires. Phase 4 (week 11-13): G verification + GA-prep.
 
----
-
-*Last updated: 2026-05-18 — Phase 1 (M050/S01) plan-phase output landed (3 plans, 3 waves)*
+*Last updated: 2026-05-19 — Phase 8 (M050/S06 cont., BRK Fase-2 Wire-up) toegevoegd via /gsd:add-phase, eng-plan LOCKED*
