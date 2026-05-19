@@ -238,11 +238,19 @@ M050 is een product-mode-shift van **onderzoekstool → actietool**: eerste brug
 4. Rescore-polling banner: voltooid binnen 60s window OF timeout-message
 5. RisicoLayer toont 3 nieuwe factor-cards (hypotheek_risico, eigendoms_complexiteit, koopwaarde_trend) na BRK persist
 6. `FavoriteParcelWorkspaceView.tsx` gesplitst in ≥5 files, alle ≤300 LOC, feature-parity met pre-split (5 dossier-tabs + scores + upload)
-7. REGRESSION: Phase 105 ephemeral BRK-modal werkt; LifecycleSideRailNav scope-rule blijft `/opgeslagen/perceel/$parcelId/*` only; 19 score-factoren unchanged
+7. REGRESSION: Phase 105 ephemeral BRK-modal werkt; LifecycleSideRailNav scope-rule blijft `/opgeslagen/perceel/$parcelId/*` only; 25 score-factoren unchanged (drift-detector pinned)
 
 **Depends on:** Phase 3 (BRK factoren live), Phase 6 (cockpit shell + sidebar live)
 
-**Plans:** 0 plans (run /gsd:plan-phase 8 to break down — eng-plan biedt 8 plan-tasks als basis)
+**Plans:** 8 plans
+- [ ] 08-01-PLAN.md — Backend GET /brk + brk_read_service + 14 unit/integration/regression tests incl. multi-tenant IRON-RULE (Wave 1)
+- [ ] 08-02-PLAN.md — Frontend BRK hooks (useBrkRecords, usePersistBrk, useRescorePoll) + errorMapping util + 13 hook tests (Wave 2)
+- [ ] 08-03-PLAN.md — Fase 2 components (ContactPhaseView + BrkPersistPanel + BrkOwnerCard + BrkHypotheekCard + BrkKoopwaardeTimeline + RescoreProgressBanner) + 17 component tests (Wave 3)
+- [ ] 08-04-PLAN.md — RisicoLayer FACTOR_LABELS + formatFactorValue extension voor 3 BRK keys + REGRESSION-CRITICAL 25-factor completeness test + parallel backend drift-detector (Wave 1)
+- [ ] 08-05-PLAN.md — phases.ts enable 2-contact + $phase route ContactPhaseView dispatch + REGRESSION-CRITICAL phases-3-8-disabled test (Wave 4 — depends on 08-03 for ContactPhaseView module resolution)
+- [ ] 08-06-PLAN.md — FavoriteParcelWorkspaceView SPLIT (5 cockpit components + 2 lib/cockpit helpers + DELETE monolith) + REGRESSION-CRITICAL parity test (Wave 1)
+- [ ] 08-07-PLAN.md — AANPAK card BRK CTA REMOVED + "Stap door naar Contact" handoff CTA + 4 unit tests (Wave 2)
+- [ ] 08-08-PLAN.md — Backend integration E2E + REGRESSION-CRITICAL Phase 105 modal + LifecycleSideRailNav scope + frontend E2E flow tests (Wave 5)
 
 ---
 
@@ -260,4 +268,4 @@ M050 is een product-mode-shift van **onderzoekstool → actietool**: eerste brug
 
 7 lanes (A-G). Phase 1 (week 1-3): Lanes A (M050.5) + B (BRK) + C (Brief+AI) parallel in worktrees. Phase 2 (week 4-7): D (PostNL) na C-merge, E (Cockpit) na B+D-merge. Phase 3 (week 8-11): F wires. Phase 4 (week 11-13): G verification + GA-prep.
 
-*Last updated: 2026-05-19 — Phase 8 (M050/S06 cont., BRK Fase-2 Wire-up) toegevoegd via /gsd:add-phase, eng-plan LOCKED*
+*Last updated: 2026-05-19 — Phase 8 broken down via /gsd:plan-phase: 8 plans in 5 waves (W1: 08-01/04/06, W2: 08-02/07, W3: 08-03, W4: 08-05, W5: 08-08) — 08-05 rev'd to wave 4 (depends on 08-03 ContactPhaseView for module resolution); 08-04 25-factor coverage + backend drift-detector. All 6 phase-8 requirements distributed (UX-06/07/08, WIRE-04/05, TEST-09).*
