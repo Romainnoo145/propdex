@@ -5,14 +5,14 @@ milestone_name: milestone
 current_phase: 2
 current_plan: 3
 status: completed
-stopped_at: Completed Phase 08 Plan 08-03 — 6 fase-2 components (ContactPhaseView dispatcher + 5 sub-components) all ≤300 LOC, 24/24 unit tests green, 4 commits, AD4 Particuliere eigenaar verbatim, DEF-01 polling-URL alias logged
-last_updated: "2026-05-19T11:49:17.626Z"
+stopped_at: Completed Phase 08 Plan 08-05 — 2-contact lifecycle phase enabled + dispatched, REGRESSION test pinned (6/6 green), DEF-01 polling-URL resolved via ScanResultItem.cascade_rescored_at field, 4 commits
+last_updated: "2026-05-19T12:28:35.307Z"
 last_activity: 2026-05-19
 progress:
   total_phases: 10
   completed_phases: 4
   total_plans: 22
-  completed_plans: 20
+  completed_plans: 21
   percent: 22
 ---
 
@@ -110,6 +110,7 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 | Phase 08-brk-fase-2-wire-up P07 | 8m 3s | 2 tasks | 5 files |
 | Phase 08-brk-fase-2-wire-up P02 | 8m 41s | 3 tasks | 7 files |
 | Phase 08-brk-fase-2-wire-up P03 | 9m 51s | 3 tasks | 9 files |
+| Phase 08-brk-fase-2-wire-up P05 | 35m 40s | 4 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -301,6 +302,9 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 - [Phase 08-brk-fase-2-wire-up]: 08-03: BrkOwnerCard uses explicit eigenaar_type === 'rechtspersoon' AND eigenaar_type === 'overheid' literal branches (not generic isRechtspersoon boolean) — satisfies plan grep AC and acts as drift canary if backend Pydantic Literal narrows further.
 - [Phase 08-brk-fase-2-wire-up]: 08-03: RescoreProgressBanner + ContactPhaseView Links pass search={{ stage: undefined }} to /opgeslagen/perceel/ — matches Phase 6 STATE pattern for parent /opgeslagen route validateSearch. Pre-existing .tsx errors unfixed (scope-boundary).
 - [Phase 08-brk-fase-2-wire-up]: 08-03: Polling endpoint URL alias deferred to Plan 08-05/08-08 — logged as DEF-01 in deferred-items.md. useRescorePoll calls /api/parcels/{id}/scan (404 today); real endpoint /api/scans/parcels/{id}/scan-data. Plan 08-03 is component-layer-only; rewire belongs in router-dispatch or E2E plan.
+- [Phase 08-brk-fase-2-wire-up]: 08-05: 2-contact lifecycle phase enabled (Phase 8 go-live); plannedMilestone='M050/S06 cont. (Phase 8)'; phases 3-bod through 8-exit MUST remain disabled until M060-M110 ship (sidebar greyed-out icon contract from Phase 6)
+- [Phase 08-brk-fase-2-wire-up]: 08-05: REGRESSION-CRITICAL phases.test.ts iron-rule shipped (6/6 green) — guards against premature M060-M110 phase-enable toggles; per-assertion error message names regressing phase; future plans MUST update test (not delete) when shipping new phase
+- [Phase 08-brk-fase-2-wire-up]: 08-05 / DEF-01 resolved: required backend ScanResultItem.cascade_rescored_at field (NOT single-line frontend fix as DEF-01 hypothesized — ScanResultItem had no top-level flags dict). Propagated from ScanResult.flags JSONB in get_parcel_scan_data; shouldStopOnSuccess predicate now dual-shape (top-level primary + legacy flags.cascade_rescored_at fallback)
 
 ### Pending Todos
 
@@ -312,6 +316,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-19T11:49:01.158Z
-Stopped at: Completed Phase 08 Plan 08-03 — 6 fase-2 components (ContactPhaseView dispatcher + 5 sub-components) all ≤300 LOC, 24/24 unit tests green, 4 commits, AD4 Particuliere eigenaar verbatim, DEF-01 polling-URL alias logged
+Last session: 2026-05-19T12:28:22.969Z
+Stopped at: Completed Phase 08 Plan 08-05 — 2-contact lifecycle phase enabled + dispatched, REGRESSION test pinned (6/6 green), DEF-01 polling-URL resolved via ScanResultItem.cascade_rescored_at field, 4 commits
 Resume file: None
