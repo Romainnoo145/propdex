@@ -5,14 +5,14 @@ milestone_name: milestone
 current_phase: 2
 current_plan: 3
 status: completed
-stopped_at: Completed Phase 08 Plan 08-05 — 2-contact lifecycle phase enabled + dispatched, REGRESSION test pinned (6/6 green), DEF-01 polling-URL resolved via ScanResultItem.cascade_rescored_at field, 4 commits
-last_updated: "2026-05-19T12:28:35.307Z"
+stopped_at: Completed Phase 08 Plan 08-08 — 31 NEW tests (6 backend E2E + 7 Phase 105 regression + 4 sidebar scope + 14 frontend composition) green; Phase 8 BRK Fase-2 Wire-up FINAL plan complete; 3 commits
+last_updated: "2026-05-19T12:42:01.897Z"
 last_activity: 2026-05-19
 progress:
   total_phases: 10
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 22
-  completed_plans: 21
+  completed_plans: 22
   percent: 22
 ---
 
@@ -111,6 +111,7 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 | Phase 08-brk-fase-2-wire-up P02 | 8m 41s | 3 tasks | 7 files |
 | Phase 08-brk-fase-2-wire-up P03 | 9m 51s | 3 tasks | 9 files |
 | Phase 08-brk-fase-2-wire-up P05 | 35m 40s | 4 tasks | 9 files |
+| Phase 08-brk-fase-2-wire-up P08 | 9m 46s | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -305,6 +306,9 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 - [Phase 08-brk-fase-2-wire-up]: 08-05: 2-contact lifecycle phase enabled (Phase 8 go-live); plannedMilestone='M050/S06 cont. (Phase 8)'; phases 3-bod through 8-exit MUST remain disabled until M060-M110 ship (sidebar greyed-out icon contract from Phase 6)
 - [Phase 08-brk-fase-2-wire-up]: 08-05: REGRESSION-CRITICAL phases.test.ts iron-rule shipped (6/6 green) — guards against premature M060-M110 phase-enable toggles; per-assertion error message names regressing phase; future plans MUST update test (not delete) when shipping new phase
 - [Phase 08-brk-fase-2-wire-up]: 08-05 / DEF-01 resolved: required backend ScanResultItem.cascade_rescored_at field (NOT single-line frontend fix as DEF-01 hypothesized — ScanResultItem had no top-level flags dict). Propagated from ScanResult.flags JSONB in get_parcel_scan_data; shouldStopOnSuccess predicate now dual-shape (top-level primary + legacy flags.cascade_rescored_at fallback)
+- [Phase 08-brk-fase-2-wire-up]: 08-08: Frontend E2E composition-snapshot pattern (fs.readFile+regex) chosen over RTL/jsdom — node-env unit project convention; 14 tests cover flows 3/4/5/7 + sidebar scope mirror
+- [Phase 08-brk-fase-2-wire-up]: 08-08: Phase 105 URL is /api/scans/parcels/{id}/eigendom (parcels_router mounted under scans prefix) — different URL prefix from /api/parcels/{id}/brk strengthens route-shadow contract beyond plan's same-prefix assumption
+- [Phase 08-brk-fase-2-wire-up]: 08-08: Backend-Python static regression for frontend sidebar scope rule — Path.read_text + regex on _authenticated.tsx gives single CI gate, no node dependency; per-assertion error messages name regressing pattern
 
 ### Pending Todos
 
@@ -316,6 +320,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-19T12:28:22.969Z
-Stopped at: Completed Phase 08 Plan 08-05 — 2-contact lifecycle phase enabled + dispatched, REGRESSION test pinned (6/6 green), DEF-01 polling-URL resolved via ScanResultItem.cascade_rescored_at field, 4 commits
+Last session: 2026-05-19T12:42:01.894Z
+Stopped at: Completed Phase 08 Plan 08-08 — 31 NEW tests (6 backend E2E + 7 Phase 105 regression + 4 sidebar scope + 14 frontend composition) green; Phase 8 BRK Fase-2 Wire-up FINAL plan complete; 3 commits
 Resume file: None
