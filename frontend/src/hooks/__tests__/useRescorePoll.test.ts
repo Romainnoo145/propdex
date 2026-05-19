@@ -86,6 +86,27 @@ describe('shouldStopOnSuccess', () => {
     }
     expect(shouldStopOnSuccess(bogus, PERSIST_AT)).toBe(false)
   })
+
+  it('DEF-01: reads top-level cascade_rescored_at from ScanResultItem shape', () => {
+    const fresh: ScanFlagsResponse = {
+      cascade_rescored_at: '2026-05-19T10:00:05Z',
+    }
+    expect(shouldStopOnSuccess(fresh, PERSIST_AT)).toBe(true)
+
+    const stale: ScanFlagsResponse = {
+      cascade_rescored_at: '2026-05-19T09:00:00Z',
+    }
+    expect(shouldStopOnSuccess(stale, PERSIST_AT)).toBe(false)
+  })
+
+  it('DEF-01: top-level cascade_rescored_at takes precedence over legacy flags', () => {
+    // Legacy flags shape with stale ts, top-level with fresh ts → fresh wins.
+    const mixed: ScanFlagsResponse = {
+      cascade_rescored_at: '2026-05-19T10:00:05Z',
+      flags: { cascade_rescored_at: '2026-05-19T09:00:00Z' },
+    }
+    expect(shouldStopOnSuccess(mixed, PERSIST_AT)).toBe(true)
+  })
 })
 
 // ============================================================================
@@ -97,23 +118,24 @@ describe('fetchScanFlags', () => {
     vi.mocked(apiFetch).mockReset()
   })
 
-  it('GETs /api/parcels/{parcelId}/scan', async () => {
-    vi.mocked(apiFetch).mockResolvedValueOnce({ flags: { cascade_rescored_at: null } })
+  it('GETs /api/scans/parcels/{parcelId}/scan-data (DEF-01 fix)', async () => {
+    vi.mocked(apiFetch).mockResolvedValueOnce({ cascade_rescored_at: null })
 
     await fetchScanFlags('parcel-1', 'token')
 
     expect(apiFetch).toHaveBeenCalledWith(
-      '/api/parcels/parcel-1/scan',
+      '/api/scans/parcels/parcel-1/scan-data',
       { method: 'GET', accessToken: 'token' },
     )
   })
 
   it('URL-encodes parcel identifiers', async () => {
-    vi.mocked(apiFetch).mockResolvedValueOnce({ flags: null })
+    vi.mocked(apiFetch).mockResolvedValueOnce({ cascade_rescored_at: null })
 
     await fetchScanFlags('A/B', 'token')
 
     expect(vi.mocked(apiFetch).mock.calls[0]?.[0]).toContain('A%2FB')
+    expect(vi.mocked(apiFetch).mock.calls[0]?.[0]).toContain('/api/scans/parcels/')
   })
 })
 

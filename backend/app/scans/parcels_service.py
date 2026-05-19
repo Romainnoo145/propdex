@@ -372,6 +372,11 @@ async def get_parcel_scan_data(
         market_signals=market_signals,
         opportunity_signals=opportunity_signals,
         building_metrics=building_metrics,
+        cascade_rescored_at=(
+            flags.get("cascade_rescored_at")
+            if isinstance(flags.get("cascade_rescored_at"), str)
+            else None
+        ),
         has_report=has_report,
     )
 

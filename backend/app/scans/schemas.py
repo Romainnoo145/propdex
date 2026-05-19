@@ -214,6 +214,15 @@ class ScanResultItem(BaseModel):
         default=None,
         description="Zoning build metrics (e.g., max_bebouwingspercentage, max_floor_area_ratio)",
     )
+    cascade_rescored_at: str | None = Field(
+        default=None,
+        description=(
+            "ISO-8601 timestamp of last cascade rescore (M050/S03 D7). "
+            "Used by frontend useRescorePoll hook (BRK fase-2) to detect "
+            "when a rescore has completed after a BRK persist. DEF-01 fix "
+            "from Phase 8 wire-up."
+        ),
+    )
     has_report: bool = Field(
         default=False,
         description="Whether this parcel already has an active saved report",

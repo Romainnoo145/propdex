@@ -12,14 +12,25 @@ export const POLL_INTERVAL_MS = 2000
 export const MAX_TICKS = 30
 export type RescorePollPhase = 'idle' | 'polling' | 'success' | 'timeout'
 export interface RescorePollResult { phase: RescorePollPhase; tickCount: number }
-export interface ScanFlagsResponse { flags?: { cascade_rescored_at?: string | null } | null }
+
+/**
+ * Response shape from GET /api/scans/parcels/{parcelId}/scan-data (ScanResultItem).
+ *
+ * Backend exposes `cascade_rescored_at` at the top level (DEF-01 fix, Phase 8
+ * wire-up). The legacy `{ flags: { cascade_rescored_at } }` shape is retained as
+ * an optional fallback so future endpoint evolution stays drop-in.
+ */
+export interface ScanFlagsResponse {
+  cascade_rescored_at?: string | null
+  flags?: { cascade_rescored_at?: string | null } | null
+}
 
 /** Pure predicate — true iff cascade rescore completed AFTER persist. */
 export function shouldStopOnSuccess(
   response: ScanFlagsResponse | null | undefined,
   pollStartAt: number,
 ): boolean {
-  const ts = response?.flags?.cascade_rescored_at
+  const ts = response?.cascade_rescored_at ?? response?.flags?.cascade_rescored_at
   if (!ts) return false
   const parsed = Date.parse(ts)
   if (Number.isNaN(parsed)) return false
@@ -29,8 +40,11 @@ export function shouldStopOnSuccess(
 export async function fetchScanFlags(
   parcelId: string, accessToken: string | null,
 ): Promise<ScanFlagsResponse> {
+  // DEF-01 fix (Phase 8 wire-up): /api/parcels/{id}/scan does not exist.
+  // Real endpoint is /api/scans/parcels/{id}/scan-data → ScanResultItem with
+  // top-level cascade_rescored_at field.
   return apiFetch<ScanFlagsResponse>(
-    `/api/parcels/${encodeURIComponent(parcelId)}/scan`,
+    `/api/scans/parcels/${encodeURIComponent(parcelId)}/scan-data`,
     { method: 'GET', accessToken },
   )
 }

@@ -1,6 +1,27 @@
 # Phase 08 — Deferred Items
 
-## DEF-01 — fetchScanFlags endpoint URL alias
+## DEF-01 — fetchScanFlags endpoint URL alias  ✅ RESOLVED in Plan 08-05 (2026-05-19)
+
+**Resolution:**
+- Added `cascade_rescored_at: str | None` field to `ScanResultItem` schema
+  (backend/app/scans/schemas.py)
+- Propagated `flags.get("cascade_rescored_at")` from `ScanResult.flags` JSONB
+  in `parcels_service.get_parcel_scan_data()` (backend/app/scans/parcels_service.py)
+- Rewired `fetchScanFlags` to call `/api/scans/parcels/{parcelId}/scan-data`
+  (frontend/src/hooks/useRescorePoll.ts)
+- Extended `shouldStopOnSuccess` predicate to read top-level
+  `cascade_rescored_at` (new shape) with legacy `flags.cascade_rescored_at`
+  fallback for forward-compat
+- Updated `useRescorePoll.test.ts` URL assertion + added 2 DEF-01 predicate tests
+  (19/19 tests green, up from 17)
+
+**Why backend change (not pure frontend):** ScanResultItem did NOT have a top-level
+`flags` field — only individual extracted typed fields. The "single-line frontend
+fix" path in original DEF-01 logging was based on incorrect assumption.
+
+**Commit:** see Plan 08-05 final commits.
+
+---
 
 **Logged by:** Plan 08-03 (executor) on 2026-05-19
 **Source:** Plan 08-02 SUMMARY open-issue + open-coordination note.
