@@ -5,14 +5,14 @@ milestone_name: milestone
 current_phase: 2
 current_plan: 3
 status: completed
-stopped_at: Completed M050/S03 Plan 03-03 — D3 + D7 + rescore_parcel + 8 integration tests (63/63 green incl. 17 BRK + 29 regression + 9 unit redistribution)
-last_updated: "2026-05-19T09:50:28.046Z"
-last_activity: 2026-05-18
+stopped_at: Completed M050/S06 Phase 8 Plan 08-04 — RisicoLayer BRK wire-up + 25-factor registry drift-detection (6 backend + 12 frontend tests)
+last_updated: "2026-05-19T11:12:37.473Z"
+last_activity: 2026-05-19
 progress:
-  total_phases: 9
+  total_phases: 10
   completed_phases: 4
-  total_plans: 14
-  completed_plans: 14
+  total_plans: 22
+  completed_plans: 16
   percent: 22
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-05-18 — Tranche 2 strategy pivot locke
 Phase: 2 of 9 (M050/S02 BRK Fetch + Persist Endpoint) — wave 1 shipped 2026-05-18
 Plan: 3 of 3 in current phase
 Status: Plan 02-01 complete (3/3 tasks, D1+D6+D7+D8+D11+D14+D15 honored). Next: Plan 02-02 brk_fetch_service + POST /api/parcels/{id}/brk/persist.
-Last activity: 2026-05-18
+Last activity: 2026-05-19
 
 Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 
@@ -104,6 +104,8 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 | Phase 03-scoring-factoren-cascade P01 | 6m | 3 tasks | 5 files |
 | Phase 03-scoring-factoren-cascade P02 | 7m | 3 tasks | 6 files |
 | Phase 03-scoring-factoren-cascade P03-03 | 22m | 3 tasks | 11 files |
+| Phase 08-brk-fase-2-wire-up P04 | 9m | 2 tasks | 5 files |
+| Phase 08-brk-fase-2-wire-up P01 | 9m 54s | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -272,6 +274,10 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 - [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-03: D3 GUARD on default_weight equality prevents x1.25 over-inflation when _apply_missing_data_strategy already zeroed BRK weights (>20% missing). D3 only fires when missing-strategy did NOT touch the BRK factor.
 - [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-03: rescore_parcel JOIN ParcelCache.parcel_id (IMKAD str) -> ScanResult (UUID FK) — matches M047/S05 _process_parcel JOIN pattern. enqueue_rescore_parcel uses deterministic _job_id='rescore:{org}:{parcel}' for F7 ARQ-native dedup.
 - [Phase 03-scoring-factoren-cascade]: M050/S03 Plan 03-03: NEW app/core/arq.py::get_arq_pool FastAPI dependency centralises app.state.arq_pool access. brk_router D7 hook wraps enqueue_rescore_parcel in try/except (best-effort — NEVER raises out of 200 path). All 6 S02 exception mappings preserved verbatim.
+- [Phase 08-brk-fase-2-wire-up]: 08-04: FACTOR_LABELS scope = 12 score-card risico keys (9 pre-M050 + 3 BRK). 4 env keys render via deriveEnvCards inline strings — drift contract documents both paths
+- [Phase 08-brk-fase-2-wire-up]: 08-04: Backend FACTOR_REGISTRY frozenset == frontend KNOWN_25_FACTOR_KEYS array kept in sync via paired source-of-truth comments; backend test is the canary (fails first on rename)
+- [Phase 08-brk-fase-2-wire-up]: 08-04: Added vitest 'unit' project (node env) alongside existing Storybook project — pure-logic tests only; Storybook remains React rendering test surface per project convention
+- [Phase 08-brk-fase-2-wire-up]: 08-04: formatFactorValue BRK cases defensive — accept both backend dict shapes (n_with_hypotheek/n_owners/koopjaar+koopsom) AND legacy primitive shapes (bool/string/int) for non-breaking future evolution
 
 ### Pending Todos
 
@@ -283,6 +289,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-18T20:45:09.688Z
-Stopped at: Completed M050/S03 Plan 03-03 — D3 + D7 + rescore_parcel + 8 integration tests (63/63 green incl. 17 BRK + 29 regression + 9 unit redistribution)
+Last session: 2026-05-19T11:12:21.323Z
+Stopped at: Completed M050/S06 Phase 8 Plan 08-04 — RisicoLayer BRK wire-up + 25-factor registry drift-detection (6 backend + 12 frontend tests)
 Resume file: None
