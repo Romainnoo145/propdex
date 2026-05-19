@@ -2,6 +2,7 @@ import { createFileRoute, useParams, Link, redirect } from '@tanstack/react-rout
 import ResultsShell from '@/components/layout/ResultsShell'
 import { LIFECYCLE_PHASES, getLifecyclePhase, type LifecyclePhaseKey } from '@/lib/lifecycle/phases'
 import { ArrowLeft } from 'lucide-react'
+import { ContactPhaseView } from '@/components/lifecycle/ContactPhaseView'
 
 const VALID_PHASE_KEYS: readonly LifecyclePhaseKey[] = LIFECYCLE_PHASES.map((p) => p.key)
 
@@ -48,7 +49,12 @@ function OpgeslagenPerceelPhasePage() {
     )
   }
 
-  // After the beforeLoad guard, `phase` is guaranteed to be 2-6.
+  // Phase 8 (M050/S06 cont.) — Contact fase is BRK-home
+  if (phase === '2-contact') {
+    return <ContactPhaseView parcelId={parcelId} />
+  }
+
+  // Fallthrough: phases 3-8 remain placeholder until their milestones ship
   const phaseDef = getLifecyclePhase(phase)
   const Icon = phaseDef.icon
 
