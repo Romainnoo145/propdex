@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
 import { useMemo } from 'react'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { useParcelFavorites } from '@/hooks/useFavorites'
-import { FavoriteParcelWorkspaceView } from '@/components/projects/FavoriteParcelWorkspaceView'
+import { OnderzoekPhaseView } from '@/components/cockpit/OnderzoekPhaseView'
 import { EmptyState } from '@/components/feedback/EmptyState'
 
 export const Route = createFileRoute('/_authenticated/opgeslagen/perceel/$parcelId')({
@@ -47,7 +47,7 @@ function OpgeslagenPerceelPage() {
   // the dossier stretches to viewport width and feels wrong.
   return (
     <ResultsShell>
-      <FavoriteParcelWorkspaceView favorite={parcel} onBack={handleClose} onOpenMap={handleOpenMap} />
+      <OnderzoekPhaseView favorite={parcel} onBack={handleClose} onOpenMap={handleOpenMap} />
     </ResultsShell>
   )
 }
