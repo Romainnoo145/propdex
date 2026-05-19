@@ -5,14 +5,14 @@ milestone_name: milestone
 current_phase: 2
 current_plan: 3
 status: completed
-stopped_at: Completed Phase 08 Plan 08-07 — BRK persist-CTA removed from fase-1; Contact-handoff Link wired in AanpakCard (27/27 cockpit tests green; UX-06 requirement complete)
-last_updated: "2026-05-19T11:32:18.341Z"
+stopped_at: Completed Phase 08 Plan 08-02 — 3 React Query hooks (useBrkRecords / usePersistBrk / useRescorePoll) + mapBrkError util + BRKOwnershipRecordRead TS type, 42/42 unit tests green, 3 commits
+last_updated: "2026-05-19T11:34:58.877Z"
 last_activity: 2026-05-19
 progress:
   total_phases: 10
   completed_phases: 4
   total_plans: 22
-  completed_plans: 18
+  completed_plans: 19
   percent: 22
 ---
 
@@ -108,6 +108,7 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 | Phase 08-brk-fase-2-wire-up P01 | 9m 54s | 3 tasks | 6 files |
 | Phase 08-brk-fase-2-wire-up P06 | 17min | 4 tasks | 13 files |
 | Phase 08-brk-fase-2-wire-up P07 | 8m 3s | 2 tasks | 5 files |
+| Phase 08-brk-fase-2-wire-up P02 | 8m 41s | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -289,6 +290,11 @@ Progress: [██░░░░░░░░] 22% (2/9 slices — S01 + S06 done)
 - [Phase 08-brk-fase-2-wire-up]: Plan 08-06: AANPAK CTA copy preserved VERBATIM in cockpit-derivations.ts including BRK CTAs — iron-rule canary in parity test pins pre-08-07 baseline; Plan 08-07 explicitly fails this canary when it lands 'Stap door naar Contact' copy
 - [Phase 08-brk-fase-2-wire-up]: Plan 08-07: BRK persist-CTA removed from fase-1 AANPAK card; replaced with unconditional Contact-handoff Link (AD1 fase-overgang IS the gate); NextStep discriminated union introduced in cockpit-derivations.ts
 - [Phase 08-brk-fase-2-wire-up]: Plan 08-07: Iron-rule canary in OnderzoekPhaseView.parity.test.tsx UPDATED (not deleted) — re-pins new Contact-handoff copy + route target so future plans cannot silently regress to BRK-on-fase-1
+- [Phase 08-brk-fase-2-wire-up]: 08-02: apiFetch + useAuth used instead of eng-plan literal axios/apiClient (project convention — axios is not a dep). Translation mechanical: apiClient.get(url) → apiFetch<T>(url, {method:'GET', accessToken}); AxiosError → ApiError|Error
+- [Phase 08-brk-fase-2-wire-up]: 08-02: Pure query/mutation functions (fetchBrkRecords/persistBrkRecords/fetchScanFlags/shouldStopOnSuccess) exported alongside hooks — enables 42 tests in node-env unit project without @testing-library/react (matches Plan 08-04 RisicoLayer test precedent)
+- [Phase 08-brk-fase-2-wire-up]: 08-02: useRescorePoll uses runKey-scoped terminal state + phase-derived-from-props — avoids React 19 react-hooks/set-state-in-effect cascade-render lint failure; single justified eslint-disable for intentional tick-reset (matches PipelineStagePill / JuridischKlimaatModalContent precedent)
+- [Phase 08-brk-fase-2-wire-up]: 08-02: mapBrkError 503 disambiguation case-insensitive on 'credential' substring; 403 + 404 collapse to identical 'Perceel niet in jouw portfolio' copy (AD2 silent-isolation iron-rule pinned by canary test mapBrkError(403).title === mapBrkError(404).title)
+- [Phase 08-brk-fase-2-wire-up]: 08-02: Polling endpoint GET /api/parcels/{parcelId}/scan is forward-looking; backend route doesn't yet exist (Plan 08-03 wires it or adapts /api/scans/parcels/{id}/scan-data). Hook decoupled via shouldStopOnSuccess predicate — endpoint-shape change is one line
 
 ### Pending Todos
 
@@ -300,6 +306,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-19T11:32:18.339Z
-Stopped at: Completed Phase 08 Plan 08-07 — BRK persist-CTA removed from fase-1; Contact-handoff Link wired in AanpakCard (27/27 cockpit tests green; UX-06 requirement complete)
+Last session: 2026-05-19T11:34:58.874Z
+Stopped at: Completed Phase 08 Plan 08-02 — 3 React Query hooks (useBrkRecords / usePersistBrk / useRescorePoll) + mapBrkError util + BRKOwnershipRecordRead TS type, 42/42 unit tests green, 3 commits
 Resume file: None
