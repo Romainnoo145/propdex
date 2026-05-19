@@ -56,6 +56,15 @@
 - [x] **UX-04**: Aura-tokens consistent: Morning Mist canvas, Pure Glass cards, Plus Jakarta Sans, Warm Amber accent.
 - [x] **UX-05**: `prefers-reduced-motion` fallback respected; `will-change:transform` op floating-panels.
 
+### BRK Fase-2 Wire-up (Phase 8 — M050/S06 cont.)
+
+- [ ] **UX-06**: Lifecycle-fase 2 (Contact) enabled in `phases.ts`; BRK persist-CTA verplaatst van fase 1 (Onderzoek) naar fase 2; fase 1 AANPAK card krijgt "Stap door naar Contact" copy. Geen score-drempel.
+- [ ] **UX-07**: Empty BRK response (alleen-natuurlijk-persoon eigenaar) → "Particuliere eigenaar" infoblok met AVG-uitleg + outreach-suggestie via BAG-adres/makelaar (NIET silent fail, AD4).
+- [ ] **UX-08**: Rescore-polling UX in fase 2: inline banner "Onderzoeksscore wordt bijgewerkt…" → 2s × 30 ticks (60s window) → success-banner met link terug naar fase 1, of timeout-banner zonder retry-loop (AD3).
+- [ ] **WIRE-04**: Nieuw `GET /api/parcels/{parcel_id}/brk` endpoint met hard org-filter + `soft_deleted_at IS NULL` filter + multi-owner support (latest fetch-cycle anchor). Cross-org returns `[]` (no leak van bestaan).
+- [ ] **WIRE-05**: `FavoriteParcelWorkspaceView.tsx` (1922 LOC) gesplitst in ≥5 componenten ≤300 LOC conform CLAUDE.md regel; feature-parity REGRESSION-CRITICAL test verifieert 5 dossier-tabs + scores + upload + projectnotities-grid intact.
+- [ ] **TEST-09**: REGRESSION-CRITICAL multi-tenant isolation voor BRK read-pad: cross-org GET `/api/parcels/{id}/brk` returns `[]` (NIET 403). Plus regression op Phase 105 ephemeral BRK modal (different schema BRKOwnership vs BRKOwnershipRecordRead) en LifecycleSideRailNav scope-rule.
+
 ### End-to-End Wiring + Tier-Gates
 
 - [ ] **WIRE-01**: Tier-gate decorators op `/parcels/{id}/brk-lookup` + `/briefs/{id}/send` — Demo 0/0, Paid 25/5, Enterprise 250/50 quota (Q8 LOCKED). Soft 80% warning, hard 100% block.

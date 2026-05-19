@@ -219,7 +219,7 @@ M050 is een product-mode-shift van **onderzoekstool → actietool**: eerste brug
 ### Phase 8: BRK Fase-2 Wire-up (M050/S06 cont.)
 **Goal:** Activeer lifecycle-fase 2 (Contact) als BRK-home. Verplaats BRK persist-CTA van fase 1 (Onderzoek) naar fase 2, voeg nieuwe `GET /api/parcels/{id}/brk` read-endpoint toe, render 3 BRK risico-factoren in RisicoLayer na rescore, en split de 1922-LOC `FavoriteParcelWorkspaceView.tsx` in ≤300-LOC componenten conform CLAUDE.md regel.
 
-**Requirements:** UX-06, UX-07, UX-08, WIRE-04, TEST-09 *(to be added to REQUIREMENTS.md)*
+**Requirements:** UX-06, UX-07, UX-08, WIRE-04, WIRE-05, TEST-09
 
 **Eng-plan (LOCKED 2026-05-19):** `.planning/milestones/M050-S06-ENG-PLAN.md`
 
