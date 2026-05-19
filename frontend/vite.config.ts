@@ -72,6 +72,18 @@ export default defineConfig({
         },
         setupFiles: ['.storybook/vitest.setup.ts']
       }
+    }, {
+      extends: true,
+      test: {
+        // Pure-logic unit tests (added Phase 08-04 for BRK FACTOR_LABELS coverage).
+        // Node env, no browser, no jsdom. For React-rendering tests, use Storybook
+        // play functions instead — project convention per MEMORY.md "Storybook =
+        // convergence smoke layer". This project covers REGRESSION-CRITICAL drift
+        // detectors paired with backend pytest regression tests.
+        name: 'unit',
+        environment: 'node',
+        include: ['src/**/__tests__/**/*.test.ts', 'src/**/__tests__/**/*.test.tsx']
+      }
     }]
   }
 });
