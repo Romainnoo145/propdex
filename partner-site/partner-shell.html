@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Propdex — Vertrouwelijk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <!-- Wachtwoord-gate: inhoud is AES-GCM-versleuteld, staat niet leesbaar in de bron -->
+  <div class="gate" id="gate">
+    <div class="gate-card">
+      <div class="gate-lock" aria-hidden="true">&#128274;</div>
+      <h1>Vertrouwelijk voorstel</h1>
+      <p>Voer de toegangscode in die u van Klarifai heeft ontvangen.</p>
+      <form class="gate-form" id="gate-form" autocomplete="off">
+        <input
+          class="gate-input"
+          id="gate-pw"
+          type="password"
+          inputmode="text"
+          placeholder="Toegangscode"
+          aria-label="Toegangscode"
+          autofocus
+        />
+        <button class="gate-button" id="gate-btn" type="submit">Ontgrendelen</button>
+        <span class="gate-error" id="gate-err" role="alert"></span>
+      </form>
+      <p class="gate-foot">Propdex · Klarifai BV — strikt vertrouwelijk</p>
+    </div>
+  </div>
+
+  <main class="container" id="content" hidden></main>
+
+  <script>
+    (function () {
+      var PAYLOAD = {{PAYLOAD}};
+      var gate = document.getElementById('gate');
+      var content = document.getElementById('content');
+      var form = document.getElementById('gate-form');
+      var input = document.getElementById('gate-pw');
+      var btn = document.getElementById('gate-btn');
+      var err = document.getElementById('gate-err');
+      var SS_KEY = 'propdex_partner_unlock';
+
+      function b64(s) {
+        return Uint8Array.from(atob(s), function (c) { return c.charCodeAt(0); });
+      }
+
+      async function decrypt(pw) {
+        var enc = new TextEncoder();
+        var base = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveKey']);
+        var key = await crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt: b64(PAYLOAD.salt), iterations: PAYLOAD.iter, hash: 'SHA-256' },
+          base,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['decrypt']
+        );
+        var pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(PAYLOAD.iv) }, key, b64(PAYLOAD.ct));
+        return new TextDecoder().decode(pt);
+      }
+
+      function reveal(html) {
+        content.innerHTML = html;
+        content.hidden = false;
+        gate.hidden = true;
+        document.title = 'Propdex — Founding Partner';
+        window.scrollTo(0, 0);
+      }
+
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var pw = input.value.trim();
+        if (!pw) return;
+        btn.disabled = true;
+        err.classList.remove('show');
+        try {
+          var html = await decrypt(pw);
+          reveal(html);
+          try { sessionStorage.setItem(SS_KEY, pw); } catch (_) {}
+        } catch (e2) {
+          err.textContent = 'Onjuiste toegangscode. Probeer het opnieuw.';
+          err.classList.add('show');
+          btn.disabled = false;
+          input.select();
+        }
+      });
+
+      // Stil her-ontgrendelen binnen dezelfde sessie (bv. na refresh)
+      (async function () {
+        var saved = null;
+        try { saved = sessionStorage.getItem(SS_KEY); } catch (_) {}
+        if (!saved) return;
+        try { reveal(await decrypt(saved)); }
+        catch (_) { try { sessionStorage.removeItem(SS_KEY); } catch (_) {} }
+      })();
+    })();
+  </script>
+</body>
+</html>

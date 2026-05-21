@@ -420,6 +420,286 @@ nav.toc a:hover {
   }
 }
 
+/* ─── Partner pitch components ─────────────────────────────────────────── */
+
+/* Feature grid (engagement-laag) */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin: 28px 0 8px;
+}
+
+.feature-card {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(14, 17, 17, 0.06);
+  border-radius: 18px;
+  padding: 22px 24px;
+}
+
+.feature-card h4 {
+  margin: 10px 0 6px;
+}
+
+.feature-card p {
+  font-size: 0.92rem;
+  margin-bottom: 0;
+}
+
+.feature-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(249, 168, 38, 0.14);
+  color: var(--amber);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.feature-card--accent {
+  background: rgba(209, 226, 216, 0.35);
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+.feature-card--accent .feature-num {
+  background: rgba(34, 197, 94, 0.16);
+  color: var(--vitality);
+}
+
+/* Deal grid (3 lagen) */
+.deal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 28px 0 24px;
+}
+
+.deal-card {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(14, 17, 17, 0.06);
+  border-radius: 20px;
+  padding: 26px 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.deal-card--feature {
+  background: var(--obsidian);
+  border-color: var(--obsidian);
+}
+
+.deal-card--feature .deal-tag { color: var(--amber); }
+.deal-card--feature .deal-amount,
+.deal-card--feature p,
+.deal-card--feature strong { color: #fff; }
+.deal-card--feature .deal-amount span { color: rgba(255, 255, 255, 0.6); }
+
+.deal-tag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+
+.deal-amount {
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--obsidian);
+  margin: 10px 0 12px;
+  line-height: 1.1;
+}
+
+.deal-amount span {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--ink);
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+.deal-card p {
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+.deal-framing {
+  background: rgba(249, 168, 38, 0.08);
+  border-radius: 16px;
+  padding: 20px 24px;
+  font-size: 0.95rem;
+}
+
+/* SAFE terms */
+.safe-terms {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.safe-term {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(14, 17, 17, 0.06);
+  border-radius: 18px;
+  padding: 24px 18px;
+}
+
+.safe-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink);
+  opacity: 0.7;
+}
+
+.safe-value {
+  display: block;
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--obsidian);
+  margin: 8px 0 6px;
+}
+
+.safe-note {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--ink);
+  opacity: 0.75;
+  line-height: 1.4;
+}
+
+/* ─── Password gate ────────────────────────────────────────────────────── */
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--canvas);
+  background-image:
+    radial-gradient(circle at 15% 20%, rgba(209, 226, 216, 0.5) 0%, transparent 50%),
+    radial-gradient(circle at 85% 80%, rgba(249, 168, 38, 0.14) 0%, transparent 50%);
+}
+
+.gate[hidden] { display: none; }
+
+.gate-card {
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  border-radius: 28px;
+  padding: 44px 36px;
+  box-shadow: var(--shadow-strong);
+}
+
+.gate-lock {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+  border-radius: 999px;
+  background: rgba(249, 168, 38, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.gate-card h1 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--obsidian);
+  margin-bottom: 8px;
+}
+
+.gate-card p {
+  font-size: 0.92rem;
+  color: var(--ink);
+  opacity: 0.8;
+  margin-bottom: 24px;
+}
+
+.gate-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gate-input {
+  width: 100%;
+  font-family: var(--font);
+  font-size: 1rem;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(14, 17, 17, 0.12);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--obsidian);
+  text-align: center;
+  letter-spacing: 0.02em;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gate-input:focus {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 4px rgba(249, 168, 38, 0.12);
+}
+
+.gate-button {
+  width: 100%;
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: none;
+  background: var(--obsidian);
+  color: var(--canvas);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.gate-button:hover { background: var(--amber); color: var(--obsidian); }
+.gate-button:active { transform: scale(0.98); }
+.gate-button[disabled] { opacity: 0.6; cursor: progress; }
+
+.gate-error {
+  min-height: 18px;
+  font-size: 0.85rem;
+  color: #DC2626;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.gate-error.show { opacity: 1; }
+
+.gate-foot {
+  margin-top: 20px;
+  font-size: 0.78rem;
+  color: var(--ink);
+  opacity: 0.55;
+}
+
+#content[hidden] { display: none; }
+
 @media (max-width: 720px) {
   .container { padding: 32px 16px 64px; }
   .glass { padding: 32px 24px; border-radius: 24px; }
@@ -427,4 +707,8 @@ nav.toc a:hover {
   nav.toc ol { column-count: 1; }
   th, td { padding: 10px 12px; font-size: 0.85rem; }
   .cross-link { flex-direction: column; text-align: center; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .deal-grid { grid-template-columns: 1fr; }
+  .safe-terms { grid-template-columns: 1fr; }
+  .gate-card { padding: 36px 24px; }
 }

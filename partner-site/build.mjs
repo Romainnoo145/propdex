@@ -4,6 +4,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { marked } from 'marked';
 
@@ -55,10 +56,42 @@ function render({ source, output, title, eyebrow, heading, meta, crossLinkText, 
   console.log(`✓ ${source}  →  public/${output}`);
 }
 
-// Partner-pagina is hand-geschreven HTML (public/partner.html) — niet via markdown gerenderd.
-// Reden: partner-pagina heeft toggle/accordion-structuur en gespreksvorm-content
-// die slecht past bij linear-markdown. Markdown-versie (.planning/PARTNER-BRIEFING-...md)
-// is uitgebreid intern document voor advocaat + notaris, niet voor web-publicatie.
+// ─── Partner-pagina: AES-GCM-versleutelde wachtwoord-gate ────────────────────
+// partner-content.html (bron) wordt versleuteld met PARTNER_PASSWORD en achter
+// de gate in partner-shell.html geplaatst. De deal-inhoud staat NIET leesbaar in
+// public/partner.html — alleen ciphertext. Browser ontsleutelt via Web Crypto.
+// Parameters (PBKDF2-SHA256 + AES-256-GCM) matchen exact de browser-decrypt.
+function encryptContent(plaintext, password) {
+  const salt = crypto.randomBytes(16);
+  const iv = crypto.randomBytes(12);
+  const iterations = 150000;
+  const key = crypto.pbkdf2Sync(password, salt, iterations, 32, 'sha256');
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const ct = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag(); // Web Crypto verwacht ciphertext||tag
+  return {
+    salt: salt.toString('base64'),
+    iv: iv.toString('base64'),
+    ct: Buffer.concat([ct, tag]).toString('base64'),
+    iter: iterations,
+  };
+}
+
+function renderPartner() {
+  const password = process.env.PARTNER_PASSWORD || 'propdex-hauzer-2026';
+  if (!process.env.PARTNER_PASSWORD) {
+    console.warn('⚠ PARTNER_PASSWORD niet gezet — placeholder "propdex-hauzer-2026" gebruikt. Zet de env-var vóór de productie-build.');
+  }
+  const content = fs.readFileSync(path.join(__dirname, 'partner-content.html'), 'utf8');
+  const shell = fs.readFileSync(path.join(__dirname, 'partner-shell.html'), 'utf8');
+  const payload = encryptContent(content, password);
+  const out = shell.replace('{{PAYLOAD}}', JSON.stringify(payload));
+  fs.mkdirSync(PUBLIC, { recursive: true });
+  fs.writeFileSync(path.join(PUBLIC, 'partner.html'), out, 'utf8');
+  console.log('✓ partner-content.html  →  public/partner.html (AES-GCM encrypted)');
+}
+
+renderPartner();
 
 // Investor onepager
 render({

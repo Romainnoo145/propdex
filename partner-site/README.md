@@ -82,15 +82,35 @@ De `vercel.json` rewrites zorgen dat:
 - `partner.propdex.nl/` → `/partner.html`
 - `invest.propdex.nl/` → `/invest.html`
 
-### Password Protection enabelen
+### Password-gate op partner.propdex.nl (in-page, versleuteld)
 
-1. Vercel project → **Settings** → **Deployment Protection** → **Password Protection**
-2. Stel wachtwoord in (één voor het hele project — werkt voor beide subdomeinen)
-3. Save
+De partner-pagina heeft een **eigen Aura-gestylede wachtwoord-gate**. De deal-inhoud
+(`partner-content.html`) wordt bij de build **AES-256-GCM-versleuteld** (PBKDF2-SHA256,
+150k iteraties) en als ciphertext in `public/partner.html` gezet — de cijfers staan
+dus **niet leesbaar in de paginabron**. De browser ontsleutelt client-side via Web
+Crypto zodra het juiste wachtwoord is ingevuld.
 
-Iedereen die de URL bezoekt krijgt een password-prompt voordat de inhoud zichtbaar wordt. Vercel slaat na auth een cookie op voor 24u standaard (instelbaar).
+**Wachtwoord instellen (productie):**
 
-**Hoe wachtwoord delen:** mondeling in partner-gesprek of via signal/separate-channel. Niet in e-mail samen met de URL.
+1. Vercel project → **Settings** → **Environment Variables**
+2. Voeg toe: `PARTNER_PASSWORD` = het woord dat je aan Hauzer geeft
+3. Redeploy — de build her-versleutelt automatisch met dit wachtwoord
+
+> ⚠️ Zonder `PARTNER_PASSWORD` valt de build terug op de placeholder
+> `propdex-hauzer-2026` (met een waarschuwing in de build-log). Zet de env-var
+> dus altijd vóór de echte pitch.
+
+**Lokaal met een eigen wachtwoord builden:**
+
+```bash
+PARTNER_PASSWORD="jouw-woord" npm run build
+```
+
+**Hoe wachtwoord delen:** mondeling in het partner-gesprek of via een apart kanaal
+(Signal). Niet in dezelfde e-mail als de URL.
+
+> De `invest.propdex.nl`-pagina heeft géén in-page gate. Wil je die ook beschermen,
+> gebruik dan Vercel's **Deployment Protection → Password Protection** (project-breed).
 
 ## Print naar PDF
 
@@ -101,16 +121,21 @@ Beide pagina's hebben print-friendly CSS. Browser → Print → "Save as PDF" le
 ```
 partner-site/
 ├── package.json          — marked dependency + build script
-├── build.mjs             — markdown → HTML renderer
-├── template.html         — HTML wrapper met placeholders
+├── build.mjs             — renderer: invest (markdown) + partner (encrypted gate)
+├── template.html         — HTML wrapper voor invest-pagina
+├── partner-content.html  — BRON van de partner-pitch (edit hier)
+├── partner-shell.html    — gate + Web-Crypto-decrypt wrapper voor partner
 ├── vercel.json           — rewrites + headers
 ├── README.md             — dit bestand
 └── public/
-    ├── styles.css        — Aura-styling
-    ├── index.html        — landing fallback (gegenereerd)
-    ├── partner.html      — gegenereerd uit PARTNER-BRIEFING-*.md
+    ├── styles.css        — Aura-styling (incl. gate + deal/feature/SAFE componenten)
+    ├── partner.html      — gegenereerd: AES-versleutelde partner-content + gate
     └── invest.html       — gegenereerd uit ANGEL-ONEPAGER-*.md
 ```
+
+**Partner-pagina editen:** wijzig `partner-content.html` (de pitch) of
+`partner-shell.html` (de gate) en run `npm run build`. Niet `public/partner.html`
+direct editen — dat wordt overschreven.
 
 ## Updaten na markdown-wijzigingen
 

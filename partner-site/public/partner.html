@@ -4,537 +4,101 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Propdex BV. Partner Briefing</title>
+  <title>Propdex — Vertrouwelijk</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="/styles.css" />
-  <link rel="stylesheet" href="/partner.css" />
 </head>
 <body>
-  <main class="page">
+  <!-- Wachtwoord-gate: inhoud is AES-GCM-versleuteld, staat niet leesbaar in de bron -->
+  <div class="gate" id="gate">
+    <div class="gate-card">
+      <div class="gate-lock" aria-hidden="true">&#128274;</div>
+      <h1>Vertrouwelijk voorstel</h1>
+      <p>Voer de toegangscode in die u van Klarifai heeft ontvangen.</p>
+      <form class="gate-form" id="gate-form" autocomplete="off">
+        <input
+          class="gate-input"
+          id="gate-pw"
+          type="password"
+          inputmode="text"
+          placeholder="Toegangscode"
+          aria-label="Toegangscode"
+          autofocus
+        />
+        <button class="gate-button" id="gate-btn" type="submit">Ontgrendelen</button>
+        <span class="gate-error" id="gate-err" role="alert"></span>
+      </form>
+      <p class="gate-foot">Propdex · Klarifai BV — strikt vertrouwelijk</p>
+    </div>
+  </div>
 
-    <!-- HERO -->
-    <header class="hero-block">
-      <span class="eyebrow">Partner Briefing · Vertrouwelijk · Mei 2026</span>
-      <h1>Propdex BV. Voorstel voor 50/50 samenwerking.</h1>
-      <p class="hero-meta">Opgesteld door Klarifai ter voorbereiding op het partner-gesprek.</p>
-    </header>
+  <main class="container" id="content" hidden></main>
 
-    <!-- EXECUTIVE SUMMARY -->
-    <section class="summary-block">
-      <h2>Executive Summary</h2>
-      <ol class="exec-list">
-        <li>
-          <strong>Propdex is technisch productie-klaar.</strong> 47 productie-features opgeleverd in zes maanden. 137.000 percelen verwerkt voor gemeente Venlo. 275 geautomatiseerde tests groen. Backend draait stabiel op Railway in West-Europa, frontend op Vercel. Marginale kost per scan: €0,05 tot €0,15.
-        </li>
-        <li>
-          <strong>Pilot-launch in 8 tot 12 weken, full production-grade in 12 tot 16 weken vanaf ondertekening.</strong> Drie sporen parallel: productie-hardening (document-cache, wijk-beleid, validatie-tooling), commerciële infrastructuur (Stripe, e-mail), juridisch (aandeelhoudersovereenkomst, IP-akte, DPA, algemene voorwaarden). Externe klant-validatie is nog te bewijzen. Partner is op dit moment de enige committed gebruiker via zijn eigen organisatie.
-        </li>
-        <li>
-          <strong>De cijfers per klant zien er goed uit.</strong> Abonnementen van €299, €699 en €1.249 per maand, binnen wat de vastgoedsector maximaal betaalt voor software (ongeveer €15.000 per jaar). De marge is 94 tot 96 procent. Bij 50 klanten ongeveer €375.000 jaaromzet, indicatief €3,75 miljoen bedrijfswaarde. Bij 100 klanten oplopend naar €750.000 jaaromzet.
-        </li>
-        <li>
-          <strong>50/50-aandelenverhouding via holding-structuur.</strong> Klarifai BV en Partner Holding BV houden elk 50 procent van een nieuw op te richten Propdex BV. Klarifai's bestaande werk wordt overgenomen voor €50.000, betaald in 24 maandelijkse termijnen uit de omzet van Propdex BV. Beide partijen zijn vanaf dag één volwaardig mede-eigenaar met gelijk stemrecht en gelijk winstrecht.
-        </li>
-        <li>
-          <strong>Zes onderwerpen voor dit gesprek.</strong> Doelgroep, prijsmodel, eigendomsstructuur, IP-koopprijs, leaver-regelingen, werkkapitaal-aanpak. Per onderwerp staat in §6 een voorstel van Klarifai met onderbouwing.
-        </li>
-      </ol>
-    </section>
+  <script>
+    (function () {
+      var PAYLOAD = {"salt":"f+4puQsxNBzheoeLzC6NpQ==","iv":"pWyd5DXMr+neqGQB","ct":"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","iter":150000};
+      var gate = document.getElementById('gate');
+      var content = document.getElementById('content');
+      var form = document.getElementById('gate-form');
+      var input = document.getElementById('gate-pw');
+      var btn = document.getElementById('gate-btn');
+      var err = document.getElementById('gate-err');
+      var SS_KEY = 'propdex_partner_unlock';
 
-    <!-- §1 -->
-    <section class="prose-block">
-      <h2 data-num="Sectie 01">Wat is Propdex en waarom betalen klanten</h2>
+      function b64(s) {
+        return Uint8Array.from(atob(s), function (c) { return c.charCodeAt(0); });
+      }
 
-      <h3>De visie</h3>
-      <p>Twee regelgevings-wijzigingen vergroten het onderzoekswerk per vastgoedproject in Nederland. De Omgevingswet vervangt duizenden oude bestemmingsplannen door één omgevingsplan per gemeente. Elke gemeente schrijft die de komende jaren opnieuw, met eigen bouwregels en transformatie-paden. En sinds 2024 verplicht de Wet kwaliteitsborging dat een onafhankelijke kwaliteitsborger elk bouwproject toetst, wat veel onderzoek en documentatie vraagt.</p>
-      <p>In dit speelveld ontbreekt één centrale tool voor onderzoek op transformatiepotentie. Brainbay en NVM bedienen makelaars op huidige waarde. Matrixian en Calcasa doen taxaties. Het Omgevingsloket heeft het overheidsmonopolie op vergunningen. Niemand integreert scouting, screening, onderzoek, risico-analyse en go/no-go voor transformatie en herontwikkeling.</p>
-      <p>Propdex bouwt die centrale tool. In jaar 1 en 2 als due-diligence-cockpit. In jaar 2 en 3 met AI-gegenereerde transformatie-scenario's per perceel (woningen, zorg, commercieel, gemengd). In jaar 3 tot 5 als de-facto data-laag tussen ontwikkelaars, financiers en gemeentes.</p>
+      async function decrypt(pw) {
+        var enc = new TextEncoder();
+        var base = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveKey']);
+        var key = await crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt: b64(PAYLOAD.salt), iterations: PAYLOAD.iter, hash: 'SHA-256' },
+          base,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['decrypt']
+        );
+        var pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(PAYLOAD.iv) }, key, b64(PAYLOAD.ct));
+        return new TextDecoder().decode(pt);
+      }
 
-      <div class="pull-quote">
-        Wie de centrale tool voor transformatie-onderzoek pakt, wint de <strong>standaardpositie</strong>.
-      </div>
+      function reveal(html) {
+        content.innerHTML = html;
+        content.hidden = false;
+        gate.hidden = true;
+        document.title = 'Propdex — Founding Partner';
+        window.scrollTo(0, 0);
+      }
 
-      <h3>Wat het probleem oplost</h3>
-      <p>Een vastgoedontwikkelaar of kwaliteitsborger schakelt vandaag tussen BAG-viewer, Funda, losse PDF-bestemmingsplannen, klimaatviewer, RVO-energielabel-database, gemeentewebsites voor woonvisies en Excel om alles te consolideren. Propdex doet die aggregatie automatisch. Het scoringsmodel (Score versie 3.0) toont per perceel de potentie en de risico's.</p>
-      <p>Tijdwinst per perceel-screening, op basis van een eerste inschatting die nog niet markt-gemeten is: vier tot acht uur handwerk wordt vijftien tot dertig minuten in Propdex. Bij tien tot twintig percelen per project, en vijf tot dertig projecten per jaar, levert dat tientallen uren per maand op per ontwikkelaar.</p>
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var pw = input.value.trim();
+        if (!pw) return;
+        btn.disabled = true;
+        err.classList.remove('show');
+        try {
+          var html = await decrypt(pw);
+          reveal(html);
+          try { sessionStorage.setItem(SS_KEY, pw); } catch (_) {}
+        } catch (e2) {
+          err.textContent = 'Onjuiste toegangscode. Probeer het opnieuw.';
+          err.classList.add('show');
+          btn.disabled = false;
+          input.select();
+        }
+      });
 
-      <h3>Doelgroepen jaar 1</h3>
-      <div class="segment-grid">
-        <article class="segment-card">
-          <div class="segment-tag segment-tag-primary">Primair</div>
-          <h4>Vastgoedontwikkelaars</h4>
-          <p class="segment-price">€299 — €1.249 <span>per maand</span></p>
-          <dl class="segment-meta">
-            <dt>Wie precies</dt>
-            <dd>5 tot 30 projecten per jaar in NL, focus op transformatie en herontwikkeling.</dd>
-            <dt>Waarom eerst</dt>
-            <dd>Partner is zelf dit segment. Verliest het meeste tijd aan onderzoek per perceel. Product specifiek hiervoor gebouwd.</dd>
-          </dl>
-        </article>
-        <article class="segment-card">
-          <div class="segment-tag">Parallel</div>
-          <h4>Kwaliteitsborgers</h4>
-          <p class="segment-price">€299 — €699 <span>per maand</span></p>
-          <dl class="segment-meta">
-            <dt>Wie precies</dt>
-            <dd>Werkzaam in Wkb-rol sinds 2024, ongeveer 600 actieve bureaus in NL.</dd>
-            <dt>Waarom eerst</dt>
-            <dd>Regelgevingsdruk dwingt adoptie. Zelfde data-laag. Voorspelbaar adoptiepad.</dd>
-          </dl>
-        </article>
-      </div>
-      <p><small><strong>Niet in scope voor jaar 1:</strong> makelaars (Brainbay en NVM hebben monopolie), gemeentes als klant (verkooptraject naar de overheid duurt 12 tot 18 maanden), particulieren (Omgevingsloket is gratis volgens artikel 16.1 Omgevingswet).</small></p>
-
-      <h3>Partner als eerste gebruiker</h3>
-      <p>De partner is tegelijk vastgoedontwikkelaar en gebruikt Propdex vanaf dag één in zijn eigen organisatie als pilot. Dat verandert de standaard pre-product-positionering.</p>
-      <ul>
-        <li>Het product wordt gevalideerd in echte onderzoek-workflows van een vastgoedontwikkelaar, niet in laboratorium-omstandigheden.</li>
-        <li>Verbeteringen aan het product worden gestuurd door werkelijke problemen uit dagelijks gebruik.</li>
-        <li>Er bestaat een eerste case-study en testimonial-basis voordat externe sales begint.</li>
-        <li>De sales-boodschap wordt automatisch authentiek omdat de partner verkoopt wat hij zelf gebruikt.</li>
-      </ul>
-      <p>Externe klant-werving bouwt voort op deze referentie. De pilot-organisatie krijgt gratis toegang als referentieklant.</p>
-
-      <h3>Status van de software</h3>
-      <p>Backend (FastAPI) draait stabiel op Railway in West-Europa op het adres api.propdex.nl. Frontend (React 19) draait op Vercel op propdex.nl. De DNS is op 14 mei 2026 gemigreerd naar Cloudflare voor betere DNS-management, gratis DDoS-bescherming en wereldwijde propagatie. De backend-service en de achtergrondworker draaien stabiel met live verkeer.</p>
-    </section>
-
-    <!-- §2 -->
-    <section class="prose-block">
-      <h2 data-num="Sectie 02">Status op dit moment</h2>
-
-      <h3>Schaal</h3>
-      <div class="metric-grid">
-        <div class="metric"><div class="metric-num">137.000</div><div class="metric-label">Percelen verwerkt in productie</div></div>
-        <div class="metric"><div class="metric-num">64.000</div><div class="metric-label">Scoringsresultaten beschikbaar</div></div>
-        <div class="metric"><div class="metric-num">47</div><div class="metric-label">Productie-features opgeleverd</div></div>
-        <div class="metric"><div class="metric-num">275+</div><div class="metric-label">Geautomatiseerde tests groen</div></div>
-        <div class="metric"><div class="metric-num">10+</div><div class="metric-label">Externe data-bronnen geïntegreerd</div></div>
-        <div class="metric"><div class="metric-num">128.000</div><div class="metric-label">Regels code (Python en TypeScript)</div></div>
-      </div>
-
-      <h3>Vier afgeronde blokken</h3>
-      <p><strong>Kaartgedreven due-diligence-cockpit voor heel Nederland.</strong> MapLibre-gebaseerde interface met score-overlay (potentie en risico) per perceel. Per perceel een Intelligence Grid met negen potentie-kaarten, een gepagineerde risico-sectie en vijf dossier-tabs. Het product is gebouwd op het Aura design system (Morning Mist canvas, Plus Jakarta Sans, glas-effecten) en geoptimaliseerd voor langdurig onderzoek op 27"-monitor.</p>
-      <p><strong>AI-gedreven analyse van beleidsdocumenten.</strong> Cascade-infrastructuur die gemeentelijke woonvisies, omgevingsplannen en beleidsdocumenten automatisch normaliseert naar per-perceel inzichten. Aangestuurd door Anthropic Claude (Haiku 4.5) met een deterministische cache: exact één LLM-aanroep per document per gemeente, niet per perceel.</p>
-      <p><strong>Productie-infrastructuur op enterprise-grade.</strong> FastAPI backend en ARQ achtergrond-jobs op Railway. React 19 frontend op Vercel. PostgreSQL 16 met PostGIS 3.7 voor geospatial queries. Redis voor job-queue en caching. Sentry voor error-tracking (EU regio).</p>
-      <p><strong>Multi-tenant SaaS-fundament.</strong> Volledige scheiding tussen klant-organisaties via FastAPI JWT-authenticatie en PostgreSQL Row-Level Security, plus filtering op organization_id in elke query. Tien externe data-bronnen worden vooraf gecached per scan (BAG, BRK, BAG-3D, planologisch web, Natura2000, overstromingsrisico, geluid, luchtkwaliteit, energielabels, bodem). CBS-statistiek (bevolking, criminaliteit, leeftijd) per wijk.</p>
-    </section>
-
-    <!-- §3 -->
-    <section class="prose-block">
-      <h2 data-num="Sectie 03">Wat ontbreekt voor commerciële launch</h2>
-
-      <p>Het product werkt voor de partner als pilot-gebruiker. Voor een commerciële multi-tenant launch met externe klanten moeten nog drie blokken werk worden afgerond. Daarnaast loopt de cascade-pipeline (uitbreiding data-bronnen per gemeente) door over jaar 1 en 2.</p>
-
-      <h3>Productie-hardening (Klarifai)</h3>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Onderdeel</th><th>Werktijd</th><th>Prioriteit</th></tr></thead>
-          <tbody>
-            <tr><td><strong>Document-cache optimalisatie en wijk-specifieke beleidsanalyse.</strong> Voorkomt dat één gemeente 100.000+ AI-aanroepen veroorzaakt en zorgt dat de scores per wijk binnen een gemeente kunnen verschillen.</td><td>2 tot 3 weken</td><td><span class="risk risk-high">Kritiek</span></td></tr>
-            <tr><td><strong>Validatie-tooling en score-kalibratie.</strong> Mechanisme om scores te toetsen tegen daadwerkelijke uitkomsten, zodat we het model in productie kunnen verbeteren op basis van klant-feedback.</td><td>2 tot 3 weken</td><td><span class="risk risk-high">Kritiek</span></td></tr>
-            <tr><td>Productie-monitoring met meldingen op kostenpieken en trage queries</td><td>2 tot 3 dagen</td><td><span class="risk risk-med">Hoog</span></td></tr>
-            <tr><td>Load-testing met meerdere klanten tegelijk en multi-tenant stress</td><td>3 tot 5 dagen</td><td><span class="risk risk-med">Hoog</span></td></tr>
-            <tr><td>Google OAuth productie-secrets</td><td>2 tot 4 uur</td><td><span class="risk risk-low">Medium</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h3>Commerciële infrastructuur (Klarifai)</h3>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Onderdeel</th><th>Werktijd</th><th>Kosten</th><th>Prioriteit</th></tr></thead>
-          <tbody>
-            <tr><td><strong>Stripe-betaalflow</strong>, self-service met tier-limieten</td><td>1 tot 1,5 week</td><td>€0 setup, 1,5 tot 2,5% per transactie</td><td><span class="risk risk-high">Kritiek</span></td></tr>
-            <tr><td><strong>E-mailprovider</strong> (Resend of AWS SES) voor invites, verificatie, wachtwoordreset</td><td>1 tot 2 dagen</td><td>€0 tot €20 per maand</td><td><span class="risk risk-high">Kritiek</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h3>Juridisch (advocaat en notaris)</h3>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Onderdeel</th><th>Doorlooptijd</th><th>Kosten</th><th>Prioriteit</th></tr></thead>
-          <tbody>
-            <tr><td><strong>DPA, privacy policy, algemene voorwaarden</strong> voor commerciële klanten</td><td>2 tot 3 weken</td><td>€2.500 tot €4.000 advocaatkosten</td><td><span class="risk risk-high">Kritiek</span></td></tr>
-            <tr><td><strong>Aandeelhoudersovereenkomst, akte van IP-overdracht, oprichting Propdex BV</strong></td><td>2 tot 3 weken</td><td>€1.500 tot €2.500 notaris en €1.500 tot €2.500 advocaat</td><td><span class="risk risk-high">Kritiek</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h3>Doorlopende uitbreiding (jaar 1 en 2)</h3>
-      <p>Naast de launch-blokken hierboven staat nog een grote pijplijn aan inhoudelijke uitbreidingen ingepland: ongeveer 33 nieuwe soorten beleidsdocumenten die het platform automatisch leest en verwerkt (woonvisies, omgevingsvisies, mobiliteitsplannen, klimaatbeleid, energie-transitiebeleid en meer). Deze uitbreidingen zijn geen launch-blokker, maar verhogen het analytische niveau van het product geleidelijk gedurende jaar 1 en 2. De volgorde wordt bepaald in samen-overleg, op basis van marktbehoefte en klantverzoeken. Daarnaast doorlopende feature-iteraties op basis van klant-feedback, technisch onderhoud, security-updates en uitbreiding richting enterprise-functionaliteit (API, custom branding, integraties).</p>
-
-      <p class="prose-callout">
-        <strong>Tijdsindicatie:</strong><br/>
-        Pilot-launch (eerste betalende klanten op werkend platform): <strong>8 tot 12 weken</strong> vanaf ondertekening.<br/>
-        Full commercial production-grade (multi-tenant, alle launch-blokken af): <strong>12 tot 16 weken</strong> vanaf ondertekening.<br/>
-        Eenmalige juridische investering: <strong>€5.500 tot €9.000</strong>. Engineering-tijd wordt door Klarifai gedragen als voorwerk.
-      </p>
-    </section>
-
-    <!-- §4 -->
-    <section class="prose-block">
-      <h2 data-num="Sectie 04">Lopende kosten en unit economics</h2>
-
-      <h3>Pricing-tiers (voorstel, eerste verkoopgesprekken zijn prijs-validatie)</h3>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Tier</th><th>€/maand</th><th>€/jaar</th><th>Users</th><th>Scans inbegrepen</th></tr></thead>
-          <tbody>
-            <tr><td>Starter</td><td>€299</td><td>€3.600</td><td>1</td><td>50 per maand</td></tr>
-            <tr><td>Team</td><td>€699</td><td>€8.400</td><td>5</td><td>100 per maand</td></tr>
-            <tr><td>Enterprise</td><td>€1.249</td><td>€15.000</td><td>15+</td><td>250 per maand, plus API, branding op rapportages, voorrang in support</td></tr>
-            <tr><td>Extra scans</td><td>€1,50 per scan</td><td>n.v.t.</td><td>n.v.t.</td><td>Boven de bundle</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p>De bovengrens van €15.000 per jaar is gebaseerd op een markt-waarneming, niet op hard onderzoek. In de NL-vastgoedsector worden software-abonnementen boven dit bedrag zelden afgenomen.</p>
-
-      <h3>Kosten-roadmap per groeifase</h3>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Fase</th><th>Klanten</th><th>Vaste lasten per maand</th><th>Variabele lasten per maand</th><th>Totaal per maand</th><th>Kost per klant</th></tr></thead>
-          <tbody>
-            <tr><td>Pilot</td><td>1 tot 5</td><td>€26 tot €86</td><td>€5 tot €25</td><td>€31 tot €111</td><td>€20 tot €25</td></tr>
-            <tr><td>Commerciële launch</td><td>5 tot 25</td><td>€100 tot €150</td><td>€25 tot €150</td><td>€125 tot €300</td><td>€10 tot €15</td></tr>
-            <tr><td>Groei</td><td>25 tot 100</td><td>€200 tot €350</td><td>€150 tot €600</td><td>€350 tot €950</td><td>€7 tot €10</td></tr>
-            <tr><td>Schaal</td><td>100 tot 500</td><td>€600 tot €1.500</td><td>€600 tot €3.000</td><td>€1.200 tot €4.500</td><td>€8 tot €10</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p>Wat één scan ons kost: €0,05 tot €0,15. We gebruiken meerdere AI-leveranciers (Anthropic en Google Gemini via OpenRouter), zodat we niet afhankelijk zijn van één partij.</p>
-
-      <div class="stat-strip">
-        <div class="stat-strip-item">
-          <div class="stat-strip-num">94–96%</div>
-          <div class="stat-strip-label">Brutomarge</div>
-        </div>
-        <div class="stat-strip-item">
-          <div class="stat-strip-num">€625</div>
-          <div class="stat-strip-label">Gemiddelde omzet per klant/mnd</div>
-        </div>
-        <div class="stat-strip-item">
-          <div class="stat-strip-num">€0,05–0,15</div>
-          <div class="stat-strip-label">Kost per scan</div>
-        </div>
-        <div class="stat-strip-item">
-          <div class="stat-strip-num">€8–10</div>
-          <div class="stat-strip-label">Kost per klant op schaal</div>
-        </div>
-      </div>
-
-      <h3>Jaarrecurring inkomsten bij verschillende klantaantallen</h3>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Klanten</th><th>Gemiddelde omzet per klant/mnd</th><th>Jaarinkomsten</th><th>Indicatieve waardering (10× jaaromzet)</th></tr></thead>
-          <tbody>
-            <tr><td>25</td><td>€625</td><td>€187.500</td><td>€1,9 miljoen</td></tr>
-            <tr><td>50</td><td>€625</td><td>€375.000</td><td>€3,75 miljoen</td></tr>
-            <tr><td>100</td><td>€625</td><td>€750.000</td><td>€7,5 miljoen</td></tr>
-            <tr><td>250 (jaar 3 en verder)</td><td>€700</td><td>€2,1 miljoen</td><td>€21 miljoen</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- §5 -->
-    <section class="prose-block">
-      <h2 data-num="Sectie 05">Roadmap eerste drie maanden</h2>
-      <p>Vanaf de handtekening lopen drie sporen parallel: techniek bij Klarifai, juridisch via advocaat en notaris, en commercieel door de partner. Pilot-launch valt eind maand 2 of begin maand 3, full production-grade rond maand 4.</p>
-
-      <div class="timeline">
-        <div class="timeline-header">
-          <div class="timeline-spoor-label">&nbsp;</div>
-          <div class="timeline-week">Maand 1</div>
-          <div class="timeline-week">Maand 2</div>
-          <div class="timeline-week">Maand 3</div>
-          <div class="timeline-week timeline-week-end">Maand 4+</div>
-        </div>
-
-        <div class="timeline-row">
-          <div class="timeline-spoor-label">
-            <div class="timeline-spoor-name">Techniek</div>
-            <div class="timeline-spoor-sub">Klarifai · mijlpalen</div>
-          </div>
-          <div class="timeline-bar timeline-bar-tech" style="grid-column: 2 / span 1;">
-            <strong>Fundament leggen</strong>
-            <span>Document-cache optimalisatie afronden · basis-monitoring opzetten · OAuth productie-secrets · security-config baseline · alerting op kostenpieken</span>
-          </div>
-          <div class="timeline-bar timeline-bar-tech" style="grid-column: 3 / span 1;">
-            <strong>Commerciële laag</strong>
-            <span>Wijk-specifieke beleidsanalyse afronden · Stripe checkout + webhooks · e-mailprovider · tier-quotum-enforcement · eerste load-testing</span>
-          </div>
-          <div class="timeline-bar timeline-bar-tech" style="grid-column: 4 / span 1;">
-            <strong>Pilot-launch ondersteunen</strong>
-            <span>Validatie-tooling bouwen · onboarding-flow voor klanten · Stripe customer-portal · backup + disaster-recovery-test · pilot-data verzamelen</span>
-          </div>
-          <div class="timeline-bar timeline-bar-tech" style="grid-column: 5 / span 1;">
-            <strong>Doorlopend uitbreiden</strong>
-            <span>Score-modellen kalibreren op pilot-data · uitbreiding beleidsdocumenten per gemeente · feature-iteraties op klantfeedback · API voor enterprise · performance-optimalisaties</span>
-          </div>
-        </div>
-
-        <div class="timeline-row">
-          <div class="timeline-spoor-label">
-            <div class="timeline-spoor-name">&nbsp;</div>
-            <div class="timeline-spoor-sub">Klarifai · doorlopend</div>
-          </div>
-          <div class="timeline-bar timeline-bar-tech-light" style="grid-column: 2 / span 4;">
-            <strong>Doorlopend werk gedurende alle maanden</strong>
-            <span>Bug-fixes · technische klantondersteuning op tweede lijn · monitoring van infra en kosten · security-updates · dependency-onderhoud · data-pipelines bewaken · uptime-checks · GDPR-compliance-audit · documentatie bijhouden · code-reviews</span>
-          </div>
-        </div>
-
-        <div class="timeline-row">
-          <div class="timeline-spoor-label">
-            <div class="timeline-spoor-name">Juridisch</div>
-            <div class="timeline-spoor-sub">Advocaat + notaris</div>
-          </div>
-          <div class="timeline-bar timeline-bar-legal" style="grid-column: 2 / span 1;">
-            <strong>Intake + opstellen</strong>
-            <span>Advocaat kiezen, SHA-draft, IP-akte, juridische skeletten</span>
-          </div>
-          <div class="timeline-bar timeline-bar-legal" style="grid-column: 3 / span 1;">
-            <strong>Oprichting</strong>
-            <span>Notaris-afspraak, Propdex BV opgericht, KvK en UBO</span>
-          </div>
-        </div>
-
-        <div class="timeline-row">
-          <div class="timeline-spoor-label">
-            <div class="timeline-spoor-name">Commercieel</div>
-            <div class="timeline-spoor-sub">Partner</div>
-          </div>
-          <div class="timeline-bar timeline-bar-biz" style="grid-column: 2 / span 1;">
-            <strong>Voorbereiding</strong>
-            <span>Prospect-lijst, angel-contacten, positionering, pitch-deck</span>
-          </div>
-          <div class="timeline-bar timeline-bar-biz" style="grid-column: 3 / span 1;">
-            <strong>Eerste gesprekken</strong>
-            <span>Demo's bij 5-10 prospects, angel-pitches, onboarding ontwerpen</span>
-          </div>
-          <div class="timeline-bar timeline-bar-biz" style="grid-column: 4 / span 1;">
-            <strong>Pilot-klanten</strong>
-            <span>Eerste 1-3 betalende klanten landen, feedback verwerken</span>
-          </div>
-          <div class="timeline-bar timeline-bar-biz" style="grid-column: 5 / span 1;">
-            <strong>Schalen</strong>
-            <span>Marketing-uitrol, pijplijn opbouwen richting 8 klanten</span>
-          </div>
-        </div>
-
-        <div class="timeline-milestone">
-          <div class="timeline-milestone-arrow">→</div>
-          <div class="timeline-milestone-content">
-            <strong>Maand 2 of 3: pilot-launch</strong>
-            <span>Eerste betalende klanten op werkend platform. Maand 4: full commercial production-grade.</span>
-          </div>
-        </div>
-      </div>
-
-      <p class="prose-callout">
-        <strong>Tijdsindicatie vanaf ondertekening:</strong> Pilot-launch met eerste betalende klanten in 8 tot 12 weken (maand 2-3). Full multi-tenant production-grade in 12 tot 16 weken (maand 3-4). Daarna doorlopende uitbreiding van het product gedurende jaar 1 en 2 (uitbreiding van data-bronnen per gemeente, feature-iteraties, enterprise-functionaliteit). Het technische werk is daarmee niet "klaar" na maand 4, het werkt door zolang we klanten bedienen.
-      </p>
-    </section>
-
-    <!-- §6 -->
-    <section class="prose-block">
-      <h2 data-num="Sectie 06">Beslissingen voor dit gesprek</h2>
-      <p>Zes onderwerpen waarover we samen een richting moeten kiezen. Per onderwerp staat een voorstel van Klarifai met onderbouwing. Geen van deze is in beton gegoten.</p>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>#</th><th>Beslissing</th><th>Voorstel Klarifai</th></tr></thead>
-          <tbody>
-            <tr>
-              <td>1</td>
-              <td><strong>Doelgroep</strong></td>
-              <td>Vastgoedontwikkelaars en kwaliteitsborgers parallel. Twee verkoop-sporen, dezelfde data-laag, geen afhankelijkheid van één segment. Gemeentes en makelaars vallen expliciet buiten scope voor jaar 1.</td>
-            </tr>
-            <tr>
-              <td>2</td>
-              <td><strong>Prijsmodel</strong></td>
-              <td>Een tiered abonnement met scan-credits voor wie meer doet. Tiers €299, €699 en €1.249 per maand, binnen het marktplafond van €15.000 per jaar. €1,50 per extra scan boven de bundle. De eerste drie verkoopgesprekken testen actief deze prijzen.</td>
-            </tr>
-            <tr>
-              <td>3</td>
-              <td><strong>Eigendomsstructuur</strong></td>
-              <td>Holding-structuur: Klarifai BV en Partner Holding BV houden samen Propdex BV. Eenmalige notaris- en advocaat-kosten ongeveer €5.500 tot €9.000. Schoon voor latere investeerders, fiscaal gunstig voor beide kanten.</td>
-            </tr>
-            <tr>
-              <td>4</td>
-              <td><strong>Overname Klarifai's voorwerk</strong></td>
-              <td>Vaste prijs van €50.000, betaald in 24 maandelijkse termijnen van €2.083 vanaf oprichting. Pauze-regeling: termijnen worden opgeschort zolang Propdex BV negatieve operationele cashflow heeft. Bij een latere angel-ronde mag het saldo in één keer worden afgelost uit die middelen (maximaal 25 procent van de ronde). Geen prijs-herziening achteraf.</td>
-            </tr>
-            <tr>
-              <td>5</td>
-              <td><strong>Vertrek en wanprestatie</strong></td>
-              <td>Beide partijen worden vanaf dag één voor 50 procent eigenaar zonder voorwaarden vooraf. Bij vertrek in goed overleg (eigen keuze, ziekte, persoonlijke omstandigheden) houden beide partijen hun aandelen. Bij vertrek door aantoonbare wanprestatie of contractbreuk geldt een uitkoopregeling tegen marktwaarde door een onafhankelijke taxateur. Elke drie maanden gezamenlijke evaluatie van koers en voortgang, zonder dat dit gevolgen heeft voor aandelenbezit.</td>
-            </tr>
-            <tr>
-              <td>6</td>
-              <td><strong>Werkkapitaal bij start</strong></td>
-              <td>Beide partijen brengen geen cash in bij oprichting. We starten zonder werkkapitaal en zoeken parallel een investeerder. Doel: investering van €100.000 tot €300.000 binnen vier tot zes maanden, eerste drie betalende klanten in maand vier tot zes (pilot-launch valt in maand 2-3).</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- §7 -->
-    <section class="prose-block">
-      <h2 data-num="Sectie 07">Structuur van de samenwerking</h2>
-
-      <h3>Uitgangspunt</h3>
-      <p>Klarifai en partner werken samen 50/50 aan Propdex BV. Klarifai brengt het bestaande product, doorlopende technische ontwikkeling en de overdracht van het intellectueel eigendom. Partner brengt commerciële uitvoering, marketing, klantsucces, financiële operaties en netwerk-toegang. Beide partijen halen waarde uit groei via aandelen, dividend en eventuele exit.</p>
-
-      <h3>Rolverdeling in drie domeinen</h3>
-      <p>Het werk verdeelt zich in drie domeinen. Klarifai is verantwoordelijk voor product en techniek. Partner is verantwoordelijk voor commerciële uitvoering en bedrijfsvoering. Beide samen nemen de strategische beslissingen die richting bepalen. De rollen zijn complementair en gelijkwaardig.</p>
-
-      <div class="three-col-roles">
-        <div class="role-box role-box-tech">
-          <h4>Klarifai · Product en techniek</h4>
-          <p class="role-box-meta">Eigen verantwoordelijkheid en uitvoering</p>
-          <ul>
-            <li>Productontwikkeling en bug-fixes</li>
-            <li>Technische infrastructuur, monitoring, beveiliging</li>
-            <li>Data-integraties (BAG, Kadaster, omgevingsplannen)</li>
-            <li>AI-pipeline en scoring-model</li>
-            <li>Naleving privacy-regelgeving en audit-trails</li>
-            <li>Technische klantondersteuning op tweede lijn</li>
-          </ul>
-        </div>
-        <div class="role-box role-box-samen">
-          <h4>Samen · Strategie, financiën, mensen</h4>
-          <p class="role-box-meta">Beide partijen, instemming van beide aandeelhouders</p>
-          <ul>
-            <li>Productroadmap en strategische heroriëntatie</li>
-            <li>Keuze van doelmarkten en segmenten</li>
-            <li>Marketing-positionering en merkverhaal</li>
-            <li>Prijsbeleid en kortingen</li>
-            <li>Klantcontracten boven €50.000 per jaar</li>
-            <li>Strategische partnerships en integraties</li>
-            <li>Financieel beheer: facturatie, debiteuren, boekhouding, budget en cashflow</li>
-            <li>Welke angels we benaderen, hoeveel we ophalen, op welke voorwaarden</li>
-            <li>Koers van de externe communicatie en woordvoering</li>
-            <li>Personeel: aanname, beoordelingen, contractwijzigingen, operationeel beheer</li>
-            <li>Wijziging van statuten, aandeelhoudersovereenkomst of bedrijfsdoel</li>
-          </ul>
-        </div>
-        <div class="role-box role-box-biz">
-          <h4>Partner · Commerciële uitvoering</h4>
-          <p class="role-box-meta">Eigen verantwoordelijkheid en uitvoering</p>
-          <ul>
-            <li>Sales: prospects benaderen, demo's geven, contracten sluiten</li>
-            <li>Marketing-uitvoering: content, social media, events</li>
-            <li>Business development en lead-generation</li>
-            <li>Klantsucces, onboarding, eerste-lijns ondersteuning</li>
-            <li>Angel-pitch en investeerder-relaties (binnen samen-kaders)</li>
-            <li>PR-uitvoering en perscontacten</li>
-            <li>Juridische coördinatie met advocaat en notaris</li>
-          </ul>
-        </div>
-      </div>
-
-      <p class="prose-callout">
-        <strong>Praktische cadans.</strong> Wekelijks operationeel overleg voor lopende zaken. Eens per kwartaal gezamenlijke evaluatie van strategie en samenwerking. Beide partijen hebben instemmingsrecht op de samen-onderwerpen. Bij blijvend meningsverschil geldt een procedure van overleg, gevolgd door bemiddeling, eventueel bindend advies, en als laatste stap een uitkoopregeling.
-      </p>
-
-      <h3>Eigendomsstructuur</h3>
-      <p>Geen rechtstreekse deelname in Propdex BV. Beide partijen via een persoonlijke holding-vennootschap.</p>
-      <div class="diagram">
-        <div class="diagram-row">
-          <div class="diagram-box">Klarifai BV<br/><small>(bestaand)</small></div>
-          <div class="diagram-box">Partner Holding BV<br/><small>(nieuw op te richten)</small></div>
-        </div>
-        <div class="diagram-arrows"><span>50%</span><span>50%</span></div>
-        <div class="diagram-row">
-          <div class="diagram-box diagram-box-main">Propdex BV<br/><small>(gezamenlijke werk-BV)</small></div>
-        </div>
-      </div>
-      <p>De voordelen van deze structuur: schone scheiding tussen privé-vermogen en de werkmaatschappij, fiscaal optimaal voor zowel management-vergoedingen als toekomstige dividenden, schone basis voor latere investeringsronden. Eenmalige kosten voor de oprichting (notaris en advocaat samen ongeveer €5.500 tot €9.000) worden door Propdex BV gedragen, niet privé.</p>
-
-      <h3>Overname Klarifai's bestaande werk: €50.000</h3>
-      <p>De Propdex-codebase, designs, datapipeline en domein zijn intellectueel eigendom dat juridisch nog bij Klarifai BV ligt. Voor Propdex BV daadwerkelijk eigenaar wordt (noodzakelijk voor latere investeringsronden of exit) moet die IP via een formele koopakte worden overgedragen.</p>
-      <ul>
-        <li>Propdex BV koopt de IP van Klarifai BV voor €50.000.</li>
-        <li>Betaling in 24 maandelijkse termijnen van €2.083, te starten bij oprichting.</li>
-        <li>Pauze-regeling: termijnen worden opgeschort zolang Propdex BV negatieve operationele cashflow heeft. Er wordt niet betaald wat er niet is.</li>
-        <li>Bij een latere angel-ronde mag het saldo in één keer worden afgelost uit die middelen, met een maximum van 25 procent van de ronde.</li>
-        <li>Vaste prijs. Geen prijs-herziening achteraf.</li>
-      </ul>
-      <p>Onderbouwing van de €50.000: ongeveer 625 tot 800 uur ontwikkeling tussen november 2025 en mei 2026, tegen een tarief van €60 tot €80 per uur. Dit tarief ligt onder de marktrange voor zelfstandige software-ontwikkelaars in Nederland. Volledige urenreconstructie wordt aan de advocaat verstrekt.</p>
-
-      <h3>Aandelen, vertrek, wanprestatie</h3>
-
-      <div class="pull-quote">
-        Beide partijen zijn vanaf de oprichting <strong>volwaardig mede-eigenaar voor 50 procent</strong>. Geen wachttijd, geen voorwaarden vooraf.
-      </div>
-
-      <p>Stemrecht en winstrecht zijn volledig en gelijk.</p>
-      <p>Bij vertrek in goed overleg (eigen keuze, ziekte, persoonlijke omstandigheden, overlijden) houdt de vertrekkende partij zijn aandelen, met eventuele afspraken over verkoop aan de andere partij of aan derden.</p>
-      <p>Bij vertrek door aantoonbare wanprestatie (ernstige contractbreuk, fraude, schending van non-concurrentie tijdens de samenwerking) geldt een uitkoopregeling. De andere partij heeft het recht de aandelen over te nemen tegen marktwaarde, vastgesteld door een onafhankelijke registervaluator. Bij gebrek aan financiering kan de uitkoop in termijnen plaatsvinden.</p>
-
-      <h3>Non-concurrentie en bescherming relaties</h3>
-      <ul>
-        <li><strong>Non-concurrentie:</strong> 18 maanden vanaf uittreding. Geldt voor een direct concurrerend PropTech-product voor vastgoedontwikkelaars of kwaliteitsborgers in Nederland en België, plus advieswerk voor directe concurrenten van Propdex. Beide partijen.</li>
-        <li><strong>Relatiebeding:</strong> 24 maanden vanaf uittreding. Geen klanten, werknemers of contractors van Propdex BV benaderen voor concurrerende doeleinden.</li>
-      </ul>
-
-      <p class="prose-callout"><strong>Juridische review is essentieel.</strong> Het bovenstaande is een strategisch raamwerk, geen rechtsgeldig contract. Een ondernemingsrechtelijk advocaat met specialisatie in aandeelhoudersovereenkomsten stelt de definitieve formulering op. Een investering van €5.500 tot €9.000 voorkomt latere geschillen en mislukte due-diligence bij investeerders.</p>
-    </section>
-
-    <!-- §8 -->
-    <section class="prose-block">
-      <h2 data-num="Sectie 08">Risico's, eerlijk benoemd</h2>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Risico</th><th>Kans</th><th>Impact</th><th>Aanpak</th></tr></thead>
-          <tbody>
-            <tr><td><strong>Externe klanten willen niet betalen.</strong> Er is nog geen externe klant-validatie. Een investeerder heeft interesse uitgesproken, maar geen externe vastgoedontwikkelaar heeft koopintentie geuit.</td><td><span class="risk risk-high">Hoog</span></td><td><span class="risk risk-high">Hoog</span></td><td>Partner committeert zich vóór ondertekening aan een lijst van 10 tot 20 prospects die in week 1 tot 4 worden benaderd. Eerste drie klanten als evaluatiedoel binnen maand zes.</td></tr>
-            <tr><td><strong>Prijs klopt niet voor de markt.</strong> Het plafond van €15.000 per jaar is een waarneming, niet hard onderzocht.</td><td><span class="risk risk-med">Medium</span></td><td><span class="risk risk-med">Medium</span></td><td>Eerste drie verkoopgesprekken zijn expliciete prijs-validatie. Prijsbeleid is een samen-onderwerp: bijstelling in maand drie gebeurt in onderling overleg op basis van markt-feedback.</td></tr>
-            <tr><td><strong>Geen investeerder en geen klanten binnen acht maanden.</strong> Het pad zonder werkkapitaal en zonder vroege omzet kan stagneren.</td><td><span class="risk risk-med">Medium</span></td><td><span class="risk risk-high">Hoog</span></td><td>Pauze-regeling houdt Propdex BV in stand zonder IP-druk. Bij gebrek aan beide signalen na acht maanden volgt een formele evaluatie van doelgroep en aanpak.</td></tr>
-            <tr><td><strong>IP-overdracht juridisch niet schoon.</strong></td><td><span class="risk risk-low">Laag</span></td><td><span class="risk risk-high">Hoog</span></td><td>Advocaat reviewt de akte. Urenreconstructie en waardebepaling worden bijgevoegd. Expliciete verklaring over auteursrechtelijke status.</td></tr>
-            <tr><td><strong>Concurrent lanceert vergelijkbaar product.</strong> Brainbay, Matrixian of een nieuwe partij.</td><td><span class="risk risk-low">Laag</span></td><td><span class="risk risk-med">Medium</span></td><td>Brainbay en Matrixian zitten in huidige waarde, niet in transformatie. Nieuwe partij heeft zes of meer maanden tech-werk in te halen. We hebben een voorsprong in het segment.</td></tr>
-            <tr><td><strong>AI-kosten stijgen of EU-beschikbaarheid valt weg.</strong></td><td><span class="risk risk-low">Laag</span></td><td><span class="risk risk-med">Medium</span></td><td>Marge van 94 tot 96 procent kan een vijfvoudige kostenstijging absorberen. Switch tussen leveranciers (Anthropic, Google, Mistral) is mogelijk.</td></tr>
-            <tr><td><strong>Overheids-API's wijzigen schema.</strong></td><td><span class="risk risk-med">Medium</span></td><td><span class="risk risk-low">Laag</span></td><td>PDOK en BAG kondigen wijzigingen ruim vooraf aan en houden oude versies een tijd parallel actief. De koppelings-laag in onze software vangt veranderingen op.</td></tr>
-            <tr><td><strong>Privacy-incident door fout in opslag of audit.</strong></td><td><span class="risk risk-low">Laag</span></td><td><span class="risk risk-high">Hoog</span></td><td>EU-only infrastructuur. Juridische review van privacy-documentatie vóór commerciële launch.</td></tr>
-            <tr><td><strong>Klarifai is één ontwikkelaar.</strong></td><td><span class="risk risk-high">Hoog</span></td><td><span class="risk risk-high">Hoog</span></td><td>Standaard tools, geen exotische tech. Codebase op GitHub. Documentatie via GSD-methodologie. Bij €15.000 maandomzet wordt in gezamenlijk overleg een freelance-ontwikkelaar toegevoegd (hires zijn samen-besluit).</td></tr>
-            <tr><td><strong>Partner heeft veel petten op.</strong> Sales, marketing-uitvoering, klantsucces, business development, angel-pitch en juridische coördinatie tegelijk.</td><td><span class="risk risk-med">Medium</span></td><td><span class="risk risk-med">Medium</span></td><td>Financieel beheer en personeel liggen aan de samen-kant, niet alleen bij partner. Bij €15.000 maandomzet ontstaat ruimte voor een commerciële medewerker via een samen-besluit. Kwartaal-evaluaties signaleren overbelasting vroeg.</td></tr>
-            <tr><td><strong>Samen-besluitvorming vertraagt dagelijkse uitvoering.</strong> Veel onderwerpen liggen bij beide partijen (prijs, marketing-positionering, hires, financieel beheer).</td><td><span class="risk risk-med">Medium</span></td><td><span class="risk risk-low">Laag</span></td><td>Wekelijks operationeel overleg vangt 80 procent van samen-onderwerpen op. Vaste mandaten binnen kaders: zodra prijsbeleid is afgesproken handelt partner verkopen zelfstandig; zodra boekhoudkader is afgesproken handelt aangewezen partij dagelijkse facturatie.</td></tr>
-            <tr><td><strong>Verschillende inzichten bij strategische keuzes.</strong> Inherent aan een 50/50-samenwerking met twee aandeelhouders.</td><td><span class="risk risk-med">Medium</span></td><td><span class="risk risk-med">Medium</span></td><td>De aandeelhoudersovereenkomst legt vast welke onderwerpen samen-besluit zijn en welke ieder zelfstandig mag uitvoeren. Bij verschil van inzicht: gesprek, daarna bemiddeling, daarna bindend advies door een onafhankelijke derde, in laatste instantie een uitkoopregeling. Kwartaal-evaluaties vangen verschillen vroeg op.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- VERVOLGSTAPPEN -->
-    <section class="prose-block prose-final">
-      <h2>Vervolgstappen</h2>
-      <div class="next-grid">
-        <div class="next-card">
-          <h4>Volgende stap partner</h4>
-          <p>Dit voorstel doorlezen. Vragen opschrijven. Praktische invulling van de partner-rol overdenken. Welke prospects zijn realistisch voor de eerste twee maanden? Welke angel-contacten zijn beschikbaar? Welke onderdelen van §6 wijken af van eigen verwachting?</p>
-        </div>
-        <div class="next-card">
-          <h4>Volgende stap Klarifai</h4>
-          <p>Wacht op reactie en bijstellingen. Bij overeenstemming op de hoofdlijnen: ondernemingsrechtelijk advocaat selecteren en intake-gesprek inplannen. Bij specifieke punten die niet kloppen: gezamenlijk uitwerken vóór contractering.</p>
-        </div>
-        <div class="next-card">
-          <h4>Tijdpad tot ondertekening</h4>
-          <p>Akkoord op hoofdlijnen, advocaat-intake, opstellen documenten (twee tot drie weken), notaris-afspraak voor oprichting Propdex BV en ondertekening. Realistisch vier tot zes weken vanaf inhoudelijk akkoord.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- FOOTER -->
-    <footer class="footer-block">
-      <p><strong>Propdex BV (in oprichting).</strong> Gezamenlijke onderneming van Klarifai BV en Partner Holding BV.</p>
-      <p>Vertrouwelijk. Niet bedoeld voor verspreiding zonder toestemming.</p>
-      <p><a href="mailto:info@klarifai.nl">info@klarifai.nl</a></p>
-    </footer>
-
-  </main>
+      // Stil her-ontgrendelen binnen dezelfde sessie (bv. na refresh)
+      (async function () {
+        var saved = null;
+        try { saved = sessionStorage.getItem(SS_KEY); } catch (_) {}
+        if (!saved) return;
+        try { reveal(await decrypt(saved)); }
+        catch (_) { try { sessionStorage.removeItem(SS_KEY); } catch (_) {} }
+      })();
+    })();
+  </script>
 </body>
 </html>
