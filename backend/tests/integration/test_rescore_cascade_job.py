@@ -59,7 +59,7 @@ async def _seed_user(db, org: Organization, email: str = "user@test.com") -> Use
     return user
 
 
-async def _seed_scan(db, gemeente_code: str = "0983") -> AreaScan:
+async def _seed_scan(db, gemeente_code: str = "GM0983") -> AreaScan:
     scan = AreaScan(
         gemeente_code=gemeente_code,
         gemeente_naam="TestGemeente",
@@ -75,7 +75,7 @@ async def _seed_scan(db, gemeente_code: str = "0983") -> AreaScan:
 
 
 async def _seed_parcel(
-    db, gemeente_code: str = "0983", parcel_id_str: str = "TST01-A-0001"
+    db, gemeente_code: str = "GM0983", parcel_id_str: str = "TST01-A-0001"
 ) -> ParcelCache:
     parcel = ParcelCache(
         parcel_id=parcel_id_str,
@@ -157,8 +157,8 @@ async def test_rescore_job_processes_affected_parcels(test_db):
     # Seed
     org = await _seed_org(test_db, "Org A")
     user = await _seed_user(test_db, org, "a@test.com")
-    scan = await _seed_scan(test_db, "0983")
-    parcel = await _seed_parcel(test_db, "0983", "VENLO-A-0001")
+    scan = await _seed_scan(test_db, "GM0983")
+    parcel = await _seed_parcel(test_db, "GM0983", "VENLO-A-0001")
     await _seed_scan_result(test_db, scan, parcel)
     doc = await _seed_policy_doc(test_db, org, user, "GM0983")
     await test_db.commit()
@@ -213,8 +213,8 @@ async def test_rescore_job_idempotent(test_db):
 
     org = await _seed_org(test_db, "Org Idempotent")
     user = await _seed_user(test_db, org, "idem@test.com")
-    scan = await _seed_scan(test_db, "0983")
-    parcel = await _seed_parcel(test_db, "0983", "IDEM-A-0001")
+    scan = await _seed_scan(test_db, "GM0983")
+    parcel = await _seed_parcel(test_db, "GM0983", "IDEM-A-0001")
     await _seed_scan_result(test_db, scan, parcel)
     doc = await _seed_policy_doc(test_db, org, user, "GM0983")
     await test_db.commit()
@@ -268,8 +268,8 @@ async def test_rescore_job_tenant_isolation(test_db):
 
     # Seed parcels in the same gemeente for both orgs
     # (parcel_cache has no org_id — shared data)
-    parcel_a = await _seed_parcel(test_db, "0983", "ISO-A-0001")
-    parcel_b = await _seed_parcel(test_db, "0983", "ISO-B-0001")
+    parcel_a = await _seed_parcel(test_db, "GM0983", "ISO-A-0001")
+    parcel_b = await _seed_parcel(test_db, "GM0983", "ISO-B-0001")
 
     # PolicyDocument belongs to org_A only
     doc_a = await _seed_policy_doc(test_db, org_a, user_a, "GM0983")

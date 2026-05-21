@@ -103,7 +103,8 @@ async def get_affected_parcel_ids(
 
     Multi-tenant: document must belong to organization_id.
     Only gemeente-level documents are supported (entity_type == "gemeente").
-    Normalizes entity_code: "GM0983" → "0983" before querying parcel_cache.
+    PolicyDocument.entity_code en ParcelCache.gemeente_code delen het "GM0983"-
+    formaat, dus een directe match volstaat (geen normalisatie nodig).
 
     Returns empty list if document not found, wrong org, or no parcels cached.
     """
@@ -119,7 +120,7 @@ async def get_affected_parcel_ids(
     if doc is None or doc.entity_type != "gemeente":
         return []
 
-    gemeente_code = doc.entity_code  # parcel_cache stores "GM0983" format
+    gemeente_code = doc.entity_code  # "GM0983"-formaat, matcht parcel_cache.gemeente_code
 
     parcel_stmt = select(ParcelCache.parcel_id).where(
         ParcelCache.gemeente_code == gemeente_code,
