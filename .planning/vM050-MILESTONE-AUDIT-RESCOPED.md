@@ -2,6 +2,7 @@
 milestone: M050 — BRK Lookup-Wedge (rescoped)
 audited: 2026-05-21
 status: gaps_found
+resolution: "gap closed same-day 2026-05-21 — fix(03) 52add70a stamps cascade_rescored_at in rescore_parcel. SCOR-02 + UX-07 now satisfied. Regression test test_rescore_parcel_stamps_cascade_rescored_at_for_frontend_poll pins the contract (RED→GREEN). Full M050/BRK/phase105 surface 188 passed. Milestone now effectively 22/22 — ready for /gsd:complete-milestone."
 supersedes_scope_of: vM050-MILESTONE-AUDIT.md (2026-05-19 pre-split audit — brief-send half split to M051)
 scores:
   requirements: 20/22
