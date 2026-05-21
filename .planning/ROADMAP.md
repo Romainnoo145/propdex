@@ -50,6 +50,14 @@ M052 maakt de sprong van System-of-Record (data) → System-of-Engagement (dagel
 **Depends on:** M050 (`ParcelFavorite`), M047 (projecttype-settings)
 **Blocks:** S02 (projecttype), S03/S04/S05 (`HAUZER_DEMO`-flag)
 
+**Plans:** 4 plans (Wave 0 test stubs → Wave 1 backend ∥ → Wave 2 frontend)
+
+Plans:
+- [ ] 01-00-PLAN.md — Wave 0 Nyquist test stubs (3 validation tests, RED)
+- [ ] 01-01-PLAN.md — FUND-02 rescore wiring (rescore_parcel uses stored project_type + PUT enqueues rescore)
+- [ ] 01-02-PLAN.md — DEMO-01 hauzer_demo flag (Organization column + migration + /me) + DEMO-03 DESIGN.md
+- [ ] 01-03-PLAN.md — FUND-01 picker-on-save + DEMO-01 useHauzerDemo hook (frontend)
+
 ---
 
 ### Phase 2: Per-perceel Acquisitie-arc (M052/S02)
