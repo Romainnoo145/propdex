@@ -7,6 +7,8 @@ export interface User {
   auth_provider: string
   is_superuser: boolean
   created_at: string
+  /** M052/S01 (DEMO-01) — true only for the Hauzer demo org. Backend enforces org isolation. */
+  hauzer_demo: boolean
 }
 
 export interface AuthContextValue {

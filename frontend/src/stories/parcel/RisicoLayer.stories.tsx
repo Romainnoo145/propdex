@@ -20,7 +20,7 @@ const mockAuthValue: AuthContextValue = {
   user: {
     id: 'story-user-id', email: 'dev@propdex.nl', full_name: 'Storybook User',
     organization_id: 'story-org-id', email_verified: true, auth_provider: 'email',
-    is_superuser: false, created_at: '2026-01-01T00:00:00Z',
+    is_superuser: false, created_at: '2026-01-01T00:00:00Z', hauzer_demo: false,
   },
   isLoading: false, isAuthenticated: true, accessToken: 'story-token',
   login: async () => {}, register: async () => {}, logout: async () => {},

@@ -40,6 +40,7 @@ const mockAuth: AuthContextValue = {
     auth_provider: 'email',
     is_superuser: true,
     created_at: '2026-01-01T00:00:00Z',
+    hauzer_demo: false,
   },
   isLoading: false,
   isAuthenticated: true,

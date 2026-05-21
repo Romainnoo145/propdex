@@ -117,7 +117,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       organization_id: 'demo-org-id',
       email_verified: true,
       auth_provider: 'email',
+      is_superuser: false,
       created_at: new Date().toISOString(),
+      hauzer_demo: false,
     })
   }, [])
 
