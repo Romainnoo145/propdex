@@ -1,120 +1,343 @@
-<!-- partner-content.html — bron voor de Hauzer Founding-Partner-pitch.
-     Wordt door build.mjs versleuteld (AES-GCM) en achter de wachtwoord-gate
-     in public/partner.html geplaatst. Edit hier, niet in public/partner.html. -->
+<!-- partner-content.html: bron van de Hauzer Founding-Partner-pitch.
+     Gebaseerd op de oorspronkelijke partner-briefing; deal-secties (6 + 7) en
+     prijsmodel (4) herschreven naar de Hauzer-deal (converteerbare lening, 2026-05-21).
+     Wordt door build.mjs AES-versleuteld achter de wachtwoord-gate gezet. Edit hier. -->
 
-<header class="glass hero">
-  <span class="hero-eyebrow">Founding Partner · Strikt vertrouwelijk</span>
-  <h1>Word Founding Partner &amp; Investor in Propdex</h1>
-  <p class="hero-meta">Exclusief voorstel voor <strong>Hauzer &amp; Partners</strong> · Venlo · mei 2026<br />Voor wie de regionale vastgoedmarkt wil domineren.</p>
-</header>
+<main class="page">
 
-<article class="glass">
-  <h2>Van opzoektool naar dagelijkse werkplek</h2>
-  <p>De meeste vastgoedsoftware is een <em>System of Record</em>: je logt één keer in, bekijkt de data, en komt niet meer terug. Propdex zet de volgende stap — een <strong>System of Engagement</strong>: de dagelijkse acquisitie-werkplek van uw makelaars en binnendienst. De kaart met echte Venlo-data is de magneet; de dagelijkse workflows en acties zijn de lijm.</p>
-  <p>Concreet: 's ochtends opent uw makelaar Propdex als eerste tool. Een <strong>acquisitie-inbox</strong> met nieuwe off-market kansen, een <strong>pipeline</strong> van lopende deals, één klik naar de <strong>eigenaar</strong> uit het Kadaster en een <strong>acquisitiebrief</strong> de deur uit — allemaal op echte data, zonder te springen tussen Kadaster, BAG, Excel en CRM.</p>
+  <!-- HERO -->
+  <header class="hero-block">
+    <span class="eyebrow">Founding Partner &amp; Investor · Vertrouwelijk · Mei 2026</span>
+    <h1>Propdex. Voorstel voor een founding partnership met Hauzer &amp; Partners.</h1>
+    <p class="hero-meta">Opgesteld door Klarifai ter voorbereiding op het gesprek met Hauzer &amp; Partners. Voor wie de regionale vastgoedmarkt wil domineren.</p>
+  </header>
 
-  <div class="callout">
-    <strong>Waarom Hauzer.</strong> Als full-service kantoor — makelaardij, nieuwbouwprojecten, financieel advies én WareHouser-logistiek — loopt u dagelijks tegen exact de chaos aan die Propdex oplost: leads, eigenaarsdata, planwijzigingen en koperskeuzes verspreid over losse bestanden. En u beoordeelt een voorstel zoals het hoort: op rendement.
-  </div>
+  <!-- EXECUTIVE SUMMARY -->
+  <section class="summary-block">
+    <h2>Executive Summary</h2>
+    <ol class="exec-list">
+      <li>
+        <strong>Propdex is technisch productie-klaar.</strong> 47 productie-features opgeleverd in zes maanden. 137.000 percelen verwerkt voor gemeente Venlo. 275 geautomatiseerde tests groen. Backend draait stabiel op Railway in West-Europa, frontend op Vercel. Marginale kost per scan: €0,05 tot €0,15.
+      </li>
+      <li>
+        <strong>Van opzoektool naar dagelijkse werkplek.</strong> De volgende stap is een System of Engagement: de dagelijkse acquisitie-werkplek van de makelaar. De kaart met echte Venlo-data is de magneet, de dagelijkse workflows (acquisitie-inbox, off-market pipeline, brief uit Kadaster-data, haalbaarheidstoets) zijn de lijm. Doel verschuift van "complete data" naar dagelijks gebruik.
+      </li>
+      <li>
+        <strong>De data-voorsprong is al gebouwd.</strong> De engagement-laag draait op echte Venlo BAG-, BRK- (Kadaster-eigendom), bestemmingsplan- en scoringsdata. De demo is geen lege mockup, het is uw markt vandaag. Externe write-integraties (Realworks-push, print-post) worden in de demo getoond en zijn na commitment productie-klaar te maken.
+      </li>
+      <li>
+        <strong>Een founding partnership in drie heldere lagen.</strong> Een abonnement (een platform-fee per vestiging plus een bedrag per gebruiker), een eenmalige investering van €50.000 via een converteerbare lening (mede-eigenaarschap plus 12 maanden exclusiviteit in Gemeente Venlo), en €15.000 aan on-site maatwerk om uw eigen workflows in de app te bouwen. Drie gescheiden geldstromen, bewust apart gehouden.
+      </li>
+      <li>
+        <strong>Demo-first.</strong> Geen speculatieve bouw. Eerst een kort kennismakingsgesprek en een demo op uw eigen Venlo-data, dan de samenwerking, pas daarna de Hauzer-custom features. Dat verkleint het risico voor beide kanten.
+      </li>
+    </ol>
+  </section>
 
-  <h2>Wat u krijgt — de engagement-laag</h2>
-  <p>Vijf dagelijks-gebruikte features die Propdex een gewoonte maken, gebouwd op echte Venlo-data (137.000 percelen, live Kadaster-eigendom, bestemmingsplan en scoring):</p>
+  <!-- §1 -->
+  <section class="prose-block">
+    <h2 data-num="Sectie 01">Wat is Propdex en waarom betalen makelaars</h2>
 
-  <div class="feature-grid">
-    <div class="feature-card">
-      <span class="feature-num">01</span>
-      <h4>Daily Acquisitie Inbox</h4>
-      <p>Ochtend-feed van actiegerichte off-market kansen — geen passieve e-mailalert waar niets mee gebeurt.</p>
+    <h3>De visie</h3>
+    <p>Twee regelgevings-wijzigingen vergroten het onderzoekswerk per vastgoedproject in Nederland. De Omgevingswet vervangt duizenden oude bestemmingsplannen door één omgevingsplan per gemeente. Elke gemeente schrijft die de komende jaren opnieuw, met eigen bouwregels en transformatie-paden. En sinds 2024 verplicht de Wet kwaliteitsborging dat een onafhankelijke kwaliteitsborger elk bouwproject toetst, wat veel onderzoek en documentatie vraagt.</p>
+    <p>In dit speelveld ontbreekt één centrale werkplek voor acquisitie en onderzoek. Brainbay en NVM bedienen makelaars op huidige waarde. Matrixian en Calcasa doen taxaties. Realworks is het CRM dat ongeveer 70 procent van de NL-makelaars gebruikt, maar dat is een administratie-systeem, geen acquisitie-motor. Niemand combineert intelligence (eigendom, bestemming, scoring) met de dagelijkse actie: vinden, benaderen, toetsen, sluiten.</p>
+
+    <div class="pull-quote">
+      Wie de dagelijkse werkplek voor off-market acquisitie pakt, wint de <strong>standaardpositie</strong>.
     </div>
-    <div class="feature-card">
-      <span class="feature-num">02</span>
-      <h4>Off-Market Pipeline</h4>
-      <p>Van gesignaleerd → eigenaar gezocht → brief gestuurd → gesprek → haalbaarheid → deal. Niets valt meer tussen wal en schip.</p>
-    </div>
-    <div class="feature-card">
-      <span class="feature-num">03</span>
-      <h4>Verstuur Brief</h4>
-      <p>Eén klik: acquisitiebrief uit Kadaster-eigendomsdata, geprint en verstuurd via print-post — met tracking.</p>
-    </div>
-    <div class="feature-card">
-      <span class="feature-num">04</span>
-      <h4>Haalbaarheids-checklists</h4>
-      <p>Automatisch uit woonvisie, parkeerbeleid en stikstof — een dagelijkse afvink-workflow per bouwmethode.</p>
-    </div>
-    <div class="feature-card">
-      <span class="feature-num">05</span>
-      <h4>Relatie-Matcher</h4>
-      <p>Koppelt off-market kavels proactief aan de actieve zoekprofielen van uw klanten (via uw Realworks).</p>
-    </div>
-    <div class="feature-card feature-card--accent">
-      <span class="feature-num">+</span>
-      <h4>Voor Hauzer op maat</h4>
-      <p>Nieuwbouw-matcher (kandidaten ↔ bouwnummers) en een built-to-suit kavelzoeker voor WareHouser — gebouwd in de consulting-laag.</p>
-    </div>
-  </div>
 
-  <div class="callout">
-    <strong>De voorsprong is de data.</strong> Propdex draait nu al op echte Venlo BAG-, BRK- (Kadaster-eigendom), bestemmingsplan- en scoringsdata. De demo die u ziet is geen lege mockup — het is uw markt, vandaag.
-  </div>
+    <h3>Wat het probleem oplost</h3>
+    <p>Een makelaar of ontwikkelaar springt vandaag tussen Kadaster, BAG, Funda, losse PDF-bestemmingsplannen, klimaatviewer, gemeentewebsites voor woonvisies en Excel om alles te consolideren. Off-market kansen worden gevonden, in een kladblok gezet, en de opvolging wordt vergeten. Propdex doet die aggregatie automatisch en houdt de opvolging vast. Het scoringsmodel (Score versie 3.0) toont per perceel de potentie en de risico's.</p>
+    <p>Tijdwinst per perceel-screening, op basis van een eerste inschatting die nog niet markt-gemeten is: vier tot acht uur handwerk wordt vijftien tot dertig minuten in Propdex. Bij tien tot twintig percelen per project, en meerdere projecten per jaar, levert dat tientallen uren per maand op.</p>
 
-  <h2>Het voorstel: drie heldere onderdelen</h2>
-  <p>Drie gescheiden afspraken — bewust apart gehouden, zodat de waarde glashelder blijft:</p>
+    <h3>De engagement-laag: vijf dagelijkse workflows</h3>
+    <p>Het kernproduct dat Propdex een dagelijkse gewoonte maakt, gebouwd op bestaand en gepland werk:</p>
+    <ul>
+      <li><strong>Daily Acquisitie Inbox.</strong> Ochtend-feed van actiegerichte off-market kansen, in plaats van een passieve e-mailalert waar niets mee gebeurt.</li>
+      <li><strong>Off-Market Pipeline.</strong> Van gesignaleerd, naar eigenaar gezocht, brief gestuurd, gesprek, haalbaarheidstoets, deal. Niets valt meer tussen wal en schip.</li>
+      <li><strong>Verstuur Brief.</strong> Eén klik: acquisitiebrief uit Kadaster-eigendomsdata, geprint en verstuurd via print-post, met tracking.</li>
+      <li><strong>Haalbaarheids-checklists.</strong> Automatisch uit woonvisie, parkeerbeleid en stikstof, als dagelijkse afvink-workflow per bouwmethode.</li>
+      <li><strong>Relatie-Matcher.</strong> Koppelt off-market kavels proactief aan de actieve zoekprofielen van uw klanten via uw Realworks.</li>
+    </ul>
 
-  <div class="deal-grid">
-    <div class="deal-card">
-      <span class="deal-tag">1 · Gebruik</span>
-      <div class="deal-amount">± €45<span>/gebruiker p.m.</span></div>
-      <p>Abonnement per makelaar/adviseur die het gebruikt, inclusief de kern-lookups. Volume-tarief vanaf 10 gebruikers. Propdex is een verticale specialist (intelligence + acquisitie) — geen CRM-vervanger, maar een aanvulling op Realworks.</p>
+    <h3>Doelgroepen</h3>
+    <div class="segment-grid">
+      <article class="segment-card">
+        <div class="segment-tag segment-tag-primary">Primair</div>
+        <h4>Makelaars en full-service kantoren</h4>
+        <p class="segment-price">Per gebruiker <span>per maand</span></p>
+        <dl class="segment-meta">
+          <dt>Wie precies</dt>
+          <dd>Kantoren als Hauzer: makelaardij, nieuwbouwprojecten, financieel advies, zakelijke bemiddeling.</dd>
+          <dt>Waarom eerst</dt>
+          <dd>Dagelijks gebruik in acquisitie. Begrijpt cijfers en rendement. Realworks-aanvulling, geen vervanging.</dd>
+        </dl>
+      </article>
+      <article class="segment-card">
+        <div class="segment-tag">Parallel</div>
+        <h4>Ontwikkelaars en kwaliteitsborgers</h4>
+        <p class="segment-price">Per gebruiker <span>per maand</span></p>
+        <dl class="segment-meta">
+          <dt>Wie precies</dt>
+          <dd>Transformatie en herontwikkeling, plus Wkb-bureaus actief sinds 2024.</dd>
+          <dt>Waarom</dt>
+          <dd>Zelfde data-laag, zelfde lifecycle. Onderzoek tot bouw in één cockpit.</dd>
+        </dl>
+      </article>
     </div>
-    <div class="deal-card deal-card--feature">
-      <span class="deal-tag">2 · Mede-eigenaarschap</span>
-      <div class="deal-amount">€50.000<span>eenmalig · SAFE</span></div>
-      <p>Pre-seed kapitaal dat de bouw versnelt. In ruil: een aandelenbelang via SAFE Note + <strong>12 maanden exclusiviteit in Gemeente Venlo</strong>. U wordt onze primaire founding investor.</p>
+    <p><small><strong>Buiten scope:</strong> particulieren (Omgevingsloket is gratis volgens artikel 16.1 Omgevingswet), en de vergunningchecker zelf (wettelijk voorbehouden aan het Omgevingsloket).</small></p>
+
+    <h3>Status van de software</h3>
+    <p>Backend (FastAPI) draait stabiel op Railway in West-Europa op api.propdex.nl. Frontend (React 19) draait op Vercel op propdex.nl. De DNS is gemigreerd naar Cloudflare voor beter DNS-management, gratis DDoS-bescherming en wereldwijde propagatie. De backend-service en de achtergrondworker draaien stabiel met live verkeer.</p>
+  </section>
+
+  <!-- §2 -->
+  <section class="prose-block">
+    <h2 data-num="Sectie 02">Status op dit moment</h2>
+
+    <h3>Schaal</h3>
+    <div class="metric-grid">
+      <div class="metric"><div class="metric-num">137.000</div><div class="metric-label">Percelen verwerkt in productie</div></div>
+      <div class="metric"><div class="metric-num">64.000</div><div class="metric-label">Scoringsresultaten beschikbaar</div></div>
+      <div class="metric"><div class="metric-num">47</div><div class="metric-label">Productie-features opgeleverd</div></div>
+      <div class="metric"><div class="metric-num">275+</div><div class="metric-label">Geautomatiseerde tests groen</div></div>
+      <div class="metric"><div class="metric-num">10+</div><div class="metric-label">Externe data-bronnen geïntegreerd</div></div>
+      <div class="metric"><div class="metric-num">128.000</div><div class="metric-label">Regels code (Python en TypeScript)</div></div>
     </div>
-    <div class="deal-card">
-      <span class="deal-tag">3 · Uw strategie ingebouwd</span>
-      <div class="deal-amount">€16.627<span>consulting</span></div>
-      <p>On-site maatwerk (2 dagen/week × 3 maanden) voor de Hauzer-specifieke features: de nieuwbouw-matcher en de WareHouser built-to-suit kavelzoeker.</p>
+
+    <h3>Vier afgeronde blokken</h3>
+    <p><strong>Kaartgedreven cockpit voor heel Nederland.</strong> MapLibre-gebaseerde interface met score-overlay (potentie en risico) per perceel. Per perceel een Intelligence Grid met negen potentie-kaarten, een gepagineerde risico-sectie en vijf dossier-tabs. Het product is gebouwd op het Aura design system (Morning Mist canvas, Plus Jakarta Sans, glas-effecten) en geoptimaliseerd voor langdurig werk op 27"-monitor.</p>
+    <p><strong>AI-gedreven analyse van beleidsdocumenten.</strong> Cascade-infrastructuur die gemeentelijke woonvisies, omgevingsplannen en beleidsdocumenten automatisch normaliseert naar per-perceel inzichten. Aangestuurd door Anthropic Claude met een deterministische cache: exact één LLM-aanroep per document per gemeente, niet per perceel.</p>
+    <p><strong>Kadaster-eigendom (BRK) als betaalde integratie.</strong> Per perceel de eigenaar, met hypotheek- en eigendoms-signalen die meewegen in de score. Persistente opslag met AVG-conforme bewaartermijnen. Dit is de basis onder de Verstuur-Brief-workflow: van eigenaar opzoeken naar brief versturen.</p>
+    <p><strong>Multi-tenant SaaS-fundament.</strong> Volledige scheiding tussen klant-organisaties via JWT-authenticatie en filtering op organisatie in elke query. Tien externe data-bronnen worden vooraf gecached per scan (BAG, BRK, BAG-3D, planologisch web, Natura2000, overstromingsrisico, geluid, luchtkwaliteit, energielabels, bodem). CBS-statistiek (bevolking, criminaliteit, leeftijd) per wijk.</p>
+  </section>
+
+  <!-- §3 -->
+  <section class="prose-block">
+    <h2 data-num="Sectie 03">Wat ontbreekt voor commerciële launch</h2>
+
+    <p>Het product werkt op echte Venlo-data. Voor een commerciële multi-tenant launch met externe klanten moeten nog drie blokken werk worden afgerond. Daarnaast loopt de uitbreiding van data-bronnen per gemeente door over jaar 1 en 2.</p>
+
+    <h3>Productie-hardening</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Onderdeel</th><th>Werktijd</th><th>Prioriteit</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Document-cache optimalisatie en wijk-specifieke beleidsanalyse.</strong> Voorkomt dat één gemeente onnodig veel AI-aanroepen veroorzaakt en zorgt dat de scores per wijk binnen een gemeente kunnen verschillen.</td><td>2 tot 3 weken</td><td><span class="risk risk-high">Kritiek</span></td></tr>
+          <tr><td><strong>Validatie-tooling en score-kalibratie.</strong> Mechanisme om scores te toetsen tegen daadwerkelijke uitkomsten, zodat we het model in productie verbeteren op basis van klant-feedback.</td><td>2 tot 3 weken</td><td><span class="risk risk-high">Kritiek</span></td></tr>
+          <tr><td>Productie-monitoring met meldingen op kostenpieken en trage queries</td><td>2 tot 3 dagen</td><td><span class="risk risk-med">Hoog</span></td></tr>
+          <tr><td>Load-testing met meerdere klanten tegelijk en multi-tenant stress</td><td>3 tot 5 dagen</td><td><span class="risk risk-med">Hoog</span></td></tr>
+        </tbody>
+      </table>
     </div>
-  </div>
 
-  <p class="deal-framing">Kort gezegd: <strong>abonnement = gebruik</strong>, <strong>€50.000 = mede-eigenaarschap + exclusiviteit</strong>, <strong>€16.627 = uw strategie ingebouwd</strong>. We verkopen geen opzoektool; we verkopen de software die uw binnendienst en makelaars dagelijks helpt actief off-market deals te sluiten.</p>
-
-  <h2>De SAFE Note — uw vroege risico maximaal beloond</h2>
-  <p>We dragen nu géén harde aandelen over bij de notaris — dat kost duizenden euro's en zet ons beiden klem voor de toekomst. In plaats daarvan leggen we uw €50.000 vast in een <strong>SAFE Note</strong> (Simple Agreement for Future Equity), de internationale standaard voor vroege SaaS-investeringen. Uw inleg converteert automatisch naar aandelen bij de eerstvolgende grote investeringsronde — met korting.</p>
-
-  <div class="safe-terms">
-    <div class="safe-term">
-      <span class="safe-label">Valuation Cap</span>
-      <span class="safe-value">€1.250.000</span>
-      <span class="safe-note">het waarderingsplafond waartegen u maximaal afrekent</span>
+    <h3>Commerciële infrastructuur</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Onderdeel</th><th>Werktijd</th><th>Kosten</th><th>Prioriteit</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Print-post-koppeling</strong> (PostNL Zakelijk of vergelijkbaar) voor de Verstuur-Brief-workflow</td><td>1 tot 2 weken</td><td>Per zending, plus contract-onboarding</td><td><span class="risk risk-high">Kritiek</span></td></tr>
+          <tr><td><strong>Stripe-betaalflow</strong>, self-service met gebruiker-limieten</td><td>1 tot 1,5 week</td><td>€0 setup, 1,5 tot 2,5% per transactie</td><td><span class="risk risk-high">Kritiek</span></td></tr>
+          <tr><td><strong>E-mailprovider</strong> (Resend of AWS SES) voor invites, verificatie, wachtwoordreset</td><td>1 tot 2 dagen</td><td>€0 tot €20 per maand</td><td><span class="risk risk-high">Kritiek</span></td></tr>
+        </tbody>
+      </table>
     </div>
-    <div class="safe-term">
-      <span class="safe-label">Discount</span>
-      <span class="safe-value">20%</span>
-      <span class="safe-note">korting op de prijs die latere investeerders betalen</span>
+
+    <h3>Juridisch</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Onderdeel</th><th>Doorlooptijd</th><th>Kosten</th><th>Prioriteit</th></tr></thead>
+        <tbody>
+          <tr><td><strong>DPA, privacy policy, algemene voorwaarden</strong> voor commerciële klanten, plus de verwerkersovereenkomst met het Kadaster voor productie-BRK</td><td>2 tot 4 weken</td><td>€2.500 tot €4.000 advocaatkosten</td><td><span class="risk risk-high">Kritiek</span></td></tr>
+          <tr><td><strong>Converteerbare lening</strong> opstellen en tekenen (de investering hieronder)</td><td>1 tot 2 weken</td><td>€1.000 tot €2.000 advocaatkosten</td><td><span class="risk risk-high">Kritiek</span></td></tr>
+        </tbody>
+      </table>
     </div>
-    <div class="safe-term">
-      <span class="safe-label">Verwacht belang</span>
-      <span class="safe-value">~4 – 5%</span>
-      <span class="safe-note">bij conversie, afhankelijk van de volgende ronde</span>
+
+    <p class="prose-callout">
+      <strong>Tijdsindicatie:</strong><br/>
+      Demo op echte Venlo-data: <strong>nu beschikbaar</strong>.<br/>
+      Pilot-launch (eerste betalende gebruikers op werkend platform): <strong>8 tot 12 weken</strong> vanaf commitment.<br/>
+      Full commercial production-grade (multi-tenant, alle launch-blokken af): <strong>12 tot 16 weken</strong> vanaf commitment.
+    </p>
+  </section>
+
+  <!-- §4 -->
+  <section class="prose-block">
+    <h2 data-num="Sectie 04">Prijsmodel en unit economics</h2>
+
+    <h3>Twee delen: platform-fee plus per gebruiker</h3>
+    <p>Het abonnement bestaat uit twee delen. Een platform-fee per vestiging dekt het variabele verbruik (AI-tokens, brief-verzending, infrastructuur) en draait bijna break-even. Daarbovenop een bedrag per gebruiker, en dat is de marge. Zo betaalt het kantoor zijn eigen verbruik en schaalt de winst mee met het aantal gebruikers.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Onderdeel</th><th>Prijs</th><th>Wat het dekt</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Platform-fee per vestiging</strong></td><td>± €99 per maand</td><td>AI-scans, een quotum van 50 brieven per maand en de infrastructuur. Bijna break-even.</td></tr>
+          <tr><td><strong>Per gebruiker</strong></td><td>± €45 per maand</td><td>De marge. Schaalt mee met het team. Volume-tarief vanaf 10 gebruikers.</td></tr>
+          <tr><td>BRK-lookups (Kadaster)</td><td>via eigen Kadaster-contract</td><td>€0 extra voor ons als Hauzer een eigen Kadaster-budgetcontract heeft, wat de meeste makelaars al hebben. Anders per stuk doorbelast.</td></tr>
+          <tr><td>Boven het quotum</td><td>per brief / per scan</td><td>Doorbelasting alleen bij gebruik boven de inbegrepen bundel.</td></tr>
+          <tr><td>Realworks ter vergelijking</td><td>Base €125 / Pro €190 per vestiging</td><td>Plus modules (Nieuwbouw €50, BOG €30). Te verifiëren op de live prijzen-pagina.</td></tr>
+        </tbody>
+      </table>
     </div>
-  </div>
+    <p>Een klein kantoor van 5 makelaars betaalt €99 plus 5 × €45 is €324 per maand. Dat zit op Realworks-niveau. Positionering: een verticale specialist in intelligence en acquisitie, geen CRM-vervanger. Propdex complementeert Realworks, het vervangt het niet.</p>
 
-  <p>Rekenvoorbeeld: op de cap is <strong>€50.000 / €1.250.000 = 4,0%</strong>. Valt de volgende ronde lager uit, dan beschermt de 20% discount u — uw effectieve instapprijs daalt mee, tot een belang van circa <strong>5%</strong>. Zo krijgt u gegarandeerd de beste deal voor uw vroege vertrouwen, en houdt de oprichter ruim de controle (~95%) — geen versnipperde cap table die toekomstige groei blokkeert.</p>
+    <h3>Wat het verbruik kost</h3>
+    <p>De marginale kosten zijn laag en bekend: €0,05 tot €0,15 per AI-scan, €1,00 tot €1,40 per brief via PostNL, en €0 voor BRK-lookups zolang die via het eigen Kadaster-contract lopen. We gebruiken meerdere AI-leveranciers (Anthropic en Google Gemini via OpenRouter), zodat we niet afhankelijk zijn van één partij. De platform-fee dekt deze kosten, de per-gebruiker-prijs is daardoor vrijwel volledig marge.</p>
 
-  <h2>Exclusiviteit — een echte voorsprong</h2>
-  <p>Gedurende <strong>de eerste 12 maanden na livegang onboarden we geen directe concurrenten in Gemeente Venlo</strong>. U bent de eerste makelaardij in de regio met Propdex en houdt die technologische voorsprong vast op uw thuismarkt.</p>
+    <div class="stat-strip">
+      <div class="stat-strip-item">
+        <div class="stat-strip-num">€99 + €45</div>
+        <div class="stat-strip-label">Platform-fee + per gebruiker p.m.</div>
+      </div>
+      <div class="stat-strip-item">
+        <div class="stat-strip-num">90%+</div>
+        <div class="stat-strip-label">Marge op de per-gebruiker-prijs</div>
+      </div>
+      <div class="stat-strip-item">
+        <div class="stat-strip-num">€0,05–0,15</div>
+        <div class="stat-strip-label">Kost per AI-scan</div>
+      </div>
+      <div class="stat-strip-item">
+        <div class="stat-strip-num">€1,00–1,40</div>
+        <div class="stat-strip-label">Kost per brief (PostNL)</div>
+      </div>
+    </div>
+    <p><small>De prijzen zijn een voorstel. De eerste verkoopgesprekken, te beginnen met Hauzer, zijn actieve prijs-validatie.</small></p>
+  </section>
 
-  <h2>De businesscase</h2>
-  <p>Praat niet over hoe mooi de software is, maar over wat het oplevert: minder handmatig spring- en mailwerk, meer off-market deals die u anders mist, en een binnendienst die uren per week bespaart op het matchen en opzoeken. Propdex maakt van losse acties een dagelijkse, meetbare acquisitie-motor — en u deelt mee in de groei ervan.</p>
+  <!-- §5 -->
+  <section class="prose-block">
+    <h2 data-num="Sectie 05">Het pad: demo-first</h2>
+    <p>Geen speculatieve bouw vóór commitment. Het pad loopt van demo naar pilot naar uitrol, met de techniek bij Klarifai en de praktijktoets bij Hauzer.</p>
+    <ol>
+      <li><strong>Kennismakingsgesprek.</strong> Kort gesprek met de directie om te bevestigen welke business-lijn het meeste pijn doet: makelaardij-acquisitie, nieuwbouw-administratie of WareHouser-logistiek. Dat bepaalt welk scherm de demo opent.</li>
+      <li><strong>Demo op echte Venlo-data.</strong> De acquisitie-cockpit op uw eigen markt: inbox, pipeline, echte BRK-eigenaar, brief-preview en een haalbaarheids-checklist. Grotendeels echte data, externe verzend-stappen getoond.</li>
+      <li><strong>Commitment en SAFE.</strong> Bij akkoord tekenen we de SAFE Note en starten de pilot binnen een lopend of aankomend Hauzer-project.</li>
+      <li><strong>Productie en maatwerk.</strong> Productie-hardening van de engagement-laag (8 tot 16 weken) plus de Hauzer-custom features via de consulting-laag.</li>
+      <li><strong>Regio-uitrol.</strong> Na de pilot: bredere uitrol, met uw 12 maanden exclusiviteit in Gemeente Venlo als voorsprong.</li>
+    </ol>
+  </section>
 
-  <h2>De volgende stap</h2>
-  <p>We bouwen demand-first: eerst een kort kennismakingsgesprek om te bevestigen welke van uw business-lijnen het meeste pijn doet — makelaardij-acquisitie, nieuwbouw-administratie of WareHouser-logistiek — daarna een demo op uw eigen Venlo-data, en pas dan de samenwerking. Geen luchtkasteel: een werkend platform dat u kunt zien draaien.</p>
-  <p><strong>Klaar voor de demo?</strong> <a href="mailto:info@klarifai.nl?subject=Founding%20Partner%20Propdex%20%C3%97%20Hauzer">info@klarifai.nl</a> — dan plannen we het kennismakingsgesprek.</p>
-</article>
+  <!-- §6 -->
+  <section class="prose-block">
+    <h2 data-num="Sectie 06">Het voorstel: drie lagen</h2>
+    <p>Drie gescheiden geldstromen, bewust apart gehouden zodat de waarde glashelder blijft. Het abonnement is gebruik, de €50.000 is mede-eigenaarschap plus exclusiviteit, de €15.000 is uw eigen werkwijze ingebouwd in de app.</p>
+    <div class="three-col-roles">
+      <div class="role-box role-box-tech">
+        <h4>1 · Gebruik</h4>
+        <p class="role-box-meta">Abonnement, terugkerend</p>
+        <ul>
+          <li>Platform-fee ± €99 per vestiging per maand (dekt het verbruik)</li>
+          <li>± €45 per gebruiker per maand</li>
+          <li>BRK via uw eigen Kadaster-contract</li>
+          <li>Aanvulling op Realworks, geen vervanging</li>
+        </ul>
+      </div>
+      <div class="role-box role-box-samen">
+        <h4>2 · Mede-eigenaarschap</h4>
+        <p class="role-box-meta">€50.000 eenmalig, converteerbare lening</p>
+        <ul>
+          <li>Runway zodat de oprichter kan doorbouwen</li>
+          <li>Zet om in circa 5% aandelen (zie §7)</li>
+          <li>12 maanden exclusiviteit in Gemeente Venlo</li>
+          <li>Hauzer wordt primaire eerste investeerder</li>
+        </ul>
+      </div>
+      <div class="role-box role-box-biz">
+        <h4>3 · Uw eigen workflows ingebouwd</h4>
+        <p class="role-box-meta">€15.000 consulting, eenmalig</p>
+        <ul>
+          <li>Circa 185 uur on-site à €80 (ongeveer 2 dagen per week, 3 maanden)</li>
+          <li>Specifiek om Hauzer's eigen custom workflows in de app te bouwen</li>
+          <li>Nieuwbouw-matcher (kandidaten ↔ bouwnummers) en WareHouser built-to-suit kavelzoeker</li>
+          <li>Gebouwd ná commitment, met uw medewerking</li>
+        </ul>
+      </div>
+    </div>
+    <p class="prose-callout">
+      <strong>De kern.</strong> We verkopen geen opzoektool. We verkopen de software die uw binnendienst en makelaars dagelijks helpt actief off-market deals te sluiten, plus mede-eigenaarschap in de groei ervan.
+    </p>
+  </section>
 
-<footer class="site-footer">
-  <strong>Propdex</strong> · een onderneming van Klarifai BV<br />
-  Strikt vertrouwelijk — niet bedoeld voor verspreiding zonder toestemming · <span>info@klarifai.nl</span>
-</footer>
+  <!-- §7 -->
+  <section class="prose-block">
+    <h2 data-num="Sectie 07">De investering: converteerbare lening</h2>
+
+    <h3>Wat een converteerbare lening is</h3>
+    <p>Hauzer leent €50.000 aan de werk-BV. In plaats van dat geld in contanten terug te betalen, zet de lening zich later om in aandelen, automatisch, op het moment dat er een echte investeringsronde komt die de waarde van Propdex objectief bepaalt.</p>
+    <p>Waarom zo en niet meteen aandelen uitgeven? Omdat een product zonder omzet vandaag lastig te waarderen is. Een percentage nu vastleggen leidt tot eindeloze discussie en notariskosten. De lening stelt die waardering uit tot een latere investeerder de prijs zet. Daarom is dit in Nederland het standaard instrument voor de vroege fase. Twee zaken belonen Hauzer omdat ze vroeg instappen: een discount van 20 procent op de prijs die de latere investeerder betaalt, en een valuation cap.</p>
+
+    <div class="metric-grid">
+      <div class="metric"><div class="metric-num">€1M</div><div class="metric-label">Valuation cap</div></div>
+      <div class="metric"><div class="metric-num">20%</div><div class="metric-label">Discount</div></div>
+      <div class="metric"><div class="metric-num">~5%</div><div class="metric-label">Belang bij conversie</div></div>
+    </div>
+
+    <h3>Wat de valuation cap is, en waar €1 miljoen vandaan komt</h3>
+    <p>De valuation cap is het maximum-bedrijfswaarde waartegen de lening omzet naar aandelen. Waardeert een latere investeerder Propdex op bijvoorbeeld €3 miljoen, dan rekent Hauzer alsnog af alsof het €1 miljoen was, en krijgt zo meer aandelen voor het vroege risico.</p>
+    <p>De €1 miljoen is geen toevallig getal. Een waardering in deze fase is deels een inschatting, maar te ankeren: dit is een werkend platform, geen idee op papier. 47 productie-features, 137.000 percelen, live Kadaster-eigendom, echte Venlo-data. Dat tilt het boven pure idee-fase (€0,5 miljoen), en €1 miljoen positioneert het bewust bescheiden als een werkende MVP zonder omzet. Op die cap is €50.000 gedeeld door €1.000.000 gelijk aan 5 procent. De oprichter houdt daarmee ruim de controle (ongeveer 95 procent) en er ontstaat geen versnipperde cap table die latere financiering blokkeert.</p>
+
+    <h3>Geen risico op de oprichter persoonlijk</h3>
+    <p>De lening staat op naam van de BV, niet privé, zonder persoonlijke borg. Bij een volgende ronde zet de lening zich om in aandelen, er wordt niets in contanten terugbetaald. Mocht het onverhoopt misgaan, dan kan de BV niet betalen en is het verlies voor de investeerder, niet voor de oprichter persoonlijk. Het kapitaal heeft één concreet doel: runway, zodat de oprichter zichzelf kan blijven betalen en doorbouwen naar de commerciële launch.</p>
+
+    <h3>Exclusiviteit</h3>
+    <p>Gedurende de eerste 12 maanden na livegang onboarden we geen directe concurrenten in Gemeente Venlo. U bent de eerste makelaardij in de regio met Propdex en houdt die technologische voorsprong vast op uw thuismarkt.</p>
+
+    <h3>Wat Hauzer inbrengt</h3>
+    <ul>
+      <li>De €50.000 pre-seed kapitaal via de converteerbare lening.</li>
+      <li>Optreden als exclusieve pilot-partner: Propdex in dagelijks gebruik binnen een lopend of aankomend project.</li>
+      <li>Toegang tot uw Realworks voor de relatie- en nieuwbouw-matcher. Deze features vereisen die toegang en worden daarom pas ná commitment gebouwd.</li>
+    </ul>
+
+    <p class="prose-callout"><strong>Juridische en fiscale review is essentieel.</strong> Het bovenstaande is een strategisch raamwerk, geen rechtsgeldig contract. Een ondernemingsrechtelijk advocaat stelt de definitieve converteerbare lening op. De entiteit waarin Hauzer leent en de fiscale route waarlangs de oprichter zichzelf uitbetaalt (managementfee vanuit de holding) worden met de accountant vastgelegd.</p>
+  </section>
+
+  <!-- §8 -->
+  <section class="prose-block">
+    <h2 data-num="Sectie 08">Risico's, eerlijk benoemd</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Risico</th><th>Kans</th><th>Impact</th><th>Aanpak</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Nog geen getekende demand.</strong> Hauzer is nog niet gepitcht. Dit is pitch-voorbereiding, geen gevalideerde deal. Solution-in-search-of-demand is het centrale risico.</td><td><span class="risk risk-high">Hoog</span></td><td><span class="risk risk-high">Hoog</span></td><td>Demo-first. Een overtuigende demo op echte data, een discovery-gesprek vóór bouwen, en bouw van de Hauzer-custom features pas ná commitment.</td></tr>
+          <tr><td><strong>Prijs klopt niet voor de markt.</strong> Het per-gebruiker tarief is een voorstel, op Realworks-niveau gepositioneerd maar niet hard gevalideerd.</td><td><span class="risk risk-med">Medium</span></td><td><span class="risk risk-med">Medium</span></td><td>De eerste verkoopgesprekken, te beginnen met Hauzer, zijn expliciete prijs-validatie. Bijstelling op basis van markt-feedback.</td></tr>
+          <tr><td><strong>Afhankelijkheid van Realworks-toegang.</strong> De relatie- en nieuwbouw-matcher vereisen Hauzer's Realworks-account en API.</td><td><span class="risk risk-med">Medium</span></td><td><span class="risk risk-med">Medium</span></td><td>Deze features zitten bewust in de consulting-laag ná commitment, niet in de speculatieve bouw. De kern-engagement-laag werkt zonder Realworks.</td></tr>
+          <tr><td><strong>Concurrent lanceert vergelijkbaar product.</strong> Brainbay, Matrixian, Realworks of een nieuwe partij.</td><td><span class="risk risk-low">Laag</span></td><td><span class="risk risk-med">Medium</span></td><td>Concurrenten zitten óf in intelligence óf in operations, niet samen. Een nieuwe partij heeft zes of meer maanden tech-werk in te halen. De exclusiviteit beschermt uw regio.</td></tr>
+          <tr><td><strong>AI-kosten stijgen of EU-beschikbaarheid valt weg.</strong></td><td><span class="risk risk-low">Laag</span></td><td><span class="risk risk-med">Medium</span></td><td>Hoge marge absorbeert een forse kostenstijging. Switch tussen leveranciers (Anthropic, Google, Mistral) is mogelijk.</td></tr>
+          <tr><td><strong>Overheids-API's wijzigen schema.</strong></td><td><span class="risk risk-med">Medium</span></td><td><span class="risk risk-low">Laag</span></td><td>PDOK en BAG kondigen wijzigingen ruim vooraf aan en houden oude versies een tijd parallel actief. De koppelings-laag vangt veranderingen op.</td></tr>
+          <tr><td><strong>Privacy-incident door fout in opslag of audit.</strong> BRK-eigendomsdata vraagt zorgvuldige omgang.</td><td><span class="risk risk-low">Laag</span></td><td><span class="risk risk-high">Hoog</span></td><td>EU-only infrastructuur. AVG-conforme bewaartermijnen, rechtspersoon-only persistente opslag. Juridische review vóór commerciële launch.</td></tr>
+          <tr><td><strong>Klarifai is één ontwikkelaar.</strong></td><td><span class="risk risk-high">Hoog</span></td><td><span class="risk risk-high">Hoog</span></td><td>Standaard tools, geen exotische tech. Codebase op GitHub. Bij voldoende omzet wordt een freelance-ontwikkelaar toegevoegd.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- VERVOLGSTAPPEN -->
+  <section class="prose-block prose-final">
+    <h2>Vervolgstappen</h2>
+    <div class="next-grid">
+      <div class="next-card">
+        <h4>Volgende stap Hauzer</h4>
+        <p>Dit voorstel doorlezen. Bepalen welke business-lijn het meeste pijn doet, zodat de demo daarop opent. Een kort kennismakingsgesprek inplannen.</p>
+      </div>
+      <div class="next-card">
+        <h4>Volgende stap Klarifai</h4>
+        <p>De demo op uw eigen Venlo-data klaarzetten. Bij interesse: de SAFE Note laten opstellen door een ondernemingsrechtelijk advocaat.</p>
+      </div>
+      <div class="next-card">
+        <h4>Tijdpad</h4>
+        <p>Gesprek en demo op korte termijn. Bij akkoord: SAFE tekenen, pilot starten binnen een Hauzer-project, productie-hardening in 8 tot 16 weken.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer-block">
+    <p><strong>Propdex.</strong> Een onderneming van Klarifai BV.</p>
+    <p>Strikt vertrouwelijk. Niet bedoeld voor verspreiding zonder toestemming.</p>
+    <p><a href="mailto:info@klarifai.nl">info@klarifai.nl</a></p>
+  </footer>
+
+</main>

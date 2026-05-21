@@ -4,10 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Propdex — Vertrouwelijk</title>
+  <title>Propdex · Vertrouwelijk</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/partner.css" />
 </head>
 <body>
   <!-- Wachtwoord-gate: inhoud is AES-GCM-versleuteld, staat niet leesbaar in de bron -->
@@ -29,11 +31,11 @@
         <button class="gate-button" id="gate-btn" type="submit">Ontgrendelen</button>
         <span class="gate-error" id="gate-err" role="alert"></span>
       </form>
-      <p class="gate-foot">Propdex · Klarifai BV — strikt vertrouwelijk</p>
+      <p class="gate-foot">Propdex · Klarifai BV · strikt vertrouwelijk</p>
     </div>
   </div>
 
-  <main class="container" id="content" hidden></main>
+  <div id="content" hidden></div>
 
   <script>
     (function () {
@@ -68,7 +70,7 @@
         content.innerHTML = html;
         content.hidden = false;
         gate.hidden = true;
-        document.title = 'Propdex — Founding Partner';
+        document.title = 'Propdex · Founding Partner';
         window.scrollTo(0, 0);
       }
 
