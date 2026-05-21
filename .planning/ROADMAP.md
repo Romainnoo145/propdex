@@ -39,11 +39,13 @@ M052 maakt de sprong van System-of-Record (data) → System-of-Engagement (dagel
 **Requirements:** FUND-01, FUND-02, DEMO-01, DEMO-03
 
 **Success criteria:**
-1. Gebruiker kiest bij opslaan een zoekmethode (optoppen/nieuwbouw/transformatie/splitsen); `projecttype` persisteert op `ParcelFavorite` (migratie + org-scoped)
-2. Gekozen projecttype voedt de bestaande M047 projecttype-scoring (score reflecteert de aanpak)
-3. `HAUZER_DEMO` feature-flag gate aanwezig + getest: off → mock-surfaces onzichtbaar, on → zichtbaar (env + per-org)
+1. Gebruiker kiest bij opslaan een zoekmethode; projecttype persisteert via het bestaande **org-scoped `ParcelProjectType`** (`PUT /api/parcels/{id}/project-type`) — GEEN nieuwe kolom/migratie op `ParcelFavorite`. De 6-waarde-enum in `parcel_project_type_schemas.py` blijft single source of truth (picker mapt zoekmethode → enum-waarde; geen keuze = `onbepaald`)
+2. Gekozen projecttype voedt de bestaande M047 projecttype-scoring; set triggert een rescore zodat de headline-score de aanpak reflecteert (verifieer bestaande cascade; wire indien afwezig)
+3. `hauzer_demo` boolean op `Organization` (default false, NOT NULL), uitgelezen via `/api/auth/me`, frontend `useHauzerDemo()`-hook gate't mock-surfaces; demo-org = login `demo@klarifai.nl`. Multi-tenant: andere orgs krijgen nooit `true`. (Geen env-switch — YAGNI pre-prod; volledige tiering = M050.5)
 4. DESIGN.md gecorrigeerd: makelaars zijn wél onze markt (achterhaalde "makelaars NIET"-regel weg)
 5. `npm run check` + `ruff check . && mypy .` groen
+
+**Architectuur-lock (eng-review 2026-05-21):** projecttype hergebruikt org-scoped `ParcelProjectType` i.p.v. nieuwe ParcelFavorite-kolom (single source of truth + multi-tenant-isolatie). HAUZER_DEMO = smalle per-org boolean i.p.v. env+tier. Deferred: per-favorite projecttype-override (multi-strategie per perceel) + use_case_scoring enum-mismatch (pre-existing M047-seam).
 
 **Depends on:** M050 (`ParcelFavorite`), M047 (projecttype-settings)
 **Blocks:** S02 (projecttype), S03/S04/S05 (`HAUZER_DEMO`-flag)
