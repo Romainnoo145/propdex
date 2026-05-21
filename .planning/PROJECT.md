@@ -46,35 +46,48 @@ Tranche 1 is voor vastgoedontwikkelaars + kwaliteitsborgers. Tranche 2 voegt bel
 - ✓ M045/S05 upload-flow integratie in nieuwe hub + legacy-route redirect-banner — M049/S04
 - ✓ Encrypted `IntegrationCredential` model (Fernet + MultiFernet rotation pattern) + admin UX — M049/S05
 - ✓ ActionItems pagina deprecation + content migratie naar Data-bronnen action-buttons — M049/S06
+- ✓ BRK Eigendom persistent storage (rechtspersoon-only, 30/90 dgn AVG-retention + cron) — eerste paid Type-C — M050/S01-S02
+- ✓ 3 BRK scoring-factoren (hypotheek_risico, eigendoms_complexiteit, koopwaarde_trend) + BRK-write→rescore cascade — M050/S03
+- ✓ Opgeslagen-cockpit + LifecycleSideRailNav (scoped to perceel-detail) op Aura-tokens — M050/S06
+- ✓ Lifecycle fase-2 (Contact) als BRK-home: `GET /api/parcels/{id}/brk` + RescoreProgressBanner + 1922-LOC monoliet → 7 componenten — M050/S06-cont
 
-## Current Milestone: M050 BRK Actiefase-Wedge
+## Current Milestone: M052 Hauzer Engagement-Demo
 
-**Goal:** Product-mode-shift van onderzoekstool → actietool. Drie-fase-funnel introduceren: Onderzoek → Actie (brief naar eigenaar) → CRM (M053+). Eerste paid Type-C integration (BRK Eigendom persistent) + AI-personalized brief-feature via PostNL master-account-model.
+**Goal:** Sprong van System-of-Record (data) → System-of-Engagement (dagelijkse werkplek). De engagement-laag — het kernproduct verkoopbaar aan elke makelaar — bouwen **in productie** op echte Venlo-data, met dunne demo-shims voor de Hauzer-pitch. Hauzer & Partners (Venlo) = beoogde launching-partner (nog NIET gepitcht; demo-first). Doel: Hauzer overtuigen dat dit hun dagelijkse acquisitie-hub wordt.
+
+**Aanpak (BESLIST 2026-05-21):** In productie bouwen, niet wegwerp. ~80% is echt kernproduct (Kanban/Haalbaarheid/kavelzoeker/projecttype) dat je sowieso wilt. Demo-isolatie via **demo-org seed + feature-flags** (`HAUZER_DEMO`). Alleen Hauzer-API-afhankelijke features (Realworks-matcher, nieuwbouw-matcher) blijven puur mock tot na de deal — die kun je sowieso niet speculatief bouwen. Zo blijft de office-hours "geen speculatieve verbranding"-discipline intact zonder dubbel werk.
 
 **Target features:**
-- BRK persistent storage (rechtspersoon-only, 30/90 dgn retention) + 3 nieuwe scoring-factoren (hypotheek_risico, eigendoms_complexiteit, koopwaarde_trend)
-- Brief-template registry + AI-personalisatie via Claude streaming (Pydantic-typed, audit-logged)
-- PostNL Zakelijk master-account dispatch + delivery-tracking webhooks + partner-branding-injection
-- Opgeslagen-tab cockpit transformatie: full-width perceel-cards + lifecycle-sidebar (4-8 icons: Onderzoek → Exploitatie)
-- Tier-gates + quota-enforcement (Demo 0/0 · Paid 25/5 · Enterprise 250/50 — Q8 LOCKED)
-- M050.5 parallel: tier-decorator + quota-counter infra
+- `projecttype`-veld op `ParcelFavorite` + "opslaan-op-zoekmethode" (stuurt M047-scoring + welke Haalbaarheid-checklist verschijnt)
+- Per-perceel 4-fase acquisitie-arc: Onderzoek → Contact → **Haalbaarheid** (9e fase, additief in phases.ts) → Bod; checklist-verhuizing Onderzoek→Haalbaarheid; `LifecycleSideRailNav` configureerbaar (Hauzer-set)
+- Dashboard-landing (werkdag-cockpit): Pipeline Kanban (ECHT, `pipeline_stage` + drag) + Daily Acquisitie Inbox (mock-items, upgradebaar)
+- Kaart: built-to-suit kavelzoeker-filter (ECHT, >10.000m² + Logistiek/Industrie + leeg) · Nieuwbouw-verkoop matcher (mock surface)
+- Demo-org seed (5-7 favorites in stages + mock inbox) + DESIGN.md makelaars-correctie
 
-**Pre-planning artifacts (2026-05-17):**
-- `.planning/milestones/M050-INDEX.md` (hub)
-- `.planning/milestones/M050-ENG-PLAN.md` (6 architectuur-decisions D1-D6 + datamodel + 7-lane worktree-parallelization)
-- `.planning/milestones/M050-DECISIONS-PRE-PLANNING.md` (Q6 PostNL master-account · Q7 retention · Q8 quota-defaults)
+**Demo real-vs-mock:** 4 schermen volledig echt · 1 echt-data-fake-write (Contact: BRK echt, PostNL-send gefaket) · 3 mock (Inbox upgradebaar · nieuwbouw-matcher + Realworks gated op Hauzer-API).
+
+**Pre-planning artifacts (2026-05-21):**
+- `~/.gstack/projects/Romainnoo145-propdex/klarifai-main-design-20260521-135656.md` — office-hours strategie (System-of-Engagement + deal-structuur)
+- `docs/superpowers/specs/2026-05-21-hauzer-engagement-ia-demo-design.md` — IA + demo real-vs-mock + component-touchpoints (codebase-geverifieerd)
 
 ### Active
 
-- [ ] BRK datamodel + retention-life-cycle (Q7 LOCKED) + ARQ cleanup-cron — M050/S01
-- [ ] BRK persist client (Phase 105 ephemeral → persist-mode) met M049 credential-resolver — M050/S02
-- [ ] 3 scoring-factoren live + rescore-cascade trigger op BRK-write — M050/S03
-- [ ] Brief-template registry + 3 templates + preview met perceel-context — M050/S04
-- [ ] AI brief-personalisatie via Claude streaming + audit-log + partner-review verplicht (D7) — M050/S04.5
-- [ ] PostNL dispatch + delivery-tracking webhooks + partner-branding-injection — M050/S05
-- [ ] Admin-UX partner-branding-upload in M049-hub-stijl — M050/S05.5
-- [ ] Opgeslagen-cockpit + lifecycle-sidebar transformatie (V5 wireframe LOCKED) — M050/S06
-- [ ] E2E wiring + tier-gates + feature-flag triad + AVG-audit-trail — M050/S07
+- [ ] `projecttype` op `ParcelFavorite` + opslaan-op-zoekmethode UI — M052
+- [ ] `Haalbaarheid`-fase (phases.ts additief) + `HaalbaarheidPhaseView` + checklist-verhuizing — M052
+- [ ] `LifecycleSideRailNav` configureerbaar (Hauzer 4-fase set) + Bod mock-light — M052
+- [ ] Dashboard Pipeline Kanban (echt, `pipeline_stage` + drag→update_pipeline) — M052
+- [ ] Daily Acquisitie Inbox surface (mock-items achter `HAUZER_DEMO`) — M052
+- [ ] Built-to-suit kavelzoeker-filter op Kaart (echt) — M052
+- [ ] Nieuwbouw-verkoop matcher (mock surface achter `HAUZER_DEMO`) — M052
+- [ ] Demo-org seed + DESIGN.md makelaars-correctie — M052
+- [ ] Forward-roadmap reconciliatie (3 sporen + cascade-batch her-nummering) — M052 setup
+
+### Defined / gated (nog te doen — niet gedropt)
+
+Deze milestones zijn volledig gedefinieerd (requirements + roadmap in `.planning/milestones/`) maar nog niet gestart. Ze blijven actieve scope; M052 gaat vóór omdat de demo demand moet valideren vóór verdere investering.
+
+- **M051 Brief-Send Pipeline** (defined 2026-05-19, gated op Kadaster-DPA + PostNL Zakelijk legal-track) — eigenaar-outreach na BRK: 3 templates + Claude AI-personalisatie + PostNL-dispatch + partner-branding + tier-gate triad + AVG-audit. 23 reqs, 5 phases. **Grote Hauzer-pré:** de "Verstuur Brief"-knop is engagement-feature #3. In M052 zit dit als echt-data-fake-write (Contact-fase: brief-preview echt, send gefaket) — de demo-teaser; M051 maakt het post-deal productie. Docs: `.planning/milestones/M051-INDEX.md` / `-REQUIREMENTS.md` / `-ROADMAP.md`.
+- **M050.5 Feature Tiering & Demo Lockdown** (defined 2026-05-16, parallel-runnable) — org-level tiers (demo/paid/superadmin), backend-enforced + `<TierGate>`. 36 reqs, 4 phases. Relevant voor M052: het lange-termijn-alternatief voor de `HAUZER_DEMO`-flag-aanpak; M052 gebruikt flags nu, tiering kan later de gating overnemen. Docs: `.planning/milestones/M050.5-REQUIREMENTS.md` / `-ROADMAP.md`.
 
 ### Out of Scope
 
@@ -88,6 +101,9 @@ Tranche 1 is voor vastgoedontwikkelaars + kwaliteitsborgers. Tranche 2 voegt bel
 - NVM/Vindsubsidies betaalde integraties — M053+
 - Cascade-batches buiten woonvisie_match POC — M051-M057
 - Projecttype-gebonden balance / pruning sparse factoren — M050+
+- **M052 demo-scope:** echte PostNL-dispatch + echte Realworks-koppeling + nieuwbouw-matcher-logica blijven mock — vereisen Hauzer's API-toegang, post-deal (€16.6k consulting)
+- **M052:** erfpacht-einddatum-radar — BRK Bevragen is overheid-only, geen bulk-query voor private SaaS; reframe als manueel/partnership-registry (later), per-perceel `zakelijk_recht_type`-flag wél
+- **M052:** Tranche-2-fases (Vergunning→Exit) + Verhuur-surface — buiten Hauzer's voorkant-product (makelaardij/advies/verkoop)
 
 ## Context
 
@@ -128,6 +144,9 @@ Tranche 1 is voor vastgoedontwikkelaars + kwaliteitsborgers. Tranche 2 voegt bel
 | M050 cockpit = pipeline-cards + workspace-sidebar | Single-column brede cards + perceel-foto thumbnail; sidebar van toplevel-icons → 4-8 lifecycle-icons (V5 wireframe LOCKED) | — Pending (M050/S06) |
 | Partner = klant + reseller terminologie | Partner gebruikt product zelf EN verkoopt door; alle "klant" refs → "partner" in M050 docs 2026-05-17 | ✓ Good |
 | **Tranche 2 pivot 2026-05-18** | Propdex evolueert van onderzoekstool naar onderzoek + actie + beheer platform. Verhuur/Beheer/Exit toegevoegd als M060-M110 milestones, parallel-able per dev-team. Lifecycle-sidebar van 6 → 8 fases. Makelaars + beleggers + eigenaren toegevoegd als target users (was: out-of-scope). One-way door — locked. | — Pending (M060+) |
+| **System-of-Engagement pivot 2026-05-21** | Van System-of-Record (data, eenmalig waardevol) → System-of-Engagement (dagelijkse werkplek, retentie). Engagement-laag (5 features) = kernproduct voor elke makelaar. Hauzer = beoogde launching-partner (demo-first, nog niet gepitcht). Vervangt het angel-spoor; oude 50%-dev-partner-deal afgeketst. | — Pending (M052) |
+| **M052 in productie bouwen, niet wegwerp-demo** | Engagement-laag = kernproduct dat je sowieso wilt; wegwerp-demo = dubbel werk. Echt product in productie achter feature-flags; demo-isolatie via demo-org seed + `HAUZER_DEMO`-flag; alleen Hauzer-API-features (Realworks/nieuwbouw-matcher) puur mock. Speculatieve-burn-discipline blijft want het Hauzer-specifieke deel blijft ongebouwd. | — Pending (M052) |
+| **M052 Haalbaarheid als 9e fase** | Additief in phases.ts (geen verwijdering) + per-use-case filtering — 8-fase Tranche-2-visie blijft intact. Checklists verhuizen Onderzoek→Haalbaarheid, gedreven door parcel-`projecttype` i.p.v. report_id-koppeling. | — Pending (M052) |
 
 ---
-*Last updated: 2026-05-18 — Tranche 2 strategy pivot locked*
+*Last updated: 2026-05-21 — M052 Hauzer Engagement-Demo (System-of-Engagement pivot, build-in-production)*

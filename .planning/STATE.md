@@ -1,38 +1,39 @@
 ---
 gsd_state_version: 1.0
-milestone: M050
-milestone_name: BRK Lookup-Wedge
-status: completed
-stopped_at: M050 archived 2026-05-21 — rescoped re-audit closed SCOR-02/UX-07 seam (fix(03) 52add70a), 22/22 reqs satisfied, tagged M050. Next milestone M051 Brief-Send (defined, kickoff gated on Kadaster DPA + PostNL legal-track).
-last_updated: "2026-05-21T11:43:00.000Z"
+milestone: M052
+milestone_name: Hauzer Engagement-Demo
+status: defining_requirements
+stopped_at: M052 started 2026-05-21 — System-of-Engagement pivot, build-in-production (demo-org + HAUZER_DEMO flags). Defining requirements → roadmap.
+last_updated: "2026-05-21T13:00:00.000Z"
 last_activity: 2026-05-21
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 22
-  completed_plans: 22
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Propdex — GSD State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-18 — Tranche 2 strategy pivot locked)
+See: .planning/PROJECT.md (updated 2026-05-21 — M052 Hauzer Engagement-Demo, System-of-Engagement pivot)
 
-**Core value:** Onderzoek → Actie funnel in één cockpit. Tranche 1 (M001-M050): van grondpositie tot bouw. Tranche 2 (M060-M110, roadmap): verhuur tot exit. Intelligence-first across full lifecycle.
-**Current focus:** M050 BRK Lookup-Wedge — eerste paid Type-C integration (Kadaster BRK), persistent storage, scoring-cascade, en lifecycle-fase 2 (Contact) UI. 5 phases shipped 2026-05-17 t/m 2026-05-19. Brief-send-helft losgekoppeld als M051.
+**Core value:** System-of-Engagement — Propdex als dagelijkse werkplek van de makelaar/ontwikkelaar, niet eenmalige datakaart. Kaart+data = magneet, dagelijkse workflows+acties = lijm (retentie). Intelligence-first across full lifecycle.
+**Current focus:** M052 Hauzer Engagement-Demo — engagement-laag (kernproduct) in productie bouwen op echte Venlo-data, demo-isolatie via demo-org + `HAUZER_DEMO`-flags. Hauzer = beoogde launching-partner (demo-first, nog niet gepitcht). Defining requirements → roadmap.
 
 ## Current Position
 
-Milestone: M050 BRK Lookup-Wedge — ✅ SHIPPED + ARCHIVED 2026-05-21 (tag M050).
-Rescoped re-audit closed the one cross-phase gap (SCOR-02/UX-07 rescore-completion freshness signal — `fix(03)` 52add70a stamps `cascade_rescored_at` in `rescore_parcel`). 22/22 requirements satisfied. Full M050/BRK/phase105 surface 188 passed.
-Next milestone: M051 — Brief-Send Pipeline (defined 2026-05-19; kickoff gated op Kadaster DPA + PostNL Zakelijk legal-track). Awaiting user's new plans before `/gsd:new-milestone`.
+Milestone: M052 Hauzer Engagement-Demo — 🆕 STARTED 2026-05-21. Defining requirements → roadmap.
+Approach LOCKED 2026-05-21: in productie bouwen (geen wegwerp-demo); ~80% = echt kernproduct; demo-isolatie via demo-org seed + `HAUZER_DEMO` feature-flags; alleen Hauzer-API-features (Realworks/nieuwbouw-matcher) puur mock tot post-deal.
+Prev milestone: M050 BRK Lookup-Wedge — ✅ SHIPPED + ARCHIVED 2026-05-21 (tag M050), 22/22 reqs.
+Still open (defined, not started — NOT dropped): M051 Brief-Send Pipeline (gated op Kadaster-DPA + PostNL legal — grote Hauzer-pré; M052 toont het als fake-write teaser) · M050.5 Feature Tiering (parallel-runnable).
 Last activity: 2026-05-21
 
-Progress: [██████████] 100% (5/5 phases — S01 + S02 + S03 + S06 + S06-cont done)
+Progress: [░░░░░░░░░░] 0% — requirements + roadmap in opbouw
 
-⚠ Pre-existing (NOT M050): woonvisie `rescore_parcels_for_document` job + m045 cascade endpoints have 3 failing + 5 erroring tests on `main` (`get_affected_parcel_ids` returns empty). Confirmed failing on clean tree. Needs separate investigation.
+⚠ Pre-existing (NOT M052): woonvisie `rescore_parcels_for_document` job + m045 cascade endpoints have 3 failing + 5 erroring tests on `main` (`get_affected_parcel_ids` returns empty). Confirmed failing on clean tree. Known-issue todo, geen M052-scope — maar telt zwaarder nu engagement-laag in productie landt (groene main-CI). Needs separate investigation.
 
 ## Performance Metrics
 
