@@ -165,6 +165,24 @@ async def async_client(test_db: AsyncSession) -> AsyncGenerator[AsyncClient, Non
 
     app.dependency_overrides[get_db] = override_get_db
 
+    # Override get_arq_pool with a transparent wrapper so tests that don't
+    # exercise ARQ enqueue don't need app.state.arq_pool initialised.
+    # If app.state.arq_pool IS set (e.g. FUND-02 test sets a specific mock),
+    # the wrapper returns that pool — preserving enqueue assert semantics.
+    # If not set, returns a silent no-op mock so the 200 path is unblocked.
+    from unittest.mock import AsyncMock, MagicMock
+
+    from app.core.arq import get_arq_pool
+
+    _fallback_mock_pool = AsyncMock()
+    _fallback_mock_pool.enqueue_job = AsyncMock(return_value=MagicMock())
+
+    async def override_get_arq_pool():
+        pool = getattr(app.state, "arq_pool", None)
+        return pool if pool is not None else _fallback_mock_pool
+
+    app.dependency_overrides[get_arq_pool] = override_get_arq_pool
+
     # Disable rate limiting in tests by setting enabled=False on the actual limiter
     # The route decorators reference the module-level limiter object directly,
     # so replacing app.state.limiter has no effect on decorator-level limits.
