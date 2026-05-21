@@ -243,6 +243,55 @@ async def test_persist_triggers_rescore_with_factor_keys(
 
 
 @pytest.mark.asyncio
+async def test_rescore_parcel_stamps_cascade_rescored_at_for_frontend_poll(
+    test_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """REGRESSION (SCOR-02 / UX-07): rescore_parcel MUST stamp ``cascade_rescored_at``.
+
+    The frontend RescoreProgressBanner polls ``/scan-data`` and stops on
+    ``cascade_rescored_at`` (useRescorePoll.shouldStopOnSuccess). The scan-data
+    endpoint only exposes ``flags['cascade_rescored_at']``. If the BRK rescore
+    job stamps only ``m050_s03_factors_at`` (its observability sentinel) and not
+    ``cascade_rescored_at``, the banner can never reach its success state and
+    always times out at 60s. This pins the freshness-signal contract so both
+    the woonvisie cascade job and the BRK rescore job speak the same field.
+    """
+    monkeypatch.setattr(settings, "M050_BRK_PERSIST_ENABLED", True)
+    monkeypatch.setattr(settings, "M050_S03_FACTORS_ENABLED", True)
+
+    org, _user = await _seed_org_and_user(test_db)
+    await _seed_parcel_with_scan(test_db)
+    await _seed_brk_record(test_db, org, heeft_hypotheek=True, koopjaar=2018)
+
+    from app.jobs.rescore_cascade_job import rescore_parcel
+
+    monkeypatch.setattr(
+        "app.jobs.rescore_cascade_job.settings.DATABASE_URL", _test_db_url()
+    )
+    job_result = await rescore_parcel(
+        {}, organization_id=str(org.id), parcel_id=PARCEL_ID
+    )
+    assert job_result["updated"] is True
+
+    test_db.expire_all()
+    stmt = (
+        select(ScanResult)
+        .join(ParcelCache, ParcelCache.id == ScanResult.parcel_id)
+        .where(ParcelCache.parcel_id == PARCEL_ID)
+    )
+    sr = (await test_db.execute(stmt)).scalar_one()
+    assert sr.flags is not None
+
+    cascade_at = sr.flags.get("cascade_rescored_at")
+    assert isinstance(cascade_at, str), (
+        "rescore_parcel must stamp cascade_rescored_at — the field the frontend "
+        "poller reads to detect rescore completion"
+    )
+    assert re.match(r"^\d{4}-\d{2}-\d{2}T", cascade_at), cascade_at
+
+
+@pytest.mark.asyncio
 async def test_persist_endpoint_returns_200_even_if_enqueue_fails(
     test_db,
     async_client,

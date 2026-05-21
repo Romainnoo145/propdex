@@ -350,7 +350,13 @@ async def rescore_parcel(
                 }
                 for k, v in score_result.score_breakdown.items()
             }
-            flags["m050_s03_factors_at"] = datetime.utcnow().isoformat()
+            stamped_at = datetime.utcnow().isoformat()
+            flags["m050_s03_factors_at"] = stamped_at
+            # Shared freshness signal: the frontend RescoreProgressBanner polls on
+            # cascade_rescored_at (useRescorePoll), and the scan-data endpoint only
+            # exposes that field. The woonvisie cascade job stamps it too — both
+            # rescore paths must speak the same field or the banner never succeeds.
+            flags["cascade_rescored_at"] = stamped_at
             scan.flags = flags
             await db.commit()
     finally:
