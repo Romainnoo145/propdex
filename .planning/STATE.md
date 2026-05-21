@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 01-fundament-demo-flag 01-01-PLAN.md
-last_updated: "2026-05-21T18:57:17.480Z"
+stopped_at: Completed Phase 01 Plan 01-02 — hauzer_demo column + migration + /me field + DESIGN.md fix; 3 tasks, 3 commits
+last_updated: "2026-05-21T18:58:28.893Z"
 last_activity: 2026-05-21
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -117,6 +117,7 @@ Progress: [░░░░░░░░░░] 0% — requirements + roadmap in opbo
 | Phase 08-brk-fase-2-wire-up P08 | 9m 46s | 3 tasks | 4 files |
 | Phase 01-fundament-demo-flag P00 | 3m | 3 tasks | 3 files |
 | Phase 01-fundament-demo-flag P01 | 436s | 2 tasks | 3 files |
+| Phase 01 P02 | 8m | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -318,6 +319,9 @@ Progress: [░░░░░░░░░░] 0% — requirements + roadmap in opbo
 - [Phase 01-fundament-demo-flag]: shouldShowProjectTypePicker export path locked as @/components/map/panels/parcel/HeartButton — Plan 01-03 must export from that module
 - [Phase 01-fundament-demo-flag]: Local import of get_project_type inside rescore_parcel body (matches existing local-import pattern — avoids circular imports during ARQ worker bootstrap)
 - [Phase 01-fundament-demo-flag]: Transparent get_arq_pool conftest override: returns app.state.arq_pool when set (for test-specific pool assertions), falls back to no-op AsyncMock — enables both FUND-02 enqueue assertions and no-pool-needed base case without modifying Plan 00 test files
+- [Phase 01]: hauzer_demo scalar query in get_me only (not eager-loaded in get_current_user) — single lightweight query on /me endpoint, zero overhead on every other authenticated request
+- [Phase 01]: Auth router dual-mount: /api/auth/* added alongside legacy /auth/* to match frontend contract and test expectations without breaking existing 77 test references
+- [Phase 01]: UserResponse.hauzer_demo default=False allows model_validate(current_user) to succeed before explicit scalar assignment overrides the value
 
 ### Pending Todos
 
@@ -329,6 +333,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-21T18:57:17.477Z
-Stopped at: Completed 01-fundament-demo-flag 01-01-PLAN.md
+Last session: 2026-05-21T18:58:28.889Z
+Stopped at: Completed Phase 01 Plan 01-02 — hauzer_demo column + migration + /me field + DESIGN.md fix; 3 tasks, 3 commits
 Resume file: None
