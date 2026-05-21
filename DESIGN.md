@@ -10,7 +10,7 @@
 - **Who it's for:**
   1. **Vastgoedontwikkelaars** (primary) — zoeken grondposities, beoordelen transformatiepotentie, managen vergunningtrajecten.
   2. **Kwaliteitsborgers** (secondary) — due-diligence en risico-screening.
-- **Space:** Dutch proptech / civic intelligence. Concurrenten: Matrixian, Calcasa, Vindsubsidies, fundament.nl, Brainbay/NVM (makelaars — NIET onze markt).
+- **Space:** Dutch proptech / civic intelligence. Concurrenten: Matrixian, Calcasa, Vindsubsidies, fundament.nl, Brainbay/NVM. Makelaars zijn wel onze markt (Hauzer = full-service developer-adjacent: makelaardij, advies, verkoop).
 - **Positioning:** Anderen doen *current value*. Wij doen *transformation potential*. Nobody else combines the full lifecycle.
 - **Project type:** Desktop-first multi-tenant SaaS (web app). Mobile out of scope. Light mode only.
 - **Usage pattern:** Builders use this 6–8h/day. Fatigue matters. Quiet matters. Clarity matters.
