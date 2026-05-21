@@ -2,12 +2,10 @@
 gsd_state_version: 1.0
 milestone: M050
 milestone_name: BRK Lookup-Wedge
-current_phase: 8
-current_plan: 8
-status: milestone_complete_pending_archive
-stopped_at: M050 audit 2026-05-19 — brief-send-half split to M051. Lookup-half all 5 phases (1, 2, 3, 6, 8) verified passed. All 22 in-scope requirements satisfied. Ready for /gsd:complete-milestone after audit re-run on rescoped M050.
-last_updated: "2026-05-19T13:00:00.000Z"
-last_activity: 2026-05-19
+status: completed
+stopped_at: M050 archived 2026-05-21 — rescoped re-audit closed SCOR-02/UX-07 seam (fix(03) 52add70a), 22/22 reqs satisfied, tagged M050. Next milestone M051 Brief-Send (defined, kickoff gated on Kadaster DPA + PostNL legal-track).
+last_updated: "2026-05-21T11:43:00.000Z"
+last_activity: 2026-05-21
 progress:
   total_phases: 5
   completed_phases: 5
@@ -27,12 +25,14 @@ See: .planning/PROJECT.md (updated 2026-05-18 — Tranche 2 strategy pivot locke
 
 ## Current Position
 
-Milestone: M050 BRK Lookup-Wedge — ALLE 5 phases verified passed.
-Status: Awaiting audit re-run + `/gsd:complete-milestone` to archive M050.
-Next milestone: M051 — Brief-Send Pipeline (defined 2026-05-19; kickoff gated op Kadaster DPA + PostNL Zakelijk legal-track).
-Last activity: 2026-05-19
+Milestone: M050 BRK Lookup-Wedge — ✅ SHIPPED + ARCHIVED 2026-05-21 (tag M050).
+Rescoped re-audit closed the one cross-phase gap (SCOR-02/UX-07 rescore-completion freshness signal — `fix(03)` 52add70a stamps `cascade_rescored_at` in `rescore_parcel`). 22/22 requirements satisfied. Full M050/BRK/phase105 surface 188 passed.
+Next milestone: M051 — Brief-Send Pipeline (defined 2026-05-19; kickoff gated op Kadaster DPA + PostNL Zakelijk legal-track). Awaiting user's new plans before `/gsd:new-milestone`.
+Last activity: 2026-05-21
 
 Progress: [██████████] 100% (5/5 phases — S01 + S02 + S03 + S06 + S06-cont done)
+
+⚠ Pre-existing (NOT M050): woonvisie `rescore_parcels_for_document` job + m045 cascade endpoints have 3 failing + 5 erroring tests on `main` (`get_affected_parcel_ids` returns empty). Confirmed failing on clean tree. Needs separate investigation.
 
 ## Performance Metrics
 

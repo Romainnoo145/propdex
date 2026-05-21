@@ -1,5 +1,23 @@
 # Milestones
 
+## M050 BRK Lookup-Wedge (Shipped: 2026-05-21)
+
+**Phases completed:** 5 phases (1, 2, 3, 6, 8), 22 plans
+
+**Key accomplishments:**
+- BRK Eigendom as first paid Type-C integration: persistent `brk_ownership_records` with AVG-compliant soft→hard-delete retention cron (Q7 LOCKED) + DB-layer natuurlijk-persoon strip-at-write
+- Vendor-managed credential resolver + read-through cache fetch/persist endpoint with full Kadaster failure-mode→HTTP registry (BRK-04/05)
+- 3 BRK-driven score-v3 risico factors (hypotheek_risico, eigendoms_complexiteit, koopwaarde_trend) with BRK-write→rescore cascade + sparse-data silent-neutral; FACTOR_REGISTRY sum=100 invariant preserved
+- Opgeslagen-cockpit transformation: full-width perceel-cards + lifecycle SideRailNav (scoped to perceel-detail) on Aura tokens
+- Lifecycle fase-2 (Contact) activated as BRK-home: new `GET /api/parcels/{id}/brk` read endpoint, RescoreProgressBanner, 1922-LOC monolith split into 7 ≤300-LOC components
+- Multi-tenant isolation proven at every layer; whole BRK path ships dormant behind feature flags (gated on Kadaster DPA)
+
+**Audit:** rescoped re-audit found + closed one cross-phase seam (SCOR-02/UX-07 freshness signal, `fix(03)` 52add70a). Final: 22/22 requirements satisfied. See `milestones/M050-MILESTONE-AUDIT.md`.
+
+**Split:** original "BRK Actiefase-Wedge" scope; brief-send half split to M051 (see `milestones/M050-MILESTONE-AUDIT-PRESPLIT.md`).
+
+---
+
 ## 🆕 M051 Brief-Send Pipeline (Defined 2026-05-19 — split from M050)
 
 **Status:** Defined, niet gestart. Kickoff gated op (a) Kadaster DPA progress (M050 BRK persist dormant tot DPA), (b) PostNL Zakelijk legal-track (~4 wk lead-time), (c) M050.5/S02 quota-counter merged.

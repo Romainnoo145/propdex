@@ -1,3 +1,12 @@
+# Requirements Archive: M050 BRK Lookup-Wedge
+
+**Archived:** 2026-05-21
+**Status:** SHIPPED
+
+For current requirements, see `.planning/REQUIREMENTS.md`.
+
+---
+
 # Requirements: Propdex M050 — BRK Lookup-Wedge
 
 **Defined:** 2026-05-17
