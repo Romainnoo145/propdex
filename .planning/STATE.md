@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed Phase 01-fundament-demo-flag Plan 00 — 3 Wave 0 test stubs (backend integration + regression + frontend unit); all RED as designed (Nyquist signal)
-last_updated: "2026-05-21T18:54:29.324Z"
+stopped_at: Completed 01-fundament-demo-flag 01-01-PLAN.md
+last_updated: "2026-05-21T18:57:17.480Z"
 last_activity: 2026-05-21
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -116,6 +116,7 @@ Progress: [░░░░░░░░░░] 0% — requirements + roadmap in opbo
 | Phase 08-brk-fase-2-wire-up P05 | 35m 40s | 4 tasks | 9 files |
 | Phase 08-brk-fase-2-wire-up P08 | 9m 46s | 3 tasks | 4 files |
 | Phase 01-fundament-demo-flag P00 | 3m | 3 tasks | 3 files |
+| Phase 01-fundament-demo-flag P01 | 436s | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -315,6 +316,8 @@ Progress: [░░░░░░░░░░] 0% — requirements + roadmap in opbo
 - [Phase 08-brk-fase-2-wire-up]: 08-08: Backend-Python static regression for frontend sidebar scope rule — Path.read_text + regex on _authenticated.tsx gives single CI gate, no node dependency; per-assertion error messages name regressing pattern
 - [Phase 01-fundament-demo-flag]: FUND-02 iron-rule uses inspect.getsource drift-guard (lighter than full mock-DB; mirrors M050/S03 F2 pattern)
 - [Phase 01-fundament-demo-flag]: shouldShowProjectTypePicker export path locked as @/components/map/panels/parcel/HeartButton — Plan 01-03 must export from that module
+- [Phase 01-fundament-demo-flag]: Local import of get_project_type inside rescore_parcel body (matches existing local-import pattern — avoids circular imports during ARQ worker bootstrap)
+- [Phase 01-fundament-demo-flag]: Transparent get_arq_pool conftest override: returns app.state.arq_pool when set (for test-specific pool assertions), falls back to no-op AsyncMock — enables both FUND-02 enqueue assertions and no-pool-needed base case without modifying Plan 00 test files
 
 ### Pending Todos
 
@@ -326,6 +329,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-21T18:54:29.321Z
-Stopped at: Completed Phase 01-fundament-demo-flag Plan 00 — 3 Wave 0 test stubs (backend integration + regression + frontend unit); all RED as designed (Nyquist signal)
+Last session: 2026-05-21T18:57:17.477Z
+Stopped at: Completed 01-fundament-demo-flag 01-01-PLAN.md
 Resume file: None
