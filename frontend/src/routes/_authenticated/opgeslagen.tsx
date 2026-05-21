@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate, useMatchRoute, Outlet } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { staggerContainer, fadeUp } from '@/lib/animations'
-import { ChevronDown, ChevronRight, Search, X, Heart } from 'lucide-react'
+import { Search, X, Heart } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { useParcelFavorites } from '@/hooks/useFavorites'
 import { EmptyState } from '@/components/feedback/EmptyState'
@@ -10,7 +10,10 @@ import { Skeleton } from '@/components/feedback/Skeleton'
 import { PotentieModal, RisicoModal } from '@/components/projects/ScoreDetailModal'
 import { toMapParcelSearch } from '@/lib/navigation/mapSearch'
 import { STAGES } from '@/components/projects/PipelineStagePill'
-import { SavedParcelCard } from '@/components/projects/SavedParcelCard'
+import {
+  GemeenteGroupAccordion,
+  type GemeenteGroup,
+} from '@/components/projects/GemeenteGroupAccordion'
 import type { FavoriteResponse, PipelineStage } from '@/lib/types/portfolio'
 
 export const Route = createFileRoute('/_authenticated/opgeslagen')({
@@ -23,13 +26,6 @@ export const Route = createFileRoute('/_authenticated/opgeslagen')({
 })
 
 /* ── Helpers ───────────────────────────────────────────────── */
-
-interface GemeenteGroup {
-  gemeente_naam: string
-  gemeente_code: string | null
-  parcels: FavoriteResponse[]
-  stageCounts: Record<PipelineStage, number>
-}
 
 function buildGroups(favorites: FavoriteResponse[]): GemeenteGroup[] {
   const map = new Map<string, GemeenteGroup>()
@@ -58,16 +54,6 @@ function buildGroups(favorites: FavoriteResponse[]): GemeenteGroup[] {
     )
   }
   return sorted
-}
-
-/* ── Count badge ─────────────────────────────────────────────── */
-
-function CountBadge({ total }: { total: number }) {
-  return (
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-[3px] border-amber-400">
-      <span className="text-[14px] font-bold text-aura-ink tabular-nums">{total}</span>
-    </div>
-  )
 }
 
 /* ── Score modal state ──────────────────────────────────────── */
@@ -207,97 +193,29 @@ function OpgeslagenPage() {
 
             {/* ── Gemeente Groups ──────────────────────── */}
             <div className="space-y-2">
-              {filteredGroups.map((group) => {
-                const isExpanded = expandedGemeenten.has(group.gemeente_naam)
-
-                return (
-                  <motion.div
-                    key={group.gemeente_naam}
-                    variants={fadeUp}
-                    className="bg-white/60 backdrop-blur-[24px] rounded-[24px] border border-white/40 shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    {/* Gemeente header */}
-                    <button
-                      onClick={() => toggleGemeente(group.gemeente_naam)}
-                      aria-expanded={isExpanded}
-                      className="w-full flex items-center justify-between px-6 py-5 hover:bg-slate-50/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-4">
-                        <CountBadge total={group.parcels.length} />
-                        <div className="text-left">
-                          <p className="text-[15px] font-bold text-aura-ink tracking-tight">
-                            {group.gemeente_naam}
-                          </p>
-                          <p className="text-[11px] text-slate-400 mt-0.5">
-                            {group.parcels.length} {group.parcels.length === 1 ? 'perceel' : 'percelen'}
-                            {group.gemeente_code && (
-                              <span className="ml-1.5 text-slate-300">· {group.gemeente_code}</span>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1">
-                          {STAGES.filter((s) => group.stageCounts[s] > 0).map((stage) => (
-                            <span key={stage} className="text-[10px] font-bold text-slate-400 tabular-nums">
-                              {group.stageCounts[stage]}
-                            </span>
-                          ))}
-                        </div>
-                        {isExpanded ? (
-                          <ChevronDown size={16} className="text-slate-400" />
-                        ) : (
-                          <ChevronRight size={16} className="text-slate-400" />
-                        )}
-                      </div>
-                    </button>
-
-                    {/* Parcel list */}
-                    <AnimatePresence>
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-                          className="overflow-hidden"
-                        >
-                          <div className="border-t border-white/40 p-4">
-                            <motion.div
-                              className="flex flex-col gap-3"
-                              variants={staggerContainer}
-                              initial="hidden"
-                              animate="show"
-                            >
-                              {group.parcels.map((parcel) => (
-                                <SavedParcelCard
-                                  key={parcel.parcel_id}
-                                  parcel={parcel}
-                                  onOpenMap={() =>
-                                    navigate({
-                                      to: '/map',
-                                      search: toMapParcelSearch({
-                                        parcelId: parcel.parcel_id,
-                                        fallbackAddress: parcel.address,
-                                      }),
-                                    })
-                                  }
-                                  onPotentieClick={() =>
-                                    setScoreModal({ parcelCacheId: parcel.parcel_cache_id, type: 'potentie' })
-                                  }
-                                  onRisicoClick={() =>
-                                    setScoreModal({ parcelCacheId: parcel.parcel_cache_id, type: 'risico' })
-                                  }
-                                />
-                              ))}
-                            </motion.div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-                )
-              })}
+              {filteredGroups.map((group) => (
+                <GemeenteGroupAccordion
+                  key={group.gemeente_naam}
+                  group={group}
+                  isExpanded={expandedGemeenten.has(group.gemeente_naam)}
+                  onToggle={() => toggleGemeente(group.gemeente_naam)}
+                  onOpenMap={(parcel) =>
+                    navigate({
+                      to: '/map',
+                      search: toMapParcelSearch({
+                        parcelId: parcel.parcel_id,
+                        fallbackAddress: parcel.address,
+                      }),
+                    })
+                  }
+                  onPotentieClick={(parcel) =>
+                    setScoreModal({ parcelCacheId: parcel.parcel_cache_id, type: 'potentie' })
+                  }
+                  onRisicoClick={(parcel) =>
+                    setScoreModal({ parcelCacheId: parcel.parcel_cache_id, type: 'risico' })
+                  }
+                />
+              ))}
             </div>
 
             {filteredGroups.length === 0 && (searchQuery || stageFilter) && (
