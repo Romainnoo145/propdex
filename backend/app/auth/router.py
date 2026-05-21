@@ -2,19 +2,22 @@
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response, status
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth_service import (
     build_resend_verification_task,
     confirm_password_reset,
     get_google_auth_url,
-    google_callback as google_callback_service,
     login_user,
     logout_user,
     refresh_tokens,
     register_user,
     request_password_reset,
     verify_email,
+)
+from app.auth.auth_service import (
+    google_callback as google_callback_service,
 )
 from app.auth.dependencies import get_current_active_user
 from app.auth.schemas import (
@@ -30,6 +33,7 @@ from app.auth.schemas import (
 from app.core.config import settings
 from app.core.database import get_db
 from app.middleware.rate_limit import limiter
+from app.models.organization import Organization
 from app.models.user import User
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -143,9 +147,18 @@ async def logout(
 @router.get("/me", response_model=UserResponse)
 async def get_me(
     current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ) -> UserResponse:
     """Get current authenticated user info."""
-    return UserResponse.model_validate(current_user)
+    result = await db.execute(
+        select(Organization.hauzer_demo).where(
+            Organization.id == current_user.organization_id
+        )
+    )
+    hauzer_demo = bool(result.scalar_one_or_none() or False)
+    data = UserResponse.model_validate(current_user)
+    data.hauzer_demo = hauzer_demo
+    return data
 
 
 @router.post("/verify-email", response_model=MessageResponse)

@@ -30,6 +30,7 @@ class UserResponse(BaseModel):
     auth_provider: str
     is_superuser: bool
     created_at: datetime
+    hauzer_demo: bool = False
 
 
 class TokenResponse(BaseModel):

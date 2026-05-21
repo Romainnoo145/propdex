@@ -156,6 +156,9 @@ async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) ->
 
 # Include routers
 app.include_router(auth_router)
+# M052/S01: also mount at /api/auth so frontend contract (/api/auth/*) and
+# external callers align with the rest of the /api/* namespace.
+app.include_router(auth_router, prefix="/api")
 app.include_router(documents_router)
 app.include_router(documents_parcels_router)
 app.include_router(favorites_router)
