@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: M052
 milestone_name: Hauzer Engagement-Demo
-status: defining_requirements
-stopped_at: M052 started 2026-05-21 — System-of-Engagement pivot, build-in-production (demo-org + HAUZER_DEMO flags). Defining requirements → roadmap.
-last_updated: "2026-05-21T13:00:00.000Z"
+status: roadmap_complete
+stopped_at: M052 roadmap complete 2026-05-21 — 6 slices (S01→(S02∥S03∥S04∥S05)→S06), 23 reqs mapped. Ready for per-slice build. Next: /plan-eng-review M052/S01 → /gsd:plan-phase 1.
+last_updated: "2026-05-21T13:15:00.000Z"
 last_activity: 2026-05-21
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -25,8 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-21 — M052 Hauzer Engagement-Demo, S
 
 ## Current Position
 
-Milestone: M052 Hauzer Engagement-Demo — 🆕 STARTED 2026-05-21. Defining requirements → roadmap.
+Milestone: M052 Hauzer Engagement-Demo — 🆕 STARTED 2026-05-21. Requirements (23) + roadmap (6 slices) compleet. Ready for per-slice build.
 Approach LOCKED 2026-05-21: in productie bouwen (geen wegwerp-demo); ~80% = echt kernproduct; demo-isolatie via demo-org seed + `HAUZER_DEMO` feature-flags; alleen Hauzer-API-features (Realworks/nieuwbouw-matcher) puur mock tot post-deal.
+Slice-volgorde: S01 (Fundament+flag) → (S02 acquisitie-arc ∥ S03 Dashboard ∥ S04 Contact-teaser ∥ S05 Discovery) → S06 (seed+verificatie).
+Next action: per CLAUDE.md drie-laags — `/plan-eng-review M052/S01` (+ design-review voor UI-zware S02-S05) vóór `/gsd:plan-phase 1`.
 Prev milestone: M050 BRK Lookup-Wedge — ✅ SHIPPED + ARCHIVED 2026-05-21 (tag M050), 22/22 reqs.
 Still open (defined, not started — NOT dropped): M051 Brief-Send Pipeline (gated op Kadaster-DPA + PostNL legal — grote Hauzer-pré; M052 toont het als fake-write teaser) · M050.5 Feature Tiering (parallel-runnable).
 Last activity: 2026-05-21

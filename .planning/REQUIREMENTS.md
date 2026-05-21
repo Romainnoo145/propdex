@@ -91,33 +91,34 @@ Wordt ingevuld tijdens roadmap-creatie.
 
 | Requirement | Slice | Status |
 |-------------|-------|--------|
-| FUND-01 | — | Pending |
-| FUND-02 | — | Pending |
-| FUND-03 | — | Pending |
-| NAV-01 | — | Pending |
-| NAV-02 | — | Pending |
-| NAV-03 | — | Pending |
-| NAV-04 | — | Pending |
-| HAAL-01 | — | Pending |
-| HAAL-02 | — | Pending |
-| HAAL-03 | — | Pending |
-| DASH-01 | — | Pending |
-| DASH-02 | — | Pending |
-| DASH-03 | — | Pending |
-| DASH-04 | — | Pending |
-| KAART-01 | — | Pending |
-| MATCH-01 | — | Pending |
-| CONTACT-01 | — | Pending |
-| CONTACT-02 | — | Pending |
-| DEMO-01 | — | Pending |
-| DEMO-02 | — | Pending |
-| DEMO-03 | — | Pending |
-| QUAL-01 | — | Pending |
-| RECON-01 | — | Pending |
+| FUND-01 | S01 | Pending |
+| FUND-02 | S01 | Pending |
+| FUND-03 | S02 | Pending |
+| NAV-01 | S02 | Pending |
+| NAV-02 | S02 | Pending |
+| NAV-03 | S02 | Pending |
+| NAV-04 | S02 | Pending |
+| HAAL-01 | S02 | Pending |
+| HAAL-02 | S02 | Pending |
+| HAAL-03 | S02 | Pending |
+| DASH-01 | S03 | Pending |
+| DASH-02 | S03 | Pending |
+| DASH-03 | S03 | Pending |
+| DASH-04 | S03 | Pending |
+| KAART-01 | S05 | Pending |
+| MATCH-01 | S05 | Pending |
+| CONTACT-01 | S04 | Pending |
+| CONTACT-02 | S04 | Pending |
+| DEMO-01 | S01 | Pending |
+| DEMO-02 | S06 | Pending |
+| DEMO-03 | S01 | Pending |
+| QUAL-01 | S06 | Pending |
+| RECON-01 | setup (milestone-init) | Done |
 
 **Coverage:**
 - v1 requirements: 23 total
-- Mapped to slices: 0 ⚠️ (roadmap pending)
+- Mapped to slices: 23 ✓ (S01-S06 + RECON-01 setup)
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-21*
