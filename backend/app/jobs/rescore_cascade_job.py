@@ -272,7 +272,9 @@ async def rescore_parcel(
         2. Call ``enrich_parcel_data_with_brk(flags, org_uuid, db)`` to
            materialize ``flags['brk_records']`` (Plan 03-01). FF-off makes
            this a no-op.
-        3. Call ``compute_score_v3(flags)`` — D3 redistribution runs internally.
+        3. Load stored project_type via ``get_project_type`` and call
+           ``compute_score_v3(flags, project_type=...)`` — D3 redistribution runs
+           internally with M047 conditional weights for the stored project type.
         4. Write the projected ``score_breakdown`` back into ``scan_result.flags``
            and bump ``flags['m050_s03_factors_at'] = datetime.utcnow().isoformat()``
            so the frontend (M050/S06) can detect freshness.
@@ -291,6 +293,7 @@ async def rescore_parcel(
     # Local imports to avoid circular-import surprises during worker bootstrap
     from app.models.parcel_cache import ParcelCache
     from app.models.scan_result import ScanResult
+    from app.services.parcel_project_type_service import get_project_type
     from app.services.score_v3 import compute_score_v3
     from app.services.scoring_pipeline import enrich_parcel_data_with_brk
 
@@ -338,7 +341,11 @@ async def rescore_parcel(
             flags = dict(scan.flags or {})
             flags["parcel_id"] = parcel_id
             flags = await enrich_parcel_data_with_brk(flags, org_uuid, db)
-            score_result = compute_score_v3(flags)
+            pt_response = await get_project_type(
+                db, parcel_id=parcel_id, organization_id=org_uuid
+            )
+            project_type_value = pt_response.project_type  # "onbepaald" when unset
+            score_result = compute_score_v3(flags, project_type=project_type_value)
             flags["score_breakdown"] = {
                 k: {
                     "genormaliseerde_score": v.genormaliseerde_score,
