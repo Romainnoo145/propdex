@@ -15,8 +15,8 @@
 
 ### Fundament
 
-- [ ] **FUND-01**: Gebruiker kiest bij opslaan van een perceel een zoekmethode (optoppen/nieuwbouw/transformatie/splitsen), opgeslagen als `projecttype` op `ParcelFavorite` · ECHT
-- [ ] **FUND-02**: Gekozen projecttype stuurt de scoring via bestaande M047 projecttype-settings · ECHT
+- [x] **FUND-01**: Gebruiker kiest bij opslaan van een perceel een zoekmethode (optoppen/nieuwbouw/transformatie/splitsen), opgeslagen als `projecttype` op `ParcelFavorite` · ECHT
+- [x] **FUND-02**: Gekozen projecttype stuurt de scoring via bestaande M047 projecttype-settings · ECHT
 - [ ] **FUND-03**: Gekozen projecttype bepaalt welke Haalbaarheid-checklist verschijnt · ECHT
 
 ### Per-perceel acquisitie-arc
@@ -51,7 +51,7 @@
 
 ### Demo-infra & kwaliteit
 
-- [ ] **DEMO-01**: `HAUZER_DEMO` feature-flag gate voor alle mock-surfaces (DASH-04, MATCH-01, NAV-04, CONTACT-02-send) · ECHT
+- [x] **DEMO-01**: `HAUZER_DEMO` feature-flag gate voor alle mock-surfaces (DASH-04, MATCH-01, NAV-04, CONTACT-02-send) · ECHT
 - [ ] **DEMO-02**: Hauzer demo-org geseed met 5-7 favorites in pipeline-stages + projecttype + mock inbox-items, org-scoped (multi-tenant) · ECHT
 - [ ] **DEMO-03**: DESIGN.md makelaars-correctie — makelaars zijn wél onze markt (Hauzer = full-service developer-adjacent) · DOCS
 - [ ] **QUAL-01**: Engagement-laag passeert `npm run check` (frontend) + `ruff check . && mypy .` (backend) + multi-tenant-isolatie regression tests (productie-bar) · ECHT
@@ -91,8 +91,8 @@ Wordt ingevuld tijdens roadmap-creatie.
 
 | Requirement | Slice | Status |
 |-------------|-------|--------|
-| FUND-01 | S01 | Pending |
-| FUND-02 | S01 | Pending |
+| FUND-01 | S01 | Complete |
+| FUND-02 | S01 | Complete |
 | FUND-03 | S02 | Pending |
 | NAV-01 | S02 | Pending |
 | NAV-02 | S02 | Pending |
@@ -109,7 +109,7 @@ Wordt ingevuld tijdens roadmap-creatie.
 | MATCH-01 | S05 | Pending |
 | CONTACT-01 | S04 | Pending |
 | CONTACT-02 | S04 | Pending |
-| DEMO-01 | S01 | Pending |
+| DEMO-01 | S01 | Complete |
 | DEMO-02 | S06 | Pending |
 | DEMO-03 | S01 | Pending |
 | QUAL-01 | S06 | Pending |

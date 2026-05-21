@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: M052
-milestone_name: Hauzer Engagement-Demo
-status: roadmap_complete
-stopped_at: M052 roadmap complete 2026-05-21 — 6 slices (S01→(S02∥S03∥S04∥S05)→S06), 23 reqs mapped. Ready for per-slice build. Next: /plan-eng-review M052/S01 → /gsd:plan-phase 1.
-last_updated: "2026-05-21T13:15:00.000Z"
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+stopped_at: Completed Phase 01-fundament-demo-flag Plan 00 — 3 Wave 0 test stubs (backend integration + regression + frontend unit); all RED as designed (Nyquist signal)
+last_updated: "2026-05-21T18:54:29.324Z"
 last_activity: 2026-05-21
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 4
+  completed_plans: 1
   percent: 0
 ---
 
@@ -115,6 +115,7 @@ Progress: [░░░░░░░░░░] 0% — requirements + roadmap in opbo
 | Phase 08-brk-fase-2-wire-up P03 | 9m 51s | 3 tasks | 9 files |
 | Phase 08-brk-fase-2-wire-up P05 | 35m 40s | 4 tasks | 9 files |
 | Phase 08-brk-fase-2-wire-up P08 | 9m 46s | 3 tasks | 4 files |
+| Phase 01-fundament-demo-flag P00 | 3m | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -312,6 +313,8 @@ Progress: [░░░░░░░░░░] 0% — requirements + roadmap in opbo
 - [Phase 08-brk-fase-2-wire-up]: 08-08: Frontend E2E composition-snapshot pattern (fs.readFile+regex) chosen over RTL/jsdom — node-env unit project convention; 14 tests cover flows 3/4/5/7 + sidebar scope mirror
 - [Phase 08-brk-fase-2-wire-up]: 08-08: Phase 105 URL is /api/scans/parcels/{id}/eigendom (parcels_router mounted under scans prefix) — different URL prefix from /api/parcels/{id}/brk strengthens route-shadow contract beyond plan's same-prefix assumption
 - [Phase 08-brk-fase-2-wire-up]: 08-08: Backend-Python static regression for frontend sidebar scope rule — Path.read_text + regex on _authenticated.tsx gives single CI gate, no node dependency; per-assertion error messages name regressing pattern
+- [Phase 01-fundament-demo-flag]: FUND-02 iron-rule uses inspect.getsource drift-guard (lighter than full mock-DB; mirrors M050/S03 F2 pattern)
+- [Phase 01-fundament-demo-flag]: shouldShowProjectTypePicker export path locked as @/components/map/panels/parcel/HeartButton — Plan 01-03 must export from that module
 
 ### Pending Todos
 
@@ -323,6 +326,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-19T12:42:01.894Z
-Stopped at: Completed Phase 08 Plan 08-08 — 31 NEW tests (6 backend E2E + 7 Phase 105 regression + 4 sidebar scope + 14 frontend composition) green; Phase 8 BRK Fase-2 Wire-up FINAL plan complete; 3 commits
+Last session: 2026-05-21T18:54:29.321Z
+Stopped at: Completed Phase 01-fundament-demo-flag Plan 00 — 3 Wave 0 test stubs (backend integration + regression + frontend unit); all RED as designed (Nyquist signal)
 Resume file: None

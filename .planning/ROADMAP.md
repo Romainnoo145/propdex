@@ -50,7 +50,7 @@ M052 maakt de sprong van System-of-Record (data) → System-of-Engagement (dagel
 **Depends on:** M050 (`ParcelFavorite`), M047 (projecttype-settings)
 **Blocks:** S02 (projecttype), S03/S04/S05 (`HAUZER_DEMO`-flag)
 
-**Plans:** 4 plans (Wave 0 test stubs → Wave 1 backend ∥ → Wave 2 frontend)
+**Plans:** 1/4 plans executed
 
 Plans:
 - [ ] 01-00-PLAN.md — Wave 0 Nyquist test stubs (3 validation tests, RED)
