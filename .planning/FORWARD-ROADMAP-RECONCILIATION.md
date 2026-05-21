@@ -50,7 +50,7 @@ Verhuur → Beheer → Exit. Zie `.planning/milestones/TRANCHE-2-ROADMAP.md`.
 
 ## 3. Renummering Spoor B (cascade / scoring-depth)
 
-Verschoven van origineel M050-M059 → nieuw **M053-M059**. Inhoud + cascade-docs onveranderd; alleen het nummer schuift. Twee bewuste merges om binnen de M053-M059-band te blijven (en niet in Tranche-2's M060+ te lopen) — **flag voor user-review**.
+Verschoven van origineel M050-M059 → nieuw **M053-M059**. Inhoud + cascade-docs onveranderd; alleen het nummer schuift. Twee bewuste merges om binnen de M053-M059-band te blijven (en niet in Tranche-2's M060+ te lopen) — **APPROVED 2026-05-21** (user-akkoord, voorwaarde: geen scope-verlies — alle sub-batches expliciet behouden, zie §3.1).
 
 | Nieuw | Origineel | Inhoud | Cascade-docs | Karakter |
 |-------|-----------|--------|--------------|----------|
@@ -62,7 +62,23 @@ Verschoven van origineel M050-M059 → nieuw **M053-M059**. Inhoud + cascade-doc
 | **M058** | M056 **+** M057 (merge) | Erfgoed + Natuur + Energie + Mobiliteit | GEM-14, PROV-05/06/07/08, LAND-08 | monument-refine, stikstof, energie_context, mobiliteit_waardering |
 | **M059** | M058 **+** M059 (merge) | Ground-truth Validatie + Score v4.0 Release | — | kalibratie tegen historische cases → officiële v4.0-release |
 
-**Merge-rationale:** orig M056 (Erfgoed+Natuur, 4 docs) en M057 (Energie+Mobiliteit, 2 docs) zijn beide klein → samenvoegen tot één milestone van 6 docs. Orig M058 (Ground-truth) en M059 (Release) zijn capstone + consolidatie → samenvoegen tot één validatie-naar-release-milestone. **Als je deze liever apart houdt:** dan loopt het spoor M053-M061 en moet de Tranche-2-band naar M070+ verschuiven. → user-decision.
+**Merge-rationale:** orig M056 (Erfgoed+Natuur, 4 docs) en M057 (Energie+Mobiliteit, 2 docs) zijn beide klein → samenvoegen tot één milestone van 6 docs. Orig M058 (Ground-truth) en M059 (Release) zijn capstone + consolidatie → samenvoegen tot één validatie-naar-release-milestone. **APPROVED 2026-05-21.**
+
+### 3.1 Scope-behoud bij de merges (geen verlies)
+
+De merge is puur nummering — elk sub-batch behoudt al zijn slices/factoren. Bij kickoff van M058/M059 worden deze sub-secties 1-op-1 slices:
+
+**M058 = (orig M056 Erfgoed+Natuur) + (orig M057 Energie+Mobiliteit):**
+- GEM-14 Erfgoedverordening → monument-refine (gemeentelijk)
+- PROV-06 Provinciaal erfgoed → monument-refine (provinciaal)
+- PROV-05 + LAND-08 Stikstof/Natura2000 (prov.+landelijk consolideren) → stikstof_risico
+- PROV-07 Energietransitie/RES → energie_context
+- PROV-08 Mobiliteitsbeleid → mobiliteit_waardering
+
+**M059 = (orig M058 Ground-truth) + (orig M059 Score v4.0 Release):**
+- Ground-truth: historische dataset (10-15 cases) → score retroactief → gewicht-kalibratie → A/B-tooling → UAT 2 echte ontwikkelaars
+- Release: factor-uitleg cross-review → score-versioning (v3.0 blijft zichtbaar, nieuw=v4.0) → per-use-case breakdown → investor-demo-flow
+- Volgorde-borg: validatie-slices blokkeren de release-slices binnen M059 (kan geen "score klopt" claimen zonder validatie).
 
 ---
 
@@ -108,4 +124,4 @@ Lineaire nummering brak omdat drie sporen parallel lopen. Vaste banden voorkomen
 
 ---
 
-*Created 2026-05-21 (RECON-01, M052 setup-deliverable). Vervangt forward-sequentie van `complete-milestone-landscape-20260418.md` Deel 4. Open user-decisions: de 2 merges in §3 + post-deal engagement-band §4.*
+*Created 2026-05-21 (RECON-01, M052 setup-deliverable). Vervangt forward-sequentie van `complete-milestone-landscape-20260418.md` Deel 4. Merges §3 APPROVED 2026-05-21 (scope-behoud §3.1). Resterende open decision: post-deal engagement-band §4 (pas relevant ná Hauzer-commitment).*
