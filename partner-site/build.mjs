@@ -78,9 +78,11 @@ function encryptContent(plaintext, password) {
 }
 
 function renderPartner() {
-  const password = process.env.PARTNER_PASSWORD || 'propdex-hauzer-2026';
+  // Ingebakken partner-wachtwoord (werkt out-of-box op Vercel). Override via
+  // env PARTNER_PASSWORD als je het buiten git wilt houden / wilt roteren.
+  const password = process.env.PARTNER_PASSWORD || 'venlo-mgeqcr-2026';
   if (!process.env.PARTNER_PASSWORD) {
-    console.warn('⚠ PARTNER_PASSWORD niet gezet — placeholder "propdex-hauzer-2026" gebruikt. Zet de env-var vóór de productie-build.');
+    console.log('ℹ Partner-wachtwoord: ingebakken default gebruikt (override met env PARTNER_PASSWORD).');
   }
   const content = fs.readFileSync(path.join(__dirname, 'partner-content.html'), 'utf8');
   const shell = fs.readFileSync(path.join(__dirname, 'partner-shell.html'), 'utf8');
