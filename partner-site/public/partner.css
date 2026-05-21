@@ -935,3 +935,22 @@
   .exec-list li { padding-left: 48px; font-size: 0.95rem; }
   .exec-list li::before { width: 32px; height: 32px; top: 18px; }
 }
+
+/* Phones: pagina scrollt nooit horizontaal; grids stacken; tabellen houden
+   nette kolommen en scrollen alleen binnen hun eigen kader indien nodig. */
+@media (max-width: 600px) {
+  html, body { overflow-x: hidden; max-width: 100%; }
+  .page { padding: 28px 14px 56px; max-width: 100%; }
+  .hero-block, .summary-block, .prose-block { padding: 24px 18px; }
+
+  /* multi-koloms grids → één kolom */
+  .three-col-roles, .stat-strip, .segment-grid, .two-col-roles, .metric-grid, .next-grid {
+    grid-template-columns: 1fr !important;
+    flex-direction: column;
+  }
+
+  /* tabellen: leesbare kolommen, scroll binnen het kader (pagina blijft vast) */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+  .prose-block table { font-size: 0.82rem; }
+  .prose-block th, .prose-block td { padding: 10px 12px !important; }
+}
