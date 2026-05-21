@@ -51,3 +51,13 @@ class Organization(Base, TimestampMixin):
             "Default False for new orgs; demo + trial orgs stay False, paying orgs True."
         ),
     )
+    hauzer_demo: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=text("false"),
+        comment=(
+            "M052/S01 — per-org gate for mock surfaces (DASH-04, MATCH-01, "
+            "NAV-04, CONTACT-02-send). Default False for all orgs. "
+            "S06 sets True on demo-org only. No env kill-switch (YAGNI pre-prod)."
+        ),
+    )
