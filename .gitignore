@@ -76,3 +76,6 @@ backend/.venv
 .superpowers/
 .worktrees/
 .gstack/
+
+# CodeGraph index (local, per-machine)
+.codegraph/
