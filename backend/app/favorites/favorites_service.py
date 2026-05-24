@@ -21,6 +21,7 @@ from app.favorites.schemas import (
 from app.models.area_scan import AreaScan
 from app.models.parcel_cache import ParcelCache
 from app.models.parcel_favorite import ParcelFavorite
+from app.models.parcel_project_type import ParcelProjectType
 from app.models.report import SavedReport
 from app.models.scan_result import ScanResult
 from app.models.user import User
@@ -317,7 +318,12 @@ async def list_favorites(
     user_id: uuid.UUID,
     db: AsyncSession,
 ) -> list[FavoriteResponse]:
-    """Return all favorites for the current user, enriched with scan scores."""
+    """Return all favorites for the current user, enriched with scan scores and project type."""
+    # Resolve caller's org via User.organization_id — keep signature (user_id, db) unchanged
+    org_id = await db.scalar(
+        select(User.organization_id).where(User.id == user_id)
+    )
+
     scores_sq = (
         select(
             ScanResult.parcel_id.label("parcel_id"),
@@ -346,15 +352,28 @@ async def list_favorites(
         .subquery()
     )
 
+    # Org-scoped project_type join on Kadaster-string parcel_id (NOT parcel_cache_id UUID).
+    # UniqueConstraint(organization_id, parcel_id) guarantees at most one row per (org, parcel).
+    project_type_sq = (
+        select(
+            ParcelProjectType.parcel_id.label("parcel_id"),
+            ParcelProjectType.project_type.label("project_type"),
+        )
+        .where(ParcelProjectType.organization_id == org_id)
+        .subquery()
+    )
+
     result = await db.execute(
         select(
             ParcelFavorite,
             scores_sq.c.potentie_score,
             scores_sq.c.risico_score,
             report_sq.c.report_id,
+            project_type_sq.c.project_type,
         )
         .outerjoin(scores_sq, scores_sq.c.parcel_id == ParcelFavorite.parcel_cache_id)
         .outerjoin(report_sq, report_sq.c.parcel_id == ParcelFavorite.parcel_cache_id)
+        .outerjoin(project_type_sq, project_type_sq.c.parcel_id == ParcelFavorite.parcel_id)
         .where(ParcelFavorite.user_id == user_id)
         .order_by(ParcelFavorite.created_at.desc())
     )
@@ -366,6 +385,7 @@ async def list_favorites(
         resp.risico_score = round(row[2], 1) if row[2] is not None else None
         resp.has_report = row[3] is not None
         resp.report_id = row[3]
+        resp.project_type = row[4]
         responses.append(resp)
     return responses
 

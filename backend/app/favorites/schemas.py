@@ -45,6 +45,7 @@ class FavoriteResponse(BaseModel):
     risico_score: float | None = None
     has_report: bool = False
     report_id: uuid.UUID | None = None
+    project_type: str | None = None  # canonical projecttype enum value, None when unset/no row
     created_at: datetime
     updated_at: datetime
 
