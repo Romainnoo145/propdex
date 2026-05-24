@@ -143,6 +143,7 @@ export function useToggleFavorite() {
             risico_score: parcel.risico_score ?? null,
             has_report: false,
             report_id: null,
+            project_type: null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }

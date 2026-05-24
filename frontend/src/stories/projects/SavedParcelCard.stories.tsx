@@ -65,6 +65,7 @@ const mockFavorite: FavoriteResponse = {
   risico_score: 38,
   has_report: false,
   report_id: null,
+  project_type: null,
   created_at: '2026-05-01T10:00:00Z',
   updated_at: '2026-05-17T09:00:00Z',
 }

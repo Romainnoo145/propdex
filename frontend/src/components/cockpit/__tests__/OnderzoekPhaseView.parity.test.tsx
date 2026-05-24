@@ -56,6 +56,7 @@ const baseFavorite: FavoriteResponse = {
   risico_score: 45,
   has_report: false,
   report_id: null,
+  project_type: null,
   created_at: '2026-05-01T10:00:00Z',
   updated_at: '2026-05-18T12:00:00Z',
 }

@@ -1,5 +1,9 @@
 import { useState } from 'react'
 import type { FavoriteResponse } from '@/lib/types/portfolio'
+import {
+  projectTypeChipLabel,
+  shouldShowProjectTypeChip,
+} from '@/lib/types/projectTypeChip'
 import { PipelineStagePill } from './PipelineStagePill'
 import { PipelineStageSelector } from './PipelineStageSelector'
 import { AfgerondModal } from './AfgerondModal'
@@ -28,6 +32,11 @@ export function FavoritedParcelCard({ favorite, onOpenMap }: FavoritedParcelCard
         <div className="min-w-0 space-y-0.5">
           <p className="text-sm font-semibold text-aura-ink leading-tight truncate">{displayAddress}</p>
           <p className="text-xs font-mono text-neutral-400 truncate">{favorite.parcel_id}</p>
+          {shouldShowProjectTypeChip(favorite.project_type) && (
+            <span className="inline-flex max-w-full items-center self-start rounded-full bg-white/70 border border-aura-obsidian/10 px-2.5 py-0.5 text-[11px] font-medium text-aura-obsidian/80 truncate">
+              {projectTypeChipLabel(favorite.project_type!)}
+            </span>
+          )}
         </div>
         <div className="relative flex-shrink-0">
           <PipelineStagePill

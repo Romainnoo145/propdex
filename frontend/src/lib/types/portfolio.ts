@@ -51,6 +51,8 @@ export interface FavoriteResponse {
   has_report: boolean
   /** Report UUID if exists */
   report_id: string | null
+  /** Chosen project type (canonical enum value), null when unset/onbepaald-equivalent */
+  project_type: string | null
   /** Creation timestamp (ISO 8601 string) */
   created_at: string
   /** Last update timestamp (ISO 8601 string) */

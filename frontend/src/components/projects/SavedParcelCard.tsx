@@ -17,6 +17,10 @@ import { Skeleton } from '@/components/feedback/Skeleton'
 import { ScoreBadge } from '@/components/projects/ScoreDetailModal'
 import { PipelineStagePill } from '@/components/projects/PipelineStagePill'
 import type { FavoriteResponse } from '@/lib/types/portfolio'
+import {
+  projectTypeChipLabel,
+  shouldShowProjectTypeChip,
+} from '@/lib/types/projectTypeChip'
 
 interface SavedParcelCardProps {
   parcel: FavoriteResponse
@@ -83,6 +87,11 @@ export function SavedParcelCard({
           {[parcel.wijk_naam, parcel.gemeente_naam].filter(Boolean).join(' · ') ||
             'Onbekende gemeente'}
         </div>
+        {shouldShowProjectTypeChip(parcel.project_type) && (
+          <span className="inline-flex max-w-full items-center self-start rounded-full bg-white/70 border border-aura-obsidian/10 px-2.5 py-0.5 text-[11px] font-medium text-aura-obsidian/80 truncate">
+            {projectTypeChipLabel(parcel.project_type!)}
+          </span>
+        )}
         <div className="mt-1">
           <PipelineStagePill
             parcelId={parcel.parcel_id}
