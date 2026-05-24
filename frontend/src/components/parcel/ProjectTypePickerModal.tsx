@@ -77,7 +77,7 @@ export function ProjectTypePickerModal({
       <div>
         {/* Backdrop */}
         <div
-          className="fixed inset-0 bg-[#0E1111]/50 backdrop-blur-sm"
+          className="fixed inset-0 bg-aura-canvas/70 backdrop-blur-sm"
           style={{ zIndex: 'var(--z-modal)' }}
           onClick={onClose}
         />
@@ -91,13 +91,13 @@ export function ProjectTypePickerModal({
             role="dialog"
             aria-modal="true"
             aria-labelledby="project-type-picker-title"
-            className="w-full max-w-md bg-white/60 backdrop-blur-[24px] rounded-[32px] p-8 shadow-2xl border border-white/20"
+            className="w-full max-w-md bg-aura-glass-white/70 backdrop-blur-[24px] rounded-[32px] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.10)] border border-white/40"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Title */}
             <h2
               id="project-type-picker-title"
-              className="text-2xl font-black tracking-tight text-[#0E1111]"
+              className="text-2xl font-bold tracking-tight text-aura-obsidian"
             >
               Wat wil je hier bouwen?
             </h2>
@@ -123,8 +123,8 @@ export function ProjectTypePickerModal({
                       'rounded-2xl px-4 py-3 text-sm font-semibold text-left transition',
                       'disabled:cursor-not-allowed',
                       isActive || isPending
-                        ? 'bg-[#F9A826] text-[#0E1111]'
-                        : 'bg-[#F2F6F3] text-[#0E1111] hover:bg-[#E6ECE8]',
+                        ? 'bg-aura-amber text-aura-obsidian border border-aura-amber shadow-[0_4px_14px_rgba(249,168,38,0.35)]'
+                        : 'bg-white/60 text-aura-obsidian border border-aura-obsidian/10 hover:border-aura-amber hover:bg-white/80',
                     ].join(' ')}
                   >
                     {isLoading ? (
