@@ -99,10 +99,10 @@ export function ProjectTypePickerModal({
               id="project-type-picker-title"
               className="text-2xl font-bold tracking-tight text-aura-obsidian"
             >
-              Wat wil je hier bouwen?
+              Wat ga je hier ontwikkelen?
             </h2>
             <p className="mt-2 text-sm text-neutral-500">
-              Kies het projecttype zodat de scoring beter past bij jouw plannen.
+              Dit bepaalt jouw route voor dit perceel.
             </p>
 
             {/* Pills grid — 2 columns, 5 items (last item spans or sits alone) */}
