@@ -24,7 +24,7 @@ M052 maakt de sprong van System-of-Record (data) → System-of-Engagement (dagel
 
 ## Phases
 
-- [ ] **Phase 1: Fundament + Demo-flag** (M052/S01) — `projecttype` via org-scoped `ParcelProjectType` + picker (copy/intentie) + per-perceel rescore-wiring · `HAUZER_DEMO` feature-flag infra · DESIGN.md makelaars-correctie · _(scoring-als-lens herontworpen 2026-05-24 → gegatede toekomst-phase; zie 01-04 + design doc)_
+- [x] **Phase 1: Fundament + Demo-flag** (M052/S01) — `projecttype` via org-scoped `ParcelProjectType` + picker (copy/intentie) + per-perceel rescore-wiring · `HAUZER_DEMO` feature-flag infra · DESIGN.md makelaars-correctie · _(scoring-als-lens herontworpen 2026-05-24 → gegatede toekomst-phase; zie 01-04 + design doc)_ (completed 2026-05-24)
 - [ ] **Phase 2: Per-perceel Acquisitie-arc** (M052/S02) — `Haalbaarheid` als 9e fase + `HaalbaarheidPhaseView` + checklist-verhuizing (projecttype-driven) + configureerbare `LifecycleSideRailNav` (Hauzer 4-fase set) + Bod mock-light
 - [ ] **Phase 3: Dashboard Cockpit** (M052/S03) — Dashboard-landing + Pipeline Kanban (echt, `pipeline_stage` + drag) + Daily Acquisitie Inbox (mock)
 - [ ] **Phase 4: Contact Brief-teaser** (M052/S04) — brief-preview uit echte BRK-eigenaar-data + gefakete verzend-bevestiging
@@ -52,7 +52,7 @@ M052 maakt de sprong van System-of-Record (data) → System-of-Engagement (dagel
 
 **Update (2026-05-24, office-hours + eng-review):** projecttype-model gesplitst in **Discovery-lens** (herscoort hele kaart, GEGATED achter Hauzer-veldobservatie → toekomstige phase) + **perceel-modus** (opslaan stuurt de route). Picker wordt copy/intentie ("Wat ga je hier ontwikkelen?", geen scoring-claim); dit vervangt de "opslaan stuurt scoring"-aanname uit crit. 2 (de per-perceel rescore uit 01-01 blijft bestaan). Plan **01-04** dekt stuk 2 (picker-copy) + stuk 3 (type-chip op Opgeslagen-kaarten via `FavoriteResponse`-join). Design doc: `klarifai-main-design-20260523`; eng-review test-plan: `klarifai-main-eng-review-test-plan-20260524`.
 
-**Plans:** 4/4 plans executed (01-04 in planning)
+**Plans:** 5/5 plans complete
 
 Plans:
 - [x] 01-00-PLAN.md — Wave 0 Nyquist test stubs (3 validation tests, RED)
