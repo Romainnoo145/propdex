@@ -53,7 +53,7 @@
 
 - [x] **DEMO-01**: `HAUZER_DEMO` feature-flag gate voor alle mock-surfaces (DASH-04, MATCH-01, NAV-04, CONTACT-02-send) · ECHT
 - [ ] **DEMO-02**: Hauzer demo-org geseed met 5-7 favorites in pipeline-stages + projecttype + mock inbox-items, org-scoped (multi-tenant) · ECHT
-- [ ] **DEMO-03**: DESIGN.md makelaars-correctie — makelaars zijn wél onze markt (Hauzer = full-service developer-adjacent) · DOCS
+- [x] **DEMO-03**: DESIGN.md makelaars-correctie — makelaars zijn wél onze markt (Hauzer = full-service developer-adjacent) · DOCS
 - [ ] **QUAL-01**: Engagement-laag passeert `npm run check` (frontend) + `ruff check . && mypy .` (backend) + multi-tenant-isolatie regression tests (productie-bar) · ECHT
 
 ### Setup-deliverable
@@ -111,7 +111,7 @@ Wordt ingevuld tijdens roadmap-creatie.
 | CONTACT-02 | S04 | Pending |
 | DEMO-01 | S01 | Complete |
 | DEMO-02 | S06 | Pending |
-| DEMO-03 | S01 | Pending |
+| DEMO-03 | S01 | Complete |
 | QUAL-01 | S06 | Pending |
 | RECON-01 | setup (milestone-init) | Done |
 
