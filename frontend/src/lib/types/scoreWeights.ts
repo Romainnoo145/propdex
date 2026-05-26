@@ -225,7 +225,7 @@ export interface PresetDef {
 // prettier-ignore
 export const PRESETS: PresetDef[] = [
   {
-    id: 'nieuwbouw_wonen', name: 'Nieuwbouw wonen', description: 'Greenfield ontwikkeling — vrije grond + vergunning bepalend',
+    id: 'nieuwbouw_wonen', name: 'Nieuwbouw', description: 'Greenfield ontwikkeling — vrije grond + vergunning bepalend',
     config: {
       preset: 'nieuwbouw_wonen', potentie_risico_balance: 0.7, score_threshold: 50,
       potentie_weights: { vrije_grond: 15, optoppotentie: 5, bestemming: 14, leegstand: 7, funda_frictie: 8, perceelgrootte: 16, demografie: 10, vergunning_succeskans: 18 },
@@ -233,7 +233,7 @@ export const PRESETS: PresetDef[] = [
     },
   },
   {
-    id: 'transformatie_wonen', name: 'Transformatie wonen', description: 'Herbestemmen bestaand vastgoed — leegstand + bestemmingswijziging centraal',
+    id: 'transformatie_wonen', name: 'Transformatie', description: 'Herbestemmen bestaand vastgoed — leegstand + bestemmingswijziging centraal',
     config: {
       preset: 'transformatie_wonen', potentie_risico_balance: 0.5, score_threshold: 50,
       potentie_weights: { vrije_grond: 8, optoppotentie: 10, bestemming: 18, leegstand: 18, funda_frictie: 8, perceelgrootte: 10, demografie: 10, vergunning_succeskans: 15 },

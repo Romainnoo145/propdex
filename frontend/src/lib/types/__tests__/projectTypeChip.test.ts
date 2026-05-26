@@ -49,8 +49,8 @@ describe('projectTypeChipLabel', () => {
     expect(projectTypeChipLabel('commercieel_naar_wonen')).toBe('Commercieel → wonen')
   })
 
-  it('returns "Nieuwbouw wonen" for "nieuwbouw_wonen"', () => {
-    expect(projectTypeChipLabel('nieuwbouw_wonen')).toBe('Nieuwbouw wonen')
+  it('returns "Nieuwbouw" for "nieuwbouw_wonen"', () => {
+    expect(projectTypeChipLabel('nieuwbouw_wonen')).toBe('Nieuwbouw')
   })
 
   it('falls back to raw string for unknown type (defensive)', () => {

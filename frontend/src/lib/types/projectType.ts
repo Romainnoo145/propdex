@@ -16,8 +16,8 @@ export const PROJECT_TYPE_VALUES: readonly ProjectType[] = [
 ] as const
 
 export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
-  nieuwbouw_wonen: 'Nieuwbouw wonen',
-  transformatie_wonen: 'Transformatie wonen',
+  nieuwbouw_wonen: 'Nieuwbouw',
+  transformatie_wonen: 'Transformatie',
   optoppen: 'Optoppen',
   splitsen: 'Splitsen',
   commercieel_naar_wonen: 'Commercieel \u2192 wonen',
