@@ -33,7 +33,7 @@ export function FavoritedParcelCard({ favorite, onOpenMap }: FavoritedParcelCard
           <p className="text-sm font-semibold text-aura-ink leading-tight truncate">{displayAddress}</p>
           <p className="text-xs font-mono text-neutral-400 truncate">{favorite.parcel_id}</p>
           {shouldShowProjectTypeChip(favorite.project_type) && (
-            <span className="inline-flex max-w-full items-center self-start rounded-full bg-white/70 border border-aura-obsidian/10 px-2.5 py-0.5 text-[11px] font-medium text-aura-obsidian/80 truncate">
+            <span className="inline-flex max-w-full items-center self-start rounded-full bg-amber-50/80 border border-aura-amber/30 px-2.5 py-0.5 text-[11px] font-medium text-amber-700 truncate">
               {projectTypeChipLabel(favorite.project_type!)}
             </span>
           )}

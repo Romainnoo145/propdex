@@ -87,11 +87,6 @@ export function SavedParcelCard({
           {[parcel.wijk_naam, parcel.gemeente_naam].filter(Boolean).join(' · ') ||
             'Onbekende gemeente'}
         </div>
-        {shouldShowProjectTypeChip(parcel.project_type) && (
-          <span className="inline-flex max-w-full items-center self-start rounded-full bg-white/70 border border-aura-obsidian/10 px-2.5 py-0.5 text-[11px] font-medium text-aura-obsidian/80 truncate">
-            {projectTypeChipLabel(parcel.project_type!)}
-          </span>
-        )}
         <div className="mt-1">
           <PipelineStagePill
             parcelId={parcel.parcel_id}
@@ -100,29 +95,35 @@ export function SavedParcelCard({
         </div>
       </div>
 
-      {/* RIGHT: Score cluster — ScoreBadge takes `type` + `score` (NOT variant/value).
-          stopPropagation on outer wrapper so card-click doesn't fire on badge-click.
-          ScoreBadge's onClick has no event arg per its real signature. */}
+      {/* RIGHT: Project-type chip (top) + score cluster (bottom).
+          stopPropagation on outer wrapper so card-click doesn't fire on chip/badge-click. */}
       <div
-        className="shrink-0 flex items-center gap-2"
+        className="shrink-0 flex flex-col items-end gap-2"
         onClick={(e) => e.stopPropagation()}
       >
-        {parcel.potentie_score != null && (
-          <ScoreBadge
-            type="potentie"
-            score={parcel.potentie_score}
-            size="sm"
-            onClick={() => onPotentieClick?.()}
-          />
+        {shouldShowProjectTypeChip(parcel.project_type) && (
+          <span className="inline-flex max-w-full items-center rounded-full bg-amber-50/80 border border-aura-amber/30 px-2.5 py-0.5 text-[11px] font-medium text-amber-700 truncate">
+            {projectTypeChipLabel(parcel.project_type!)}
+          </span>
         )}
-        {parcel.risico_score != null && (
-          <ScoreBadge
-            type="risico"
-            score={parcel.risico_score}
-            size="sm"
-            onClick={() => onRisicoClick?.()}
-          />
-        )}
+        <div className="flex items-center gap-2">
+          {parcel.potentie_score != null && (
+            <ScoreBadge
+              type="potentie"
+              score={parcel.potentie_score}
+              size="sm"
+              onClick={() => onPotentieClick?.()}
+            />
+          )}
+          {parcel.risico_score != null && (
+            <ScoreBadge
+              type="risico"
+              score={parcel.risico_score}
+              size="sm"
+              onClick={() => onRisicoClick?.()}
+            />
+          )}
+        </div>
       </div>
     </motion.div>
   )
