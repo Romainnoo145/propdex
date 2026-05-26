@@ -3,7 +3,8 @@ import { useNavigate } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import { ParcelPanelShell } from './parcel/ParcelPanelShell'
-import { HeartButton } from './parcel/HeartButton'
+import { HeartButton, shouldShowProjectTypePicker } from './parcel/HeartButton'
+import { ProjectTypePickerModal } from '@/components/parcel/ProjectTypePickerModal'
 import { MissingDataBadge } from './parcel/MissingDataBadge'
 import { countMissingFactors } from './parcel/ScoreBreakdownModal'
 import {
@@ -52,6 +53,7 @@ interface ParcelDetailPanelProps {
 export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: ParcelDetailPanelProps) {
   const navigate = useNavigate()
   const [view, setView] = useState<PanelView>({ kind: 'overview' })
+  const [showPicker, setShowPicker] = useState(false)
   const [trackedParcelId, setTrackedParcelId] = useState(parcel.parcel_id)
   const enrichmentQuery = useParcelEnrichment(parcel.parcel_id)
   const favoritesQuery = useParcelFavorites()
@@ -85,7 +87,18 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
       return
     }
     if (!isFavorited) {
-      toggleFavorite.mutate({ parcel, isFavorited, gemeenteNaam, wijkNaam })
+      toggleFavorite.mutate(
+        { parcel, isFavorited, gemeenteNaam, wijkNaam },
+        {
+          // M052/S01 follow-up: CTA-button also opens project-type picker after
+          // creating a favorite (parity with HeartButton flow).
+          onSuccess: (data) => {
+            if (shouldShowProjectTypePicker(isFavorited, data)) {
+              setShowPicker(true)
+            }
+          },
+        },
+      )
     }
   }, [isFavorited, hasReport, matchedFavorite, parcel, toggleFavorite, navigate, gemeenteNaam, wijkNaam])
 
@@ -134,6 +147,7 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
   }
 
   return (
+    <>
     <ParcelPanelShell onClose={onClose} footer={footer} headerActions={<HeartButton parcel={parcel} gemeenteNaam={gemeenteNaam} wijkNaam={wijkNaam} />}>
       {/* Cross-fade on parcel change */}
       <motion.div
@@ -218,5 +232,15 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
         </AnimatePresence>
       </motion.div>
     </ParcelPanelShell>
+    {showPicker && parcel.parcel_code && (
+      <ProjectTypePickerModal
+        open={showPicker}
+        onClose={() => setShowPicker(false)}
+        parcelId={parcel.parcel_code}
+        currentType={null}
+        onSkip={() => setShowPicker(false)}
+      />
+    )}
+    </>
   )
 }
