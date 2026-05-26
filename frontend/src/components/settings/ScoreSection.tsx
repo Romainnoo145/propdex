@@ -150,9 +150,9 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
         </div>
       </div>
 
-      {/* Presets — full width, 4 columns */}
+      {/* Presets — full width, project-type cards (5) */}
       <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
-        <p className="text-[12px] font-semibold text-[#0E1111]">Kies een startprofiel</p>
+        <p className="text-[12px] font-semibold text-[#0E1111]">Welke projecten doe je vooral?</p>
         <PresetCards
           presets={PRESETS}
           activePreset={formState.preset}

@@ -217,31 +217,51 @@ export interface PresetDef {
   config: ScoreWeightsConfig
 }
 
+// Project-type-driven startprofielen.
+// Preset id == ProjectType enum value (zie lib/types/projectType.ts). Mirror van
+// backend M047 FACTOR_REGISTRY.weight_by_projecttype — niet identiek (frontend mist
+// woonvisie_match + 3 BRK-factoren) maar reflecteert dezelfde intent per type.
+// Risk-appetite (Agressief..Conservatief) blijft een orthogonale tweak in RiskAppetite.tsx.
 // prettier-ignore
 export const PRESETS: PresetDef[] = [
-  { id: 'standaard', name: 'Standaard', description: 'Gebalanceerde weging voor algemeen gebruik', config: DEFAULT_WEIGHTS },
   {
-    id: 'snel_kansen', name: 'Snel kansen', description: 'Nadruk op ontwikkelkansen en vrije ruimte',
+    id: 'nieuwbouw_wonen', name: 'Nieuwbouw wonen', description: 'Greenfield ontwikkeling — vrije grond + vergunning bepalend',
     config: {
-      preset: 'snel_kansen', potentie_risico_balance: 0.85, score_threshold: 50,
-      potentie_weights: { vrije_grond: 20, optoppotentie: 8, bestemming: 10, leegstand: 13, funda_frictie: 7, perceelgrootte: 16, demografie: 6, vergunning_succeskans: 10 },
-      risico_weights: { funderingsrisico: 10, asbest: 4, bodemverontreiniging: 5, monument: 4, bestemmingswijziging: 6, constructieve_staat: 5, juridisch_klimaat: 6, criminaliteit: 4, max_hoogte_bereikt: 3, natura2000: 4, overstromingsrisico: 4, geluid: 3, luchtkwaliteit: 3 },
+      preset: 'nieuwbouw_wonen', potentie_risico_balance: 0.7, score_threshold: 50,
+      potentie_weights: { vrije_grond: 15, optoppotentie: 5, bestemming: 14, leegstand: 7, funda_frictie: 8, perceelgrootte: 16, demografie: 10, vergunning_succeskans: 18 },
+      risico_weights: { funderingsrisico: 10, asbest: 6, bodemverontreiniging: 10, monument: 4, bestemmingswijziging: 10, constructieve_staat: 5, juridisch_klimaat: 8, criminaliteit: 6, max_hoogte_bereikt: 5, natura2000: 8, overstromingsrisico: 7, geluid: 5, luchtkwaliteit: 4 },
     },
   },
   {
-    id: 'risico_averse', name: 'Risico-avers', description: 'Due diligence focus — risico zwaarder gewogen',
+    id: 'transformatie_wonen', name: 'Transformatie wonen', description: 'Herbestemmen bestaand vastgoed — leegstand + bestemmingswijziging centraal',
     config: {
-      preset: 'risico_averse', potentie_risico_balance: 0.5, score_threshold: 50,
-      potentie_weights: { vrije_grond: 10, optoppotentie: 8, bestemming: 10, leegstand: 6, funda_frictie: 4, perceelgrootte: 10, demografie: 6, vergunning_succeskans: 10 },
-      risico_weights: { funderingsrisico: 21, asbest: 8, bodemverontreiniging: 11, monument: 6, bestemmingswijziging: 10, constructieve_staat: 9, juridisch_klimaat: 10, criminaliteit: 7, max_hoogte_bereikt: 6, natura2000: 9, overstromingsrisico: 8, geluid: 8, luchtkwaliteit: 6 },
+      preset: 'transformatie_wonen', potentie_risico_balance: 0.5, score_threshold: 50,
+      potentie_weights: { vrije_grond: 8, optoppotentie: 10, bestemming: 18, leegstand: 18, funda_frictie: 8, perceelgrootte: 10, demografie: 10, vergunning_succeskans: 15 },
+      risico_weights: { funderingsrisico: 12, asbest: 14, bodemverontreiniging: 10, monument: 8, bestemmingswijziging: 18, constructieve_staat: 14, juridisch_klimaat: 10, criminaliteit: 4, max_hoogte_bereikt: 3, natura2000: 3, overstromingsrisico: 4, geluid: 4, luchtkwaliteit: 3 },
     },
   },
   {
-    id: 'stedelijke_transformatie', name: 'Stedelijke transformatie', description: 'Optimaal voor herontwikkeling in stedelijk gebied',
+    id: 'optoppen', name: 'Optoppen', description: 'Extra lagen op bestaand pand — optoppotentie + draagkracht beslissend',
     config: {
-      preset: 'stedelijke_transformatie', potentie_risico_balance: 0.65, score_threshold: 50,
-      potentie_weights: { vrije_grond: 10, optoppotentie: 16, bestemming: 16, leegstand: 10, funda_frictie: 6, perceelgrootte: 10, demografie: 8, vergunning_succeskans: 18 },
-      risico_weights: { funderingsrisico: 12, asbest: 6, bodemverontreiniging: 8, monument: 7, bestemmingswijziging: 10, constructieve_staat: 8, juridisch_klimaat: 9, criminaliteit: 5, max_hoogte_bereikt: 10, natura2000: 4, overstromingsrisico: 5, geluid: 5, luchtkwaliteit: 4 },
+      preset: 'optoppen', potentie_risico_balance: 0.4, score_threshold: 50,
+      potentie_weights: { vrije_grond: 8, optoppotentie: 20, bestemming: 12, leegstand: 4, funda_frictie: 6, perceelgrootte: 10, demografie: 8, vergunning_succeskans: 14 },
+      risico_weights: { funderingsrisico: 18, asbest: 10, bodemverontreiniging: 4, monument: 10, bestemmingswijziging: 6, constructieve_staat: 18, juridisch_klimaat: 8, criminaliteit: 4, max_hoogte_bereikt: 14, natura2000: 2, overstromingsrisico: 2, geluid: 4, luchtkwaliteit: 3 },
+    },
+  },
+  {
+    id: 'splitsen', name: 'Splitsen', description: 'Woning splitsen in meerdere units — vergunning + bestemming kritisch',
+    config: {
+      preset: 'splitsen', potentie_risico_balance: 0.55, score_threshold: 50,
+      potentie_weights: { vrije_grond: 6, optoppotentie: 8, bestemming: 14, leegstand: 10, funda_frictie: 10, perceelgrootte: 14, demografie: 10, vergunning_succeskans: 18 },
+      risico_weights: { funderingsrisico: 10, asbest: 10, bodemverontreiniging: 4, monument: 10, bestemmingswijziging: 14, constructieve_staat: 12, juridisch_klimaat: 10, criminaliteit: 5, max_hoogte_bereikt: 4, natura2000: 3, overstromingsrisico: 4, geluid: 5, luchtkwaliteit: 4 },
+    },
+  },
+  {
+    id: 'commercieel_naar_wonen', name: 'Commercieel → wonen', description: 'Kantoor/winkel naar woonbestemming — leegstand + bestemmingswijziging dominant',
+    config: {
+      preset: 'commercieel_naar_wonen', potentie_risico_balance: 0.55, score_threshold: 50,
+      potentie_weights: { vrije_grond: 6, optoppotentie: 10, bestemming: 20, leegstand: 18, funda_frictie: 8, perceelgrootte: 10, demografie: 10, vergunning_succeskans: 14 },
+      risico_weights: { funderingsrisico: 8, asbest: 10, bodemverontreiniging: 10, monument: 6, bestemmingswijziging: 20, constructieve_staat: 10, juridisch_klimaat: 10, criminaliteit: 5, max_hoogte_bereikt: 3, natura2000: 3, overstromingsrisico: 4, geluid: 8, luchtkwaliteit: 6 },
     },
   },
 ]
