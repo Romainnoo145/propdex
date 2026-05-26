@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 status: unknown
 stopped_at: Completed Phase 01 Plan 01-04 — picker copy intentie + project_type chip + org-scoped bulk-join; 3 tasks, 3 commits
-last_updated: "2026-05-24T10:53:54.884Z"
+last_updated: "2026-05-26T15:46:37.136Z"
 last_activity: 2026-05-21
 progress:
   total_phases: 6
