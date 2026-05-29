@@ -359,6 +359,28 @@ the checklist on → **direct Realworks integration.**
   overdracht page; +**B8** Realworks koppeling (push relatie/object/documenten/scores/DD-status).
   F10 (offerte→Gmail to partner) STAYS — it's part of Voorbereiding DD, not Realworks.
 
+### Contact tab + BRK data reality (UAT 2026-05-29)
+Contact (tab 2) = **BRK eigendom-intelligentie** (off-market wedge) + de **persoonlijke brief**
+(Propdex-gegenereerd). NIET een CRM (= Realworks). Verified against the app's BRK-bevragen
+integration + the kadaster/BRK-bevragen OpenAPI.
+- **Echt uit BRK-bevragen** (endpoints the app already targets): `zakelijkgerechtigden` →
+  eigenaar naam/type/kvk/zetel, `zakelijk_recht_type` (eigendomsvorm: vol eigendom/erfpacht/
+  opstal), `aandeel`, `koopsom` + `koopjaar`; `hypotheken` → hypotheekhouder + aard; `beslagen`
+  → aard. `heeft_hypotheek` is a boolean persisted on `BrkOwnershipRecord`; full hypotheek/beslag
+  is on-demand fetch and **`never_cache`** (privacy — stripped from report JSONB).
+- **NIET uit BRK** (was fabricated — relabel/source elsewhere or drop): koopwaarde-indicatie +
+  overwaarde = taxatie (Calcasa/Matrixian — not present) → use WOZ instead; WOZ = gemeente/WOZ
+  (label apart); mandeligheid / erfdienstbaarheid-detail = splitsingsakte → flag "controleer
+  akte" (manual, not auto).
+- ⚠️ **Open**: whether BRK-bevragen returns the hypotheek **bedrag** exactly (schema has
+  `Hypotheek.bedrag`, not 100% certain) — show conservatively (houder + "ingeschreven").
+- **Persoonlijke brief** = `eigenaar_brief` (document_generator) from BRK-eigenaar + perceel-
+  intelligentie; preview + acties (Versturen/Bewerken/Download PDF); verzending+opvolging →
+  Realworks. So **CONTACT-02 is real** (Propdex generates the letter), not a fake teaser.
+- **TODO:** +**F16** Contact BRK-intelligence page (source-labeled per datum, AVG/never_cache
+  note) + persoonlijke-brief generator-preview with actions; **B-update** BRK fetch incl.
+  `hypotheken`/`beslagen` on-demand + never_cache; valuation/WOZ labeled as separate source.
+
 ### Resolved decisions (UAT 2026-05-29)
 - **Phase name = "Voorbereiding"** (not "Haalbaarheid"). The phase key/route becomes
   `3-voorbereiding`; "haalbaarheidscheck" stays item opt-01 inside it. ⚠️ minor echo: the
