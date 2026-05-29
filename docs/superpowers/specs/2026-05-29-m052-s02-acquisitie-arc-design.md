@@ -336,6 +336,29 @@ presented as a real "connect Realworks" surface, not fake data. Revisit each pre
 - **B7** ParcelFavorite (or new `parcel_bid` model): `bid_amount`, `bid_status`,
   `bid_events[]` (biedingshistorie); bid-letter template in document_generator.
 
+### Realworks boundary + handoff (UAT 2026-05-29 — major architecture decision)
+Worst-case assumption: **Realworks is Hauzer's system-of-record** (CRM, relatiebeheer,
+contactmomenten, bod, transactie). Propdex integrates via API. **Propdex builds only the
+voortraject Realworks lacks: Onderzoek + Voorbereiding (DD/haalbaarheid-checklist).** From
+the checklist on → **direct Realworks integration.**
+- **Contact-CRM + Bod bid-tracker: DROPPED** (= Realworks; supersedes NAV-04 + B7 + the
+  Contact-brief-CRM). The **Bod tab becomes "Acquisitie-samenvatting & overdracht"** (tab 4):
+  GO/NO-GO verdict + aanbevolen richtbod, kerncijfers (WOZ/koopwaarde/ontwikkelwaarde/marge),
+  onderzoeksresultaten (scores, bestemmingsplan, woonvisie-match, constructief, BRK-eigenaar),
+  dossier-overzicht → **"Stuur dossier naar Realworks"** (push relatie + object + documenten
+  + scores + DD-status via koppeling).
+- BRK-eigenaarsintelligentie blijft Propdex (off-market) — surfacet in de samenvatting/dossier.
+- **Demo lifecycle:** Onderzoek → Voorbereiding → Samenvatting/overdracht ⇒ Realworks. Tabs
+  5–9 = Realworks/future.
+- **Pitch:** Propdex = intelligence-voortraject dat een kant-en-klaar dossier in Realworks
+  aflevert; vult het acquisitie-gat, vervangt Realworks niet.
+- **Still in scope (roadmap-confirmed):** Dashboard + Pipeline Kanban + Daily Acquisitie Inbox
+  with **gemeente-triggered action-items** (DASH-04, via `change_monitor` + Venlo policy-docs —
+  upgrade mock→real per demo principle) [S03]; transformatiepotentie = core scoring wedge.
+- **TODO deltas:** −Bod bid-workspace (F14), −B7 bid model, −Contact-CRM; +**F15** Samenvatting/
+  overdracht page; +**B8** Realworks koppeling (push relatie/object/documenten/scores/DD-status).
+  F10 (offerte→Gmail to partner) STAYS — it's part of Voorbereiding DD, not Realworks.
+
 ### Resolved decisions (UAT 2026-05-29)
 - **Phase name = "Voorbereiding"** (not "Haalbaarheid"). The phase key/route becomes
   `3-voorbereiding`; "haalbaarheidscheck" stays item opt-01 inside it. ⚠️ minor echo: the
