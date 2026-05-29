@@ -10,24 +10,30 @@ hook stays cheap.
 
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
-GSD_STATE = Path("/home/klarifai/.gsd/projects/0fbd70b53f1b/STATE.md")
+# Source of truth = git Mxxx/Sxx commit prefixes, matching stack-context-inject.sh.
+# (GSD STATE.md is no longer read — it only updates via /gsd:* commands and drifts.)
+PROJ = Path("/home/klarifai/Documents/klarifai/clientprojects/propdex")
 SLICE_STATE_DIR = Path(__file__).parent.parent / "state" / "slices"
 
 
 def parse_active_slice():
-    if not GSD_STATE.exists():
+    """Return slice key (e.g. 'M052_S01') from the latest Mxxx/Sxx git commit."""
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(PROJ), "log", "--oneline", "-80"],
+            capture_output=True, text=True, timeout=5,
+        ).stdout
+    except Exception:
         return None
-    text = GSD_STATE.read_text(encoding="utf-8", errors="ignore")
-    m = re.search(r"^\*\*Active Milestone:\*\*\s*(.+)$", text, re.M)
-    s = re.search(r"^\*\*Active Slice:\*\*\s*(.+)$", text, re.M)
-    if not m or not s:
+    m = re.search(r"(M0[0-9]+(?:\.[0-9]+)?)/(S[0-9]+)", out)
+    if not m:
         return None
-    milestone = m.group(1).split(":")[0].strip()
-    slice_id = s.group(1).split(":")[0].strip()
-    key = re.sub(r"[^a-zA-Z0-9]", "_", f"{milestone}_{slice_id}")[:60]
+    milestone, slice_id = m.group(1), m.group(2)
+    key = re.sub(r"[^a-zA-Z0-9]", "_", f"{milestone} {slice_id}")[:60]
     return key
 
 
