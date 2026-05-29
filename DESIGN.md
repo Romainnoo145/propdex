@@ -174,6 +174,29 @@ Tailwind convention: `gap-1` (4) · `gap-2` (8) · `gap-4` (16) · `gap-6` (24) 
 - `animate-slide-up` fly-up, 4-column bento layout, drag handle, `rounded-t-[48px]`.
 - Map blijft zichtbaar boven.
 
+### Data pages (ResultsShell)
+
+Alle niet-kaart data-routes (projecten, opgeslagen, instellingen, rapport, perceel-cockpit) renderen hun inhoud in **`ResultsShell`** (`frontend/src/components/layout/ResultsShell.tsx`) — niet los op de canvas.
+
+- Container: `w-full h-full overflow-y-auto bg-[#FAFCFA] rounded-[40px]`. **Solid `#FAFCFA`** (een half-step lichter dan canvas `#F2F6F3`) zodat de `rounded-[40px]` zich losmaakt van de canvas achter de sidebar. **NIET glass** (DS-04) — glass is voor floating surfaces, de data-shell is opaque.
+- Default leescontainer: `mx-auto max-w-5xl px-6 py-8` — gecentreerde reading band. Content **vult** deze band; geen smallere links-uitgelijnde kolom (dat leest als "kapot gecentreerd").
+- `fullWidth` prop omzeilt de max-w-5xl band voor full-bleed data-views (bv. `/resultaten`).
+- Content-cards binnen de shell = **Pure Glass**: `bg-white/60 backdrop-blur-[24px] border border-white/40 rounded-[24px]`.
+
+### Parcel cockpit (lifecycle workspace)
+
+Routes onder `/opgeslagen/perceel/$parcelId/*` zijn de single-parcel cockpit. Hier **wisselt de nav**: niet de drie-pod `SideRailNav`, maar de fixed icon-only **`LifecycleSideRailNav`** (zie Component Patterns). Elke fase (Onderzoek/Contact/…) rendert in `ResultsShell` met de **`ParcelWorkspaceHeader`**-conventie bovenaan.
+
+**Page-title-hiërarchie** (consistent toepassen):
+
+| Context | Class |
+|---|---|
+| Eyebrow boven titel | `text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400` |
+| Data/cockpit page-titel | `text-[28px] font-bold leading-tight tracking-tighter text-slate-900` |
+| Top-level admin page-titel | `text-[32px] font-black tracking-tight text-[#0E1111]` |
+| Modal-titel | `text-[22px] font-black tracking-tight text-[#0E1111]` |
+| Subtitle / meta-regel | `text-[14px] text-slate-500` |
+
 ---
 
 ## Radius (hierarchical)
@@ -251,6 +274,32 @@ Shadows zijn altijd soft (low alpha, generous blur). Geen harde drop-shadows.
 - Drie floating glass pods (logo + routes + system).
 - Icons: lucide-react, `size={22} strokeWidth={1.5}`.
 - Active state: amber circle (48px) met Framer Motion `layoutId="sidebar-active"`.
+
+### LifecycleSideRailNav
+`frontend/src/components/layout/LifecycleSideRailNav.tsx`
+
+- **Vervangt** `SideRailNav` op de parcel-cockpit routes (`/opgeslagen/perceel/$parcelId/*`) — single-parcel lifecycle-context.
+- `fixed left-0 top-0 bottom-0 w-[130px]`, flex-col `justify-between py-10`, `z-[100]`. NIET de drie-pod variant.
+- **Icon-only** (lucide `size={22} strokeWidth={1.5}`), label verschijnt als hover-tooltip rechts. Geen permanente tekstlabels, geen nummers.
+- Drie zones: logo-circle (h-16 w-16, → `/opgeslagen`) / fase-iconen (gap-4, h-12 w-12) / uitlog-icon.
+- Fasen uit `LIFECYCLE_PHASES` (`frontend/src/lib/lifecycle/phases.ts`). Active: `bg-aura-obsidian` gevulde circle achter amber icon, `layoutId="lifecycle-sidebar-active"` (spring 380/30). Enabled: `text-slate-500`. Disabled: `text-slate-300` + `opacity-60`, geen circle.
+
+### ParcelWorkspaceHeader
+`frontend/src/components/cockpit/ParcelWorkspaceHeader.tsx`
+
+- Canonieke header voor cockpit/fase-views. `mb-6`, flex-col → `lg:flex-row justify-between`.
+- Eyebrow ("Portfolio workspace") → titel = perceel-**adres** (`text-[28px] font-bold tracking-tighter`), voorafgegaan door kleine `h-7 w-7 rounded-full bg-white/60` terug-knop (ChevronLeft).
+- Subtitle-rij (`mt-2 flex flex-wrap gap-2`): `text-[14px] text-slate-500` meta (`parcel_id · gemeente · wijk`) + stage-badge pill + potentie/risico score-pills.
+- Rechts: action-knoppen (checklist-circle / map-circle obsidian / "Bekijk rapport" amber pill).
+
+### PDFViewerModal
+`frontend/src/components/ui/PDFViewerModal.tsx`
+
+- Herbruikbare document-viewer (portal). Open bij klik op een document (bv. checklist `rapport.pdf`).
+- Backdrop: `fixed inset-0 z-[60] bg-black/50 backdrop-blur-md`.
+- Content: gecentreerd `max-w-3xl rounded-[32px] bg-[#F8FAFA] shadow-2xl h-[calc(100vh-64px)]`.
+- Header: eyebrow "Document viewer" + `text-[18px] font-bold` bestandsnaam; "Open in nieuw tabblad" + obsidian close (h-9 w-9 rounded-full).
+- Body: authenticated fetch → `<iframe>` `rounded-[16px] border-[#EAEFEF]`, met loading/error states.
 
 ### ParcelBentoOverview
 `frontend/src/components/map/panels/parcel/ParcelBentoOverview.tsx`
@@ -385,6 +434,7 @@ Een Nederlandse vastgoedontwikkelaar die dit 6 uur per dag gebruikt moet zich **
 | 2026-03-11 | Drop dark mode | Out of scope. Light-only supports Morning-Mist character. Dark mode sloopt glass + mesh. |
 | 2026-03-11 | Three floating pods, not sidebar strip | Map is the product in Discovery mode. Chrome must not dominate. |
 | 2026-04-22 | DESIGN.md formalized | System is stable across M042–M047. Capture before M048 touches visual code. Two-mode narrative added as north star. |
+| 2026-05-29 | Page & cockpit conventions documented | Reverse-engineered from code tijdens M052/S02 design-shotgun (mockups klopten niet zonder). Toegevoegd: ResultsShell (#FAFCFA reading-shell + max-w-5xl band), LifecycleSideRailNav (icon-only fase-rail), ParcelWorkspaceHeader (eyebrow + 28px tracking-tighter titel), page-title-hiërarchie, PDFViewerModal. |
 
 ---
 
