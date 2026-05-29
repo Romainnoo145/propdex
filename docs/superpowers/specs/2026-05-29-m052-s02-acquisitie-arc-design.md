@@ -222,3 +222,85 @@ needed is a use_case-mapping mirror — deferred to eng-review.
 4. Report path fallback when a report has no saved-favorite projecttype.
 5. `commercieel_naar_wonen` mapping (flagged assumption above).
 6. `HaalbaarheidPhaseView` visual layout — via `/design-shotgun`.
+
+---
+
+## Checklist document model — verified from code (the rapport → checklist → cascade chain)
+
+> Added 2026-05-29 after design-shotgun review surfaced that the checklist is far richer
+> than a checkbox list, and that the app already auto-generates checklist documents.
+> This section is the production-data contract — build to it, don't re-derive it.
+
+### Per-item document sources (a trichotomy + a confidence tier)
+
+A checklist item's right-hand state is derived, not authored. Sources:
+
+1. **Auto uit rapport** — `checklist_orchestrator.generate_checklist_documents(report_data)`
+   runs when a report is created. `get_available_docs()` generates a PDF for every
+   `CHECKLIST_DOC_CONFIGS` entry whose `required_fields` are present in `report_data`,
+   persists it as a `ParcelDocument`, and links it to checklist items via the config's
+   **`checklist_item_ids`**. Two confidence tiers:
+   - **HIGH** (definitive/official) → auto-doc *satisfies* the item (✓ done, "Uit rapport", view/download):
+     `kadaster`→opt-02 · `bestemmingsplan`→opt-09 · `energielabel`→opt-17 · `wkb_precheck`→opt-18.
+   - **MEDIUM** (indicatief, carries `disclaimer`) → auto-doc is a *pre-screen*; the formal
+     deliverable still needs upload (show indicatie PDF + keep item open + disclaimer):
+     `fundering`→opt-06 · `asbest`→opt-07 · `vergunningen`→opt-11 · `haalbaarheid`→opt-01.
+   - (`risicoprofiel`, `woz`, `bodem`, `monumenten` also auto-generate but map to other
+     use_cases / no optoppen item.)
+2. **Upload** — deliverables the app cannot produce (architect/constructeur): opt-03
+   bouwtekeningen, opt-04 ontwerp, opt-05 constructief rapport, opt-08 bezonning, opt-15
+   VvE, … . Upload lives in the **item detail modal**, persists as `ParcelDocument`,
+   wired through the existing `uploaded_documents` / `checklist-status` path.
+3. **Genereer** — `document_generator.TEMPLATES` only produces `eigenaar_brief` +
+   `vooroverleg_request` (briefs). These belong to **Contact**, not here. **No "Genereer
+   document" CTA on Haalbaarheid rows.**
+4. **Externe link / handmatig** — Omgevingsloket, Kadaster, BZK-handreiking, buren informeren.
+
+### Cascade integration (current + forward)
+
+- The `haalbaarheid` auto-doc requires `["zoning", "scores_v3"]`. `scores_v3` is produced by
+  the **M047 cascade pipeline** (beleidsdocumenten → typed factor extraction → FACTOR_REGISTRY
+  → scores_v3). So adding cascade/beleid docs to a gemeente enriches `scores_v3` + factor
+  fields → `get_available_docs` finds more "sufficient data" → **more checklist docs
+  auto-generate**. This is the rapport→checklist translation the product wants.
+- **Extensible:** a new cascade-derived report field becomes a new `ChecklistDocConfig`
+  (`required_fields` + `checklist_item_ids`) → automatically flows into the checklist. No
+  checklist-UI change. Document this pattern for production-data work.
+- M047/S05 `rescore_parcels_for_document` refreshes `scores_v3` when a document changes →
+  next report-gen reflects updated cascade data.
+
+### Frontend item state machine
+
+Derive per item from `(checked, hasDocument, doc.confidence, cta_type)`:
+- HIGH auto-doc or uploaded doc → **DONE** (✓ amber), source chip ("Uit rapport" / "Geüpload"), view + download.
+- MEDIUM auto-doc → **INDICATIE** (view indicatief PDF + disclaimer) **and still OPEN** for formal upload.
+- no doc, upload-type → **OPEN** + Verplicht/Aanbevolen → row-click opens detail modal (upload).
+- no doc, link-type → **OPEN** → detail modal (external link).
+- Row-click → item detail modal (detail / why_needed / provider + action). Document-click → `PDFViewerModal`.
+
+---
+
+## Build TODO model (M052/S02)
+
+### Frontend
+- [ ] **F1** `HaalbaarheidPhaseView` (cockpit) — renders checklist-core for `parcel.projecttype`→use_case inside `ResultsShell` + `ParcelWorkspaceHeader`. *(new)*
+- [ ] **F2** Extract reusable `ChecklistCore` from `S8VergunningChecklist` (currently report-bound) → mounts in both HaalbaarheidPhaseView + report section. HAAL-01/HAAL-03. *(refactor)*
+- [ ] **F3** `projectTypeToUseCase()` mapping helper (`optoppen/splitsen/transformatie_wonen→transformatie/nieuwbouw_wonen→nieuwbouw/commercieel_naar_wonen→? /onbepaald→none`). *(new — commercieel_naar_wonen = flagged decision)*
+- [ ] **F4** Source-aware row state machine (Uit rapport HIGH / Indicatief MEDIUM+disclaimer / Geüpload / open) using `checklist-status` + `confidence`. *(enhance — needs B2)*
+- [ ] **F5** Item detail modal: detail/why_needed/provider + upload + view + external-link + MEDIUM indicatie-vs-formele disclaimer. *(adapt existing)*
+- [ ] **F6** No-projecttype empty state → opens S01 `ProjectTypePickerModal`. FUND-03.
+- [ ] **F7** `phases.ts`: insert `haalbaarheid` (order 3, enabled) + renumber; `$phase` route branch → HaalbaarheidPhaseView. NAV-01/NAV-03.
+- [ ] **F8** Remove old checklist entry from workspace-header/Onderzoek; keep `ReportHeader` secondary. HAAL-03.
+- [ ] **F9** Drop prices/`estimated_cost` from row UI (kept in detail modal only, if at all). *(per UAT)*
+
+### Backend
+- [ ] **B1** Confirm `project_type` (S01, ParcelFavorite) → use_case is resolvable server-side where the checklist needs it; add mirror map if required. *(verify)*
+- [ ] **B2** `checklist-status` response must surface per-item `confidence` (high/medium) + `disclaimer` + source (auto/upload) so F4 can render the state. *(verify/enhance — likely missing today)*
+- [ ] **B3** Verify `checklist_orchestrator` attaches auto-docs to the parcel's use_case items via `checklist_item_ids` end-to-end (report-gen → ParcelDocument → checklist-status). *(verify — wiring exists)*
+- [ ] **B4** *(production/forward)* Document + keep the `ChecklistDocConfig` extension pattern as cascade fields land: new field → new config → `checklist_item_ids`. No build now.
+- [ ] **B5** Regression: relocating the checklist must not change report-side behaviour (S8 still works); `ChecklistProgress` rows unchanged. HAAL-02.
+
+### Still open (decide before plan)
+- **Phase name** — "Haalbaarheid" collides with item opt-01 + the `haalbaarheid` auto-doc, and undersells a full vergunning/ontwikkel-prep checklist. Recommend rename → **"Voorbereiding"** (or "Dossier"/"Toetsing"); lightweight go/no-go stays in Onderzoek. *Pending user decision.*
+- **Phase position** — confirm the heavy prep sits between Contact and Bod vs. post-Bod, per how Hauzer actually commissions architect/constructeur work. *Pending user domain input.*
+- **`commercieel_naar_wonen`** → `transformatie` use_case (assumption) vs own checklist. *Pending.*
