@@ -251,10 +251,27 @@ A checklist item's right-hand state is derived, not authored. Sources:
    bouwtekeningen, opt-04 ontwerp, opt-05 constructief rapport, opt-08 bezonning, opt-15
    VvE, … . Upload lives in the **item detail modal**, persists as `ParcelDocument`,
    wired through the existing `uploaded_documents` / `checklist-status` path.
-3. **Genereer** — `document_generator.TEMPLATES` only produces `eigenaar_brief` +
+3. **Vraag offerte aan** — items with `cta_type="request_quote"` (constructief,
+   fundering, asbest, bezonningsstudie — external-partner work). Action opens a
+   **pre-filled Gmail/mailto compose** addressed to the org's **fixed partner for that
+   service** (e.g. the client's asbest partner), with parcel context filled in. Same
+   compose pattern as `eigenaar_brief`. The returned report is then uploaded (source #2).
+   Requires a per-org **partner-per-service config**.
+4. **Genereer** — `document_generator.TEMPLATES` only produces `eigenaar_brief` +
    `vooroverleg_request` (briefs). These belong to **Contact**, not here. **No "Genereer
    document" CTA on Haalbaarheid rows.**
-4. **Externe link / handmatig** — Omgevingsloket, Kadaster, BZK-handreiking, buren informeren.
+5. **Externe link / handmatig** — Omgevingsloket, Kadaster, BZK-handreiking, buren informeren.
+
+### Row UI (locked in design-shotgun, variant A)
+Rows are quiet; the right side shows the item's primary affordance, no source pills:
+- real document present (auto-HIGH or uploaded) → **docpill** (red PDF icon + filename + size + download), click → `PDFViewerModal`.
+- `request_quote` → **"Vraag offerte aan"** button (+ small eye if a MEDIUM indicatie exists).
+- MEDIUM indicatie only → **eye** (peek indicatie) + chevron.
+- upload-needed / manual → **chevron** → detail modal.
+- external link → **link icon**.
+The "X uit rapport / Y indicaties" story lives in the **card subtitle**; per-item source +
+confidence + disclaimer live in the **detail modal**. No `pipeline_stage` badge in the
+cockpit header (it's a Kanban axis; lives on the Dashboard — S03).
 
 ### Cascade integration (current + forward)
 
@@ -291,7 +308,8 @@ Derive per item from `(checked, hasDocument, doc.confidence, cta_type)`:
 - [ ] **F6** No-projecttype empty state → opens S01 `ProjectTypePickerModal`. FUND-03.
 - [ ] **F7** `phases.ts`: insert `haalbaarheid` (order 3, enabled) + renumber; `$phase` route branch → HaalbaarheidPhaseView. NAV-01/NAV-03.
 - [ ] **F8** Remove old checklist entry from workspace-header/Onderzoek; keep `ReportHeader` secondary. HAAL-03.
-- [ ] **F9** Drop prices/`estimated_cost` from row UI (kept in detail modal only, if at all). *(per UAT)*
+- [ ] **F9** Drop prices/`estimated_cost` from row UI; quiet rows, no source pills (card subtitle + detail modal carry source/confidence). *(per UAT)*
+- [ ] **F10** `request_quote` action → Gmail/mailto compose to the org's fixed partner for that service, parcel context pre-filled; detail modal also offers upload-of-returned-report. *(new — UAT idea)*
 
 ### Backend
 - [ ] **B1** Confirm `project_type` (S01, ParcelFavorite) → use_case is resolvable server-side where the checklist needs it; add mirror map if required. *(verify)*
@@ -300,7 +318,39 @@ Derive per item from `(checked, hasDocument, doc.confidence, cta_type)`:
 - [ ] **B4** *(production/forward)* Document + keep the `ChecklistDocConfig` extension pattern as cascade fields land: new field → new config → `checklist_item_ids`. No build now.
 - [ ] **B5** Regression: relocating the checklist must not change report-side behaviour (S8 still works); `ChecklistProgress` rows unchanged. HAAL-02.
 
-### Still open (decide before plan)
-- **Phase name** — "Haalbaarheid" collides with item opt-01 + the `haalbaarheid` auto-doc, and undersells a full vergunning/ontwikkel-prep checklist. Recommend rename → **"Voorbereiding"** (or "Dossier"/"Toetsing"); lightweight go/no-go stays in Onderzoek. *Pending user decision.*
-- **Phase position** — confirm the heavy prep sits between Contact and Bod vs. post-Bod, per how Hauzer actually commissions architect/constructeur work. *Pending user domain input.*
-- **`commercieel_naar_wonen`** → `transformatie` use_case (assumption) vs own checklist. *Pending.*
+### Resolved decisions (UAT 2026-05-29)
+- **Phase name = "Voorbereiding"** (not "Haalbaarheid"). The phase key/route becomes
+  `3-voorbereiding`; "haalbaarheidscheck" stays item opt-01 inside it. ⚠️ minor echo: the
+  checklist's own first phase-group is also "voorbereiding" — acceptable (nested), or
+  relabel the group display later. NAV-01/NAV-03 use "Voorbereiding".
+- **`commercieel_naar_wonen` → `transformatie`** use_case (confirmed). Resolves F3.
+- **Phase position** = between Contact and Bod (confirmed by accepting the arc).
+- **No inline upload on rows** — every row opens the detail popup which carries upload;
+  rows stay clean.
+
+### UI / interaction — locked in design-shotgun (variant A, build to this)
+- **Header** = `ParcelWorkspaceHeader`. Removed: `pipeline_stage` badge (Kanban axis,
+  belongs on Dashboard) and the **checklist shortcut button** (HAAL-03 — checklist now
+  lives in the Voorbereiding tab, so the `/checklist/$id` circle is dropped). Kept: eyebrow,
+  28px address title, projecttype chip (height = score pills, 34px), score pills, map +
+  "Bekijk rapport" actions.
+- **Rows** quiet, no source pills, no prices, no eye button. Right side = one affordance:
+  **docpill** (red PDF + filename + size, click→viewer) for a real doc · **"Vraag offerte aan"**
+  (amber, `request_quote`) · **chevron** (upload/manual) · **link icon** (info source).
+  Whole row opens the detail modal.
+- **Detail modal** (per item): eyebrow + title + description + (MEDIUM) "Indicatief uit
+  rapport" block with "Bekijk indicatie →" + provider line. Action zone: **best-practice
+  upload dropzone** (whole box click/drop, no inner button, "Sleep een PDF hierheen of klik
+  om te bladeren · PDF max 20 MB") with the **amber `request_quote` action below it**
+  ("Vraag offerte aan bij <partner>"). No explanatory subline.
+- **PDFViewerModal** renders the real PDF in an `<iframe>` (centered `max-w-3xl rounded-[32px]
+  #F8FAFA` over `black/50` blur).
+- **Auto-fill story** told once at card level ("X afgerond · Y indicaties uit rapport"),
+  per-item source/confidence in the detail modal.
+
+### Updated TODO additions
+- **F11** Remove checklist shortcut button + `pipeline_stage` badge from `ParcelWorkspaceHeader` (cockpit). HAAL-03.
+- **F12** Detail modal layout: best-practice dropzone + amber `request_quote` action below; indicatie block for MEDIUM items; no source pills on rows.
+- **F13** PDFViewerModal iframe renders real generated/uploaded PDFs (reuse existing component).
+- **F7** updated: phase key `3-voorbereiding`, label "Voorbereiding".
+- **B6** Per-org **partner-per-service config** (which partner for asbest/constructeur/fundering/bezonning) powering F10's offerte-compose.
