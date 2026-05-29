@@ -318,6 +318,24 @@ Derive per item from `(checked, hasDocument, doc.confidence, cta_type)`:
 - [ ] **B4** *(production/forward)* Document + keep the `ChecklistDocConfig` extension pattern as cascade fields land: new field → new config → `checklist_item_ids`. No build now.
 - [ ] **B5** Regression: relocating the checklist must not change report-side behaviour (S8 still works); `ChecklistProgress` rows unchanged. HAAL-02.
 
+### Demo principle (UAT 2026-05-29 — overrides "mock-light")
+The Hauzer demo must be a **genuinely usable** product that closes the deal, **realistic
+to what's buildable**. Drop "mock-light" framing. Build every surface for real where
+capability allows. The **only** honest exception is a feature that depends on an external
+API not yet available (Nieuwbouw-verkoop matcher → Realworks, post-deal) — and even that is
+presented as a real "connect Realworks" surface, not fake data. Revisit each previously-
+"mock" item (NAV-04 Bod, DASH-04 inbox, CONTACT-02 send, MATCH-01 matcher) against this bar.
+
+- **Bod (was NAV-04 mock-light) → real bid workspace.** Reference values (WOZ from report,
+  koopwaarde + owner + hypotheek from BRK), editable bid + computed marge, persisted status
+  (Nog geen bod / Uitgebracht / In onderhandeling / Akkoord / Afgewezen), biedingshistorie
+  (event log), real notitie, and a **"Bod-brief opstellen"** action (document_generator
+  bid-letter, like eigenaar_brief) + "Bericht aan eigenaar" (Gmail). New backend fields
+  needed → B7.
+- **F14** `BodPhaseView` — real bid workspace per the above (centered max-w-5xl band).
+- **B7** ParcelFavorite (or new `parcel_bid` model): `bid_amount`, `bid_status`,
+  `bid_events[]` (biedingshistorie); bid-letter template in document_generator.
+
 ### Resolved decisions (UAT 2026-05-29)
 - **Phase name = "Voorbereiding"** (not "Haalbaarheid"). The phase key/route becomes
   `3-voorbereiding`; "haalbaarheidscheck" stays item opt-01 inside it. ⚠️ minor echo: the
