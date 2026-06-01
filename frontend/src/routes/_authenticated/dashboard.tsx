@@ -40,6 +40,11 @@ const IconFile = () => (
     <path d="M14 2v5a1 1 0 0 0 1 1h5" />
   </svg>
 )
+const IconSpark = () => (
+  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 flex-none fill-none stroke-aura-amber-hover stroke-[1.8] [stroke-linecap:round] [stroke-linejoin:round]">
+    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+  </svg>
+)
 const IconScale = () => (
   <svg viewBox="0 0 24 24" className={ic}>
     <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
@@ -103,7 +108,8 @@ function KansCard({ kans, onDismiss }: { kans: Kans; onDismiss: () => void }) {
           </div>
           <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-neutral-400">
             <span className="h-[5px] w-[5px] rounded-full bg-aura-amber" />
-            Ontwikkelpotentie{kans.wijk ? ` · ${kans.wijk}` : ''}
+            {kans.projecttype ?? 'Ontwikkelpotentie'}
+            {kans.wijk ? ` · ${kans.wijk}` : ''}
           </div>
         </div>
         <button
@@ -114,6 +120,14 @@ function KansCard({ kans, onDismiss }: { kans: Kans; onDismiss: () => void }) {
           &times;
         </button>
       </div>
+      {kans.reason && (
+        <div className="mt-2.5 flex items-start gap-2 rounded-[9px] bg-aura-canvas px-2.5 py-2 text-xs leading-snug text-aura-ink/70">
+          <span className="mt-0.5">
+            <IconSpark />
+          </span>
+          {kans.reason}
+        </div>
+      )}
       <div className="mt-2.5 flex gap-2">
         <button className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[10px] border border-aura-amber/40 bg-aura-amber/[0.12] text-[12.5px] font-semibold text-aura-amber-hover hover:bg-aura-amber/20">
           <IconFile />

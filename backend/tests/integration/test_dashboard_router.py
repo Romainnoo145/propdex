@@ -76,7 +76,14 @@ async def _scored_parcel(test_db, code, gemeente_naam, potentie, *, x=155000, y=
             scan_id=scan.id,
             parcel_id=parcel.id,
             score=potentie,
-            flags={"scores": {"potentie": potentie, "risico": 30.0}},
+            flags={
+                "scores": {"potentie": potentie, "risico": 30.0},
+                "score_breakdown": {
+                    "optoppotentie": {"genormaliseerde_score": 85.0, "categorie": "potentie"},
+                    "bestemming": {"genormaliseerde_score": 70.0, "categorie": "potentie"},
+                    "geluid": {"genormaliseerde_score": 40.0, "categorie": "risico"},
+                },
+            },
         )
     )
     await test_db.flush()
@@ -164,6 +171,9 @@ async def test_kansen_top_scored_excluding_favorites(
     assert k1["potentie_score"] == 80.0
     assert k1["address"] == "VENLO-K1 straat 1"
     assert k1["wijk"] == "Centrum"
+    # projecttype afgeleid uit de beste use_case + een reden-regel
+    assert k1["projecttype"] in {"Optoppen", "Splitsen", "Transformatie", "Nieuwbouw"}
+    assert k1["reason"]
 
 
 @pytest.mark.asyncio

@@ -27,8 +27,20 @@ from app.models.project import Project
 from app.models.scan_result import ScanResult
 from app.models.user import User
 from app.schemas.common import StatusResponse
+from app.services.use_case_scoring import compute_use_case_scores
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
+
+
+def _best_use_case(breakdown: dict | None) -> tuple[str | None, str | None]:
+    """Leid het best-scorende projecttype + een reden af uit een score_breakdown."""
+    if not breakdown:
+        return None, None
+    scores = compute_use_case_scores(breakdown)
+    if not scores:
+        return None, None
+    best = max(scores.values(), key=lambda s: s.score)
+    return best.label, f"{best.category} scorend voor {best.label.lower()}"
 
 
 class PijplijnStageCount(BaseModel):
@@ -73,6 +85,8 @@ class Kans(BaseModel):
     address: str | None
     wijk: str | None
     potentie_score: float | None
+    projecttype: str | None
+    reason: str | None
 
 
 class KansenResponse(BaseModel):
@@ -102,6 +116,7 @@ async def get_kansen(
             ScanResult.parcel_id.label("pc_id"),
             potentie.label("potentie"),
             AreaScan.wijk_naam.label("wijk"),
+            ScanResult.flags["score_breakdown"].label("breakdown"),
             func.row_number()
             .over(
                 partition_by=ScanResult.parcel_id,
@@ -127,6 +142,7 @@ async def get_kansen(
             ParcelCache.address,
             ranked.c.wijk,
             ranked.c.potentie,
+            ranked.c.breakdown,
         )
         .join(ranked, ranked.c.pc_id == ParcelCache.id)
         .where(
@@ -140,15 +156,19 @@ async def get_kansen(
         .limit(limit)
     )
 
-    kansen = [
-        Kans(
-            parcel_id=parcel_id,
-            address=address,
-            wijk=wijk,
-            potentie_score=round(potentie_score, 1) if potentie_score is not None else None,
+    kansen = []
+    for parcel_id, address, wijk, potentie_score, breakdown in result.all():
+        projecttype, reason = _best_use_case(breakdown)
+        kansen.append(
+            Kans(
+                parcel_id=parcel_id,
+                address=address,
+                wijk=wijk,
+                potentie_score=round(potentie_score, 1) if potentie_score is not None else None,
+                projecttype=projecttype,
+                reason=reason,
+            )
         )
-        for parcel_id, address, wijk, potentie_score in result.all()
-    ]
     return KansenResponse(kansen=kansen)
 
 
