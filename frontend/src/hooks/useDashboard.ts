@@ -137,7 +137,7 @@ export function useGemeenteSignalen(gemeente: string) {
     queryKey: ['dashboard', 'signalen', gemeente],
     queryFn: async () => {
       const res = await apiFetch<ChangesListResponse>(
-        `/api/monitoring/changes?gemeente_naam=${encodeURIComponent(gemeente)}&include_matches=true&limit=20`,
+        `/api/monitoring/changes?gemeente_naam=${encodeURIComponent(gemeente)}&include_matches=true&limit=100`,
         { method: 'GET', accessToken },
       )
       // Nieuw -> oud op publicatiedatum.
