@@ -23,6 +23,7 @@ from app.admin.router import router as admin_router
 from app.agents.chat_router import router as chat_router
 from app.agents.router import router as agents_router
 from app.api.endpoints.checklist_progress import router as checklist_progress_router
+from app.api.endpoints.dashboard import router as dashboard_router
 from app.api.endpoints.gemeente import router as gemeente_router
 from app.api.endpoints.jurisprudence import router as jurisprudence_router
 from app.api.endpoints.parcel_project_type_router import (
@@ -175,6 +176,7 @@ app.include_router(factor_pins_router)
 app.include_router(jurisprudence_router)
 app.include_router(gemeente_router)
 app.include_router(checklist_progress_router)
+app.include_router(dashboard_router)
 app.include_router(parcel_project_type_router)
 app.include_router(policy_documents_router)
 app.include_router(agents_router)
