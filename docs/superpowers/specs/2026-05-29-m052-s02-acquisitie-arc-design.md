@@ -417,3 +417,89 @@ integration + the kadaster/BRK-bevragen OpenAPI.
 - **F13** PDFViewerModal iframe renders real generated/uploaded PDFs (reuse existing component).
 - **F7** updated: phase key `3-voorbereiding`, label "Voorbereiding".
 - **B6** Per-org **partner-per-service config** (which partner for asbest/constructeur/fundering/bezonning) powering F10's offerte-compose.
+
+---
+
+## Dashboard (S03) — twee-signalen acquisitie-radar (locked 2026-05-29, CEO-review)
+
+**Besluit:** het dashboard is GEEN marktbrede publicaties-monitor met een prominent beleidsblok, en GEEN pipeline-Kanban-first scherm. Het is een **twee-signalen acquisitie-radar**: de dagelijkse hartslag (gemeentesignalen) + de off-market kansen die eruit volgen. Pijplijn is een voetnoot.
+
+**Premisse (CEO-review, gegrond op de sector + codebase):**
+- **Vergunningen/bekendmakingen = dagelijkse hartslag** (`change_detector` → `ChangeRecord`: SRU-bekendmakingen + PLU plan-wijzigingen). Altijd gevuld → de spine.
+- **Beleidswijzigingen zijn zeldzaam** én marktbreed: één wijziging herscoort ~2000 percelen. Dus NOOIT een vaste sectie (staat meestal leeg) en NOOIT per-perceel "kansen-deltas". → een **conditionele banner** die alleen verschijnt als er een beleids/plan-wijziging is, marktbreed framet en naar de **kaart** linkt.
+- **Funda is geen acquisitiekanaal** in deze markt (vraag ~200x aanbod; alles op Funda is al overboden). Geen Funda-API, makelaar heeft eigen tools. → Funda volledig buiten scope. De tweede helft is **off-market** (supply *creëren*, niet kopen): ontwikkelpotentie + eigenaar benaderen.
+- **Pijplijn is minst belangrijk** → kleine strip onderaan.
+- **Multi-gemeente** zit in het datamodel (`ParcelFavorite.gemeente_code` + index; `change_detector` per gemeente; M049 databronnen per gemeente). Dashboard toont een **gemeente-scope switcher** (default primaire gemeente, "Alle gemeenten"); demo-data = Venlo.
+
+**Structuur (build naar Dashboard.html):**
+1. **Header** — three-pod app-nav (NIET de lifecycle-rail). Greeting + subtitle met haalbare tellingen ("3 nieuwe kansen · 6 bekendmakingen vandaag") + **gemeente-scope pill** rechtsboven (`Venlo · 3 actief`).
+2. **Conditionele beleid-banner** — soft-amber strip, alleen bij een actieve beleids/plan-wijziging; tekst marktbreed; actie "Bekijk op kaart"; **wegklikbaar (x)**.
+3. **Twee koloms:**
+   - **Links — Gemeentesignalen**: `ChangeRecord`-stroom (vergunningen + plan-wijzigingen door elkaar, op datum), **type-filter chips** (Alle/Plan-wijziging/Vergunning/Sloop/Transformatie). Rijen zijn rustig: datum, titel, adres, **map-icoon** (geen type-pills op de rij). **Pijplijn-match = hele rij amber** (favorite op dat perceel/gemeente), geen tekstlabel.
+   - **Rechts — Off-market kansen**: gescoorde percelen met ontwikkelpotentie voor het projecttype, **nog niet in de pijplijn**. Per kaart: **score-ring**, adres, projecttype, een **reden** ("Plan-wijziging ontsloot 2 bouwlagen" / "Transformatiepotentie kantoor naar wonen" / "Hoog scorend, niet in pijplijn"), **Bekijk rapport** (soft-amber, primair) + **map** (obsidian-cirkel, amber icoon) + **x dismiss** (verberg, maakt ruimte voor nieuwe). "Alle kansen op de kaart".
+4. **Pijplijn-strip** (voetnoot) — counts per fase + "Open pijplijn".
+
+**Flow-logica:** radar, dan *Bekijk rapport* (perceel-cockpit openen, kijken), dan onderzoeken (Voorbereiding), DAN pas eigenaar benaderen (Contact-tab). Eigenaar-benaderen hoort NIET op de dashboard-kaart (te vroeg; je hebt het pand nog niet gezien). De gemeentesignalen voeden de off-market kansen: plan-wijziging op een straat, dan die percelen ontsloten, dan nieuwe kans (plan-wijzigingen zijn lokaal, tientallen percelen, dus behapbaar; niet de 2000-percelen woonvisie-massa).
+
+### Dashboard frontend TODO (productie)
+- **D1** Dashboard-route + landing (three-pod app-nav, niet lifecycle-rail). Eerste scherm na login voor Hauzer-demo-org.
+- **D2** Gemeente-scope switcher: org's actieve gemeenten = distinct `gemeente_code` uit favorites + geconfigureerde databronnen (M049). Default primaire gemeente, "Alle gemeenten" aggregeert.
+- **D3** Gemeentesignalen-feed uit `ChangeRecord` (SRU-vergunningen + PLU plan-wijzigingen), type-filter, gescoord op gemeente-scope. **Pijplijn-match highlight** = join op favorites (perceel/gemeente), amber rij.
+- **D4** Conditionele beleid-banner: detecteer actieve beleids/plan-`ChangeRecord`; dismiss persisten per user; "Bekijk op kaart" naar kaart met herscoring-overlay.
+- **D5** Off-market kansen: query gescoorde percelen per projecttype binnen gemeente-scope, score boven drempel, **exclude favorites**; reden-afleiding (recente plan-wijziging-koppeling via M047 cascade / hoge score / projecttype-fit); **top-N** (schaalbaar, geen 2000-lijst). Dismiss = verberg (persisten per user/org).
+- **D6** Acties: "Bekijk rapport" naar perceel-cockpit/rapport; map naar kaart-focus op perceel.
+- **D7** Pijplijn-strip uit favorites `pipeline_stage`-counts.
+
+### Dashboard backend TODO (productie)
+- **B-dash-1** Feed-endpoint `ChangeRecord` (per gemeente, recent, getypeerd), org-scoped via favorites/gemeente.
+- **B-dash-2** Off-market kansen-endpoint: gescoorde percelen per projecttype, exclude favorites, met reden (cascade-link naar plan-wijziging). **Schaalbewust** (top-N + paginatie; nooit volledige herscoorde set materialiseren).
+- **B-dash-3** Dismissed-kansen persistence (per user/org) zodat verborgen percelen wegblijven en ruimte maken.
+- **B-dash-4** Gemeente-scope-resolutie (org's actieve gemeenten) + "alle"-aggregatie.
+- **B-dash-5** Banner-detectie: actieve beleids/plan-`ChangeRecord` per gemeente (zeldzaam; meestal geen banner).
+
+WAARSCHUWING **Roadmap-afwijking:** M052-ROADMAP Phase 3 noemde nog "Pipeline Kanban (echt, drag) + Daily Acquisitie Inbox (mock)". CEO-review 2026-05-29 vervangt dat door deze twee-signalen-radar: Kanban naar pijplijn-voetnoot; "inbox" naar gemeentesignalen + off-market kansen.
+
+---
+
+## Discovery (S05) — GESCHRAPT (2026-05-31)
+
+Built-to-suit kavelzoeker + nieuwbouw-verkoop matcher zijn uit scope. Kavelzoeker dubbelt de bestaande kaart-filters (`ParcelScoreLayer` score-drempel + `LayerToggle` leegstand/bouwcapaciteit/`leeg_perceel`/bestemmingsplan + de projecttype scoring-lens uit S01, incl. `nieuwbouw` use_case). Nieuwbouw-matcher = Realworks-territorium (verkoop, post-deal) en de enige echte mock — strijdig met "echt & bruikbaar voortraject". Discovery is gedekt: dashboard = reactief, kaart = proactief. Geen gat, geen slice.
+
+---
+
+## Dashboard build-plan (S03) — eng-review locked (2026-05-31)
+
+**Scope:** DEMO-LEAN (D1). **Signalen-data:** change_monitor live 1x voor Venlo, curated-seed fallback (D2).
+
+### Backend (`app/api/endpoints/dashboard.py`, nieuw router)
+- **Gemeentesignalen = HERGEBRUIK `GET /api/monitoring/changes`** (bestaat al: org-scoped via `Project.organization_id`, `gemeente_naam`-filter, `include_matches`, paginatie, `ChangeRecordResponse` met change_type permit/zoning + matched_parcels). NIET dupliceren. Enige toevoeging: **`in_pipeline: bool`** enrichment (matched_parcel_id ∈ org-favorites) — in `changes_service.get_changes_list` of als dashboard-laagje.
+- `GET /api/dashboard/kansen?gemeente=` → top-N gescoorde percelen (scan_results), **exclude favorites**, projecttype + afgeleide reden. Volg het **`list_favorites` enrich-patroon** (set-based outerjoin subqueries, geen N+1). ⚠️ Lees de júiste score-key (rescore schrijft `potentie_score`, niet `flags.scores.potentie` — latent bug, regression-test).
+- `GET /api/dashboard/pijplijn` → counts per `pipeline_stage` uit favorites (één query).
+- `GET /api/dashboard/banner` → meest recente actieve beleid/plan-ChangeRecord of `null`.
+- Gemeente-scope helper: distinct `favorites.gemeente_code` voor de org (default primaire).
+- **Multi-tenant:** elke query filtert `organization_id` (via `User.organization_id`-patroon, geen direct org_id op favorites).
+- Data: run `change_monitor` 1x voor een Venlo-`Project`; fallback curated seed.
+
+### Frontend (`routes/_authenticated/dashboard.tsx` herbouwen)
+- Port mockup `Dashboard.html` → React + Aura-tokens. Componenten: `DashboardBeleidBanner`, `GemeentesignalenStream` (+ type-filter chips, amber match-rij), `OffMarketKansen` (score-ring kaarten + dismiss localStorage), `PijplijnStrip`, `GemeenteScopeSwitcher`.
+- Hooks: `useDashboardSignalen`, `useDashboardKansen`, `usePijplijn`, `useBanner`. Hergebruik score-ring + three-pod nav.
+
+### Tests
+- **IRON-RULE multi-tenant regression** (`backend/tests/regression/`): dashboard-endpoints lekken nooit cross-org ChangeRecords/percelen/favorites.
+- Endpoint-tests: signalen-shape + `in_pipeline`-flag; kansen excludeert favorites + leest correcte score-key (regression voor latent bug); pijplijn-counts; banner null-when-none.
+- Frontend: render met mock-data; dismiss verbergt kaart.
+
+### NOT in scope (uitgesteld → TODO, demo-lean)
+- Dismissed-kansen DB-persistence (nu localStorage) · multi-gemeente "alle"-aggregatie · change_monitor scheduling (nu 1x handmatig) · volledige index-tuning op 137k · banner-detectie-automatisering.
+
+### What already exists (hergebruikt)
+- `ChangeRecord` + `change_monitor` job (feed-data + spatial match) · `list_favorites` enrich-patroon · `ParcelProjectType` (M047, org-scoped, niet dupliceren) · scan_results scored (63k) · `dashboard.tsx` route · pipeline_stage · score-ring + Aura-frame.
+
+### Failure modes
+- ChangeRecord leeg voor Venlo → feed leeg → seed-fallback + empty-state. · Score-key mismatch → kansen leeg (latent bug) → correcte key + test (CRITICAL als ongetest). · `matched_parcel_id` null → `in_pipeline=false` (oké).
+
+---
+
+## Design-lock status (2026-05-31)
+
+Alle demo-surfaces gelockt: **Voorbereiding · Contact · Samenvatting · Dashboard**. Mockups in `~/.gstack/projects/Romainnoo145-propdex/designs/haalbaarheid-phaseview-20260529/`. Volgende stap: per slice (S02/S03/S04) `/plan-eng-review` → `/gsd:plan-phase` → build; S06 seedt + verifieert.

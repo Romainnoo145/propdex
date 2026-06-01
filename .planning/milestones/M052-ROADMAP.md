@@ -18,7 +18,7 @@ M052 maakt de sprong van System-of-Record (data) → System-of-Engagement (dagel
 - M047: projecttype-scoring-settings (FUND-02 consumeert dit)
 - M020/M022: `checklists.py` 4 use-cases + `ChecklistProgress`
 
-**Slice ordering:** `S01 → (S02 ∥ S03 ∥ S04 ∥ S05) → S06`. S01 is foundation (projecttype + `HAUZER_DEMO`-flag); S02-S05 parallel-eligible; S06 seedt + verifieert het geheel.
+**Slice ordering:** `S01 → (S02 ∥ S03 ∥ S04) → S06`. S01 is foundation (projecttype + `HAUZER_DEMO`-flag); S02-S04 parallel-eligible; S06 seedt + verifieert het geheel. **S05 GESCHRAPT** (design-lock 2026-05-31): kavelzoeker dubbelt de bestaande kaart-filters (score-drempel/leegstand/bouwcapaciteit/leeg_perceel + projecttype-lens), nieuwbouw-matcher = Realworks-territorium (verkoop, post-deal). Discovery is gedekt door dashboard (reactief) + kaart (proactief).
 
 **Proces (CLAUDE.md drie-laags):** office-hours deed de milestone-besluitlaag. Per slice vóór `/gsd:plan-phase`: `/plan-eng-review` (architectuur lock-in) + `/plan-design-review` (UI-zwaar — geldt voor S02/S03/S04/S05). Brainstorm vóór elk nieuw component.
 
@@ -26,9 +26,9 @@ M052 maakt de sprong van System-of-Record (data) → System-of-Engagement (dagel
 
 - [ ] **Phase 1: Fundament + Demo-flag** (M052/S01) — `projecttype` op `ParcelFavorite` + opslaan-op-zoekmethode UI + scoring-wiring · `HAUZER_DEMO` feature-flag infra · DESIGN.md makelaars-correctie
 - [ ] **Phase 2: Per-perceel Acquisitie-arc** (M052/S02) — `Haalbaarheid` als 9e fase + `HaalbaarheidPhaseView` + checklist-verhuizing (projecttype-driven) + configureerbare `LifecycleSideRailNav` (Hauzer 4-fase set) + Bod mock-light
-- [ ] **Phase 3: Dashboard Cockpit** (M052/S03) — Dashboard-landing + Pipeline Kanban (echt, `pipeline_stage` + drag) + Daily Acquisitie Inbox (mock)
+- [ ] **Phase 3: Dashboard Cockpit** (M052/S03) — Dashboard-landing = **twee-signalen acquisitie-radar** (gemeentesignalen `ChangeRecord` + off-market kansen + conditionele beleid-banner + pijplijn-voetnoot + gemeente-scope). Vervangt "Kanban + inbox". Design-lock zie spec.
 - [ ] **Phase 4: Contact Brief-teaser** (M052/S04) — brief-preview uit echte BRK-eigenaar-data + gefakete verzend-bevestiging
-- [ ] **Phase 5: Discovery Surfaces** (M052/S05) — built-to-suit kavelzoeker-filter (echt) + Nieuwbouw-verkoop matcher (mock surface)
+- [x] ~~**Phase 5: Discovery Surfaces** (M052/S05)~~ — **GESCHRAPT 2026-05-31**: kavelzoeker dubbelt bestaande kaart-filters; nieuwbouw-matcher = Realworks (post-deal). Geen discovery-gat.
 - [ ] **Phase 6: Demo-org Seed + Verificatie** (M052/S06) — Hauzer demo-org seed (favorites in stages + projecttype + mock inbox) + productie-bar verificatie
 
 ## Phase Details
@@ -101,19 +101,9 @@ M052 maakt de sprong van System-of-Record (data) → System-of-Engagement (dagel
 
 ---
 
-### Phase 5: Discovery Surfaces (M052/S05)
-**Goal:** De sourcing-surfaces — echte built-to-suit kavelzoeker + mock nieuwbouw-matcher.
+### Phase 5: Discovery Surfaces (M052/S05) — GESCHRAPT 2026-05-31
 
-**Requirements:** KAART-01, MATCH-01
-
-**Success criteria:**
-1. Kaart-filter "built-to-suit kavelzoeker": >10.000m² + Logistiek/Industrie-bestemming + leeg (geen `has_pand`) → toont ~20-50 echte Venlo-kandidaten uit `ParcelCache`
-2. Nieuwbouw-verkoop top-level surface (kandidaten ↔ bouwnummers) achter `HAUZER_DEMO` — mock-data, duidelijk als post-deal-feature gemarkeerd
-3. Filter werkt org-scoped + performant op 137k percelen
-4. `npm run check` groen
-
-**Depends on:** S01 (`HAUZER_DEMO` voor matcher). Kavelzoeker-deel onafhankelijk.
-**Demo-status:** Kavelzoeker ECHT · Nieuwbouw-matcher MOCK
+**Reden (design-lock):** built-to-suit kavelzoeker dubbelt de bestaande kaart-filters (`ParcelScoreLayer` score-drempel + `LayerToggle` leegstand/bouwcapaciteit/bebouwd-status/`leeg_perceel` + `bestemmingsplan`) plus de projecttype scoring-lens (S01, incl. `nieuwbouw` use_case). De nieuwbouw-verkoop matcher is Realworks-territorium (verkoop, ná de deal) en de enige echte mock — past niet in een "echt & bruikbaar voortraject"-demo. Discovery is gedekt: dashboard = reactief (gemeentesignalen + off-market kansen), kaart = proactief (filters aanwezig). Geen gat → geen slice.
 
 ---
 
@@ -128,7 +118,7 @@ M052 maakt de sprong van System-of-Record (data) → System-of-Engagement (dagel
 3. Productie-bar: `npm run check` + `ruff check . && mypy .` groen; multi-tenant-isolatie regression tests groen; M050/M048-regressies vrij
 4. `HAUZER_DEMO` off → applicatie toont geen mock-surfaces voor niet-Hauzer-tenants (clean toggle)
 
-**Depends on:** S02, S03, S04, S05 (seedt + verifieert alle surfaces)
+**Depends on:** S02, S03, S04 (seedt + verifieert alle surfaces; S05 geschrapt)
 **Demo-status:** ECHT
 
 ---
