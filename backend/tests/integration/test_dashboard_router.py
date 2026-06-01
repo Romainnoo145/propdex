@@ -163,6 +163,7 @@ async def test_kansen_top_scored_excluding_favorites(
     k1 = next(k for k in data["kansen"] if k["parcel_id"] == "VENLO-K1")
     assert k1["potentie_score"] == 80.0
     assert k1["address"] == "VENLO-K1 straat 1"
+    assert k1["wijk"] == "Centrum"
 
 
 @pytest.mark.asyncio

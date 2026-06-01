@@ -96,10 +96,12 @@ function KansCard({ kans, onDismiss }: { kans: Kans; onDismiss: () => void }) {
       <div className="flex items-center gap-3">
         <ScoreRing score={kans.potentie_score} />
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-bold text-aura-ink">{kans.address ?? kans.parcel_id}</div>
+          <div className="truncate text-sm font-bold text-aura-ink">
+            {kans.address ?? `Perceel ${kans.parcel_id}`}
+          </div>
           <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-neutral-400">
             <span className="h-[5px] w-[5px] rounded-full bg-aura-amber" />
-            Ontwikkelpotentie
+            Ontwikkelpotentie{kans.wijk ? ` · ${kans.wijk}` : ''}
           </div>
         </div>
         <button

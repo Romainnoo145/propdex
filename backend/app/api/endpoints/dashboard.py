@@ -69,6 +69,7 @@ async def get_pijplijn(
 class Kans(BaseModel):
     parcel_id: str
     address: str | None
+    wijk: str | None
     potentie_score: float | None
 
 
@@ -98,6 +99,7 @@ async def get_kansen(
         select(
             ScanResult.parcel_id.label("pc_id"),
             potentie.label("potentie"),
+            AreaScan.wijk_naam.label("wijk"),
             func.row_number()
             .over(
                 partition_by=ScanResult.parcel_id,
@@ -115,7 +117,12 @@ async def get_kansen(
     )
 
     result = await db.execute(
-        select(ParcelCache.parcel_id, ParcelCache.address, ranked.c.potentie)
+        select(
+            ParcelCache.parcel_id,
+            ParcelCache.address,
+            ranked.c.wijk,
+            ranked.c.potentie,
+        )
         .join(ranked, ranked.c.pc_id == ParcelCache.id)
         .where(
             ranked.c.rn == 1,
@@ -131,9 +138,10 @@ async def get_kansen(
         Kans(
             parcel_id=parcel_id,
             address=address,
+            wijk=wijk,
             potentie_score=round(potentie_score, 1) if potentie_score is not None else None,
         )
-        for parcel_id, address, potentie_score in result.all()
+        for parcel_id, address, wijk, potentie_score in result.all()
     ]
     return KansenResponse(kansen=kansen)
 
