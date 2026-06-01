@@ -211,7 +211,7 @@ function DashboardPage() {
           {/* LINKS — gemeentesignalen */}
           <div>
             <SectionHead>Gemeentesignalen</SectionHead>
-            <div className="overflow-hidden rounded-2xl border border-white/60 bg-white/55">
+            <div className="h-[calc(100vh-320px)] min-h-[360px] overflow-y-auto rounded-2xl border border-white/60 bg-white/55">
               {signalen.isLoading && <Empty>Laden…</Empty>}
               {signalen.isSuccess && signalen.data.length === 0 && (
                 <Empty>Nog geen bekendmakingen voor {GEMEENTE}.</Empty>
@@ -221,7 +221,7 @@ function DashboardPage() {
                 return (
                   <div
                     key={s.id}
-                    className={`flex cursor-pointer items-center gap-3.5 px-[18px] py-3 ${i > 0 ? 'border-t border-aura-ink/5' : ''} ${inPipeline ? 'bg-aura-amber/[0.07] hover:bg-aura-amber/[0.11]' : 'hover:bg-white/70'}`}
+                    className={`group flex cursor-pointer items-center gap-3.5 px-[18px] py-3 ${i > 0 ? 'border-t border-aura-ink/5' : ''} ${inPipeline ? 'bg-aura-amber/[0.07] hover:bg-aura-amber/[0.11]' : 'hover:bg-white/70'}`}
                   >
                     <span className="w-12 flex-none text-[11px] text-neutral-400">
                       {fmtDate(s.change_date)}
@@ -240,7 +240,7 @@ function DashboardPage() {
                       </span>
                     )}
                     <span
-                      className={`flex-none ${inPipeline ? 'text-aura-amber-hover' : 'text-neutral-400'}`}
+                      className={`flex-none ${inPipeline ? 'text-aura-amber-hover' : 'text-neutral-400 group-hover:text-aura-amber-hover'}`}
                     >
                       <IconMap />
                     </span>
@@ -253,7 +253,7 @@ function DashboardPage() {
           {/* RECHTS — off-market kansen */}
           <div>
             <SectionHead>Off-market kansen</SectionHead>
-            <div className="rounded-[20px] border border-white/60 bg-white/55 p-4">
+            <div className="h-[calc(100vh-320px)] min-h-[360px] overflow-y-auto rounded-[20px] border border-white/60 bg-white/55 p-4">
               <p className="mb-3.5 text-xs text-neutral-500">
                 Ontwikkelpotentie in je gemeenten · nog niet benaderd
               </p>
