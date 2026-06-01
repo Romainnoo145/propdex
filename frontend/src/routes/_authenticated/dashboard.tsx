@@ -162,7 +162,7 @@ function DashboardPage() {
   }
 
   return (
-    <ResultsShell>
+    <ResultsShell fullWidth>
       <div className="mx-auto max-w-[1180px] px-8 py-8">
         {/* header */}
         <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
@@ -207,7 +207,7 @@ function DashboardPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-[1.45fr_1fr] items-start gap-[18px] max-lg:grid-cols-1">
+        <div className="grid grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] items-start gap-[18px] max-lg:grid-cols-1">
           {/* LINKS — gemeentesignalen */}
           <div>
             <SectionHead>Gemeentesignalen</SectionHead>
