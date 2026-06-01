@@ -5,17 +5,24 @@ levert de overige dashboard-surfaces (pijplijn-counts, off-market kansen, banner
 dismiss).
 """
 
+import uuid
+
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_active_user
+from app.auth.dependencies import (
+    get_current_active_user,
+    get_current_organization_id,
+)
 from app.core.database import get_db
 from app.middleware.rate_limit import limiter
 from app.models.area_scan import AreaScan
+from app.models.change_record import ChangeRecord
 from app.models.parcel_cache import ParcelCache
 from app.models.parcel_favorite import ParcelFavorite
+from app.models.project import Project
 from app.models.scan_result import ScanResult
 from app.models.user import User
 
@@ -129,3 +136,56 @@ async def get_kansen(
         for parcel_id, address, potentie_score in result.all()
     ]
     return KansenResponse(kansen=kansen)
+
+
+class BannerItem(BaseModel):
+    id: str
+    title: str
+    change_type: str
+    change_date: str
+    gemeente_naam: str
+    source_url: str | None
+
+
+class BannerResponse(BaseModel):
+    banner: BannerItem | None
+
+
+@router.get("/banner", response_model=BannerResponse)
+@limiter.limit("60/minute")
+async def get_banner(
+    request: Request,
+    gemeente: str,
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> BannerResponse:
+    """Conditionele beleid-banner: de recentste plan-/beleidswijziging (``zoning``)
+    in de gemeente voor deze organisatie, of ``null`` (meeste dagen geen banner).
+
+    Org-scoped via ``Project.organization_id`` (ChangeRecord hangt aan een Project).
+    """
+    result = await db.execute(
+        select(ChangeRecord)
+        .join(Project, Project.id == ChangeRecord.project_id)
+        .where(
+            Project.organization_id == organization_id,
+            ChangeRecord.gemeente_naam == gemeente,
+            ChangeRecord.change_type == "zoning",
+        )
+        .order_by(ChangeRecord.change_date.desc())
+        .limit(1)
+    )
+    change = result.scalar_one_or_none()
+    if change is None:
+        return BannerResponse(banner=None)
+
+    return BannerResponse(
+        banner=BannerItem(
+            id=str(change.id),
+            title=change.title,
+            change_type=change.change_type,
+            change_date=change.change_date.isoformat(),
+            gemeente_naam=change.gemeente_naam,
+            source_url=change.source_url,
+        )
+    )

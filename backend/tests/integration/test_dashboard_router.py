@@ -1,13 +1,17 @@
 """M052/S03 — Dashboard router (twee-signalen acquisitie-radar) tests."""
 
+from datetime import datetime
+
 import pytest
 from geoalchemy2 import WKTElement
 from httpx import AsyncClient
 
 from app.auth.jwt import create_access_token
 from app.models.area_scan import AreaScan
+from app.models.change_record import ChangeRecord
 from app.models.parcel_cache import ParcelCache
 from app.models.parcel_favorite import ParcelFavorite
+from app.models.project import Project
 from app.models.scan_result import ScanResult
 
 
@@ -176,3 +180,81 @@ async def test_kansen_does_not_leak_other_gemeente(
     assert resp.status_code == 200
     ids = [k["parcel_id"] for k in resp.json()["kansen"]]
     assert ids == ["VENLO-G1"]
+
+
+async def _zoning_change(test_db, project_id, external_id, title, change_date, gemeente="Venlo"):
+    test_db.add(
+        ChangeRecord(
+            project_id=project_id,
+            change_type="zoning",
+            external_id=external_id,
+            title=title,
+            change_date=change_date,
+            gemeente_naam=gemeente,
+            metadata_json={},
+        )
+    )
+
+
+@pytest.mark.asyncio
+async def test_banner_returns_recent_zoning_change(
+    async_client: AsyncClient, create_test_user, test_db
+):
+    """Banner = recentste beleid/plan-wijziging (zoning); permits tellen niet mee."""
+    user, org, headers = await _user_headers(create_test_user)
+    project = Project(name="Venlo", organization_id=org.id, gemeente_code="GM0983", is_monitored=True)
+    test_db.add(project)
+    await test_db.flush()
+
+    test_db.add(
+        ChangeRecord(
+            project_id=project.id,
+            change_type="permit",
+            external_id="p1",
+            title="Omgevingsvergunning",
+            change_date=datetime(2026, 5, 29),
+            gemeente_naam="Venlo",
+            metadata_json={},
+        )
+    )
+    await _zoning_change(test_db, project.id, "z-old", "Oud omgevingsplan", datetime(2026, 5, 10))
+    await _zoning_change(test_db, project.id, "z-new", "Omgevingsplan Venlo-Centrum gewijzigd", datetime(2026, 5, 28))
+    await test_db.commit()
+
+    resp = await async_client.get("/api/dashboard/banner?gemeente=Venlo", headers=headers)
+
+    assert resp.status_code == 200
+    banner = resp.json()["banner"]
+    assert banner is not None
+    assert banner["title"] == "Omgevingsplan Venlo-Centrum gewijzigd"
+    assert banner["change_type"] == "zoning"
+
+
+@pytest.mark.asyncio
+async def test_banner_null_when_no_zoning(
+    async_client: AsyncClient, create_test_user, test_db
+):
+    """Geen actieve beleid/plan-wijziging → banner is null (meeste dagen)."""
+    user, org, headers = await _user_headers(create_test_user)
+    resp = await async_client.get("/api/dashboard/banner?gemeente=Venlo", headers=headers)
+    assert resp.status_code == 200
+    assert resp.json()["banner"] is None
+
+
+@pytest.mark.asyncio
+async def test_banner_does_not_leak_other_org(
+    async_client: AsyncClient, create_test_user, test_db
+):
+    """IRON RULE: de banner toont nooit een wijziging van een andere organisatie."""
+    user_a, org_a, headers_a = await _user_headers(create_test_user, email="a@x.com", org_name="A")
+    user_b, org_b, _ = await _user_headers(create_test_user, email="b@x.com", org_name="B")
+    project_b = Project(name="Venlo", organization_id=org_b.id, gemeente_code="GM0983", is_monitored=True)
+    test_db.add(project_b)
+    await test_db.flush()
+    await _zoning_change(test_db, project_b.id, "z-b", "Omgevingsplan B", datetime(2026, 5, 28))
+    await test_db.commit()
+
+    resp = await async_client.get("/api/dashboard/banner?gemeente=Venlo", headers=headers_a)
+
+    assert resp.status_code == 200
+    assert resp.json()["banner"] is None
