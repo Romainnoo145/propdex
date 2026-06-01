@@ -291,3 +291,31 @@ async def test_dismiss_is_user_scoped(async_client: AsyncClient, create_test_use
 
     rb = await async_client.get("/api/dashboard/kansen?gemeente=Venlo", headers=headers_b)
     assert {k["parcel_id"] for k in rb.json()["kansen"]} == {"VENLO-S1"}
+
+
+@pytest.mark.asyncio
+async def test_pipeline_parcels_returns_favorite_cache_ids(
+    async_client: AsyncClient, create_test_user, test_db
+):
+    """De pijplijn-parcels endpoint geeft de favorite parcel_cache_ids van de user
+    terug, zodat de frontend gemeentesignalen kan markeren die een eigen perceel raken."""
+    user, org, headers = await _user_headers(create_test_user)
+    other, _, headers_other = await _user_headers(create_test_user, email="pp@x.com", org_name="PP")
+    parcel = await _scored_parcel(test_db, "VENLO-PP1", "Venlo", 70.0)
+    test_db.add(
+        ParcelFavorite(
+            parcel_id="VENLO-PP1",
+            parcel_cache_id=parcel.id,
+            user_id=user.id,
+            pipeline_stage="Onderzoek",
+        )
+    )
+    await test_db.commit()
+
+    resp = await async_client.get("/api/dashboard/pipeline-parcels", headers=headers)
+    assert resp.status_code == 200
+    assert str(parcel.id) in resp.json()["parcel_cache_ids"]
+
+    # IRON RULE: andere user ziet deze pijplijn-parcel niet
+    resp_other = await async_client.get("/api/dashboard/pipeline-parcels", headers=headers_other)
+    assert resp_other.json()["parcel_cache_ids"] == []

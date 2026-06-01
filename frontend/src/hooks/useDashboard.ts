@@ -97,6 +97,23 @@ export function useDashboardBanner(gemeente: string) {
   })
 }
 
+/** parcel_cache_ids van de favorites van de user (voor in-pijplijn-markering). */
+export function usePipelineParcels() {
+  const { accessToken } = useAuth()
+  return useQuery<string[], Error>({
+    queryKey: ['dashboard', 'pipeline-parcels'],
+    queryFn: async () => {
+      const r = await apiFetch<{ parcel_cache_ids: string[] }>(
+        '/api/dashboard/pipeline-parcels',
+        { method: 'GET', accessToken },
+      )
+      return r.parcel_cache_ids
+    },
+    staleTime: 60 * 1000,
+    enabled: !!accessToken,
+  })
+}
+
 /** Verberg een off-market kans (persistent, server-side). */
 export function useDismissKans() {
   const { accessToken } = useAuth()

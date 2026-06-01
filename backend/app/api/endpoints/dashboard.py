@@ -228,3 +228,30 @@ async def dismiss_kans(
         db.add(DismissedKans(user_id=current_user.id, parcel_id=parcel_id))
         await db.commit()
     return {"status": "ok"}
+
+
+class PipelineParcelsResponse(BaseModel):
+    parcel_cache_ids: list[str]
+
+
+@router.get("/pipeline-parcels", response_model=PipelineParcelsResponse)
+@limiter.limit("60/minute")
+async def get_pipeline_parcels(
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> PipelineParcelsResponse:
+    """De ``parcel_cache_id``'s van de favorites van de huidige user.
+
+    De frontend gebruikt deze om gemeentesignalen amber te markeren ("In je
+    pijplijn") wanneer een bekendmaking een eigen perceel raakt. User-scoped.
+    """
+    result = await db.execute(
+        select(ParcelFavorite.parcel_cache_id).where(
+            ParcelFavorite.user_id == current_user.id,
+            ParcelFavorite.parcel_cache_id.isnot(None),
+        )
+    )
+    return PipelineParcelsResponse(
+        parcel_cache_ids=[str(pc_id) for pc_id in result.scalars().all()]
+    )

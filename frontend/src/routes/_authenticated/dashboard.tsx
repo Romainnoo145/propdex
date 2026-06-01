@@ -8,6 +8,7 @@ import {
   useGemeenteSignalen,
   useOffMarketKansen,
   usePijplijn,
+  usePipelineParcels,
   type Kans,
 } from '@/hooks/useDashboard'
 
@@ -134,6 +135,8 @@ function DashboardPage() {
   const signalen = useGemeenteSignalen(GEMEENTE)
   const kansen = useOffMarketKansen(GEMEENTE)
   const pijplijn = usePijplijn()
+  const pipelineParcels = usePipelineParcels()
+  const pipelineSet = new Set(pipelineParcels.data ?? [])
   const dismissKans = useDismissKans()
   const [dismissed, setDismissed] = useState<Set<string>>(() => new Set())
 
@@ -199,27 +202,37 @@ function DashboardPage() {
               {signalen.isSuccess && signalen.data.length === 0 && (
                 <Empty>Nog geen bekendmakingen voor {GEMEENTE}.</Empty>
               )}
-              {signalen.data?.map((s, i) => (
-                <div
-                  key={s.id}
-                  className={`flex cursor-pointer items-center gap-3.5 px-[18px] py-3 hover:bg-white/70 ${i > 0 ? 'border-t border-aura-ink/5' : ''}`}
-                >
-                  <span className="w-12 flex-none text-[11px] text-neutral-400">
-                    {fmtDate(s.change_date)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13.5px] font-semibold text-aura-ink">
-                      {s.title}
+              {signalen.data?.map((s, i) => {
+                const inPipeline = !!s.matched_parcel_id && pipelineSet.has(s.matched_parcel_id)
+                return (
+                  <div
+                    key={s.id}
+                    className={`flex cursor-pointer items-center gap-3.5 px-[18px] py-3 ${i > 0 ? 'border-t border-aura-ink/5' : ''} ${inPipeline ? 'bg-aura-amber/[0.07] hover:bg-aura-amber/[0.11]' : 'hover:bg-white/70'}`}
+                  >
+                    <span className="w-12 flex-none text-[11px] text-neutral-400">
+                      {fmtDate(s.change_date)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13.5px] font-semibold text-aura-ink">
+                        {s.title}
+                      </div>
+                      <div className="truncate text-xs text-neutral-400">
+                        {s.address ?? s.gemeente_naam}
+                      </div>
                     </div>
-                    <div className="truncate text-xs text-neutral-400">
-                      {s.address ?? s.gemeente_naam}
-                    </div>
+                    {inPipeline && (
+                      <span className="flex-none rounded-md bg-aura-amber/15 px-1.5 py-1 text-[10px] font-bold text-aura-amber-hover">
+                        In je pijplijn
+                      </span>
+                    )}
+                    <span
+                      className={`flex-none ${inPipeline ? 'text-aura-amber-hover' : 'text-neutral-400'}`}
+                    >
+                      <IconMap />
+                    </span>
                   </div>
-                  <span className="flex-none text-neutral-400">
-                    <IconMap />
-                  </span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
