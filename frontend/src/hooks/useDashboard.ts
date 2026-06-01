@@ -140,7 +140,8 @@ export function useGemeenteSignalen(gemeente: string) {
         `/api/monitoring/changes?gemeente_naam=${encodeURIComponent(gemeente)}&include_matches=true&limit=20`,
         { method: 'GET', accessToken },
       )
-      return res.changes
+      // Nieuw -> oud op publicatiedatum.
+      return res.changes.slice().sort((a, b) => b.change_date.localeCompare(a.change_date))
     },
     staleTime: 60 * 1000,
     enabled: !!accessToken && !!gemeente,

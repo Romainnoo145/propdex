@@ -104,7 +104,7 @@ function KansCard({ kans, onDismiss }: { kans: Kans; onDismiss: () => void }) {
         <ScoreRing score={kans.potentie_score} />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-bold text-aura-ink">
-            {kans.address ?? `Perceel ${kans.parcel_id}`}
+            {kans.address ?? 'Ontwikkelkavel'}
           </div>
           <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-neutral-400">
             <span className="h-[5px] w-[5px] rounded-full bg-aura-amber" />
@@ -179,7 +179,6 @@ function DashboardPage() {
           <button className="inline-flex items-center gap-2.5 rounded-full border border-white/70 bg-white/70 py-2 pl-4 pr-3 text-sm font-bold text-aura-ink">
             <span className="h-[7px] w-[7px] rounded-full bg-aura-amber" />
             {GEMEENTE}
-            <span className="text-[11px] font-semibold text-neutral-400">3 actief</span>
             <svg
               viewBox="0 0 24 24"
               className="h-4 w-4 fill-none stroke-[1.8] stroke-neutral-500 [stroke-linecap:round]"
