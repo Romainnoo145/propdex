@@ -259,3 +259,35 @@ async def test_banner_does_not_leak_other_org(
 
     assert resp.status_code == 200
     assert resp.json()["banner"] is None
+
+
+@pytest.mark.asyncio
+async def test_dismiss_kans_hides_it(async_client: AsyncClient, create_test_user, test_db):
+    """Een weggetikte kans verdwijnt uit de off-market kansen (server-side persistent)."""
+    user, org, headers = await _user_headers(create_test_user)
+    await _scored_parcel(test_db, "VENLO-D1", "Venlo", 75.0, x=155000)
+    await _scored_parcel(test_db, "VENLO-D2", "Venlo", 70.0, x=155100)
+    await test_db.commit()
+
+    r0 = await async_client.get("/api/dashboard/kansen?gemeente=Venlo", headers=headers)
+    assert {k["parcel_id"] for k in r0.json()["kansen"]} == {"VENLO-D1", "VENLO-D2"}
+
+    rd = await async_client.post("/api/dashboard/kansen/VENLO-D1/dismiss", headers=headers)
+    assert rd.status_code == 200
+
+    r1 = await async_client.get("/api/dashboard/kansen?gemeente=Venlo", headers=headers)
+    assert {k["parcel_id"] for k in r1.json()["kansen"]} == {"VENLO-D2"}
+
+
+@pytest.mark.asyncio
+async def test_dismiss_is_user_scoped(async_client: AsyncClient, create_test_user, test_db):
+    """IRON RULE: een dismiss van user A verbergt de kans niet voor user B."""
+    user_a, _, headers_a = await _user_headers(create_test_user, email="da@x.com", org_name="DA")
+    user_b, _, headers_b = await _user_headers(create_test_user, email="db@x.com", org_name="DB")
+    await _scored_parcel(test_db, "VENLO-S1", "Venlo", 72.0, x=155000)
+    await test_db.commit()
+
+    await async_client.post("/api/dashboard/kansen/VENLO-S1/dismiss", headers=headers_a)
+
+    rb = await async_client.get("/api/dashboard/kansen?gemeente=Venlo", headers=headers_b)
+    assert {k["parcel_id"] for k in rb.json()["kansen"]} == {"VENLO-S1"}

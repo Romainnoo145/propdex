@@ -4,6 +4,7 @@ import { useState } from 'react'
 import ResultsShell from '@/components/layout/ResultsShell'
 import {
   useDashboardBanner,
+  useDismissKans,
   useGemeenteSignalen,
   useOffMarketKansen,
   usePijplijn,
@@ -133,9 +134,15 @@ function DashboardPage() {
   const signalen = useGemeenteSignalen(GEMEENTE)
   const kansen = useOffMarketKansen(GEMEENTE)
   const pijplijn = usePijplijn()
+  const dismissKans = useDismissKans()
   const [dismissed, setDismissed] = useState<Set<string>>(() => new Set())
 
   const visibleKansen = (kansen.data?.kansen ?? []).filter((k) => !dismissed.has(k.parcel_id))
+
+  const handleDismiss = (parcelId: string) => {
+    setDismissed((d) => new Set(d).add(parcelId)) // instant feedback
+    dismissKans.mutate(parcelId) // persist server-side
+  }
 
   return (
     <ResultsShell>
@@ -226,11 +233,7 @@ function DashboardPage() {
               {kansen.isLoading && <Empty>Laden…</Empty>}
               {kansen.isSuccess && visibleKansen.length === 0 && <Empty>Geen open kansen.</Empty>}
               {visibleKansen.map((k) => (
-                <KansCard
-                  key={k.parcel_id}
-                  kans={k}
-                  onDismiss={() => setDismissed((d) => new Set(d).add(k.parcel_id))}
-                />
+                <KansCard key={k.parcel_id} kans={k} onDismiss={() => handleDismiss(k.parcel_id)} />
               ))}
             </div>
           </div>

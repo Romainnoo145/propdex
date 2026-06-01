@@ -5,7 +5,7 @@
  * pijplijn / off-market kansen / banner komen van de nieuwe dashboard-router.
  */
 
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { apiFetch } from '@/lib/api'
 import { useAuth } from '@/lib/auth/useAuth'
@@ -94,6 +94,20 @@ export function useDashboardBanner(gemeente: string) {
       ),
     staleTime: 5 * 60 * 1000,
     enabled: !!accessToken && !!gemeente,
+  })
+}
+
+/** Verberg een off-market kans (persistent, server-side). */
+export function useDismissKans() {
+  const { accessToken } = useAuth()
+  const qc = useQueryClient()
+  return useMutation<{ status: string }, Error, string>({
+    mutationFn: (parcelId: string) =>
+      apiFetch<{ status: string }>(
+        `/api/dashboard/kansen/${encodeURIComponent(parcelId)}/dismiss`,
+        { method: 'POST', accessToken },
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['dashboard', 'kansen'] }),
   })
 }
 

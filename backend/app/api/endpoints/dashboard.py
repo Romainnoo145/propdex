@@ -20,11 +20,13 @@ from app.core.database import get_db
 from app.middleware.rate_limit import limiter
 from app.models.area_scan import AreaScan
 from app.models.change_record import ChangeRecord
+from app.models.dismissed_kans import DismissedKans
 from app.models.parcel_cache import ParcelCache
 from app.models.parcel_favorite import ParcelFavorite
 from app.models.project import Project
 from app.models.scan_result import ScanResult
 from app.models.user import User
+from app.schemas.common import StatusResponse
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
@@ -115,6 +117,9 @@ async def get_kansen(
     favorite_ids = select(ParcelFavorite.parcel_id).where(
         ParcelFavorite.user_id == current_user.id
     )
+    dismissed_ids = select(DismissedKans.parcel_id).where(
+        DismissedKans.user_id == current_user.id
+    )
 
     result = await db.execute(
         select(
@@ -129,6 +134,7 @@ async def get_kansen(
             ranked.c.potentie.isnot(None),
             ranked.c.potentie >= min_potentie,
             ParcelCache.parcel_id.notin_(favorite_ids),
+            ParcelCache.parcel_id.notin_(dismissed_ids),
         )
         .order_by(ranked.c.potentie.desc())
         .limit(limit)
@@ -197,3 +203,28 @@ async def get_banner(
             source_url=change.source_url,
         )
     )
+
+
+@router.post("/kansen/{parcel_id}/dismiss", response_model=StatusResponse)
+@limiter.limit("60/minute")
+async def dismiss_kans(
+    request: Request,
+    parcel_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """Verberg een off-market kans voor de huidige user (persistent, user-scoped).
+
+    Idempotent: nogmaals verbergen is een no-op. De ``kansen``-query sluit
+    verborgen percelen uit.
+    """
+    existing = await db.execute(
+        select(DismissedKans).where(
+            DismissedKans.user_id == current_user.id,
+            DismissedKans.parcel_id == parcel_id,
+        )
+    )
+    if existing.scalar_one_or_none() is None:
+        db.add(DismissedKans(user_id=current_user.id, parcel_id=parcel_id))
+        await db.commit()
+    return {"status": "ok"}
