@@ -1,13 +1,13 @@
 # Railway Deploy Notes — propdex-staging
 
-> Last deployed: 2026-04-03
+> Last deployed: 2026-04-03 (api) · 2026-06-02 (worker — crash-loop fixed)
 
 ## Services
 
 | Service | URL | Start Command | Status |
 |---|---|---|---|
-| api | `api-production-7f87.up.railway.app` | `bash scripts/start_web.sh` (via APP_MODE=web) | ✅ SUCCESS |
-| worker | `worker-production-3a858.up.railway.app` | `bash scripts/start_worker.sh` (via APP_MODE=worker) | ⚠️ CRASH |
+| api | `api-production-7f87.up.railway.app` | `bash scripts/start_web.sh` (via APP_MODE=web) | ✅ SUCCESS (⚠️ stale pre-M050 image — see Worker crash-loop note) |
+| worker | `worker-production-3a858.up.railway.app` | `bash scripts/start_worker.sh` (via APP_MODE=worker) | ✅ SUCCESS (fixed 2026-06-02) |
 | PostGIS | `postgis.railway.internal:5432` | — | ✅ SUCCESS |
 | Redis | `redis.railway.internal:6379` | — | ✅ SUCCESS |
 
@@ -73,6 +73,36 @@ docker exec propdex-db bash -c 'pg_dump -Fc -U postgres propdex --data-only ... 
 
 Results: 28 tables, 137K parcels, 64K scan results, 16 reports, 1 user.
 6 non-critical restore errors (schema mismatches for dev-only columns/tables).
+
+## Worker crash-loop (fixed 2026-06-02)
+
+The `worker` service crash-looped from the 2026-04-03 deploy until 2026-06-02,
+silently freezing the daily `change_monitor` cron — prod gemeentesignalen were
+stale from early April to June. Two compounding causes:
+
+1. **Redis private-network boot race.** arq's `create_pool()` pings
+   `redis.railway.internal` immediately at boot, but Railway's IPv6 private
+   network needs a few seconds to resolve. arq's default retry window
+   (`conn_retries=5 × conn_retry_delay=1` ≈ 5s) lost the race every boot.
+   **Fix:** bumped to `conn_retries=20 × conn_retry_delay=2` (~40s) in
+   `get_redis_settings()` (`app/jobs/worker.py`). Regression test:
+   `tests/unit/test_worker_redis_settings.py`.
+
+2. **Missing `INTEGRATION_CREDENTIAL_KEY`.** After the Redis fix the worker
+   crashed earlier, at `Settings()` validation: the M050 BRK integration added
+   a *required* Fernet key that was never set on the worker. Set it via
+   `railway variables --set "INTEGRATION_CREDENTIAL_KEY=<fernet>" -s worker`.
+   Prod had no encrypted `integration_credentials` rows (feature postdates the
+   2026-04-03 data migration), so any valid Fernet key boots safely.
+
+⚠️ **The `api` service is still on a stale pre-M050 image** — it stays up only
+because that image predates `INTEGRATION_CREDENTIAL_KEY`. **Before redeploying
+`api`, set the SAME `INTEGRATION_CREDENTIAL_KEY` on it** (must match the worker /
+whatever encrypted any `integration_credentials`), or it will crash on boot.
+
+The daily cron (`hour=3` UTC) self-heals the data gap on its next run: the
+cursor is `MAX(ChangeRecord.detected_at)`, so it fetches everything published
+since the last detection in one paginated pass.
 
 ## Gotchas
 
