@@ -42,3 +42,26 @@ Plus een tweede gemeente GM1507 (11.524 rijen) staat los in parcel_cache.
 ## Niet doen (nu)
 
 Niet blind dedupliceren of rijen verwijderen — eerst begrijpen wat elk object-type is en of de scan-pipeline ze bewust ophaalt. Geen scope binnen huidige pitch-werk; aparte sessie.
+
+---
+
+## RESOLVED — attributie (2026-06-02)
+
+Mis-stamping gefixt op prod via `app/tools/restamp_parcel_gemeente.py` (commit ba454b98).
+Geen rijen verwijderd; alleen `gemeente_code` per-parcel hersteld vanuit de eigen
+identiteit (BAG 16-cijferig → CBS-prefix; BRK 14-cijferig → kadastrale-gemeente-map).
+16.020 rijen gecorrigeerd, alle kandidaat-rijen geback-upt naar
+`parcel_cache_gemeente_backup_20260602` (omkeerbaar).
+
+Eerlijke per-gemeente BRK-tellingen na fix:
+- GM0983 Venlo = 55.034 (volledige gemeente: Venlo+Tegelen+Belfeld+Arcen; ~31.5k = kad.gem. Venlo-core)
+- GM1507 Horst a/d Maas = 3.710 · GM1894 Peel en Maas = 2.764 · GM0889 Beesel = 2.236 · GM0893 Bergen = 73 (allemaal PARTIEEL — alleen scan-bleed)
+
+Beantwoordt onderzoeksvraag 2 (cross-gemeente lek = scan-bbox stamp, nu hersteld op data-niveau).
+
+## NOG OPEN (deferred)
+
+1. **Root cause in scan-pipeline**: parcels krijgen nog steeds de gemeente_code van de SCAN bij nieuwe scans. Fix bij de regionale-dekking-milestone (assign gemeente per-parcel, niet per-scan).
+2. **BAG/BRK identifier-semantiek** (onderzoeksvraag 4): één `parcel_id` bevat zowel BAG-objecten (16) als BRK-kadaster (14). Splitsen naar `bag_id`/`brk_id` of object_type-kolom — nog te doen.
+3. **Appartementsrechten-split** (onderzoeksvraag 1): 55k BRK Venlo vs ~31.5k kad.gem-core — verschil = deelgemeenten + mogelijke A-rechten; niet uitgesplitst.
+4. **Regionale dekking**: buurgemeenten staan PARTIEEL in data. Volledige gemeente-scans = aparte milestone (user-besluit 2026-06-02: "alles omliggend" als toekomstige scope, niet nu).
