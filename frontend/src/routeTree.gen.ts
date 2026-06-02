@@ -30,7 +30,6 @@ import { Route as AuthenticatedInstellingenIndexRouteImport } from './routes/_au
 import { Route as AuthenticatedRapportIdRouteImport } from './routes/_authenticated/rapport.$id'
 import { Route as AuthenticatedInstellingenScoreRouteImport } from './routes/_authenticated/instellingen.score'
 import { Route as AuthenticatedInstellingenDataBronnenRouteImport } from './routes/_authenticated/instellingen.data-bronnen'
-import { Route as AuthenticatedInstellingenBeleidBeheerRouteImport } from './routes/_authenticated/instellingen.beleid-beheer'
 import { Route as AuthenticatedInstellingenAdminRouteImport } from './routes/_authenticated/instellingen.admin'
 import { Route as AuthenticatedInstellingenActionItemsRouteImport } from './routes/_authenticated/instellingen.action-items'
 import { Route as AuthenticatedChecklistIdRouteImport } from './routes/_authenticated/checklist.$id'
@@ -38,6 +37,7 @@ import { Route as AuthenticatedInstellingenDataBronnenIndexRouteImport } from '.
 import { Route as AuthenticatedOpgeslagenPerceelParcelIdRouteImport } from './routes/_authenticated/opgeslagen.perceel.$parcelId'
 import { Route as AuthenticatedInstellingenDataBronnenGemeenteCodeRouteImport } from './routes/_authenticated/instellingen.data-bronnen.$gemeenteCode'
 import { Route as AuthenticatedOpgeslagenPerceelParcelIdPhaseRouteImport } from './routes/_authenticated/opgeslagen.perceel.$parcelId.$phase'
+import { Route as AuthenticatedInstellingenDataBronnenEntityTypeEntityCodeRouteImport } from './routes/_authenticated/instellingen.data-bronnen.$entityType.$entityCode'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -149,12 +149,6 @@ const AuthenticatedInstellingenDataBronnenRoute =
     path: '/data-bronnen',
     getParentRoute: () => AuthenticatedInstellingenRoute,
   } as any)
-const AuthenticatedInstellingenBeleidBeheerRoute =
-  AuthenticatedInstellingenBeleidBeheerRouteImport.update({
-    id: '/beleid-beheer',
-    path: '/beleid-beheer',
-    getParentRoute: () => AuthenticatedInstellingenRoute,
-  } as any)
 const AuthenticatedInstellingenAdminRoute =
   AuthenticatedInstellingenAdminRouteImport.update({
     id: '/admin',
@@ -197,6 +191,12 @@ const AuthenticatedOpgeslagenPerceelParcelIdPhaseRoute =
     path: '/$phase',
     getParentRoute: () => AuthenticatedOpgeslagenPerceelParcelIdRoute,
   } as any)
+const AuthenticatedInstellingenDataBronnenEntityTypeEntityCodeRoute =
+  AuthenticatedInstellingenDataBronnenEntityTypeEntityCodeRouteImport.update({
+    id: '/$entityType/$entityCode',
+    path: '/$entityType/$entityCode',
+    getParentRoute: () => AuthenticatedInstellingenDataBronnenRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -218,7 +218,6 @@ export interface FileRoutesByFullPath {
   '/checklist/$id': typeof AuthenticatedChecklistIdRoute
   '/instellingen/action-items': typeof AuthenticatedInstellingenActionItemsRoute
   '/instellingen/admin': typeof AuthenticatedInstellingenAdminRoute
-  '/instellingen/beleid-beheer': typeof AuthenticatedInstellingenBeleidBeheerRoute
   '/instellingen/data-bronnen': typeof AuthenticatedInstellingenDataBronnenRouteWithChildren
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
@@ -226,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
   '/opgeslagen/perceel/$parcelId': typeof AuthenticatedOpgeslagenPerceelParcelIdRouteWithChildren
   '/instellingen/data-bronnen/': typeof AuthenticatedInstellingenDataBronnenIndexRoute
+  '/instellingen/data-bronnen/$entityType/$entityCode': typeof AuthenticatedInstellingenDataBronnenEntityTypeEntityCodeRoute
   '/opgeslagen/perceel/$parcelId/$phase': typeof AuthenticatedOpgeslagenPerceelParcelIdPhaseRoute
 }
 export interface FileRoutesByTo {
@@ -247,13 +247,13 @@ export interface FileRoutesByTo {
   '/checklist/$id': typeof AuthenticatedChecklistIdRoute
   '/instellingen/action-items': typeof AuthenticatedInstellingenActionItemsRoute
   '/instellingen/admin': typeof AuthenticatedInstellingenAdminRoute
-  '/instellingen/beleid-beheer': typeof AuthenticatedInstellingenBeleidBeheerRoute
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/instellingen': typeof AuthenticatedInstellingenIndexRoute
   '/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
   '/opgeslagen/perceel/$parcelId': typeof AuthenticatedOpgeslagenPerceelParcelIdRouteWithChildren
   '/instellingen/data-bronnen': typeof AuthenticatedInstellingenDataBronnenIndexRoute
+  '/instellingen/data-bronnen/$entityType/$entityCode': typeof AuthenticatedInstellingenDataBronnenEntityTypeEntityCodeRoute
   '/opgeslagen/perceel/$parcelId/$phase': typeof AuthenticatedOpgeslagenPerceelParcelIdPhaseRoute
 }
 export interface FileRoutesById {
@@ -278,7 +278,6 @@ export interface FileRoutesById {
   '/_authenticated/checklist/$id': typeof AuthenticatedChecklistIdRoute
   '/_authenticated/instellingen/action-items': typeof AuthenticatedInstellingenActionItemsRoute
   '/_authenticated/instellingen/admin': typeof AuthenticatedInstellingenAdminRoute
-  '/_authenticated/instellingen/beleid-beheer': typeof AuthenticatedInstellingenBeleidBeheerRoute
   '/_authenticated/instellingen/data-bronnen': typeof AuthenticatedInstellingenDataBronnenRouteWithChildren
   '/_authenticated/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/_authenticated/rapport/$id': typeof AuthenticatedRapportIdRoute
@@ -286,6 +285,7 @@ export interface FileRoutesById {
   '/_authenticated/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
   '/_authenticated/opgeslagen/perceel/$parcelId': typeof AuthenticatedOpgeslagenPerceelParcelIdRouteWithChildren
   '/_authenticated/instellingen/data-bronnen/': typeof AuthenticatedInstellingenDataBronnenIndexRoute
+  '/_authenticated/instellingen/data-bronnen/$entityType/$entityCode': typeof AuthenticatedInstellingenDataBronnenEntityTypeEntityCodeRoute
   '/_authenticated/opgeslagen/perceel/$parcelId/$phase': typeof AuthenticatedOpgeslagenPerceelParcelIdPhaseRoute
 }
 export interface FileRouteTypes {
@@ -310,7 +310,6 @@ export interface FileRouteTypes {
     | '/checklist/$id'
     | '/instellingen/action-items'
     | '/instellingen/admin'
-    | '/instellingen/beleid-beheer'
     | '/instellingen/data-bronnen'
     | '/instellingen/score'
     | '/rapport/$id'
@@ -318,6 +317,7 @@ export interface FileRouteTypes {
     | '/instellingen/data-bronnen/$gemeenteCode'
     | '/opgeslagen/perceel/$parcelId'
     | '/instellingen/data-bronnen/'
+    | '/instellingen/data-bronnen/$entityType/$entityCode'
     | '/opgeslagen/perceel/$parcelId/$phase'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -339,13 +339,13 @@ export interface FileRouteTypes {
     | '/checklist/$id'
     | '/instellingen/action-items'
     | '/instellingen/admin'
-    | '/instellingen/beleid-beheer'
     | '/instellingen/score'
     | '/rapport/$id'
     | '/instellingen'
     | '/instellingen/data-bronnen/$gemeenteCode'
     | '/opgeslagen/perceel/$parcelId'
     | '/instellingen/data-bronnen'
+    | '/instellingen/data-bronnen/$entityType/$entityCode'
     | '/opgeslagen/perceel/$parcelId/$phase'
   id:
     | '__root__'
@@ -369,7 +369,6 @@ export interface FileRouteTypes {
     | '/_authenticated/checklist/$id'
     | '/_authenticated/instellingen/action-items'
     | '/_authenticated/instellingen/admin'
-    | '/_authenticated/instellingen/beleid-beheer'
     | '/_authenticated/instellingen/data-bronnen'
     | '/_authenticated/instellingen/score'
     | '/_authenticated/rapport/$id'
@@ -377,6 +376,7 @@ export interface FileRouteTypes {
     | '/_authenticated/instellingen/data-bronnen/$gemeenteCode'
     | '/_authenticated/opgeslagen/perceel/$parcelId'
     | '/_authenticated/instellingen/data-bronnen/'
+    | '/_authenticated/instellingen/data-bronnen/$entityType/$entityCode'
     | '/_authenticated/opgeslagen/perceel/$parcelId/$phase'
   fileRoutesById: FileRoutesById
 }
@@ -536,13 +536,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInstellingenDataBronnenRouteImport
       parentRoute: typeof AuthenticatedInstellingenRoute
     }
-    '/_authenticated/instellingen/beleid-beheer': {
-      id: '/_authenticated/instellingen/beleid-beheer'
-      path: '/beleid-beheer'
-      fullPath: '/instellingen/beleid-beheer'
-      preLoaderRoute: typeof AuthenticatedInstellingenBeleidBeheerRouteImport
-      parentRoute: typeof AuthenticatedInstellingenRoute
-    }
     '/_authenticated/instellingen/admin': {
       id: '/_authenticated/instellingen/admin'
       path: '/admin'
@@ -592,12 +585,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOpgeslagenPerceelParcelIdPhaseRouteImport
       parentRoute: typeof AuthenticatedOpgeslagenPerceelParcelIdRoute
     }
+    '/_authenticated/instellingen/data-bronnen/$entityType/$entityCode': {
+      id: '/_authenticated/instellingen/data-bronnen/$entityType/$entityCode'
+      path: '/$entityType/$entityCode'
+      fullPath: '/instellingen/data-bronnen/$entityType/$entityCode'
+      preLoaderRoute: typeof AuthenticatedInstellingenDataBronnenEntityTypeEntityCodeRouteImport
+      parentRoute: typeof AuthenticatedInstellingenDataBronnenRoute
+    }
   }
 }
 
 interface AuthenticatedInstellingenDataBronnenRouteChildren {
   AuthenticatedInstellingenDataBronnenGemeenteCodeRoute: typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
   AuthenticatedInstellingenDataBronnenIndexRoute: typeof AuthenticatedInstellingenDataBronnenIndexRoute
+  AuthenticatedInstellingenDataBronnenEntityTypeEntityCodeRoute: typeof AuthenticatedInstellingenDataBronnenEntityTypeEntityCodeRoute
 }
 
 const AuthenticatedInstellingenDataBronnenRouteChildren: AuthenticatedInstellingenDataBronnenRouteChildren =
@@ -606,6 +607,8 @@ const AuthenticatedInstellingenDataBronnenRouteChildren: AuthenticatedInstelling
       AuthenticatedInstellingenDataBronnenGemeenteCodeRoute,
     AuthenticatedInstellingenDataBronnenIndexRoute:
       AuthenticatedInstellingenDataBronnenIndexRoute,
+    AuthenticatedInstellingenDataBronnenEntityTypeEntityCodeRoute:
+      AuthenticatedInstellingenDataBronnenEntityTypeEntityCodeRoute,
   }
 
 const AuthenticatedInstellingenDataBronnenRouteWithChildren =
@@ -616,7 +619,6 @@ const AuthenticatedInstellingenDataBronnenRouteWithChildren =
 interface AuthenticatedInstellingenRouteChildren {
   AuthenticatedInstellingenActionItemsRoute: typeof AuthenticatedInstellingenActionItemsRoute
   AuthenticatedInstellingenAdminRoute: typeof AuthenticatedInstellingenAdminRoute
-  AuthenticatedInstellingenBeleidBeheerRoute: typeof AuthenticatedInstellingenBeleidBeheerRoute
   AuthenticatedInstellingenDataBronnenRoute: typeof AuthenticatedInstellingenDataBronnenRouteWithChildren
   AuthenticatedInstellingenScoreRoute: typeof AuthenticatedInstellingenScoreRoute
   AuthenticatedInstellingenIndexRoute: typeof AuthenticatedInstellingenIndexRoute
@@ -627,8 +629,6 @@ const AuthenticatedInstellingenRouteChildren: AuthenticatedInstellingenRouteChil
     AuthenticatedInstellingenActionItemsRoute:
       AuthenticatedInstellingenActionItemsRoute,
     AuthenticatedInstellingenAdminRoute: AuthenticatedInstellingenAdminRoute,
-    AuthenticatedInstellingenBeleidBeheerRoute:
-      AuthenticatedInstellingenBeleidBeheerRoute,
     AuthenticatedInstellingenDataBronnenRoute:
       AuthenticatedInstellingenDataBronnenRouteWithChildren,
     AuthenticatedInstellingenScoreRoute: AuthenticatedInstellingenScoreRoute,

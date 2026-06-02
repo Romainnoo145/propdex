@@ -37,6 +37,31 @@ def compute_lock_key(gemeente_code: str, source_key: str) -> int:
     return int.from_bytes(digest, "big", signed=False) & 0x7FFFFFFFFFFFFFFF
 
 
+async def probe_type_a_for_entity(
+    source_key: str,
+    entity_type: str,
+    entity_code: str,
+    db: AsyncSession,
+) -> ProbeResult:
+    """Live iff a vendor PolicyDocument exists for (entity_type, entity_code, source_key).
+
+    Generalizes probe_type_a_cascade to any entity scope (gemeente, provincie, landelijk).
+    is_global=True filters to vendor uploads only — klant-org overrides don't flip
+    vendor catalog state.
+    """
+    count = await db.scalar(
+        select(func.count())
+        .select_from(PolicyDocument)
+        .where(PolicyDocument.entity_type == entity_type)
+        .where(PolicyDocument.entity_code == entity_code)
+        .where(PolicyDocument.source_key == source_key)
+        .where(PolicyDocument.is_global.is_(True))
+    )
+    if count and count > 0:
+        return {"status": "live", "error_message": None}
+    return {"status": "missing", "error_message": "No vendor PolicyDocument rows found"}
+
+
 async def probe_type_a_cascade(
     source_key: str,
     gemeente_code: str,
@@ -44,23 +69,10 @@ async def probe_type_a_cascade(
 ) -> ProbeResult:
     """Count vendor PolicyDocument rows for this (gemeente, source_key).
 
-    PolicyDocument uses entity_type='gemeente' + entity_code=<code>,
-    NOT a `gemeente_code` column. is_global=True filters to vendor uploads
-    only — klant-org overrides don't flip vendor catalog state.
-
-    count > 0 → live; count == 0 → missing.
+    Delegates to probe_type_a_for_entity with entity_type='gemeente'.
+    Kept for backward compatibility with PROBE_REGISTRY and existing call sites.
     """
-    count = await db.scalar(
-        select(func.count())
-        .select_from(PolicyDocument)
-        .where(PolicyDocument.entity_type == "gemeente")
-        .where(PolicyDocument.entity_code == gemeente_code)
-        .where(PolicyDocument.source_key == source_key)
-        .where(PolicyDocument.is_global.is_(True))
-    )
-    if count and count > 0:
-        return {"status": "live", "error_message": None}
-    return {"status": "missing", "error_message": "No vendor PolicyDocument rows found"}
+    return await probe_type_a_for_entity(source_key, "gemeente", gemeente_code, db)
 
 
 async def probe_type_b_scan_evidence(

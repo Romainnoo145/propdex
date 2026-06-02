@@ -93,7 +93,7 @@ function withProviders(Story: React.ComponentType) {
   })
   const router = createRouter({
     routeTree,
-    history: createMemoryHistory({ initialEntries: ['/instellingen/beleid-beheer'] }),
+    history: createMemoryHistory({ initialEntries: ['/instellingen/data-bronnen'] }),
     context: {
       auth: {
         isAuthenticated: true,

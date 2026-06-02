@@ -44,3 +44,20 @@ export interface GemeenteSummary {
   status_counts: Record<SourceStatus, number>
   last_activity_at: string | null // ISO datetime
 }
+
+export type EntityType = 'landelijk' | 'provincie' | 'gemeente'
+
+export interface ScopeOption {
+  entity_type: EntityType
+  entity_code: string
+  entity_naam: string
+}
+
+export interface ScopeDataSourcesPayload {
+  entity_type: EntityType
+  entity_code: string
+  entity_naam: string
+  cascade_uploads: DataSourceRow[]
+  open_apis: DataSourceRow[]
+  paid_integrations: DataSourceRow[]
+}
