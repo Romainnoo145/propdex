@@ -105,6 +105,30 @@ async def _has_parcel_col(db: AsyncSession, gemeente_code: str, col: str) -> boo
     return bool((await db.execute(sql, {"g": gemeente_code})).scalar())
 
 
+async def _source_has_evidence(db: AsyncSession, gemeente_code: str, source_key: str) -> bool:
+    """True if `source_key` produced data for this gemeente's completed scans."""
+    if source_key in NO_SCAN_EVIDENCE:
+        return False
+    if source_key in FLAG_EVIDENCE:
+        return await _has_flag(db, gemeente_code, FLAG_EVIDENCE[source_key])
+    return await _has_parcel_col(db, gemeente_code, PARCEL_COL_EVIDENCE[source_key])
+
+
+async def probe_type_b(source_key: str, gemeente_code: str, db: AsyncSession) -> dict:
+    """Registry-shaped probe (matches data_source_probes.ProbeFn signature).
+
+    Returns {"status": "live"|"missing", "error_message": str|None}. Marks live
+    only on real scan evidence; NO_SCAN_EVIDENCE sources stay honestly missing.
+    """
+    evidence = await _source_has_evidence(db, gemeente_code, source_key)
+    status = classify(source_key, evidence_present=evidence)
+    if status == "live":
+        return {"status": "live", "error_message": None}
+    if source_key in NO_SCAN_EVIDENCE:
+        return {"status": "missing", "error_message": "Geen per-scan-bewijs (probe volgt in latere milestone)"}
+    return {"status": "missing", "error_message": "Geen scan-enrichment gevonden voor deze gemeente"}
+
+
 async def probe_gemeente(db: AsyncSession, gemeente_code: str) -> dict[str, str]:
     """Probe all type-B sources for one gemeente and upsert data_source_status.
 
@@ -115,13 +139,7 @@ async def probe_gemeente(db: AsyncSession, gemeente_code: str) -> dict[str, str]
 
     for entry in get_entries_by_type("B"):
         key = entry.key
-        if key in NO_SCAN_EVIDENCE:
-            evidence = False
-        elif key in FLAG_EVIDENCE:
-            evidence = await _has_flag(db, gemeente_code, FLAG_EVIDENCE[key])
-        else:  # PARCEL_COL_EVIDENCE
-            evidence = await _has_parcel_col(db, gemeente_code, PARCEL_COL_EVIDENCE[key])
-
+        evidence = await _source_has_evidence(db, gemeente_code, key)
         status = classify(key, evidence_present=evidence)
         results[key] = status
 

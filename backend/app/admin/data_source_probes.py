@@ -63,16 +63,20 @@ async def probe_type_a_cascade(
     return {"status": "missing", "error_message": "No vendor PolicyDocument rows found"}
 
 
-async def probe_type_b_stub(
+async def probe_type_b_scan_evidence(
     source_key: str,
     gemeente_code: str,
     db: AsyncSession,
 ) -> ProbeResult:
-    """Type-B (open APIs) — live probe deferred to later milestone."""
-    return {
-        "status": "not_applicable",
-        "error_message": "Open-API probe not yet wired (deferred to later milestone)",
-    }
+    """Type-B (open APIs) — live iff the source enriched this gemeente's scans.
+
+    Wired 2026-06-02 (replaces the deferred stub). Logic + evidence maps live in
+    app.admin.data_source_probe; 3 sources without per-scan evidence stay missing.
+    """
+    from app.admin.data_source_probe import probe_type_b
+
+    result = await probe_type_b(source_key, gemeente_code, db)
+    return {"status": result["status"], "error_message": result["error_message"]}
 
 
 async def probe_type_c_stub(
@@ -89,6 +93,6 @@ async def probe_type_c_stub(
 
 PROBE_REGISTRY: dict[str, ProbeFn] = {
     "A": probe_type_a_cascade,
-    "B": probe_type_b_stub,
+    "B": probe_type_b_scan_evidence,
     "C": probe_type_c_stub,
 }

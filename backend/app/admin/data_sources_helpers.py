@@ -42,9 +42,8 @@ def compute_actions(source_type: str, status: str, source_key: str) -> list[Acti
     elif source_type == "B":
         actions = [
             Action(
-                action="refresh", enabled=False,
+                action="refresh", enabled=True,
                 label_nl=_ACTION_LABELS["refresh"],
-                reason_disabled="Probe wordt later gewired",
             ),
         ]
     else:  # source_type == "C"

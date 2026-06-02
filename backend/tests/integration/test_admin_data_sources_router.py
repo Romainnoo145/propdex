@@ -249,10 +249,14 @@ async def test_refresh_404_unknown_source_key(
 
 
 @pytest.mark.asyncio
-async def test_refresh_type_b_stub_returns_not_applicable(
+async def test_refresh_type_b_missing_without_scan_evidence(
     async_client: AsyncClient, test_db: AsyncSession, create_test_user
 ):
-    """Type-B source refresh → status=not_applicable, no external call."""
+    """Type-B refresh with a scan but no enrichment flags → status=missing.
+
+    (Probe wired 2026-06-02: live requires real scan evidence; an empty scan
+    yields missing rather than the old not_applicable stub.)
+    """
     user, org = await create_test_user(email="suA@test", is_superuser=True)
     await _seed_area_scan(test_db, "GM0983", "Venlo", org.id)
     # Pick a Type B key from catalog
@@ -262,7 +266,7 @@ async def test_refresh_type_b_stub_returns_not_applicable(
         headers=_superuser_headers(user.id, org.id),
     )
     assert resp.status_code == 200, resp.text
-    assert resp.json()["status"] == "not_applicable"
+    assert resp.json()["status"] == "missing"
 
 
 @pytest.mark.asyncio
