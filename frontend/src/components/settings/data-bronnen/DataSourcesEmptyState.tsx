@@ -2,13 +2,12 @@
  * DataSourcesEmptyState — M049/S03
  *
  * Gemeente-level empty state: zero rows across all 3 sections. Shows
- * MapPin icon + heading + body + 2 CTAs (Beleid-beheer + docs placeholder).
+ * MapPin icon + heading + body + docs CTA.
  *
  * Tokens locked in 03-CONTEXT.md §7. The docs URL is a placeholder —
  * real documentation is post-M049.
  */
 import { BookOpen, MapPin } from 'lucide-react'
-import { Link } from '@tanstack/react-router'
 
 export function DataSourcesEmptyState() {
   return (
@@ -27,16 +26,10 @@ export function DataSourcesEmptyState() {
           Nog geen bronnen geactiveerd voor deze gemeente
         </h3>
         <p className="text-[12px] text-slate-500">
-          Activeer cascade-documenten via Beleid-beheer of configureer open API-bronnen om te starten.
+          Activeer cascade-documenten of configureer open API-bronnen om te starten.
         </p>
       </div>
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-2 pt-2">
-        <Link
-          to="/instellingen/beleid-beheer"
-          className="inline-flex items-center justify-center rounded-full bg-[#0E1111] px-4 py-2 text-[12px] font-semibold text-white hover:opacity-90"
-        >
-          Beleid-beheer openen
-        </Link>
+      <div className="flex items-center justify-center pt-2">
         <a
           href="https://docs.propdex.nl/data-bronnen"
           target="_blank"

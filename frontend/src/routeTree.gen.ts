@@ -30,7 +30,6 @@ import { Route as AuthenticatedInstellingenIndexRouteImport } from './routes/_au
 import { Route as AuthenticatedRapportIdRouteImport } from './routes/_authenticated/rapport.$id'
 import { Route as AuthenticatedInstellingenScoreRouteImport } from './routes/_authenticated/instellingen.score'
 import { Route as AuthenticatedInstellingenDataBronnenRouteImport } from './routes/_authenticated/instellingen.data-bronnen'
-import { Route as AuthenticatedInstellingenBeleidBeheerRouteImport } from './routes/_authenticated/instellingen.beleid-beheer'
 import { Route as AuthenticatedInstellingenAdminRouteImport } from './routes/_authenticated/instellingen.admin'
 import { Route as AuthenticatedInstellingenActionItemsRouteImport } from './routes/_authenticated/instellingen.action-items'
 import { Route as AuthenticatedChecklistIdRouteImport } from './routes/_authenticated/checklist.$id'
@@ -150,12 +149,6 @@ const AuthenticatedInstellingenDataBronnenRoute =
     path: '/data-bronnen',
     getParentRoute: () => AuthenticatedInstellingenRoute,
   } as any)
-const AuthenticatedInstellingenBeleidBeheerRoute =
-  AuthenticatedInstellingenBeleidBeheerRouteImport.update({
-    id: '/beleid-beheer',
-    path: '/beleid-beheer',
-    getParentRoute: () => AuthenticatedInstellingenRoute,
-  } as any)
 const AuthenticatedInstellingenAdminRoute =
   AuthenticatedInstellingenAdminRouteImport.update({
     id: '/admin',
@@ -225,7 +218,6 @@ export interface FileRoutesByFullPath {
   '/checklist/$id': typeof AuthenticatedChecklistIdRoute
   '/instellingen/action-items': typeof AuthenticatedInstellingenActionItemsRoute
   '/instellingen/admin': typeof AuthenticatedInstellingenAdminRoute
-  '/instellingen/beleid-beheer': typeof AuthenticatedInstellingenBeleidBeheerRoute
   '/instellingen/data-bronnen': typeof AuthenticatedInstellingenDataBronnenRouteWithChildren
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
@@ -255,7 +247,6 @@ export interface FileRoutesByTo {
   '/checklist/$id': typeof AuthenticatedChecklistIdRoute
   '/instellingen/action-items': typeof AuthenticatedInstellingenActionItemsRoute
   '/instellingen/admin': typeof AuthenticatedInstellingenAdminRoute
-  '/instellingen/beleid-beheer': typeof AuthenticatedInstellingenBeleidBeheerRoute
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/instellingen': typeof AuthenticatedInstellingenIndexRoute
@@ -287,7 +278,6 @@ export interface FileRoutesById {
   '/_authenticated/checklist/$id': typeof AuthenticatedChecklistIdRoute
   '/_authenticated/instellingen/action-items': typeof AuthenticatedInstellingenActionItemsRoute
   '/_authenticated/instellingen/admin': typeof AuthenticatedInstellingenAdminRoute
-  '/_authenticated/instellingen/beleid-beheer': typeof AuthenticatedInstellingenBeleidBeheerRoute
   '/_authenticated/instellingen/data-bronnen': typeof AuthenticatedInstellingenDataBronnenRouteWithChildren
   '/_authenticated/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/_authenticated/rapport/$id': typeof AuthenticatedRapportIdRoute
@@ -320,7 +310,6 @@ export interface FileRouteTypes {
     | '/checklist/$id'
     | '/instellingen/action-items'
     | '/instellingen/admin'
-    | '/instellingen/beleid-beheer'
     | '/instellingen/data-bronnen'
     | '/instellingen/score'
     | '/rapport/$id'
@@ -350,7 +339,6 @@ export interface FileRouteTypes {
     | '/checklist/$id'
     | '/instellingen/action-items'
     | '/instellingen/admin'
-    | '/instellingen/beleid-beheer'
     | '/instellingen/score'
     | '/rapport/$id'
     | '/instellingen'
@@ -381,7 +369,6 @@ export interface FileRouteTypes {
     | '/_authenticated/checklist/$id'
     | '/_authenticated/instellingen/action-items'
     | '/_authenticated/instellingen/admin'
-    | '/_authenticated/instellingen/beleid-beheer'
     | '/_authenticated/instellingen/data-bronnen'
     | '/_authenticated/instellingen/score'
     | '/_authenticated/rapport/$id'
@@ -549,13 +536,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInstellingenDataBronnenRouteImport
       parentRoute: typeof AuthenticatedInstellingenRoute
     }
-    '/_authenticated/instellingen/beleid-beheer': {
-      id: '/_authenticated/instellingen/beleid-beheer'
-      path: '/beleid-beheer'
-      fullPath: '/instellingen/beleid-beheer'
-      preLoaderRoute: typeof AuthenticatedInstellingenBeleidBeheerRouteImport
-      parentRoute: typeof AuthenticatedInstellingenRoute
-    }
     '/_authenticated/instellingen/admin': {
       id: '/_authenticated/instellingen/admin'
       path: '/admin'
@@ -639,7 +619,6 @@ const AuthenticatedInstellingenDataBronnenRouteWithChildren =
 interface AuthenticatedInstellingenRouteChildren {
   AuthenticatedInstellingenActionItemsRoute: typeof AuthenticatedInstellingenActionItemsRoute
   AuthenticatedInstellingenAdminRoute: typeof AuthenticatedInstellingenAdminRoute
-  AuthenticatedInstellingenBeleidBeheerRoute: typeof AuthenticatedInstellingenBeleidBeheerRoute
   AuthenticatedInstellingenDataBronnenRoute: typeof AuthenticatedInstellingenDataBronnenRouteWithChildren
   AuthenticatedInstellingenScoreRoute: typeof AuthenticatedInstellingenScoreRoute
   AuthenticatedInstellingenIndexRoute: typeof AuthenticatedInstellingenIndexRoute
@@ -650,8 +629,6 @@ const AuthenticatedInstellingenRouteChildren: AuthenticatedInstellingenRouteChil
     AuthenticatedInstellingenActionItemsRoute:
       AuthenticatedInstellingenActionItemsRoute,
     AuthenticatedInstellingenAdminRoute: AuthenticatedInstellingenAdminRoute,
-    AuthenticatedInstellingenBeleidBeheerRoute:
-      AuthenticatedInstellingenBeleidBeheerRoute,
     AuthenticatedInstellingenDataBronnenRoute:
       AuthenticatedInstellingenDataBronnenRouteWithChildren,
     AuthenticatedInstellingenScoreRoute: AuthenticatedInstellingenScoreRoute,
