@@ -21,6 +21,8 @@ import {
 import { UploadDocumentModal, type GemeenteEntry } from '@/components/settings/beleid/UploadDocumentModal'
 import { VersionHistoryPanel } from '@/components/settings/beleid/VersionHistoryPanel'
 import { CredentialConfigModal } from '@/components/settings/CredentialConfigModal'
+import { useAuth } from '@/lib/auth/useAuth'
+import { fetchPolicyDocumentBlob } from '@/lib/api'
 import { ActionItemDetailModal } from '@/components/settings/data-bronnen/ActionItemDetailModal'
 import { DataSourceRow } from '@/components/settings/data-bronnen/DataSourceRow'
 import { DataSourceSection } from '@/components/settings/data-bronnen/DataSourceSection'
@@ -53,7 +55,37 @@ function GemeenteDataSourcesPage() {
 
   // All hooks must be called unconditionally (React rules) — before any early returns
   const queryClient = useQueryClient()
+  const { accessToken } = useAuth()
   const refreshMutation = useRefreshDataSource()
+
+  // Open a document version inline in a new tab.
+  const handleViewVersion = async (
+    versionId: string,
+    entityType: string,
+    entityCode: string,
+  ) => {
+    const blob = await fetchPolicyDocumentBlob(entityType, entityCode, versionId, accessToken)
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    // Revoke after a tick so the new tab has loaded the blob.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  }
+
+  // Download a document version with its original filename.
+  const handleDownloadVersion = async (
+    versionId: string,
+    filename: string,
+    entityType: string,
+    entityCode: string,
+  ) => {
+    const blob = await fetchPolicyDocumentBlob(entityType, entityCode, versionId, accessToken)
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = filename || 'document.pdf'
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
   const [openUploadFor, setOpenUploadFor] = useState<string | null>(null)
   const [openVersionsFor, setOpenVersionsFor] = useState<string | null>(null)
   const [credentialSourceKey, setCredentialSourceKey] = useState<string | null>(
@@ -227,8 +259,8 @@ function GemeenteDataSourcesPage() {
         entityType="gemeente"
         entityCode={gemeenteCode}
         latestVersionNumber={1}
-        onView={() => {}}
-        onDownload={() => {}}
+        onView={handleViewVersion}
+        onDownload={handleDownloadVersion}
       />
     </div>
   )

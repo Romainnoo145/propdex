@@ -1191,6 +1191,29 @@ export async function fetchAerialCrop(
 }
 
 /**
+ * Fetch a policy document's file as a blob (authed).
+ * GET /api/policy-documents/{entityType}/{entityCode}/{documentId}
+ * Used by the data-bronnen versions panel for View (open inline) + Download.
+ */
+export async function fetchPolicyDocumentBlob(
+  entityType: string,
+  entityCode: string,
+  documentId: string,
+  accessToken: string | null,
+): Promise<Blob> {
+  const headers: HeadersInit = {}
+  if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
+  const response = await fetch(
+    `/api/policy-documents/${entityType}/${encodeURIComponent(entityCode)}/${documentId}`,
+    { method: 'GET', headers, credentials: 'include' },
+  )
+  if (!response.ok) {
+    throw new ApiError(response.status, `Document ophalen mislukt (${response.status})`)
+  }
+  return response.blob()
+}
+
+/**
  * Fetch paginated scan history for the authenticated organization
  * GET /api/scans
  */
