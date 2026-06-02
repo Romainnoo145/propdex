@@ -180,6 +180,14 @@ const TYPE_A_ENTRIES: DataSourceKeyEntry[] = [
       "DSO-derived bouwregels per gebied (max_bouwhoogte, max_bouwlagen, FAR).",
     voedt_factor: ["bestemming", "transformatiepotentie"],
   },
+  {
+    key: "omgevingswet-bbl",
+    label_nl: "Omgevingswet & Bbl (landelijk)",
+    source_type: "A",
+    description:
+      "Landelijk wettelijk kader: Omgevingswet + Besluit bouwwerken leefomgeving.",
+    voedt_factor: ["vergunning_succeskans"],
+  },
 ];
 
 // Type B — open APIs

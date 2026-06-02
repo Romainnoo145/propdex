@@ -32,6 +32,7 @@ class DataSourceKeyEntry:
     label_nl: str
     source_type: SourceType
     description: str
+    level: Literal["landelijk", "provincie", "gemeente"] = "gemeente"
     voedt_factor: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -100,6 +101,7 @@ _TYPE_A_ENTRIES: list[DataSourceKeyEntry] = [
         description=(
             "Provinciale regels voor ruimtegebruik, bouwhoogtes, beschermde gebieden."
         ),
+        level="provincie",
         voedt_factor=("bestemming",),
     ),
     DataSourceKeyEntry(
@@ -107,6 +109,7 @@ _TYPE_A_ENTRIES: list[DataSourceKeyEntry] = [
         label_nl="Provinciale omgevingsvisie",
         source_type="A",
         description="Langetermijnvisie provincie -- verstedelijking + landschap.",
+        level="provincie",
         voedt_factor=("beleidsalignement_provincie",),
     ),
     DataSourceKeyEntry(
@@ -123,6 +126,7 @@ _TYPE_A_ENTRIES: list[DataSourceKeyEntry] = [
         label_nl="Provinciaal erfgoed",
         source_type="A",
         description="Provinciale monumentenlijst + cultuurhistorische waardenkaart.",
+        level="provincie",
         voedt_factor=("monument",),
     ),
     DataSourceKeyEntry(
@@ -132,6 +136,7 @@ _TYPE_A_ENTRIES: list[DataSourceKeyEntry] = [
         description=(
             "Natura 2000, stikstofbeleid, beperkingen bouw nabij natuurgebieden."
         ),
+        level="provincie",
         voedt_factor=("stikstofrisico",),
     ),
     DataSourceKeyEntry(
@@ -139,6 +144,7 @@ _TYPE_A_ENTRIES: list[DataSourceKeyEntry] = [
         label_nl="Regionale Energiestrategie (RES)",
         source_type="A",
         description="Zoekgebieden wind/zon, warmtenetten per regio.",
+        level="provincie",
         voedt_factor=("energie_context",),
     ),
     DataSourceKeyEntry(
@@ -146,6 +152,7 @@ _TYPE_A_ENTRIES: list[DataSourceKeyEntry] = [
         label_nl="Mobiliteitsbeleid",
         source_type="A",
         description="OV-knooppunten, bereikbaarheid, mobiliteitstransitie per regio.",
+        level="provincie",
         voedt_factor=("bereikbaarheid",),
     ),
     DataSourceKeyEntry(
@@ -178,6 +185,7 @@ _TYPE_A_ENTRIES: list[DataSourceKeyEntry] = [
         description=(
             "Subsidies voor verduurzaming, transformatie, woningbouw vanuit provincie."
         ),
+        level="provincie",
         voedt_factor=("subsidie_potentie",),
     ),
     DataSourceKeyEntry(
@@ -195,6 +203,14 @@ _TYPE_A_ENTRIES: list[DataSourceKeyEntry] = [
             "DSO-derived bouwregels per gebied (max_bouwhoogte, max_bouwlagen, FAR)."
         ),
         voedt_factor=("bestemming", "transformatiepotentie"),
+    ),
+    DataSourceKeyEntry(
+        key="omgevingswet-bbl",
+        label_nl="Omgevingswet & Bbl (landelijk)",
+        source_type="A",
+        description="Landelijk wettelijk kader: Omgevingswet + Besluit bouwwerken leefomgeving.",
+        level="landelijk",
+        voedt_factor=("vergunning_succeskans",),
     ),
 ]
 
