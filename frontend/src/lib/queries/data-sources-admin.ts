@@ -13,6 +13,8 @@ import type {
   DataSourceRow,
   GemeenteDataSourcesPayload,
   GemeenteSummary,
+  ScopeOption,
+  ScopeDataSourcesPayload,
 } from '@/lib/types/data-sources-admin'
 
 /** Stable query-key factory — single source of truth for cache invalidation. */
@@ -21,6 +23,9 @@ export const dataSourcesAdminKeys = {
   gemeenten: () => [...dataSourcesAdminKeys.all, 'gemeenten'] as const,
   gemeente: (gemeenteCode: string) =>
     [...dataSourcesAdminKeys.all, 'gemeente', gemeenteCode] as const,
+  scopes: () => [...dataSourcesAdminKeys.all, 'scopes'] as const,
+  scope: (t: string, c: string) =>
+    [...dataSourcesAdminKeys.all, 'scope', t, c] as const,
 }
 
 /** GET /api/admin/data-sources/gemeenten — aggregate per-gemeente status counts. */
@@ -83,5 +88,32 @@ export function useRefreshDataSource() {
         `Refresh mislukt voor ${vars.sourceLabel}: ${err.message}`,
       )
     },
+  })
+}
+
+/** GET /api/admin/data-sources/scopes — all landelijk + provincie scope options. */
+export function useScopes() {
+  const { accessToken } = useAuth()
+  return useQuery<ScopeOption[]>({
+    queryKey: dataSourcesAdminKeys.scopes(),
+    queryFn: () =>
+      apiFetch<ScopeOption[]>('/api/admin/data-sources/scopes', { method: 'GET', accessToken }),
+    enabled: !!accessToken,
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+/** GET /api/admin/data-sources/scope/{entity_type}/{entity_code} — 3-section payload for a non-gemeente scope. */
+export function useScopeDataSources(entityType: string | undefined, entityCode: string | undefined) {
+  const { accessToken } = useAuth()
+  return useQuery<ScopeDataSourcesPayload>({
+    queryKey: dataSourcesAdminKeys.scope(entityType ?? '', entityCode ?? ''),
+    queryFn: () =>
+      apiFetch<ScopeDataSourcesPayload>(
+        `/api/admin/data-sources/scope/${entityType}/${entityCode}`,
+        { method: 'GET', accessToken },
+      ),
+    enabled: !!accessToken && !!entityType && !!entityCode && entityType !== 'gemeente',
+    staleTime: 30 * 1000,
   })
 }
