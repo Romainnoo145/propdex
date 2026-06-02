@@ -53,3 +53,20 @@ class GemeenteSummary(BaseModel):
     total_sources: int
     status_counts: dict[DataSourceStatusValue, int]
     last_activity_at: datetime | None = None
+
+
+class ScopeDataSourcesPayload(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    entity_type: Literal["landelijk", "provincie", "gemeente"]
+    entity_code: str
+    entity_naam: str
+    cascade_uploads: list[DataSourceRow]
+    open_apis: list[DataSourceRow]       # empty for landelijk/provincie
+    paid_integrations: list[DataSourceRow]  # empty for landelijk/provincie
+
+
+class ScopeOption(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    entity_type: Literal["landelijk", "provincie", "gemeente"]
+    entity_code: str
+    entity_naam: str
