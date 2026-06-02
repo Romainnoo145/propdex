@@ -1,16 +1,15 @@
 /**
- * /instellingen/data-bronnen/ — index handler (M049/S03)
+ * /instellingen/data-bronnen/ — index handler (scope-consolidation).
  *
- * Loads gemeente summaries and redirects to the first gemeente_code
- * available (sorted last_activity_at DESC server-side). If no gemeenten
- * exist yet, renders DataSourcesEmptyState.
- * Superuser gate is enforced by the parent layout.
+ * Landing surface for the data-bronnen hub: renders the ScopePicker so the
+ * admin chooses Landelijk / Provincie / Gemeente. Empty-state when no
+ * gemeenten exist yet. Superuser gate is enforced by the parent layout.
  */
-import { useEffect } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { useGemeentenSummary } from '@/lib/queries/data-sources-admin'
 import { DataSourcesEmptyState } from '@/components/settings/data-bronnen/DataSourcesEmptyState'
+import { ScopePicker } from '@/components/settings/data-bronnen/ScopePicker'
 
 export const Route = createFileRoute(
   '/_authenticated/instellingen/data-bronnen/',
@@ -19,21 +18,8 @@ export const Route = createFileRoute(
 })
 
 function DataBronnenIndexPage() {
-  const navigate = useNavigate()
   const gemeentenQuery = useGemeentenSummary()
-
   const gemeenten = gemeentenQuery.data ?? []
-  const firstGemeenteCode = gemeenten[0]?.gemeente_code
-
-  useEffect(() => {
-    if (firstGemeenteCode) {
-      void navigate({
-        to: '/instellingen/data-bronnen/$gemeenteCode',
-        params: { gemeenteCode: firstGemeenteCode },
-        replace: true,
-      })
-    }
-  }, [firstGemeenteCode, navigate])
 
   if (gemeentenQuery.isLoading) {
     return (
@@ -59,10 +45,16 @@ function DataBronnenIndexPage() {
   if (gemeenten.length === 0) {
     return <DataSourcesEmptyState />
   }
-  const firstName = gemeenten[0]?.gemeente_naam ?? firstGemeenteCode
+
   return (
-    <div className="flex items-center gap-2 py-8 text-slate-500">
-      <Loader2 size={16} className="animate-spin" /> Omleiden naar {firstName}…
+    <div className="space-y-6">
+      <header className="space-y-2">
+        <h1 className="text-[20px] font-semibold text-[#0E1111]">Data-bronnen</h1>
+        <p className="text-[12px] text-slate-500">
+          Kies een scope om de bronnen te beheren.
+        </p>
+      </header>
+      <ScopePicker />
     </div>
   )
 }

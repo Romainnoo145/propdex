@@ -36,8 +36,8 @@ export function GemeentePicker({ gemeenten, activeGemeenteCode }: Props) {
         return (
           <Link
             key={g.gemeente_code}
-            to="/instellingen/data-bronnen/$gemeenteCode"
-            params={{ gemeenteCode: g.gemeente_code }}
+            to="/instellingen/data-bronnen/$entityType/$entityCode"
+            params={{ entityType: 'gemeente', entityCode: g.gemeente_code }}
             className="relative shrink-0 px-4 py-2 rounded-full text-[12px] font-semibold transition-colors"
             data-gemeente-code={g.gemeente_code}
             data-active={isActive ? 'true' : 'false'}
