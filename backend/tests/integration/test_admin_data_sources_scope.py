@@ -45,3 +45,31 @@ async def test_type_a_probe_live_for_provincie_doc(
         "provinciaal-erfgoed", "provincie", "PV31", test_db
     )
     assert missing["status"] == "missing"
+
+
+from tests.integration.test_admin_data_sources_router import _superuser_headers
+
+
+@pytest.mark.asyncio
+async def test_scopes_endpoint_lists_landelijk(async_client, test_db, create_test_user):
+    user, org = await create_test_user(email="scope1@test", is_superuser=True)
+    resp = await async_client.get(
+        "/api/admin/data-sources/scopes",
+        headers=_superuser_headers(user.id, org.id),
+    )
+    assert resp.status_code == 200, resp.text
+    types = {s["entity_type"] for s in resp.json()}
+    assert "landelijk" in types
+
+
+@pytest.mark.asyncio
+async def test_scope_payload_landelijk_is_type_a_only(async_client, test_db, create_test_user):
+    user, org = await create_test_user(email="scope2@test", is_superuser=True)
+    resp = await async_client.get(
+        "/api/admin/data-sources/scope/landelijk/NL",
+        headers=_superuser_headers(user.id, org.id),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["open_apis"] == [] and body["paid_integrations"] == []
+    assert len(body["cascade_uploads"]) >= 1

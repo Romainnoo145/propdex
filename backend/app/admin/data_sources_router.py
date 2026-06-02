@@ -24,10 +24,14 @@ from app.admin.data_sources_schemas import (
     DataSourceRow,
     GemeenteDataSourcesPayload,
     GemeenteSummary,
+    ScopeDataSourcesPayload,
+    ScopeOption,
 )
+from app.admin.data_sources_scope import cascade_rows_for_scope
 from app.auth.dependencies import get_current_superuser
 from app.core.database import get_db
 from app.models.data_source_status import DataSourceStatus, DataSourceStatusValue
+from app.models.gemeente_provincie_map import GemeenteProvincieMap
 from app.models.user import User
 from app.policy_documents.data_source_keys import DATA_SOURCE_KEYS, get_entry
 from app.services.gemeente_name_lookup import get_gemeente_name_map
@@ -87,6 +91,42 @@ async def list_gemeenten(
         )
     )
     return out
+
+
+# 12 NL provinces — stable CBS PVxx code→naam. Hardcoded; rarely changes.
+_PROVINCE_NAMES = {
+    "PV20": "Groningen", "PV21": "Fryslân", "PV22": "Drenthe", "PV23": "Overijssel",
+    "PV24": "Flevoland", "PV25": "Gelderland", "PV26": "Utrecht", "PV27": "Noord-Holland",
+    "PV28": "Zuid-Holland", "PV29": "Zeeland", "PV30": "Noord-Brabant", "PV31": "Limburg",
+}
+
+
+@router.get("/scopes", response_model=list[ScopeOption])
+async def list_scopes(
+    _: User = Depends(get_current_superuser), db: AsyncSession = Depends(get_db),
+) -> list[ScopeOption]:
+    """Landelijk (single) + the provinces present in gemeente_provincie_map."""
+    out = [ScopeOption(entity_type="landelijk", entity_code="NL", entity_naam="Nederland")]
+    codes = (await db.execute(select(GemeenteProvincieMap.provincie_code).distinct())).scalars().all()
+    for code in sorted(c for c in codes if c):
+        out.append(ScopeOption(entity_type="provincie", entity_code=code,
+                                entity_naam=_PROVINCE_NAMES.get(code, code)))
+    return out
+
+
+@router.get("/scope/{entity_type}/{entity_code}", response_model=ScopeDataSourcesPayload)
+async def get_scope_sources(
+    entity_type: str, entity_code: str, request: Request,
+    _: User = Depends(get_current_superuser), db: AsyncSession = Depends(get_db),
+) -> ScopeDataSourcesPayload:
+    if entity_type not in ("landelijk", "provincie"):
+        raise HTTPException(status_code=400, detail="Use /{gemeente_code} for gemeente scope")
+    naam = "Nederland" if entity_type == "landelijk" else _PROVINCE_NAMES.get(entity_code, entity_code)
+    cascade = await cascade_rows_for_scope(entity_type, entity_code, db)
+    return ScopeDataSourcesPayload(
+        entity_type=entity_type, entity_code=entity_code, entity_naam=naam,
+        cascade_uploads=cascade, open_apis=[], paid_integrations=[],
+    )
 
 
 @router.get("/{gemeente_code}", response_model=GemeenteDataSourcesPayload)
