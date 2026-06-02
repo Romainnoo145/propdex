@@ -43,6 +43,14 @@ def get_redis_settings() -> RedisSettings:
         port=parsed.port or 6379,
         database=int(parsed.path.lstrip("/") or "0"),
         password=parsed.password,
+        # Railway's private network (*.railway.internal, IPv6) only becomes
+        # resolvable a few seconds after a container boots. arq's create_pool()
+        # pings Redis immediately; its default ~5s retry window (conn_retries=5
+        # x conn_retry_delay=1) lost that boot race and crash-looped the worker,
+        # silently freezing the daily change-monitor cron. Wait up to ~40s so the
+        # private network can come up instead. Regression: tests/unit/test_worker_redis_settings.py
+        conn_retries=20,
+        conn_retry_delay=2,
     )
 
 
