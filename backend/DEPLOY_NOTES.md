@@ -1,12 +1,12 @@
 # Railway Deploy Notes — propdex-staging
 
-> Last deployed: 2026-04-03 (api) · 2026-06-02 (worker — crash-loop fixed)
+> Last deployed: 2026-06-02 (api + worker both on latest code; DB at head 7873f3326d92)
 
 ## Services
 
 | Service | URL | Start Command | Status |
 |---|---|---|---|
-| api | `api-production-7f87.up.railway.app` | `bash scripts/start_web.sh` (via APP_MODE=web) | ✅ SUCCESS (⚠️ stale pre-M050 image — see Worker crash-loop note) |
+| api | `api-production-7f87.up.railway.app` | `bash scripts/start_web.sh` (via APP_MODE=web) | ✅ SUCCESS (M047→M052 code, 2026-06-02) |
 | worker | `worker-production-3a858.up.railway.app` | `bash scripts/start_worker.sh` (via APP_MODE=worker) | ✅ SUCCESS (fixed 2026-06-02) |
 | PostGIS | `postgis.railway.internal:5432` | — | ✅ SUCCESS |
 | Redis | `redis.railway.internal:6379` | — | ✅ SUCCESS |
@@ -95,10 +95,20 @@ stale from early April to June. Two compounding causes:
    Prod had no encrypted `integration_credentials` rows (feature postdates the
    2026-04-03 data migration), so any valid Fernet key boots safely.
 
-⚠️ **The `api` service is still on a stale pre-M050 image** — it stays up only
-because that image predates `INTEGRATION_CREDENTIAL_KEY`. **Before redeploying
-`api`, set the SAME `INTEGRATION_CREDENTIAL_KEY` on it** (must match the worker /
-whatever encrypted any `integration_credentials`), or it will crash on boot.
+✅ **Resolved 2026-06-02:** `api` redeployed onto M047→M052 code. Sequence used
+(migrate-first, since all 11 gap migrations are additive → schema-ahead-of-code
+is backward compatible):
+1. `railway ssh -s worker "python -m alembic upgrade head"` — applied
+   `bbdb5c6ff811` → `7873f3326d92` (M047→M052). Run from the **worker** container
+   because the stale api image lacked the new migration files. The worker's
+   `DATABASE_URL` connects as `postgres` (superuser), so DDL succeeds; env.py
+   runs migrations async, so the asyncpg URL is fine.
+2. `railway variables --set "INTEGRATION_CREDENTIAL_KEY=<fernet>" -s api` (same
+   value as worker).
+3. `railway up . --path-as-root -s api`.
+Verified: `/api/health` → 200, `Application startup complete`, no missing-table
+errors. **Both api and worker must always carry the SAME
+`INTEGRATION_CREDENTIAL_KEY`.**
 
 The daily cron (`hour=3` UTC) self-heals the data gap on its next run: the
 cursor is `MAX(ChangeRecord.detected_at)`, so it fetches everything published
