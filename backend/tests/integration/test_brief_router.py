@@ -59,3 +59,37 @@ async def test_generate_brief_auto_mode_with_rechtspersoon(
     body = r.json()
     assert body["mode"] == "auto"
     assert "Vastgoed BV" in body["markdown"]
+
+
+@pytest.mark.asyncio
+async def test_send_brief_blocked_without_hauzer_demo(
+    async_client: AsyncClient, create_test_user, test_db
+):
+    user, org = await create_test_user(email="s1@x.nl", org_name="Geen Demo")
+    token = create_access_token(str(user.id), str(org.id))
+    headers = {"Authorization": f"Bearer {token}"}
+    r = await async_client.post(
+        "/api/parcels/NL.IMKAD.TEST.3/brief/send",
+        headers=headers,
+        json={"markdown": "x"},
+    )
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_send_brief_fake_verzonden_with_hauzer_demo(
+    async_client: AsyncClient, create_test_user, test_db
+):
+    user, org = await create_test_user(email="s2@x.nl", org_name="Hauzer Demo")
+    org.hauzer_demo = True
+    test_db.add(org)
+    await test_db.commit()
+    token = create_access_token(str(user.id), str(org.id))
+    headers = {"Authorization": f"Bearer {token}"}
+    r = await async_client.post(
+        "/api/parcels/NL.IMKAD.TEST.3/brief/send",
+        headers=headers,
+        json={"markdown": "x"},
+    )
+    assert r.status_code == 200
+    assert r.json()["status"] == "verzonden"
