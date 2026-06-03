@@ -24,7 +24,6 @@ def build_brief_parcel_data(
     address: str | None,
     gemeente_naam: str | None,
     overall_score: float | None,
-    use_case: str | None,
 ) -> dict[str, Any]:
     """Bouw de parcel_data-dict die document_generator.generate_document verwacht."""
     return {

@@ -1,5 +1,6 @@
 """M052/S04 — Contact brief-teaser endpoints (genereer + fake-send)."""
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
@@ -104,11 +105,10 @@ async def generate_brief(
         address=address,
         gemeente_naam=gemeente_naam,
         overall_score=overall,
-        use_case=use_case,
     )
 
     # 4. user_context: afzender + eigenaar (auto: uit BRK; manual: uit payload.addressee).
-    user_context: dict = {
+    user_context: dict[str, Any] = {
         "use_case": use_case,
         "bedrijfsnaam": org.name,
         "bedrijfsadres": org.afzender_adres or "[Uw bedrijfsadres]",

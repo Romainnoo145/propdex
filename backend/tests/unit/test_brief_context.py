@@ -17,7 +17,6 @@ def test_build_parcel_data_shapes_for_generate_document():
         address="Kazernestraat 12",
         gemeente_naam="Venlo",
         overall_score=83.0,
-        use_case="optoppen",
     )
     assert data["address"] == "Kazernestraat 12"
     assert data["gemeente_naam"] == "Venlo"
