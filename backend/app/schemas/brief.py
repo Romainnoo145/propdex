@@ -11,6 +11,10 @@ class GenerateBriefRequest(BaseModel):
     addressee: Addressee | None = None  # handmatige NAW (particulier-modus)
 
 
+class SendBriefRequest(BaseModel):
+    markdown: str
+
+
 class GenerateBriefResponse(BaseModel):
     markdown: str
     mode: str  # 'auto' (rechtspersoon/overheid) | 'manual' (geen record)

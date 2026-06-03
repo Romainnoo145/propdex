@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +18,7 @@ from app.models.user import User
 from app.schemas.brief import (
     GenerateBriefRequest,
     GenerateBriefResponse,
+    SendBriefRequest,
     SendBriefResponse,
 )
 from app.services import brief_context
@@ -136,10 +136,6 @@ async def generate_brief(
 
     markdown = generate_document("eigenaar_brief", parcel_data, user_context) or ""
     return GenerateBriefResponse(markdown=markdown, mode=mode)
-
-
-class SendBriefRequest(BaseModel):
-    markdown: str
 
 
 @router.post("/{parcel_id}/brief/send", response_model=SendBriefResponse)

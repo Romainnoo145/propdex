@@ -2,8 +2,10 @@
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
 
 from app.auth.jwt import create_access_token
+from app.models.brief_dispatch import BriefDispatch
 
 
 @pytest.mark.asyncio
@@ -86,10 +88,29 @@ async def test_send_brief_fake_verzonden_with_hauzer_demo(
     await test_db.commit()
     token = create_access_token(str(user.id), str(org.id))
     headers = {"Authorization": f"Bearer {token}"}
+    parcel_id = "NL.IMKAD.TEST.3"
     r = await async_client.post(
-        "/api/parcels/NL.IMKAD.TEST.3/brief/send",
+        f"/api/parcels/{parcel_id}/brief/send",
         headers=headers,
         json={"markdown": "x"},
     )
     assert r.status_code == 200
     assert r.json()["status"] == "verzonden"
+
+    # B4 regressie: persisteer exact één metadata-record, toegeschreven aan de
+    # org van de caller, en ZONDER brief-inhoud (geen PII-opslag).
+    rows = (
+        (
+            await test_db.execute(
+                select(BriefDispatch).where(BriefDispatch.parcel_id == parcel_id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.organization_id == org.id  # org-attributie vastgepind
+    assert not hasattr(row, "markdown")
+    assert not hasattr(row, "content")
+    assert not hasattr(row, "body")

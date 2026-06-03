@@ -12,3 +12,9 @@ def test_fake_dispatcher_returns_verzonden():
 
 def test_resolver_returns_fake_for_hauzer_demo():
     assert isinstance(resolve_dispatcher(hauzer_demo=True), FakeBriefDispatcher)
+
+
+def test_resolver_returns_fake_for_non_demo():
+    # Documenteert huidig gedrag: ook zonder demo komt de fake-dispatcher terug.
+    # M051 mag dit bewust omzetten naar een echte dispatcher.
+    assert isinstance(resolve_dispatcher(hauzer_demo=False), FakeBriefDispatcher)
