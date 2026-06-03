@@ -24,11 +24,17 @@ export function PipelineStageFilter({ activeStage }: PipelineStageFilterProps) {
   const navigate = useNavigate()
 
   const clearFilter = () => {
-    navigate({ search: (prev) => ({ ...prev, portfolio_stage: undefined }) })
+    navigate({
+      from: '/projecten',
+      search: (prev) => ({ ...prev, portfolio_stage: undefined }),
+    })
   }
 
   const setFilter = (stage: PipelineStage) => {
-    navigate({ search: (prev) => ({ ...prev, portfolio_stage: stage }) })
+    navigate({
+      from: '/projecten',
+      search: (prev) => ({ ...prev, portfolio_stage: stage }),
+    })
   }
 
   return (

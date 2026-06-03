@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import ResultsShell from '@/components/layout/ResultsShell'
@@ -97,7 +97,15 @@ function fmtDate(iso: string): string {
   return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
 }
 
-function KansCard({ kans, onDismiss }: { kans: Kans; onDismiss: () => void }) {
+function KansCard({
+  kans,
+  onDismiss,
+  onView,
+}: {
+  kans: Kans
+  onDismiss: () => void
+  onView: () => void
+}) {
   return (
     <div className="mb-2.5 rounded-[15px] border border-[#EEF1F1] bg-white p-3.5 transition-colors hover:border-neutral-300">
       <div className="flex items-center gap-3">
@@ -129,13 +137,17 @@ function KansCard({ kans, onDismiss }: { kans: Kans; onDismiss: () => void }) {
         </div>
       )}
       <div className="mt-2.5 flex gap-2">
-        <button className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[10px] border border-aura-amber/40 bg-aura-amber/[0.12] text-[12.5px] font-semibold text-aura-amber-hover hover:bg-aura-amber/20">
+        <button
+          onClick={onView}
+          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[10px] border border-aura-amber/40 bg-aura-amber/[0.12] text-[12.5px] font-semibold text-aura-amber-hover hover:bg-aura-amber/20"
+        >
           <IconFile />
           Bekijk rapport
         </button>
         <button
+          onClick={onView}
           title="Op kaart"
-          className="flex h-9 w-9 flex-none items-center justify-center rounded-[10px] bg-aura-obsidian text-aura-amber"
+          className="flex h-9 w-9 flex-none items-center justify-center rounded-[10px] bg-aura-obsidian text-aura-amber hover:bg-aura-obsidian/90"
         >
           <IconMap />
         </button>
@@ -145,6 +157,7 @@ function KansCard({ kans, onDismiss }: { kans: Kans; onDismiss: () => void }) {
 }
 
 function DashboardPage() {
+  const navigate = useNavigate()
   const banner = useDashboardBanner(GEMEENTE)
   const signalen = useGemeenteSignalen(GEMEENTE)
   const kansen = useOffMarketKansen(GEMEENTE)
@@ -161,6 +174,10 @@ function DashboardPage() {
     dismissKans.mutate(parcelId) // persist server-side
   }
 
+  // Open een perceel op de kaart (ParcelDetailModal = scan/rapport-weergave).
+  const openOnMap = (parcelId?: string | null) =>
+    navigate({ to: '/map', search: parcelId ? { parcel_id: parcelId } : {} })
+
   return (
     <ResultsShell fullWidth>
       <div className="mx-auto max-w-[1180px] px-8 py-8">
@@ -176,16 +193,11 @@ function DashboardPage() {
               {signalen.data?.length ?? 0} bekendmakingen in jouw gemeenten
             </p>
           </div>
-          <button className="inline-flex items-center gap-2.5 rounded-full border border-white/70 bg-white/70 py-2 pl-4 pr-3 text-sm font-bold text-aura-ink">
+          {/* Eén gemeente in scope (Hauzer = Venlo) — statische badge, geen dropdown. */}
+          <span className="inline-flex items-center gap-2.5 rounded-full border border-white/70 bg-white/70 py-2 pl-4 pr-4 text-sm font-bold text-aura-ink">
             <span className="h-[7px] w-[7px] rounded-full bg-aura-amber" />
             {GEMEENTE}
-            <svg
-              viewBox="0 0 24 24"
-              className="h-4 w-4 fill-none stroke-[1.8] stroke-neutral-500 [stroke-linecap:round]"
-            >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          </button>
+          </span>
         </div>
 
         {/* conditional beleid banner */}
@@ -200,7 +212,10 @@ function DashboardPage() {
               </div>
               <div className="mt-0.5 text-sm font-bold text-aura-ink">{banner.data.banner.title}</div>
             </div>
-            <button className="inline-flex items-center gap-1.5 rounded-full bg-aura-obsidian px-3.5 py-2 text-xs font-semibold text-white">
+            <button
+              onClick={() => navigate({ to: '/map' })}
+              className="inline-flex items-center gap-1.5 rounded-full bg-aura-obsidian px-3.5 py-2 text-xs font-semibold text-white hover:bg-aura-obsidian/90"
+            >
               Bekijk op kaart <IconArrow />
             </button>
           </div>
@@ -220,6 +235,7 @@ function DashboardPage() {
                 return (
                   <div
                     key={s.id}
+                    onClick={() => openOnMap(s.matched_parcel_id)}
                     className={`group flex cursor-pointer items-center gap-3.5 px-[18px] py-3 ${i > 0 ? 'border-t border-aura-ink/5' : ''} ${inPipeline ? 'bg-aura-amber/[0.07] hover:bg-aura-amber/[0.11]' : 'hover:bg-white/70'}`}
                   >
                     <span className="w-12 flex-none text-[11px] text-neutral-400">
@@ -259,7 +275,12 @@ function DashboardPage() {
               {kansen.isLoading && <Empty>Laden…</Empty>}
               {kansen.isSuccess && visibleKansen.length === 0 && <Empty>Geen open kansen.</Empty>}
               {visibleKansen.map((k) => (
-                <KansCard key={k.parcel_id} kans={k} onDismiss={() => handleDismiss(k.parcel_id)} />
+                <KansCard
+                  key={k.parcel_id}
+                  kans={k}
+                  onDismiss={() => handleDismiss(k.parcel_id)}
+                  onView={() => openOnMap(k.parcel_id)}
+                />
               ))}
             </div>
           </div>
@@ -276,9 +297,12 @@ function DashboardPage() {
               {s.stage} <b className="font-bold text-aura-ink">{s.count}</b>
             </span>
           ))}
-          <span className="ml-auto inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-aura-amber-hover">
+          <button
+            onClick={() => navigate({ to: '/opgeslagen' })}
+            className="ml-auto inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-aura-amber-hover hover:text-aura-amber"
+          >
             Open pijplijn <IconArrow />
-          </span>
+          </button>
         </div>
       </div>
     </ResultsShell>
