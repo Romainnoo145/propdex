@@ -10,6 +10,8 @@
  * 1-op-1 voor de echte PostNL-dispatcher.
  */
 import { useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useBrkRecords } from '@/hooks/useBrkRecords'
 import { useGenerateBrief, useSendBrief } from '@/hooks/useBrief'
@@ -49,13 +51,14 @@ export function BriefCard({ parcelId }: { parcelId: string }) {
       )}
 
       <button
-        onClick={() =>
+        onClick={() => {
+          setSent(false)
           gen.mutate(
             mode === 'manual'
               ? { eigenaar_aanhef: aanhef, eigenaar_adres: adres }
               : undefined,
           )
-        }
+        }}
         disabled={gen.isPending}
         className="rounded-full bg-aura-obsidian px-4 py-2 text-[12px] font-semibold text-white mb-3 disabled:opacity-60"
       >
@@ -63,9 +66,9 @@ export function BriefCard({ parcelId }: { parcelId: string }) {
       </button>
 
       {gen.data && (
-        <pre className="whitespace-pre-wrap text-[13px] text-aura-ink bg-white rounded-[16px] border border-[#EAEFEF] p-4">
-          {gen.data.markdown}
-        </pre>
+        <div className="bg-white rounded-[16px] border border-[#EAEFEF] p-4 text-[13px] text-aura-ink whitespace-pre-wrap [&_strong]:font-semibold [&_p]:mb-2 last:[&_p]:mb-0">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{gen.data.markdown}</ReactMarkdown>
+        </div>
       )}
 
       {gen.data &&
