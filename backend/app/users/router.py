@@ -27,6 +27,8 @@ from app.schemas.score_weights import (
 )
 from app.services.score_v3 import DEFAULT_WEIGHTS
 from app.users.schemas import (
+    AfzenderResponse,
+    AfzenderUpdate,
     PasswordChange,
     UserPreferences,
     UserPreferencesUpdate,
@@ -144,6 +146,73 @@ async def update_preferences(
     current_user.preferences = {**current_prefs, **update_data}
     await db.commit()
     return UserPreferences(**current_user.preferences)
+
+
+@router.get("/org/afzender", response_model=AfzenderResponse)
+@limiter.limit("30/minute")
+async def get_afzender(
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> AfzenderResponse:
+    """
+    Get the organization's afzender (briefhoofd) info.
+
+    bedrijfsnaam mirrors the org name; the other fields are nullable until set.
+    """
+    result = await db.execute(
+        select(Organization).where(Organization.id == organization_id)
+    )
+    org = result.scalar_one_or_none()
+    if org is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found",
+        )
+    return AfzenderResponse(
+        bedrijfsnaam=org.name,
+        afzender_adres=org.afzender_adres,
+        contactpersoon=org.contactpersoon,
+        contact_email=org.contact_email,
+        contact_telefoon=org.contact_telefoon,
+    )
+
+
+@router.patch("/org/afzender", response_model=AfzenderResponse)
+@limiter.limit("30/minute")
+async def update_afzender(
+    request: Request,
+    data: AfzenderUpdate,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> AfzenderResponse:
+    """
+    Partially update the organization's afzender info (unset fields preserved).
+    """
+    result = await db.execute(
+        select(Organization).where(Organization.id == organization_id)
+    )
+    org = result.scalar_one_or_none()
+    if org is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found",
+        )
+
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(org, field, value)
+    db.add(org)
+    await db.commit()
+    await db.refresh(org)
+    return AfzenderResponse(
+        bedrijfsnaam=org.name,
+        afzender_adres=org.afzender_adres,
+        contactpersoon=org.contactpersoon,
+        contact_email=org.contact_email,
+        contact_telefoon=org.contact_telefoon,
+    )
 
 
 @router.get("/org/score-weights", response_model=ScoreWeightsResponse)
