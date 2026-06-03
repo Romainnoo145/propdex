@@ -53,7 +53,7 @@ class AfzenderResponse(BaseModel):
     bedrijfsnaam: str
     afzender_adres: str | None = None
     contactpersoon: str | None = None
-    contact_email: str | None = None
+    contact_email: EmailStr | None = None
     contact_telefoon: str | None = None
 
 
@@ -62,5 +62,5 @@ class AfzenderUpdate(BaseModel):
 
     afzender_adres: str | None = None
     contactpersoon: str | None = None
-    contact_email: str | None = None
+    contact_email: EmailStr | None = None
     contact_telefoon: str | None = None
