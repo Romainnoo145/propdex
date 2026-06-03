@@ -538,6 +538,8 @@ export interface PropertyReportResponse {
   permit_precedents?: PermitPrecedentBenchmark | null
   brk_ownership?: BRKOwnership | null
   fysiek_risico_profiel?: FysiekRisicoProfiel | null
+  // Root-level physical risk context (backend property report, Phase 87)
+  funderingsrisicogebied?: FunderingsrisicogebiedData | null
 
   // Phase 15 additions (Vergunning Checklists)
   use_case_scores?: Record<string, UseCaseScore> | null

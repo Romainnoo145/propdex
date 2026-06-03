@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { staggerContainer, fadeUp } from '@/lib/animations'
 import { useReport } from '@/hooks/useReports'
@@ -61,7 +60,6 @@ function RapportPage() {
             : 'Terug'
 
   const { accessToken } = useAuth()
-  const queryClient = useQueryClient()
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const handleRefresh = useCallback(async () => {

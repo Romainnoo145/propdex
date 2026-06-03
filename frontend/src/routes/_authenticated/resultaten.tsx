@@ -74,7 +74,7 @@ function ResultatenPage() {
       const idx = sorted.findIndex((s) => s.scan_id === scan_id)
       if (idx > 0) {
         const [active] = sorted.splice(idx, 1)
-        sorted.unshift(active)
+        if (active) sorted.unshift(active)
       }
     }
     return sorted.slice(0, 20)
@@ -111,14 +111,6 @@ function ResultatenPage() {
       to: '/resultaten',
       search: (prev) => ({ ...prev, page }),
     })
-  }
-
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      window.history.back()
-      return
-    }
-    void navigate({ to: '/opgeslagen' })
   }
 
   const handleOpenScan = (nextScanId: string) => {
@@ -542,8 +534,3 @@ function VerkennerResults({ queryId }: { queryId: string }) {
   )
 }
 
-const dateFmt = new Intl.DateTimeFormat('nl-NL', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-})

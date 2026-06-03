@@ -20,12 +20,16 @@ export interface S4RisicoprofielProps {
 
 /* ─── Risk badge — color-coded by severity ───────────────────── */
 
-const RISK_COLORS: Record<string, { border: string; bg: string; text: string; dot: string }> = {
+interface RiskColor { border: string; bg: string; text: string; dot: string }
+
+const RISK_COLOR_ONBEKEND: RiskColor = { border: 'border-slate-200', bg: 'bg-slate-50', text: 'text-slate-600', dot: 'bg-slate-400' }
+
+const RISK_COLORS: Record<string, RiskColor> = {
   hoog:    { border: 'border-red-200',   bg: 'bg-red-50',   text: 'text-red-700',   dot: 'bg-red-500' },
   middel:  { border: 'border-amber-200', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' },
   laag:    { border: 'border-emerald-200', bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
   geen:    { border: 'border-emerald-200', bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-  onbekend: { border: 'border-slate-200', bg: 'bg-slate-50', text: 'text-slate-600', dot: 'bg-slate-400' },
+  onbekend: RISK_COLOR_ONBEKEND,
 }
 
 const RISK_LABEL: Record<string, string> = {
@@ -37,7 +41,7 @@ const RISK_LABEL: Record<string, string> = {
 }
 
 function RiskBadge({ risk }: { risk: string }) {
-  const c = RISK_COLORS[risk] ?? RISK_COLORS.onbekend
+  const c = RISK_COLORS[risk] ?? RISK_COLOR_ONBEKEND
   const label = RISK_LABEL[risk] ?? risk
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${c.border} ${c.bg} ${c.text}`}>
@@ -51,7 +55,7 @@ function RiskBadge({ risk }: { risk: string }) {
 
 function RiskBar({ risk }: { risk: string }) {
   const pct = { hoog: 85, middel: 50, laag: 20, geen: 5, onbekend: 0 }[risk] ?? 0
-  const c = RISK_COLORS[risk] ?? RISK_COLORS.onbekend
+  const c = RISK_COLORS[risk] ?? RISK_COLOR_ONBEKEND
 
   if (pct === 0) return null
 
@@ -260,7 +264,7 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
             ?? 'Geen funderingsrisicodata beschikbaar'
           const contextLabel = fundRisk?.bouwjaar ? `Bouwjaar ${fundRisk.bouwjaar}` : null
           const disclaimer = fundRisk?.disclaimer ?? null
-          const frgData = frp?.funderingsrisicogebied ?? (data.funderingsrisicogebied as Record<string, unknown> | null | undefined)
+          const frgData = frp?.funderingsrisicogebied ?? data.funderingsrisicogebied
 
           return (
             <div className="space-y-3">
@@ -276,9 +280,9 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
               {/* Details */}
               <SubCard className="space-y-0">
                 {fundRisk?.bouwjaar && <KVRow label="Bouwjaar" value={`${fundRisk.bouwjaar}`} />}
-                {(frgData?.fgr as string | undefined) && <KVRow label="Gebiedstype" value={frgData!.fgr as string} />}
-                {(frgData?.legenda as string | undefined) && <KVRow label="Risicogebied" value={frgData!.legenda as string} />}
-                {(frgData?.gemeente as string | undefined) && <KVRow label="Gemeente" value={frgData!.gemeente as string} />}
+                {frgData?.fgr && <KVRow label="Gebiedstype" value={frgData.fgr} />}
+                {frgData?.legenda && <KVRow label="Risicogebied" value={frgData.legenda} />}
+                {frgData?.gemeente && <KVRow label="Gemeente" value={frgData.gemeente} />}
               </SubCard>
 
               {/* Aanbevolen actie — amber warning card */}
@@ -360,7 +364,7 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
               value={natura
                 ? ((natura.binnen_5km as boolean) ? `${(natura.naam as string) || 'In zone'}` : 'Buiten zone')
                 : 'Onbekend'}
-              detail={(natura?.naam as string | undefined) && (natura?.binnen_5km as boolean) ? `Gebied: ${natura.naam as string}` : undefined}
+              detail={(natura?.naam as string | undefined) && (natura?.binnen_5km as boolean) ? `Gebied: ${natura?.naam as string}` : undefined}
               risk={(natura?.binnen_5km as boolean) ? 'middel' : 'laag'}
             />
             <EnvCell

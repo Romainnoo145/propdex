@@ -153,7 +153,7 @@ type Story = StoryObj<typeof SavedParcelCard>
 
 export const Loaded: Story = {
   decorators: [withProviders(makeLoadedClient())],
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement: _canvasElement }) => {
     const canvas = within(document.body)
     // Address visible
     await canvas.findByText('Kaldenkerkerweg 18, Venlo')

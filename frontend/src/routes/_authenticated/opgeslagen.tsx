@@ -17,7 +17,7 @@ import {
 import type { FavoriteResponse, PipelineStage } from '@/lib/types/portfolio'
 
 export const Route = createFileRoute('/_authenticated/opgeslagen')({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): { stage?: PipelineStage } => ({
     stage: STAGES.includes(search.stage as PipelineStage)
       ? (search.stage as PipelineStage)
       : undefined,

@@ -39,7 +39,17 @@ const PERIODE_LABELS: Record<string, string> = {
 }
 
 export const Route = createFileRoute('/_authenticated/jurisprudentie')({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): {
+    gemeente?: string
+    vergunningstype?: string
+    uitkomst?: string
+    rechtsgrond?: string
+    rechtbank_niveau?: string
+    periode?: string
+    view?: 'results'
+  } => ({
     gemeente:
       typeof search.gemeente === 'string' && search.gemeente.trim() ? search.gemeente : undefined,
     vergunningstype:

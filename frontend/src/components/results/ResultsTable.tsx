@@ -12,7 +12,6 @@ import {
 import { ChevronDown, ChevronUp, ChevronsUpDown, Search, MapPin, Heart } from 'lucide-react'
 import { useScanResults } from '@/hooks/useScans'
 import type { ScanResultItem, ScanResultsFilters } from '@/lib/types/scan'
-import { extractScoreSubscores } from '@/lib/score'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -96,25 +95,6 @@ function LeegstandBadge({ hasPand }: { hasPand: boolean }) {
   return (
     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${cls}`}>
       {isLeeg ? 'Ja' : 'Nee'}
-    </span>
-  )
-}
-
-function SubscoreBadge({ value }: { value: number | null }) {
-  if (value === null) {
-    return <span className="text-neutral-500">--</span>
-  }
-
-  const cls =
-    value >= 70
-      ? 'bg-aura-amber/15 text-aura-amber border-aura-amber/30'
-      : value >= 45
-        ? 'bg-aura-amber/8 text-aura-amber/75 border-aura-amber/20'
-        : 'bg-neutral-200/70 text-neutral-600 border-neutral-200/8'
-
-  return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium tabular-nums ${cls}`}>
-      {Math.round(value)}
     </span>
   )
 }
@@ -510,10 +490,6 @@ export default function ResultsTable({
       </div>
     )
   }
-
-  const areaTitle = data.wijk_naam
-    ? `${data.wijk_naam} (${data.gemeente_naam})`
-    : data.gemeente_naam
 
   return (
     <div className="h-full w-full flex flex-col">

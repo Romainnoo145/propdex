@@ -79,25 +79,6 @@ const STATUS_LABEL: Record<SourceStatus, string> = {
   error: 'Fout',
 }
 
-const STATUS_CLS: Record<SourceStatus, string> = {
-  ok: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  unlinked: 'border-slate-200 bg-slate-50 text-slate-500',
-  blocked: 'border-amber-200 bg-amber-50 text-amber-700',
-  error: 'border-red-200 bg-red-50 text-red-700',
-}
-
-const CONFIDENCE_LABEL: Record<string, string> = {
-  HIGH: 'Hoog',
-  MEDIUM: 'Middel',
-  LOW: 'Laag',
-}
-
-const CONFIDENCE_CLS: Record<string, string> = {
-  HIGH: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  MEDIUM: 'border-amber-200 bg-amber-50 text-amber-700',
-  LOW: 'border-red-200 bg-red-50 text-red-700',
-}
-
 /* ─── Section ────────────────────────────────────────────────── */
 
 export function S7Bronvermelding({ data, onRefresh, isRefreshing }: S7BronvermeldingProps) {

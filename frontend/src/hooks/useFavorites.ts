@@ -271,7 +271,12 @@ export function useUpdateNotitie() {
   const { accessToken } = useAuth()
   const queryClient = useQueryClient()
 
-  return useMutation<FavoriteResponse, Error, { parcelId: string; notitie: string | null }>({
+  return useMutation<
+    FavoriteResponse,
+    Error,
+    { parcelId: string; notitie: string | null },
+    { previous: FavoriteResponse[] | undefined }
+  >({
     mutationFn: ({ parcelId, notitie }) =>
       apiFetch<FavoriteResponse>(`${FAVORITES_BASE}/${encodeURIComponent(parcelId)}/notitie`, {
         method: 'PATCH',

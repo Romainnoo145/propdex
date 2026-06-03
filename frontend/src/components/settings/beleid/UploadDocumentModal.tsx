@@ -10,6 +10,7 @@
  * plus an explicit admin-overview invalidation; modal closes.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { ReactElement } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useUploadPolicyDocument } from '@/hooks/usePolicyDocuments'
@@ -50,53 +51,55 @@ interface Props {
   onSuccess?: (versionId: string) => void   // called after upload + toast, before modal closes
 }
 
-export function UploadDocumentModal({ open, onClose, gemeenten, initialGemeente, initialSourceKey, onSuccess }: Props) {
+/** Derive the entity-code default for a given niveau (matches former reset effect). */
+function defaultEntityCode(niveau: CascadeLevel, gemeenten: GemeenteEntry[]): string {
+  if (niveau === 'landelijk') return 'NL'
+  if (niveau === 'provincie') return PROVINCIES[0]!.code
+  return gemeenten[0]?.code ?? ''
+}
+
+export function UploadDocumentModal(props: Props): ReactElement | null {
+  if (!props.open) return null
+  // Remount the form on each open so initial state is derived fresh from props
+  // (replaces the former open/niveau reset effects).
+  return <UploadDocumentForm {...props} />
+}
+
+function UploadDocumentForm({ onClose, gemeenten, initialGemeente, initialSourceKey, onSuccess }: Props) {
   const queryClient = useQueryClient()
   const uploadMutation = useUploadPolicyDocument()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [niveau, setNiveau] = useState<CascadeLevel>('landelijk')
-  const [entityCode, setEntityCode] = useState<string>('NL')
-  const [sourceKey, setSourceKey] = useState<string>('')
+  // Lazy initial state — derived from props at open time. When opened from the
+  // data-bronnen hub with an initialGemeente, prefill gemeente + entity; an
+  // initialSourceKey prefills the documenttype dropdown.
+  const initialNiveau: CascadeLevel = initialGemeente ? 'gemeente' : 'landelijk'
+  const [niveau, setNiveau] = useState<CascadeLevel>(initialNiveau)
+  const [entityCode, setEntityCode] = useState<string>(
+    initialGemeente ? initialGemeente.code : defaultEntityCode(initialNiveau, gemeenten),
+  )
+  const [sourceKey, setSourceKey] = useState<string>(
+    initialSourceKey ?? getSourcesForLevel(initialNiveau)[0]?.key ?? '',
+  )
   const [file, setFile] = useState<File | null>(null)
 
   const sourceKeyOptions = useMemo(() => getSourcesForLevel(niveau), [niveau])
 
-  // Reset entity + source_key whenever niveau changes.
-  useEffect(() => {
-    const firstKey = getSourcesForLevel(niveau)[0]?.key ?? ''
-    if (niveau === 'landelijk') {
-      setEntityCode('NL')
-    } else if (niveau === 'provincie') {
-      setEntityCode(PROVINCIES[0]!.code)
-    } else {
-      setEntityCode(gemeenten[0]?.code ?? '')
-    }
-    setSourceKey(firstKey)
-  }, [niveau, gemeenten])
+  // Reset entity + source_key when the user changes niveau (folded into the handler).
+  const handleNiveauChange = (next: CascadeLevel) => {
+    setNiveau(next)
+    setEntityCode(defaultEntityCode(next, gemeenten))
+    setSourceKey(getSourcesForLevel(next)[0]?.key ?? '')
+  }
 
   // Close on ESC.
   useEffect(() => {
-    if (!open) return
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [open, onClose])
-
-  // Pre-fill from external context when opened from data-bronnen hub.
-  useEffect(() => {
-    if (open && initialGemeente) {
-      setNiveau('gemeente')
-      setEntityCode(initialGemeente.code)
-    }
-    if (open && initialSourceKey) {
-      setSourceKey(initialSourceKey)
-    }
-  }, [open, initialGemeente, initialSourceKey])
-
-  if (!open) return null
+  }, [onClose])
 
   const handleSubmit = async () => {
     if (!file) {
@@ -156,7 +159,7 @@ export function UploadDocumentModal({ open, onClose, gemeenten, initialGemeente,
           <label className="block text-[12px] font-semibold text-[#0E1111]">Niveau</label>
           <select
             value={niveau}
-            onChange={(e) => setNiveau(e.target.value as CascadeLevel)}
+            onChange={(e) => handleNiveauChange(e.target.value as CascadeLevel)}
             className="w-full rounded-[10px] border border-[#EAEFEF] bg-white px-3 py-2 text-[13px] text-[#0E1111] outline-none focus:border-[#F9A826]"
           >
             <option value="landelijk">{LEVEL_LABELS.landelijk}</option>

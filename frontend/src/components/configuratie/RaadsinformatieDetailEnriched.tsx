@@ -101,17 +101,18 @@ export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
   const { data, isLoading, error } = useRaadsinformatie(gemeenteNaam);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const stukken = data?.stukken;
   const filteredStukken = useMemo(() => {
-    if (!data?.stukken) return [];
-    if (!searchQuery.trim()) return data.stukken;
+    if (!stukken) return [];
+    if (!searchQuery.trim()) return stukken;
     const q = searchQuery.trim().toLowerCase();
-    return data.stukken.filter(
+    return stukken.filter(
       (s) =>
         s.titel.toLowerCase().includes(q) ||
         (s.samenvatting && s.samenvatting.toLowerCase().includes(q)) ||
         (s.type && s.type.toLowerCase().includes(q)),
     );
-  }, [data?.stukken, searchQuery]);
+  }, [stukken, searchQuery]);
 
   if (!gemeenteNaam || isLoading) return <DetailLoading />;
   if (error) return <DetailError error={error as Error} />;

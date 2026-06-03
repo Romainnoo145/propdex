@@ -4,12 +4,11 @@ import { Flame, TrendingUp, CircleHelp, type LucideIcon } from 'lucide-react'
 import { PageTitleToggle } from '@/components/map/panels/parcel/layers/PageTitleToggle'
 import type { ScanResultItem, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/types/scan'
 import { isScoreV3 } from '@/lib/score'
-import { TruncatedText } from '../TruncatedText'
 import { WoonvisiePopup, type WijkPolicy } from '../WoonvisiePopup'
 import { FactorCard, GhostCard } from '../FactorCard'
 import { useParcelProjectType } from '@/hooks/useParcelProjectType'
 import { useFactorPins } from '@/hooks/useFactorPins'
-import { FACTOR_BRON, buildPages, CARDS_PER_PAGE } from '@/lib/factor-groups'
+import { FACTOR_BRON, buildPages } from '@/lib/factor-groups'
 import type { PageCard } from '@/lib/factor-groups'
 
 /* ── Verdict derivation ───────────────────────────────────── */
@@ -55,48 +54,6 @@ function deriveVerdict(potentieScore: number | null): Verdict {
     barColor: 'bg-slate-300',
     Icon: CircleHelp,
   }
-}
-
-/* ── One-liner generation ─────────────────────────────────── */
-
-function generateOneLiner(
-  parcel: ScanResultItem,
-  cards: PageCard[],
-  isV3: boolean,
-): string {
-  if (isV3 && parcel.score_breakdown) {
-    // Pick the 2 highest-contributing factors for the one-liner
-    const top = [...cards]
-      .filter((c) => c.pts > 0)
-      .sort((a, b) => b.pts - a.pts)
-      .slice(0, 2)
-    if (top.length > 0) return top.map((c) => `${c.value}`).join(' · ')
-  }
-
-  // v2.1 fallback
-  const parts: string[] = []
-  const area = parcel.area_m2 ?? 0
-  const pandOpp = parcel.building_metrics?.pand_oppervlakte_m2 ?? 0
-  const vrijPct = area > 0 ? Math.round(Math.max(0, (1 - pandOpp / area)) * 100) : null
-  if (vrijPct != null && vrijPct > 5) parts.push(`${vrijPct}% vrije ruimte`)
-
-  const best = parcel.bestemmingen
-  if (Array.isArray(best) && best.length > 0) {
-    const first = best[0] as { type?: string; naam?: string }
-    const isWonen = ['wonen', 'gemengd', 'centrum'].some((kw) =>
-      `${first.type ?? ''} ${first.naam ?? ''}`.toLowerCase().includes(kw),
-    )
-    if (isWonen) parts.push('Wonen-bestemming')
-  }
-
-  if (parcel.vacancy_signal && parcel.vacancy_signal !== 'onbekend' && parcel.vacancy_signal !== 'in_gebruik') {
-    parts.push('leegstandsignaal')
-  }
-
-  if (parts.length === 0) {
-    return parcel.bouwjaar != null ? `Bouwjaar ${parcel.bouwjaar} — heuristiek` : 'Beperkte data'
-  }
-  return parts.slice(0, 2).join(' · ')
 }
 
 /* ── Factor display mapping ───────────────────────────────── */
@@ -376,8 +333,9 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
   })()
 
   const pages = buildPages(allCards, pins.map((p) => ({ id: p.id, factor_key: p.factor_key, position: p.position })))
-  const currentPage = pages[page]
-  const oneLiner = generateOneLiner(parcel, allCards, isV3)
+  // Clamp the active page during render instead of correcting via effect.
+  const safePage = Math.min(page, Math.max(0, pages.length - 1))
+  const currentPage = pages[safePage]
 
   const springVal = useSpring(0, { stiffness: 60, damping: 20 })
   useEffect(() => {
@@ -385,11 +343,6 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
     return () => clearTimeout(timer)
   }, [potentieScore, springVal])
   const barWidth = useTransform(springVal, (v) => `${v}%`)
-
-  // Keep page in bounds when pages count changes
-  useEffect(() => {
-    if (page >= pages.length) setPage(Math.max(0, pages.length - 1))
-  }, [pages.length, page])
 
   return (
     <div className="flex flex-col flex-1 pt-4 px-6 pb-4">
@@ -418,10 +371,10 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
 
       {/* ── Factor Cards Grid with page transition ────────── */}
       <div className="flex-1 mt-4 relative flex flex-col">
-        <PageTitleToggle pages={pages} activeIndex={page} onSelect={setPage} />
+        <PageTitleToggle pages={pages} activeIndex={safePage} onSelect={setPage} />
         <AnimatePresence mode="wait">
           <motion.div
-            key={page}
+            key={safePage}
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -40 }}

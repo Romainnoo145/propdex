@@ -100,7 +100,7 @@ export function getSummariesForSection(
     .map(([sourceKey]) => ({
       sourceKey,
       label: SOURCE_KEY_LABELS[sourceKey] ?? sourceKey,
-      summary: summaries[sourceKey],
+      summary: summaries[sourceKey] ?? '',
     }))
     .filter((item) => !!item.summary)
 }

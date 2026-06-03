@@ -7,7 +7,7 @@
  */
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { staggerContainer, fadeUp } from "@/lib/animations";
 import {
@@ -422,8 +422,6 @@ function DataSourceCard({
   const firstDoc = docsData?.documents?.[0];
   const isAnyParsing =
     docsData?.documents?.some((d) => d.status === "parsing") ?? false;
-  const isAnyError =
-    docsData?.documents?.some((d) => d.status === "error") ?? false;
   const aiSummary = firstDoc ? parseAiSummary(firstDoc.ai_summary) : null;
 
   // Toggle polling when parsing status changes
@@ -1300,38 +1298,6 @@ function LandelijkContent({
 
 /* ─── Source detail workspace (skeleton — T02/T03 add content) ── */
 
-/* ─── Metric card helper ────────────────────────────────────── */
-
-function MetricCard({
-  label,
-  value,
-  unit,
-  muted,
-}: {
-  label: string;
-  value: string | number | null | undefined;
-  unit?: string;
-  muted?: boolean;
-}) {
-  return (
-    <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
-      <p className="text-[28px] font-black leading-none text-[#0E1111]">
-        {value != null ? value : "—"}
-        {unit && (
-          <span className="ml-1 text-[14px] font-semibold text-slate-400">
-            {unit}
-          </span>
-        )}
-      </p>
-      <p
-        className={`mt-1.5 text-[12px] font-semibold ${muted ? "text-slate-400" : "text-slate-500"}`}
-      >
-        {label}
-      </p>
-    </div>
-  );
-}
-
 /* ─── Source detail workspace ───────────────────────────────── */
 
 function SourceDetailWorkspace({
@@ -1371,21 +1337,6 @@ function SourceDetailWorkspace({
     isLoading: profileLoading,
     error: profileError,
   } = useGemeenteProfile(resolvedNaam);
-  const {
-    data: raadsData,
-    isLoading: raadsLoading,
-    error: raadsError,
-  } = useRaadsinformatie(resolvedNaam);
-  const {
-    data: huisvData,
-    isLoading: huisvLoading,
-    error: huisvError,
-  } = useHuisvestingsverordening(resolvedNaam);
-  const {
-    data: erfgoedData,
-    isLoading: erfgoedLoading,
-    error: erfgoedError,
-  } = useErfgoed(resolvedNaam);
 
   // Breadcrumb label — graceful fallback to "gemeente" if naam not loaded
   // (matches provincie pattern; avoids showing the raw gemeenteCode like "GM0983")
@@ -1707,16 +1658,12 @@ function ConfiguratiePage() {
     category: activeCategory,
     niveau: activeNiveau,
   } = Route.useSearch();
-  const { data: gemeenteGeoJSON } = useGemeenteGeoJSON(
+  useGemeenteGeoJSON(
     activeNiveau === "gemeentelijk" || !!activeGemeente,
   );
-  const { data: provincieGeoJSON } = useProvincieGeoJSON(
+  useProvincieGeoJSON(
     activeNiveau === "provinciaal" || !!activeProvincie,
   );
-
-  const landelijkCount = LANDELIJK_DATA_SOURCES.length;
-  const gemeenteCount = gemeenteGeoJSON?.features?.length ?? "342";
-  const provincieCount = provincieGeoJSON?.features?.length ?? "12";
 
   const handleSelectGemeente = useCallback(
     (code: string) => {

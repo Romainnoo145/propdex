@@ -24,7 +24,7 @@ import type { ScanResultItem } from '@/lib/types/scan'
 function splitAddress(address: string | null): [string, string] {
   if (!address) return ['Onbekend adres', '']
   const m = address.match(/^(.+?)\s*(,\s*\d{4}\s?[A-Z]{2}.*)$/)
-  return m ? [m[1], m[2]] : [address, '']
+  return m ? [m[1] ?? address, m[2] ?? ''] : [address, '']
 }
 
 type PanelView =

@@ -13,19 +13,26 @@ export interface S6VergunningenPrecedentenProps {
   sourceParcelId?: string | null
 }
 
-const OUTCOME_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
+interface OutcomeConfig { label: string; color: string; bg: string; border: string }
+
+const OUTCOME_CONFIG_OTHER: OutcomeConfig = { label: 'Overig', color: 'text-slate-500', bg: 'bg-slate-300', border: 'border-slate-200 bg-slate-50' }
+
+const OUTCOME_CONFIG: Record<string, OutcomeConfig> = {
   granted:   { label: 'Verleend',    color: 'text-emerald-700', bg: 'bg-emerald-500', border: 'border-emerald-200 bg-emerald-50' },
   requested: { label: 'Aangevraagd', color: 'text-aura-amber-dark', bg: 'bg-aura-amber', border: 'border-aura-amber/30 bg-aura-amber/10' },
   rejected:  { label: 'Geweigerd',   color: 'text-red-700',     bg: 'bg-red-500',     border: 'border-red-200 bg-red-50' },
   withdrawn: { label: 'Ingetrokken', color: 'text-slate-600',   bg: 'bg-slate-400',   border: 'border-slate-200 bg-slate-50' },
-  other:     { label: 'Overig',      color: 'text-slate-500',   bg: 'bg-slate-300',   border: 'border-slate-200 bg-slate-50' },
+  other:     OUTCOME_CONFIG_OTHER,
 }
 
 function OutcomeBar({ distribution }: { distribution: Record<string, number> }) {
   const total = Object.values(distribution).reduce((s, n) => s + n, 0)
   if (total === 0) return null
   const ordered = ['granted', 'requested', 'rejected', 'withdrawn', 'other']
-  const segments = ordered.filter(k => distribution[k] > 0).map(k => ({ key: k, count: distribution[k], pct: (distribution[k] / total) * 100 }))
+  const segments = ordered
+    .map(k => ({ key: k, count: distribution[k] ?? 0 }))
+    .filter(seg => seg.count > 0)
+    .map(seg => ({ ...seg, pct: (seg.count / total) * 100 }))
   return (
     <div className="space-y-2">
       <div className="flex h-6 w-full overflow-hidden rounded-full bg-slate-100">
@@ -88,7 +95,8 @@ function TimelineRow({ vg, idx, total, dotColor = 'bg-aura-amber' }: {
 /** Extract "Straatnaam Nr" from a display address for title matching */
 function extractStreetAndNumber(address: string | null | undefined): string | null {
   if (!address) return null
-  const beforeComma = address.split(',')[0].trim()
+  // String.split always yields at least one element, so index 0 is defined
+  const beforeComma = address.split(',')[0]!.trim()
   if (!/\d/.test(beforeComma)) return null
   return beforeComma.toLowerCase()
 }
@@ -223,7 +231,7 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
         <SectionInsightCard kicker="Referenties" title={`Recente besluiten (${benchmark.references.length})`} Icon={FileText}>
           <div className="space-y-2">
             {benchmark.references.map((ref) => {
-              const cfg = OUTCOME_CONFIG[ref.outcome] ?? OUTCOME_CONFIG.other
+              const cfg = OUTCOME_CONFIG[ref.outcome] ?? OUTCOME_CONFIG_OTHER
               return (
                 <SubCard key={ref.change_record_id} className="space-y-1.5">
                   <div className="flex items-start justify-between gap-2">

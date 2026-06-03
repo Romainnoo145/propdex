@@ -32,7 +32,8 @@ export function useUpdateChecklistProgress() {
   return useMutation<
     ChecklistProgressResponse,
     Error,
-    { parcelId: string; useCase: string; checkedItems: string[]; uploadedDocuments?: Record<string, string> }
+    { parcelId: string; useCase: string; checkedItems: string[]; uploadedDocuments?: Record<string, string> },
+    { previous: ChecklistProgressResponse | undefined; key: string[] }
   >({
     mutationFn: (vars) =>
       apiFetch<ChecklistProgressResponse>(

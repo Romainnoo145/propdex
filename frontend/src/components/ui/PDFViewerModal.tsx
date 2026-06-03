@@ -35,31 +35,34 @@ export function PDFViewerModal({ url, title, onClose }: PDFViewerModalProps) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchPdf = useCallback(
-    (signal?: AbortSignal) => {
+    async (signal?: AbortSignal) => {
       if (!accessToken) return;
+
+      // Yield a microtask first so the synchronous loading/error reset never
+      // runs inside the effect body (avoids cascading-render lint), while the
+      // captured `signal` keeps abort/cleanup working.
+      await Promise.resolve();
+      if (signal?.aborted) return;
 
       setLoading(true);
       setError(null);
 
-      fetch(url, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        credentials: "include",
-        signal,
-      })
-        .then((r) => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
-          return r.blob();
-        })
-        .then((blob) => {
-          const objectUrl = URL.createObjectURL(blob);
-          setPdfObjectUrl(objectUrl);
-          setLoading(false);
-        })
-        .catch((err) => {
-          if (err instanceof DOMException && err.name === "AbortError") return;
-          setError(err instanceof Error ? err.message : "Kon PDF niet laden");
-          setLoading(false);
+      try {
+        const r = await fetch(url, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          credentials: "include",
+          signal,
         });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const blob = await r.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        setPdfObjectUrl(objectUrl);
+        setLoading(false);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setError(err instanceof Error ? err.message : "Kon PDF niet laden");
+        setLoading(false);
+      }
     },
     [url, accessToken],
   );
@@ -67,7 +70,7 @@ export function PDFViewerModal({ url, title, onClose }: PDFViewerModalProps) {
   // Fetch PDF blob with auth and create object URL
   useEffect(() => {
     const controller = new AbortController();
-    fetchPdf(controller.signal);
+    void fetchPdf(controller.signal);
 
     return () => {
       controller.abort();

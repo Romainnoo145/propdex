@@ -705,7 +705,6 @@ export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
   const rawPages = buildPages(parcel, vergunningen.length, meldingen.length, hasReport, energielabel, wozWaarde, geluidDb, natura2000Naam)
   const userDocs = documentsQuery.data?.documents ?? []
   const pages = mergeDocuments(rawPages, userDocs)
-  const totalPages = pages.length
   // Safe: pages always has 5 entries from buildPages, page is bounded by pagination
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const current = (pages[page] ?? pages[0])!

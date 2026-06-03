@@ -14,7 +14,7 @@ import { VerdictHero } from './gemeente/VerdictHero'
 import { IntelligenceGrid, type IntelCard } from './gemeente/IntelligenceGrid'
 import { WijkDetailModal } from './gemeente/WijkDetailModal'
 import { scanControlsEnabled } from '@/lib/features'
-import { AMBER } from '@/lib/tokens'
+import { AMBER, SLATE_MUTED, OBSIDIAN } from '@/lib/tokens'
 import { useFundaSummary } from '@/hooks/useScans'
 import type { ScanListItem, CbsNeighborhoodMetrics } from '@/lib/types/scan'
 

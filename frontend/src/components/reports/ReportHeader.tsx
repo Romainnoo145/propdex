@@ -3,7 +3,7 @@
  * from FavoriteParcelWorkspaceView.tsx.
  */
 
-import { ChevronLeft, MapPin, Download, ClipboardCheck, RefreshCw } from 'lucide-react'
+import { ChevronLeft, MapPin, Download, ClipboardCheck } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useNavigate } from '@tanstack/react-router'
 import type { PropertyReportResponse } from '@/lib/types/property'
@@ -18,7 +18,8 @@ import type { PropertyReportResponse } from '@/lib/types/property'
  */
 function formatMultiAddressTitle(addresses: string[]): string {
   if (addresses.length === 0) return ''
-  if (addresses.length === 1) return addresses[0]
+  // Length checked === 1, so index 0 is provably defined
+  if (addresses.length === 1) return addresses[0]!
 
   // Group by street name
   const groups = new Map<string, string[]>()
@@ -32,7 +33,9 @@ function formatMultiAddressTitle(addresses: string[]): string {
     // Match from the end: last space before a digit
     const match = addr.match(/^(.+?)\s+(\d+.*)$/)
     if (match) {
-      const [, street, nr] = match
+      // Both capture groups are non-optional, so a truthy match guarantees them
+      const street = match[1]!
+      const nr = match[2]!
       const existing = groups.get(street) ?? []
       existing.push(nr)
       groups.set(street, existing)
@@ -91,8 +94,6 @@ export default function ReportHeader({
   onBack,
   onViewOnMap,
   onExportPDF,
-  onRefresh,
-  isRefreshing,
 }: ReportHeaderProps) {
   const navigate = useNavigate()
   const { address, cadastral_parcels, all_addresses } = data

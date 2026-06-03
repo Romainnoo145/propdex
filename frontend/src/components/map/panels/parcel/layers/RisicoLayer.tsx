@@ -5,10 +5,9 @@ import { PageTitleToggle } from '@/components/map/panels/parcel/layers/PageTitle
 import type { ScanResultItem, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/types/scan'
 import { isScoreV3 } from '@/lib/score'
 import { useParcelEnrichment } from '@/hooks/useScans'
-import { TruncatedText } from '../TruncatedText'
 import { FactorCard, GhostCard } from '../FactorCard'
 import { useFactorPins } from '@/hooks/useFactorPins'
-import { FACTOR_BRON, buildPages, CARDS_PER_PAGE } from '@/lib/factor-groups'
+import { FACTOR_BRON, buildPages } from '@/lib/factor-groups'
 import type { PageCard } from '@/lib/factor-groups'
 
 /* ── Verdict derivation ───────────────────────────────────── */
@@ -54,19 +53,6 @@ function deriveVerdict(risicoScore: number | null): Verdict {
     barColor: 'bg-red-500',
     Icon: ShieldAlert,
   }
-}
-
-/* ── One-liner generation ─────────────────────────────────── */
-
-function generateOneLiner(cards: PageCard[], isV3: boolean): string {
-  if (isV3) {
-    const top = [...cards]
-      .filter((c) => c.pts > 0)
-      .sort((a, b) => b.pts - a.pts)
-      .slice(0, 2)
-    if (top.length > 0) return top.map((c) => c.label).join(' · ')
-  }
-  return 'Heuristisch risicoprofiel'
 }
 
 /* ── Factor display mapping ───────────────────────────────── */
@@ -415,9 +401,9 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
   // All cards combined for buildPages
   const allCards: PageCard[] = [...scoreCards, ...envCards]
   const pages = buildPages(allCards, pins.map((p) => ({ id: p.id, factor_key: p.factor_key, position: p.position })))
-  const currentPage = pages[page]
-
-  const oneLiner = generateOneLiner(scoreCards, isV3)
+  // Clamp the active page during render instead of correcting via effect.
+  const safePage = Math.min(page, Math.max(0, pages.length - 1))
+  const currentPage = pages[safePage]
 
   // Animated score bar
   const springVal = useSpring(0, { stiffness: 60, damping: 20 })
@@ -426,11 +412,6 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
     return () => clearTimeout(timer)
   }, [risicoScore, springVal])
   const barWidth = useTransform(springVal, (v) => `${v}%`)
-
-  // Keep page in bounds when pages count changes
-  useEffect(() => {
-    if (page >= pages.length) setPage(Math.max(0, pages.length - 1))
-  }, [pages.length, page])
 
   return (
     <div className="flex flex-col flex-1 pt-4 px-6 pb-4">
@@ -464,10 +445,10 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
 
       {/* ── Factor Cards Grid with page transition ────────── */}
       <div className="flex-1 mt-4 relative flex flex-col">
-        <PageTitleToggle pages={pages} activeIndex={page} onSelect={setPage} />
+        <PageTitleToggle pages={pages} activeIndex={safePage} onSelect={setPage} />
         <AnimatePresence mode="wait">
           <motion.div
-            key={page}
+            key={safePage}
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -40 }}

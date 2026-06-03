@@ -129,7 +129,7 @@ export function KlimaatLayer({ gemeenteNaam, gemeenteCode }: KlimaatLayerProps) 
       .sort((a, b) => b[1] - a[1])
   }, [profile?.permit_type_distribution])
 
-  const maxPermitCount = permitTypes.length > 0 ? permitTypes[0][1] : 1
+  const maxPermitCount = permitTypes[0]?.[1] ?? 1
 
   // Doorlooptijd per type
   const doorlooptijdTypes = useMemo(() => {

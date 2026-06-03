@@ -29,7 +29,6 @@ function RiskBadge({ level }: { level: string | null | undefined }) {
 
 export function ChatReportsList({ reports, count, message }: Props) {
   const navigate = useNavigate()
-  const hasScores = reports.some((r) => r.potentie != null)
 
   if (reports.length === 0) {
     return (

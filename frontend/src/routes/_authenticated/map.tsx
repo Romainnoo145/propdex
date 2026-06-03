@@ -203,6 +203,7 @@ function MapPage() {
       const t = setTimeout(apply, 500)
       return () => clearTimeout(t)
     }
+    return undefined
   }, [userPrefs?.map_style, mapReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------------------

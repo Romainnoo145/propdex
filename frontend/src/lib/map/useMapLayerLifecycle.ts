@@ -73,7 +73,7 @@ type QueuedOperation =
 
 function isStyleReady(map: maplibregl.Map): boolean {
   try {
-    return map.isStyleLoaded()
+    return map.isStyleLoaded() === true
   } catch {
     // Map may be removed — treat as not ready
     return false

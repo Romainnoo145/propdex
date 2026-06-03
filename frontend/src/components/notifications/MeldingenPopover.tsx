@@ -32,7 +32,7 @@ function ChangeItem({
   onMarkRead: () => void
 }) {
   const label = CHANGE_TYPE_LABELS[change.change_type] ?? change.change_type
-  const address = change.address || change.parcel_id || 'Onbekend adres'
+  const address = change.address || change.matched_parcel_id || 'Onbekend adres'
 
   return (
     <button
@@ -99,11 +99,11 @@ export function MeldingenPopover() {
   const handleNavigateToChange = (change: ChangeRecord) => {
     setOpen(false)
     // Try to navigate to the parcel on the map
-    if (change.parcel_id) {
+    if (change.matched_parcel_id) {
       navigate({
         to: '/map',
         search: toMapParcelSearch({
-          parcelId: change.parcel_id,
+          parcelId: change.matched_parcel_id,
           fallbackAddress: change.address,
         }),
       })

@@ -8,7 +8,7 @@
 
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import { ArrowUp, Compass, Clock, X, Loader2 } from 'lucide-react'
 import { useChat, type ChatMessage } from '@/hooks/useChat'
 import { useBulkQueryHistory } from '@/hooks/useBulkQuery'
@@ -21,7 +21,7 @@ export const Route = createFileRoute('/_authenticated/verkenner')({
 
 /* ─── Animations ────────────────────────────────────────────── */
 
-const fadeIn = {
+const fadeIn: Variants = {
   hidden: { opacity: 0, y: 8 },
   show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] } },
 }

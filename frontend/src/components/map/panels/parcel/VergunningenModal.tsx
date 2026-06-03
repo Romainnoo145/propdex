@@ -55,7 +55,7 @@ function formatDate(iso: string): string {
 function extractStreetAndNumber(address: string | null): string | null {
   if (!address) return null
   // Take everything before the first comma (street + housenumber)
-  const beforeComma = address.split(',')[0].trim()
+  const beforeComma = (address.split(',')[0] ?? '').trim()
   // Must contain at least one digit (house number)
   if (!/\d/.test(beforeComma)) return null
   return beforeComma.toLowerCase()

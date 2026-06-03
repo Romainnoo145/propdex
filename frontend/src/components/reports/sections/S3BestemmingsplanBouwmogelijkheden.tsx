@@ -186,7 +186,6 @@ function useAIParsing(planIdn: string | null, reportId: string | null) {
 export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId, reportId }: S3BestemmingsplanBouwmogelijkhedenProps) {
   const { zoning, buildability_delta, ai_parsing, wkb_precheck } = data
   const uploadDocument = useUploadDocument()
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const aiFileRef = useRef<HTMLInputElement>(null)
   const [showAIModal, setShowAIModal] = useState(false)
 
@@ -300,12 +299,12 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId, repor
           const parcel = buildability_delta.parcel_area_m2 ?? 0
           const built = buildability_delta.current_built_area_m2 ?? 0
           const remaining = buildability_delta.remaining_buildable_area_m2 ?? Math.max(parcel - built, 0)
-          const currentFar = (buildability_delta as Record<string, unknown>).current_far as number | null | undefined
-          const maxFar = (buildability_delta as Record<string, unknown>).max_far as number | null | undefined
-          const currentRatio = (buildability_delta as Record<string, unknown>).current_built_ratio_pct as number | null | undefined
-          const maxBebPct = (buildability_delta as Record<string, unknown>).max_bebouwingspercentage_pct as number | null | undefined
-          const confidence = (buildability_delta as Record<string, unknown>).confidence as string | null | undefined
-          const missingFields = (buildability_delta as Record<string, unknown>).missing_fields as string[] | null | undefined
+          const currentFar = buildability_delta.current_far
+          const maxFar = buildability_delta.max_far
+          const currentRatio = buildability_delta.current_built_ratio_pct
+          const maxBebPct = buildability_delta.max_bebouwingspercentage_pct
+          const confidence = buildability_delta.confidence
+          const missingFields = buildability_delta.missing_fields
           return (
             <div className="space-y-3">
               <BuildabilityBar parcelArea={parcel} builtArea={built} remainingArea={remaining} />
@@ -541,8 +540,8 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId, repor
                       : 'Onzeker'}
                 </SemanticPill>
               </div>
-              {(data.wkb_classification as Record<string, unknown> | null | undefined)?.gevolgklasse && (
-                <KVRow label="Gevolgklasse" value={(data.wkb_classification as Record<string, unknown>).gevolgklasse as string} />
+              {data.wkb_classification?.gevolgklasse && (
+                <KVRow label="Gevolgklasse" value={data.wkb_classification.gevolgklasse} />
               )}
               <KVRow label="Betrouwbaarheid" value={wkb_precheck.confidence === 'low' ? 'Laag' : wkb_precheck.confidence === 'high' ? 'Hoog' : 'Gemiddeld'} />
             </SubCard>
