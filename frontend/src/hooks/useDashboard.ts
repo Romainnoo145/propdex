@@ -136,8 +136,13 @@ export function useGemeenteSignalen(gemeente: string) {
   return useQuery<GemeenteSignaal[], Error>({
     queryKey: ['dashboard', 'signalen', gemeente],
     queryFn: async () => {
+      // include_matches=false: de dashboard-radar gebruikt alleen `matched_parcel_id`
+      // (al voorberekend op ChangeRecord door de change-monitor cron). De dure
+      // matched_parcels/matched_reports-enrichment (N+1 over alle changes) leest dit
+      // lijstje niet en kost ~5.9s op limit=100 — uit zetten => ~0.02s. limit=100 blijft
+      // omdat de feed op detected_at sorteert en wij client-side op publicatiedatum.
       const res = await apiFetch<ChangesListResponse>(
-        `/api/monitoring/changes?gemeente_naam=${encodeURIComponent(gemeente)}&include_matches=true&limit=100`,
+        `/api/monitoring/changes?gemeente_naam=${encodeURIComponent(gemeente)}&include_matches=false&limit=100`,
         { method: 'GET', accessToken },
       )
       // Nieuw -> oud op publicatiedatum.
