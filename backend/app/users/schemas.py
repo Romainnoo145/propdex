@@ -6,6 +6,8 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from app.auth.schemas import MessageResponse, UserResponse
 
 __all__ = [
+    "AfzenderResponse",
+    "AfzenderUpdate",
     "MessageResponse",
     "PasswordChange",
     "UserPreferences",
@@ -43,3 +45,22 @@ class UserPreferencesUpdate(BaseModel):
 
     notification_email_alerts: bool | None = None
     map_style: str | None = None
+
+
+class AfzenderResponse(BaseModel):
+    """M052/S04 — org afzender (briefhoofd) info; bedrijfsnaam = org name."""
+
+    bedrijfsnaam: str
+    afzender_adres: str | None = None
+    contactpersoon: str | None = None
+    contact_email: str | None = None
+    contact_telefoon: str | None = None
+
+
+class AfzenderUpdate(BaseModel):
+    """M052/S04 — partial afzender update; alle velden optioneel."""
+
+    afzender_adres: str | None = None
+    contactpersoon: str | None = None
+    contact_email: str | None = None
+    contact_telefoon: str | None = None
