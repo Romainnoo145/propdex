@@ -28,3 +28,34 @@ async def test_generate_brief_manual_mode_when_no_brk(
     assert body["mode"] == "manual"
     assert "Hauzer Vastgoed" in body["markdown"]
     assert "Geachte heer Janssen" in body["markdown"]
+
+
+@pytest.mark.asyncio
+async def test_generate_brief_auto_mode_with_rechtspersoon(
+    async_client: AsyncClient, create_test_user, test_db
+):
+    from datetime import datetime
+
+    from app.models.brk_ownership_record import BrkOwnershipRecord
+
+    user, org = await create_test_user(email="auto@x.nl", org_name="Hauzer Vastgoed")
+    rec = BrkOwnershipRecord(
+        organization_id=org.id,
+        parcel_id="NL.IMKAD.TEST.2",
+        eigenaar_type="rechtspersoon",
+        eigenaar_naam="Vastgoed BV",
+        statutaire_zetel="Industrieweg 5, Venlo",
+        heeft_hypotheek=False,
+        fetched_at=datetime.utcnow(),
+    )
+    test_db.add(rec)
+    await test_db.commit()
+    token = create_access_token(str(user.id), str(org.id))
+    headers = {"Authorization": f"Bearer {token}"}
+    r = await async_client.post(
+        "/api/parcels/NL.IMKAD.TEST.2/brief", headers=headers, json={}
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["mode"] == "auto"
+    assert "Vastgoed BV" in body["markdown"]
