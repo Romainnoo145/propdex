@@ -25,6 +25,7 @@ import { BrkOwnerCard } from './BrkOwnerCard'
 import { BrkHypotheekCard } from './BrkHypotheekCard'
 import { BrkKoopwaardeTimeline } from './BrkKoopwaardeTimeline'
 import { RescoreProgressBanner } from './RescoreProgressBanner'
+import { BriefCard } from './BriefCard'
 
 // ============================================================================
 // Pure dispatcher derivation — exported for unit tests
@@ -137,6 +138,8 @@ export function ContactPhaseView({ parcelId }: ContactPhaseViewProps) {
             <BrkKoopwaardeTimeline records={recs} />
           </>
         )}
+
+        <BriefCard parcelId={parcelId} />
       </div>
     </ResultsShell>
   )
