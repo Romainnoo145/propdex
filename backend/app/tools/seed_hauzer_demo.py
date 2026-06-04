@@ -84,6 +84,8 @@ DEMO_BRK_RECORD = {
     "eigenaar_naam": "Janssen Vastgoed Beheer B.V.",
     "statutaire_zetel": "Industrieweg 12, 5928 PA Venlo",
     "heeft_hypotheek": False,
+    "koopsom": 485000,
+    "koopjaar": 2018,
 }
 
 GEMEENTE_NAAM = "Venlo"
@@ -182,6 +184,8 @@ async def seed_demo_dataset(
                 eigenaar_naam=DEMO_BRK_RECORD["eigenaar_naam"],
                 statutaire_zetel=DEMO_BRK_RECORD["statutaire_zetel"],
                 heeft_hypotheek=DEMO_BRK_RECORD["heeft_hypotheek"],
+                koopsom=DEMO_BRK_RECORD["koopsom"],
+                koopjaar=DEMO_BRK_RECORD["koopjaar"],
                 fetched_at=datetime.utcnow(),
             )
         )
