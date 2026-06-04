@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Boolean, Integer, String, text
+from sqlalchemy import Boolean, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -61,3 +61,7 @@ class Organization(Base, TimestampMixin):
             "S06 sets True on demo-org only. No env kill-switch (YAGNI pre-prod)."
         ),
     )
+    afzender_adres: Mapped[str | None] = mapped_column(Text, nullable=True)
+    contactpersoon: Mapped[str | None] = mapped_column(Text, nullable=True)
+    contact_email: Mapped[str | None] = mapped_column(Text, nullable=True)
+    contact_telefoon: Mapped[str | None] = mapped_column(Text, nullable=True)
