@@ -16,7 +16,8 @@ class SendBriefRequest(BaseModel):
 
 
 class GenerateBriefResponse(BaseModel):
-    markdown: str
+    markdown: str  # volledige brief (letterhead + NAW + datum + body) — legacy
+    body: str  # body-only (betreft + alinea's + groet) — frontend rendert chrome zelf
     mode: str  # 'auto' (rechtspersoon/overheid) | 'manual' (geen record)
 
 

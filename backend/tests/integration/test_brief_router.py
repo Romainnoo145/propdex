@@ -30,6 +30,16 @@ async def test_generate_brief_manual_mode_when_no_brk(
     assert body["mode"] == "manual"
     assert "Hauzer Vastgoed" in body["markdown"]
     assert "Geachte heer Janssen" in body["markdown"]
+    # body-only veld is gevuld en bevat de salutation + betreft, maar NIET het
+    # afzender-letterhead (dat rendert de frontend als chrome — geen dubbeling).
+    assert body["body"]
+    assert "Geachte heer Janssen" in body["body"]
+    assert "Betreft: interesse in uw eigendom" in body["body"]
+    # Het letterhead is "**Hauzer Vastgoed**" bovenaan de volledige brief; de
+    # body mag de bedrijfsnaam alleen in de groet-ondertekening hebben, niet als
+    # vetgedrukt briefhoofd op de eerste regel.
+    assert not body["body"].startswith("**Hauzer Vastgoed**")
+    assert "**Hauzer Vastgoed**" not in body["body"]
 
 
 @pytest.mark.asyncio
@@ -61,6 +71,11 @@ async def test_generate_brief_auto_mode_with_rechtspersoon(
     body = r.json()
     assert body["mode"] == "auto"
     assert "Vastgoed BV" in body["markdown"]
+    # body-only veld: salutation uit BRK-eigenaar, geen letterhead-dubbeling.
+    assert body["body"]
+    assert "Geachte Vastgoed BV" in body["body"]
+    assert "Betreft: interesse in uw eigendom" in body["body"]
+    assert "**Hauzer Vastgoed**" not in body["body"]
 
 
 @pytest.mark.asyncio

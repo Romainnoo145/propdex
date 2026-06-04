@@ -168,9 +168,9 @@ export function BriefLetterCard({ parcelId, record }: BriefLetterCardProps) {
                 </span>
               ) : (
                 <img
-                  src="/images/hauzer-partners-logo.svg"
+                  src="/images/hauzer-partners-logo.jpg"
                   alt={bedrijfsnaam}
-                  className="h-10 w-auto"
+                  className="h-12 w-auto"
                   onError={() => setLogoFailed(true)}
                 />
               )}
@@ -214,9 +214,9 @@ export function BriefLetterCard({ parcelId, record }: BriefLetterCardProps) {
                 </p>
               )}
               {gen.data && (
-                <div className="[&_h1]:mb-4 [&_h1]:text-[14px] [&_h1]:font-bold [&_h2]:mb-4 [&_h2]:font-bold [&_p]:mb-4 [&_p]:leading-[1.7] [&_strong]:font-bold last:[&_p]:mb-0">
+                <div className="[&_h1]:mb-4 [&_h1]:text-[14px] [&_h1]:font-bold [&_h2]:mb-4 [&_h2]:font-bold [&_p]:mb-4 [&_p]:leading-[1.7] [&_strong]:font-semibold last:[&_p]:mb-0">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {gen.data.markdown}
+                    {gen.data.body}
                   </ReactMarkdown>
                 </div>
               )}

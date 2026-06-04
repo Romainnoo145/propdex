@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user, get_current_organization_id
@@ -34,52 +34,50 @@ router = APIRouter(prefix="/api/parcels", tags=["Brief"])
 async def _load_parcel_facts(
     db: AsyncSession, parcel_id: str
 ) -> tuple[str | None, str | None, float | None]:
-    """Adres, gemeente_naam, potentie-score voor een parcel (laatste scan).
+    """Adres, gemeente_naam, potentie-score voor een parcel.
 
-    Spiegelt de kansen-query in ``app/api/endpoints/dashboard.py:get_kansen``
-    (regels 112-157): ScanResult⋈AreaScan met ROW_NUMBER op laatste scan, dan
-    join met ParcelCache. ``ScanResult.parcel_id`` is een FK naar
-    ``ParcelCache.id`` (UUID) — niet de kadaster-string. De URL-``parcel_id``
-    is de kadaster-string, dus filteren we ``ParcelCache.parcel_id``.
+    Het adres komt DIRECT uit ``ParcelCache.address`` (op
+    ``ParcelCache.parcel_id == parcel_id``, de kadaster-string) — onafhankelijk
+    van enige scan. Veel percelen hebben geen ScanResult; de oude scan-join gaf
+    dan None terug → "Adres onbekend". Door op ParcelCache te filteren krijgen we
+    het adres altijd, mits het perceel gecachet is.
 
-    ``potentie`` is hier de juiste score: de brief-template zegt
-    "scoort {{ score }}/100 op ontwikkelpotentieel".
+    De ``potentie``-score komt apart uit de laatste scan (indien aanwezig); de
+    brief-template zegt "scoort {{ score }}/100 op ontwikkelpotentieel". Geen
+    scan → potentie None (template laat de score-regel dan weg). De
+    ``gemeente_naam`` komt mee uit de laatste scan (AreaScan) indien beschikbaar.
 
-    Returnt (None, None, None) als er geen scan/cache voor het perceel is.
+    Returnt (None, None, None) als er geen ParcelCache voor het perceel is.
     """
-    potentie = ScanResult.flags["scores"]["potentie"].as_float()
-    ranked = (
-        select(
-            ScanResult.parcel_id.label("pc_id"),
-            potentie.label("potentie"),
-            AreaScan.gemeente_naam.label("gemeente_naam"),
-            func.row_number()
-            .over(
-                partition_by=ScanResult.parcel_id,
-                order_by=AreaScan.created_at.desc(),
-            )
-            .label("rn"),
-        )
-        .join(AreaScan, AreaScan.id == ScanResult.scan_id)
-        .subquery()
-    )
-    row = (
+    # 1. Adres direct uit ParcelCache (onafhankelijk van scans).
+    cache_row = (
         await db.execute(
-            select(
-                ParcelCache.address,
-                ranked.c.gemeente_naam,
-                ranked.c.potentie,
-            )
-            .join(ranked, ranked.c.pc_id == ParcelCache.id)
-            .where(
-                ParcelCache.parcel_id == parcel_id,
-                ranked.c.rn == 1,
+            select(ParcelCache.id, ParcelCache.address).where(
+                ParcelCache.parcel_id == parcel_id
             )
         )
     ).first()
-    if row is None:
+    if cache_row is None:
         return None, None, None
-    return row.address, row.gemeente_naam, row.potentie
+    pc_id, address = cache_row.id, cache_row.address
+
+    # 2. Potentie + gemeente uit de laatste scan (indien aanwezig).
+    potentie_expr = ScanResult.flags["scores"]["potentie"].as_float()
+    scan_row = (
+        await db.execute(
+            select(
+                potentie_expr.label("potentie"),
+                AreaScan.gemeente_naam.label("gemeente_naam"),
+            )
+            .join(AreaScan, AreaScan.id == ScanResult.scan_id)
+            .where(ScanResult.parcel_id == pc_id)
+            .order_by(AreaScan.created_at.desc())
+            .limit(1)
+        )
+    ).first()
+    if scan_row is None:
+        return address, None, None
+    return address, scan_row.gemeente_naam, scan_row.potentie
 
 
 @router.post("/{parcel_id}/brief", response_model=GenerateBriefResponse)
@@ -138,7 +136,8 @@ async def generate_brief(
             user_context["eigenaar_adres"] = payload.addressee.eigenaar_adres
 
     markdown = generate_document("eigenaar_brief", parcel_data, user_context) or ""
-    return GenerateBriefResponse(markdown=markdown, mode=mode)
+    body = generate_document("eigenaar_brief_body", parcel_data, user_context) or ""
+    return GenerateBriefResponse(markdown=markdown, body=body, mode=mode)
 
 
 @router.post("/{parcel_id}/brief/send", response_model=SendBriefResponse)

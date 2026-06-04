@@ -43,7 +43,8 @@ export function useSaveAfzender() {
 }
 
 export interface BriefResult {
-  markdown: string
+  markdown: string // volledige brief (legacy) — gebruikt voor versturen
+  body: string // body-only (betreft + alinea's + groet) — frontend rendert chrome
   mode: 'auto' | 'manual'
 }
 

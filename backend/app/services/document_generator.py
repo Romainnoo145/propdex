@@ -65,6 +65,44 @@ Met vriendelijke groet,
 {{ contact_telefoon }}
 """
 
+EIGENAAR_BRIEF_BODY_TEMPLATE = """\
+**Betreft: interesse in uw eigendom aan {{ pand_adres }}**
+
+{{ eigenaar_aanhef }},
+
+Met grote interesse hebben wij uw pand aan **{{ pand_adres }}** in {{ gemeente_naam }} bekeken. \
+Als ontwikkelaar van vastgoedprojecten zijn wij actief op zoek naar locaties met \
+ontwikkelpotentieel in de regio.
+
+{% if use_case == "optoppen" -%}
+Wij zien mogelijkheden om het pand te **optoppen** — het toevoegen van extra woonlagen \
+bovenop de bestaande constructie. Dit biedt een unieke kans om woningen toe te voegen \
+zonder extra grondgebruik.
+{% elif use_case == "splitsen" -%}
+Wij zien mogelijkheden om het pand te **splitsen** in meerdere zelfstandige wooneenheden. \
+De huidige indeling en het beschikbare oppervlak lenen zich hier goed voor.
+{% elif use_case == "transformatie" -%}
+Wij zien mogelijkheden voor **transformatie** van het huidige gebruik naar woningen. \
+De locatie en het gebouw bieden interessante mogelijkheden voor herontwikkeling.
+{% elif use_case == "nieuwbouw" -%}
+Wij zien mogelijkheden voor **sloop-nieuwbouw** op deze locatie. \
+Het perceel biedt ruimte voor een nieuwbouwproject dat past binnen de ambities van de gemeente.
+{% else -%}
+Wij zien ontwikkelmogelijkheden voor deze locatie en willen graag de opties met u bespreken.
+{% endif %}
+{% if score is not none %}
+Op basis van onze analyse scoort deze locatie **{{ score }}/100** op ontwikkelpotentieel.
+{% endif %}
+Graag komen wij vrijblijvend met u in gesprek over de mogelijkheden. \
+U kunt ons bereiken via onderstaande contactgegevens.
+
+Met vriendelijke groet,
+
+{{ contactpersoon }}
+
+{{ bedrijfsnaam }}
+"""
+
 VOOROVERLEG_TEMPLATE = """\
 # Verzoek vooroverleg — {{ pand_adres }}
 
@@ -139,6 +177,7 @@ _Nader aan te leveren:_
 
 TEMPLATES: dict[str, str] = {
     "eigenaar_brief": EIGENAAR_BRIEF_TEMPLATE,
+    "eigenaar_brief_body": EIGENAAR_BRIEF_BODY_TEMPLATE,
     "vooroverleg_request": VOOROVERLEG_TEMPLATE,
 }
 
