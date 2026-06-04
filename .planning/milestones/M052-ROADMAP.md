@@ -24,12 +24,14 @@ M052 maakt de sprong van System-of-Record (data) → System-of-Engagement (dagel
 
 ## Phases
 
-- [ ] **Phase 1: Fundament + Demo-flag** (M052/S01) — `projecttype` op `ParcelFavorite` + opslaan-op-zoekmethode UI + scoring-wiring · `HAUZER_DEMO` feature-flag infra · DESIGN.md makelaars-correctie
-- [ ] **Phase 2: Per-perceel Acquisitie-arc** (M052/S02) — `Haalbaarheid` als 9e fase + `HaalbaarheidPhaseView` + checklist-verhuizing (projecttype-driven) + configureerbare `LifecycleSideRailNav` (Hauzer 4-fase set) + Bod mock-light
-- [ ] **Phase 3: Dashboard Cockpit** (M052/S03) — Dashboard-landing = **twee-signalen acquisitie-radar** (gemeentesignalen `ChangeRecord` + off-market kansen + conditionele beleid-banner + pijplijn-voetnoot + gemeente-scope). Vervangt "Kanban + inbox". Design-lock zie spec.
-- [ ] **Phase 4: Contact Brief-teaser** (M052/S04) — brief-preview uit echte BRK-eigenaar-data + gefakete verzend-bevestiging
+> ✅ **M052 SHIPPED naar main 2026-06-04** (merge `df068de4`). Alle slices afgerond; S05 geschrapt. Demo end-to-end echt (Contact-arc + Voorbereiding-fase + brief-teaser + WOZ + BRK-demo). ⚠️ prod-deploy vereist: alembic upgrade head + `seed_hauzer_demo` + rapport-generatie per demo-perceel.
+
+- [x] **Phase 1: Fundament + Demo-flag** (M052/S01) — `projecttype` op `ParcelFavorite` + opslaan-op-zoekmethode UI + scoring-wiring · `HAUZER_DEMO` feature-flag infra · DESIGN.md makelaars-correctie
+- [x] **Phase 2: Per-perceel Acquisitie-arc** (M052/S02) — `Haalbaarheid` als 9e fase + `HaalbaarheidPhaseView` + checklist-verhuizing (projecttype-driven) + configureerbare `LifecycleSideRailNav` (Hauzer 4-fase set) + Bod mock-light
+- [x] **Phase 3: Dashboard Cockpit** (M052/S03) — Dashboard-landing = **twee-signalen acquisitie-radar** (gemeentesignalen `ChangeRecord` + off-market kansen + conditionele beleid-banner + pijplijn-voetnoot + gemeente-scope). Vervangt "Kanban + inbox". Design-lock zie spec.
+- [x] **Phase 4: Contact Brief-teaser** (M052/S04) — brief-preview uit echte BRK-eigenaar-data + gefakete verzend-bevestiging
 - [x] ~~**Phase 5: Discovery Surfaces** (M052/S05)~~ — **GESCHRAPT 2026-05-31**: kavelzoeker dubbelt bestaande kaart-filters; nieuwbouw-matcher = Realworks (post-deal). Geen discovery-gat.
-- [ ] **Phase 6: Demo-org Seed + Verificatie** (M052/S06) — Hauzer demo-org seed (favorites in stages + projecttype + mock inbox) + productie-bar verificatie
+- [x] **Phase 6: Demo-org Seed + Verificatie** (M052/S06) — Hauzer demo-org seed (favorites in stages + projecttype + mock inbox) + productie-bar verificatie
 
 ## Phase Details
 

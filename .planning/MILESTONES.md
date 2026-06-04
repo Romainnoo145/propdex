@@ -1,5 +1,23 @@
 # Milestones
 
+## M052 Hauzer Engagement-Demo (Shipped: 2026-06-04)
+
+**Slices:** S01-S04 + S06 afgerond, S05 geschrapt. Gebouwd via superpowers (geen GSD phase-dirs). Merge `df068de4`.
+
+**Key accomplishments:**
+- System-of-Engagement-laag op echte Venlo-data: per-perceel acquisitie-arc (Onderzoek → Contact → **Voorbereiding** → Bod) met de projecttype-gedreven checklist in de nieuwe `3-voorbereiding`-fase (9-fase lifecycle, additief)
+- **Contact brief-teaser**: A4-brief uit `document_generator` + echte BRK-rechtspersoon-eigenaar, briefhoofd uit org-afzendervelden, fake-send via `BriefDispatcher`-interface (M051-naad, metadata-only, gated op `hauzer_demo`)
+- **Dashboard twee-signalen acquisitie-radar** (S03): gemeentesignalen + off-market kansen + pijplijn-voetnoot op echte data; cockpit-navigatie bedraad
+- **WOZ-Waardeloket** in de Contact eigenaar-card (€614k indicatief) + 4-tegel grid (eigendomsvorm/hypotheek/koopsom/WOZ); BRK-privacy-note
+- **Hauzer demo-org seed** (`info@hauzer.nl`, `hauzer_demo`): 6 gescoorde Venlo-percelen over pijplijn-stages + projecttypes + 6 rechtspersoon-BRK-records + volledige rapporten
+- Twee pre-existing M050-routingbugs gefixt (parcel `$phase` Outlet-split + LifecycleSideRailNav hardcoded-`/opgeslagen`-links) — exposeerden de lifecycle-fase-navigatie
+
+**⚠️ Prod-deploy:** main → prod deployt de code; de demo-DATA vereist op prod: `alembic upgrade head` (afzender + brief_dispatches migraties) + `python -m app.tools.seed_hauzer_demo` + rapport-generatie per demo-perceel (`POST /api/reports/from-parcel`). WOZ-Waardeloket is `low_confidence` (publiek/indicatief, niet autoritatief WOZ-Bevragen).
+
+**Caveats:** rapport-generatie + WOZ-cache nu via one-off endpoint-calls (niet in de seed gebakken — runtime-deps); seed-reproduceerbaarheid van rapporten = open follow-up.
+
+---
+
 ## M050 BRK Lookup-Wedge (Shipped: 2026-05-21)
 
 **Phases completed:** 5 phases (1, 2, 3, 6, 8), 22 plans
