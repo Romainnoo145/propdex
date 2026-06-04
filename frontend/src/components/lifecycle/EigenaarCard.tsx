@@ -7,8 +7,10 @@
  *   - 4 tiles: Eigendomsvorm · Hypotheek · Laatste koopsom · WOZ-waarde
  *   - privacy-note (BRK-persoonsgegevens worden niet bewaard)
  *
- * Missing fields degrade gracefully to "—" / "Onbekend". WOZ is not part of the
- * BRK-record shape, so it shows "—" until a WOZ-source is wired.
+ * Missing fields degrade gracefully to "—" / "Onbekend". WOZ is NOT part of the
+ * BRK-record shape — it comes from the parcel-enrichment source (WOZ Waardeloket,
+ * pre-cached in scan_results.flags['woz']). When the parcel has no Waardeloket
+ * object (404), the WOZ tile shows "—" + "WOZ · geen object" honestly.
  *
  * CSS-mapping (frame-v3.css → Tailwind/Aura):
  *   .ownerhero  → rounded-[18px] bg-white/60 border-white/70 p-[20px_24px]
@@ -17,9 +19,26 @@
  */
 import { Building2, Landmark, Shield } from 'lucide-react'
 import type { BRKOwnershipRecordRead } from '@/lib/types/brk'
+import type { WozData } from '@/lib/types/scan'
 
 export interface EigenaarCardProps {
   record: BRKOwnershipRecordRead
+  /** Real WOZ data from the parcel-enrichment source (WOZ Waardeloket). */
+  woz?: WozData | null
+}
+
+/** Format a WOZ value to "€ 614.000" or null when absent/invalid. */
+function formatWoz(value: number | null | undefined): string | null {
+  if (value === null || value === undefined) return null
+  if (!Number.isFinite(value) || value <= 0) return null
+  return `€ ${Math.round(value).toLocaleString('nl-NL')}`
+}
+
+/** Derive the peildatum year (e.g. "2025") from an ISO peildatum string. */
+function wozPeildatumYear(peildatum: string | null | undefined): string | null {
+  if (!peildatum) return null
+  const year = peildatum.slice(0, 4)
+  return /^\d{4}$/.test(year) ? year : null
 }
 
 /** Format a koopsom (number | string | null) to "€ 298.000" or "—". */
@@ -37,9 +56,19 @@ function typeLabel(t: BRKOwnershipRecordRead['eigenaar_type']): string {
   return 'Eigenaar'
 }
 
-export function EigenaarCard({ record }: EigenaarCardProps) {
+export function EigenaarCard({ record, woz }: EigenaarCardProps) {
   const isOverheid = record.eigenaar_type === 'overheid'
   const AvatarIcon = isOverheid ? Landmark : Building2
+
+  // WOZ tile — real Waardeloket value when present, honest "—/geen object" else.
+  const wozValue = formatWoz(woz?.meest_recente_waarde)
+  const wozYear = wozPeildatumYear(woz?.meest_recente_peildatum)
+  const wozTileValue = wozValue ?? '—'
+  const wozTileMeta = wozValue
+    ? wozYear
+      ? `WOZ · peildatum ${wozYear}`
+      : 'WOZ · Waardeloket'
+    : 'WOZ · geen object'
 
   const naam = record.eigenaar_naam ?? 'Onbekende eigenaar'
   const recht = record.zakelijk_recht_type ?? 'Vol eigendom'
@@ -95,7 +124,7 @@ export function EigenaarCard({ record }: EigenaarCardProps) {
           value={formatKoopsom(record.koopsom)}
           meta={koopjaar ? `BRK · ${koopjaar}` : 'BRK'}
         />
-        <Tile label="WOZ-waarde" value="—" meta="WOZ · gemeente" />
+        <Tile label="WOZ-waarde" value={wozTileValue} meta={wozTileMeta} />
       </div>
 
       {/* brknote2 — privacy note */}

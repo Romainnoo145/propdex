@@ -32,6 +32,7 @@ import { EmptyState } from '@/components/feedback/EmptyState'
 import { ParcelWorkspaceHeader } from '@/components/cockpit/ParcelWorkspaceHeader'
 import { PotentieModal, RisicoModal } from '@/components/projects/ScoreDetailModal'
 import { useParcelFavorites } from '@/hooks/useFavorites'
+import { useParcelEnrichment } from '@/hooks/useScans'
 import { useBrkRecords } from '@/hooks/useBrkRecords'
 import { BrkPersistPanel } from './BrkPersistPanel'
 import { RescoreProgressBanner } from './RescoreProgressBanner'
@@ -109,6 +110,12 @@ export function ContactPhaseView({ parcelId }: ContactPhaseViewProps) {
     [favoritesQuery.data, parcelId],
   )
 
+  // Real WOZ for the EigenaarCard tile comes from the parcel-enrichment source
+  // (WOZ Waardeloket, pre-cached in scan_results.flags['woz']). The enrich
+  // endpoint keys on the ParcelCache UUID, so use the favorite's parcel_cache_id.
+  const enrichmentQuery = useParcelEnrichment(favorite?.parcel_cache_id ?? null)
+  const wozData = enrichmentQuery.data?.woz_data ?? null
+
   // onBack → terug naar opgeslagen lijst; onOpenMap → /map (mirrors index route).
   const handleClose = () => void navigate({ to: '/opgeslagen', search: { stage: undefined } })
   const handleOpenMap = () => void navigate({ to: '/map' })
@@ -177,7 +184,7 @@ export function ContactPhaseView({ parcelId }: ContactPhaseViewProps) {
         {/* Record aanwezig: card 1 + 2 uit de gelockte mockup. */}
         {dispatch.showRecordDisplay && primary && (
           <>
-            <EigenaarCard record={primary} />
+            <EigenaarCard record={primary} woz={wozData} />
             <EigendomssituatieCard record={primary} />
           </>
         )}

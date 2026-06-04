@@ -22,14 +22,18 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 import uuid
 from datetime import datetime
+from typing import Any
 
+import httpx
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.auth.password import hash_password
 from app.core.config import settings
+from app.government_apis.woz_waardeloket import woz_waardeloket_client
 from app.models.brk_ownership_record import BrkOwnershipRecord
 from app.models.organization import Organization
 from app.models.parcel_cache import ParcelCache
@@ -37,6 +41,8 @@ from app.models.parcel_favorite import ParcelFavorite
 from app.models.parcel_project_type import ParcelProjectType
 from app.models.scan_result import ScanResult
 from app.models.user import User
+from app.schemas.address import AddressInput
+from app.services.address_resolver import resolve_address
 
 HAUZER_EMAIL = "info@hauzer.nl"
 HAUZER_FULL_NAME = "Hauzer Vastgoed"
@@ -56,13 +62,15 @@ AFZENDER = {
 # --- M052/S06 demo dataset ---------------------------------------------------
 
 # Fixed pipeline-stage assignment for the 6 favorites (deterministic parcel order).
-# The two "Contact" parcels sit at index 2 and 3; index 2 gets the BRK record so
-# the Contact brief renders in AUTO mode.
+# Two "Contact" parcels sit at index 1 and 2; the BRK record + real WOZ land on
+# whichever Contact parcel has a Waardeloket object so the Contact brief renders
+# in AUTO mode AND the EigenaarCard WOZ tile shows a real value. Index 1
+# (Sevenumseweg 41) is a Contact parcel because it has a real Waardeloket WOZ.
 DEMO_PIPELINE_STAGES = [
     "Gesignaleerd",
+    "Contact",
+    "Contact",
     "Onderzoek",
-    "Contact",
-    "Contact",
     "Besluit",
     "Afgerond",
 ]
@@ -70,14 +78,15 @@ DEMO_PIPELINE_STAGES = [
 # Fixed projecttype assignment per favorite (same order as the parcels).
 DEMO_PROJECT_TYPES = [
     "optoppen",
-    "transformatie_wonen",
     "commercieel_naar_wonen",
+    "transformatie_wonen",
     "splitsen",
     "nieuwbouw_wonen",
     "optoppen",
 ]
 
-# Index of the favorite that receives the rechtspersoon BRK record (first Contact).
+# Index of the favorite that receives the rechtspersoon BRK record (fallback when
+# no Contact parcel has a Waardeloket WOZ object).
 BRK_PARCEL_INDEX = 2
 
 DEMO_BRK_RECORD = {
@@ -91,12 +100,93 @@ DEMO_BRK_RECORD = {
 
 GEMEENTE_NAAM = "Venlo"
 
+# Indices that sit in the "Contact" pipeline-stage (see DEMO_PIPELINE_STAGES).
+# The BRK record + real WOZ land on the first Contact parcel that actually has a
+# Waardeloket WOZ object — so the Contact-fase EigenaarCard shows a real value.
+CONTACT_PARCEL_INDICES = [1, 2]
+
+# Postcode + huisnummer parsed from a "Straat 12, 1234 AB Plaats" address string.
+_ADDRESS_RE = re.compile(r"^(.*?)\s+(\d+)[A-Za-z\-]*,\s*(\d{4}\s?[A-Za-z]{2})", re.UNICODE)
+
+
+def _parse_postcode_huisnummer(address: str | None) -> tuple[str, int] | None:
+    """Extract (postcode, huisnummer) from a ParcelCache.address string."""
+    if not address:
+        return None
+    m = _ADDRESS_RE.match(address.strip())
+    if not m:
+        return None
+    huisnummer = int(m.group(2))
+    postcode = m.group(3).upper().replace(" ", "")
+    return postcode, huisnummer
+
+
+async def _fetch_real_woz(
+    db: AsyncSession,
+    client: httpx.AsyncClient,
+    address: str | None,
+) -> dict[str, Any] | None:
+    """Resolve address -> nummeraanduiding_id -> WOZ Waardeloket.
+
+    Returns a scan-flags-shaped woz dict only when Waardeloket has a real value;
+    None when there is no object (404) or no usable value. Never fabricates.
+    """
+    parsed = _parse_postcode_huisnummer(address)
+    if parsed is None:
+        return None
+    postcode, huisnummer = parsed
+    try:
+        res = await resolve_address(
+            input_data=AddressInput(postcode=postcode, huisnummer=huisnummer),
+            client=client,
+            session=db,
+        )
+        na_id = res.address.nummeraanduiding_id
+        woz = await woz_waardeloket_client.get_by_nummeraanduiding_id(na_id, client)
+    except Exception as exc:  # noqa: BLE001 — seed must never crash on upstream hiccup
+        print(f"[seed][demo] WOZ probe failed for {address!r}: {type(exc).__name__}: {exc}")
+        return None
+    if woz is None or woz.meest_recente_waarde is None:
+        return None
+    return {
+        "meest_recente_waarde": woz.meest_recente_waarde,
+        "meest_recente_peildatum": woz.meest_recente_peildatum,
+        "low_confidence": woz.low_confidence,
+        "low_confidence_reden": woz.low_confidence_reden,
+        "bron": woz.bron,
+    }
+
+
+async def _cache_woz_into_scan_flags(
+    db: AsyncSession, parcel_cache_id: uuid.UUID, woz_flag: dict[str, Any]
+) -> int:
+    """Merge the real WOZ dict into scan_results.flags['woz'] for a parcel.
+
+    Read-modify-write the JSONB flags via the ORM (asyncpg cannot bind a
+    parameter immediately followed by a ``::jsonb`` cast in a raw text query).
+    """
+    rows = (
+        (
+            await db.execute(
+                select(ScanResult).where(ScanResult.parcel_id == parcel_cache_id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for row in rows:
+        flags = dict(row.flags) if isinstance(row.flags, dict) else {}
+        flags["woz"] = woz_flag
+        row.flags = flags
+    return len(rows)
+
 
 async def seed_demo_dataset(
     db: AsyncSession,
     *,
     org_id: uuid.UUID,
     user_id: uuid.UUID,
+    client: httpx.AsyncClient | None = None,
 ) -> None:
     """Seed the pitchable Hauzer demo dataset (favorites + projecttypes + BRK).
 
@@ -177,10 +267,28 @@ async def seed_demo_dataset(
         )
         pt_count += 1
 
-    # 4. Insert the rechtspersoon BRK record on the first Contact parcel.
+    # 4. Pick the BRK parcel: prefer a Contact-stage parcel that has a REAL WOZ
+    # (Waardeloket object) so the Contact-fase EigenaarCard shows a real value
+    # next to the BRK eigenaar. Fall back to the canonical index when none of the
+    # Contact parcels has a Waardeloket object. WOZ is fetched live and cached
+    # into scan_results.flags['woz'] — never fabricated.
+    brk_index = BRK_PARCEL_INDEX
+    brk_woz: dict[str, Any] | None = None
+    if client is not None:
+        for idx in CONTACT_PARCEL_INDICES:
+            if idx >= len(parcels):
+                continue
+            woz = await _fetch_real_woz(db, client, parcels[idx].address)
+            if woz is not None:
+                brk_index = idx
+                brk_woz = woz
+                break
+
+    # 5. Insert the rechtspersoon BRK record on the chosen Contact parcel.
     brk_count = 0
-    if len(parcels) > BRK_PARCEL_INDEX:
-        brk_parcel = parcels[BRK_PARCEL_INDEX]
+    woz_rows = 0
+    if len(parcels) > brk_index:
+        brk_parcel = parcels[brk_index]
         db.add(
             BrkOwnershipRecord(
                 organization_id=org_id,
@@ -196,14 +304,31 @@ async def seed_demo_dataset(
         )
         brk_count = 1
 
+        # Cache the real WOZ (if any) into the BRK parcel's scan flags so the
+        # enrich endpoint surfaces it to the EigenaarCard WOZ tile.
+        if brk_woz is not None:
+            woz_rows = await _cache_woz_into_scan_flags(db, brk_parcel.id, brk_woz)
+
     await db.commit()
 
     print(f"[seed][demo] Favorites seeded: {fav_count}")
     print(f"[seed][demo] Projecttypes seeded: {pt_count}")
     print(f"[seed][demo] BRK records seeded: {brk_count}")
+    if brk_woz is not None:
+        print(
+            f"[seed][demo] Real WOZ cached on BRK parcel: "
+            f"EUR {brk_woz['meest_recente_waarde']:,} "
+            f"(peildatum {brk_woz['meest_recente_peildatum']}) "
+            f"into {woz_rows} scan_results row(s)"
+        )
+    else:
+        print(
+            "[seed][demo] No Waardeloket WOZ object for any Contact parcel — "
+            "WOZ tile shows honest '—' state."
+        )
     print("[seed][demo] Pipeline:")
     for idx, parcel in enumerate(parcels):
-        marker = "  <- BRK rechtspersoon" if idx == BRK_PARCEL_INDEX else ""
+        marker = "  <- BRK rechtspersoon" if idx == brk_index else ""
         print(
             f"  {idx}: {parcel.parcel_id} | {parcel.address} | "
             f"{DEMO_PIPELINE_STAGES[idx]} | {DEMO_PROJECT_TYPES[idx]}{marker}"
@@ -260,8 +385,12 @@ async def seed() -> None:
 
         print(f"[seed] Password: {HAUZER_INITIAL_PASSWORD}")
 
-        # 3. M052/S06 demo dataset — favorites + projecttypes + rechtspersoon BRK.
-        await seed_demo_dataset(db, org_id=org.id, user_id=user_id)
+        # 3. M052/S06 demo dataset — favorites + projecttypes + rechtspersoon BRK
+        # + real WOZ on the BRK Contact parcel (fetched live from Waardeloket).
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            await seed_demo_dataset(
+                db, org_id=org.id, user_id=user_id, client=client
+            )
 
 
 if __name__ == "__main__":
