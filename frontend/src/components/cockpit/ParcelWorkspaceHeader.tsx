@@ -5,7 +5,7 @@
  * M050/S06 cont.) so the OnderzoekPhaseView shell stays ≤300 LOC.
  */
 import { motion } from 'framer-motion'
-import { ChevronLeft, ClipboardCheck, FileText, MapPin } from 'lucide-react'
+import { ChevronLeft, FileText, MapPin } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import type { FavoriteResponse } from '@/lib/types/portfolio'
 
@@ -134,24 +134,12 @@ export function ParcelWorkspaceHeader({
             </div>
           </div>
         </div>
+        {/*
+          HAAL-03 (M052/S02): checklist-snelkoppeling verwijderd uit de workspace-header.
+          De checklist leeft nu in de Haalbaarheid-fase (tab 3); de ReportHeader-ingang
+          blijft als secundaire route. Onderzoek-context bevat geen checklist-knop meer.
+        */}
         <div className="flex items-center gap-2 lg:shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              if (favorite.has_report && favorite.report_id) {
-                navigate({ to: '/checklist/$id', params: { id: favorite.report_id } })
-              }
-            }}
-            disabled={!favorite.has_report}
-            className={`flex size-10 shrink-0 items-center justify-center rounded-full transition-colors ${
-              favorite.has_report
-                ? 'bg-amber-500 border border-[#0E1111] text-[#0E1111] hover:bg-amber-400'
-                : 'bg-[#F2F6F3] text-slate-400'
-            }`}
-            title={favorite.has_report ? 'Vergunning checklist' : 'Checklist beschikbaar na rapport'}
-          >
-            <ClipboardCheck size={16} />
-          </button>
           <button
             type="button"
             onClick={onOpenMap}

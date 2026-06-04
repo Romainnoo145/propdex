@@ -3,6 +3,7 @@ import ResultsShell from '@/components/layout/ResultsShell'
 import { LIFECYCLE_PHASES, getLifecyclePhase, type LifecyclePhaseKey } from '@/lib/lifecycle/phases'
 import { ArrowLeft } from 'lucide-react'
 import { ContactPhaseView } from '@/components/lifecycle/ContactPhaseView'
+import { HaalbaarheidPhaseView } from '@/components/lifecycle/HaalbaarheidPhaseView'
 
 const VALID_PHASE_KEYS: readonly LifecyclePhaseKey[] = LIFECYCLE_PHASES.map((p) => p.key)
 
@@ -54,7 +55,12 @@ function OpgeslagenPerceelPhasePage() {
     return <ContactPhaseView parcelId={parcelId} />
   }
 
-  // Fallthrough: phases 3-8 remain placeholder until their milestones ship
+  // Fase 3 (M052/S02 acquisitie-arc) — Voorbereiding: projecttype-gedreven checklist
+  if (phase === '3-voorbereiding') {
+    return <HaalbaarheidPhaseView parcelId={parcelId} />
+  }
+
+  // Fallthrough: phases 4-9 remain placeholder until their milestones ship
   const phaseDef = getLifecyclePhase(phase)
   const Icon = phaseDef.icon
 

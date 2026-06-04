@@ -3,13 +3,16 @@ import { motion } from 'framer-motion'
 import { LogOut } from 'lucide-react'
 import { useAuth } from '@/lib/auth/useAuth'
 import { LIFECYCLE_PHASES, type LifecyclePhaseKey } from '@/lib/lifecycle/phases'
+import { phaseLinkTarget } from './phaseLinkTarget'
 
 interface Props {
   /** Currently-active phase. If undefined, no phase pill renders. */
   activePhaseKey?: LifecyclePhaseKey
+  /** Parcel context for phase-route links. If undefined, phases render disabled. */
+  parcelId?: string
 }
 
-export default function LifecycleSideRailNav({ activePhaseKey }: Props) {
+export default function LifecycleSideRailNav({ activePhaseKey, parcelId }: Props) {
   const { logout } = useAuth()
   const navigate = useNavigate()
 
@@ -75,12 +78,11 @@ export default function LifecycleSideRailNav({ activePhaseKey }: Props) {
             </span>
           )
 
-          if (phase.enabled) {
+          if (phase.enabled && parcelId) {
             return (
               <div key={phase.key} className="w-full flex justify-center">
                 <Link
-                  to="/opgeslagen"
-                  search={{ stage: undefined }}
+                  {...phaseLinkTarget(phase.key, parcelId)}
                   aria-label={phase.label}
                   className="group relative flex justify-center"
                 >
