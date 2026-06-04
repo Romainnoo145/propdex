@@ -35,6 +35,7 @@ from app.models.organization import Organization
 from app.models.parcel_cache import ParcelCache
 from app.models.parcel_favorite import ParcelFavorite
 from app.models.parcel_project_type import ParcelProjectType
+from app.models.scan_result import ScanResult
 from app.models.user import User
 
 HAUZER_EMAIL = "info@hauzer.nl"
@@ -103,7 +104,8 @@ async def seed_demo_dataset(
     parcel_project_types + brk_ownership_records, then re-inserts the canonical
     set. Deletes are scoped strictly to the Hauzer user_id / org_id.
     """
-    # 1. Pick 6 real Venlo parcels with an address, deterministic order.
+    # 1. Pick 6 real Venlo parcels die ÉCHT gescoord zijn (scan_result met een
+    # potentie-score) — zo tonen brief + workspace echte data i.p.v. lege percelen.
     # Filter op het adres (ILIKE '%venlo%'), NIET op gemeente_code: parcel_cache
     # heeft een data-quirk waarbij Reuver-parcels (adres 595x) tóch gemeente_code
     # 'GM0983' (Venlo) dragen. Het adres reflecteert de echte locatie — Hauzer = Venlo.
@@ -111,9 +113,12 @@ async def seed_demo_dataset(
         (
             await db.execute(
                 select(ParcelCache)
+                .join(ScanResult, ScanResult.parcel_id == ParcelCache.id)
                 .where(ParcelCache.address.is_not(None))
-                .where(ParcelCache.address.ilike("%venlo%"))
+                .where(ParcelCache.address.ilike("%venlo"))
+                .where(ScanResult.flags["scores"]["potentie"].as_float().is_not(None))
                 .order_by(ParcelCache.parcel_id)
+                .distinct()
                 .limit(6)
             )
         )
