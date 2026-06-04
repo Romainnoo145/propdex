@@ -161,7 +161,7 @@ export function BriefLetterCard({ parcelId, record }: BriefLetterCardProps) {
             min-h houdt de A4-ratio als ondergrens: korte brieven ogen als een
             volle pagina, lange brieven groeien mee zodat niets clipt. */}
         <div className="flex justify-center">
-          <div className="flex w-full min-h-[calc((100%_*_297)/210)] max-w-[660px] flex-col rounded-[3px] border border-[#E5E9E9] bg-white px-14 py-16 text-[13.5px] leading-[1.7] text-aura-ink shadow-[0_2px_16px_rgba(14,17,17,0.06)]">
+          <div className="flex w-full min-h-[934px] max-w-[660px] flex-col rounded-[3px] border border-[#E5E9E9] bg-white px-14 py-16 text-[13.5px] leading-[1.7] text-aura-ink shadow-[0_2px_16px_rgba(14,17,17,0.06)]">
             {/* lh — letterhead: afzender-meta LINKS, logo RECHTSBOVEN */}
             <div className="flex items-start justify-between gap-6 border-b border-[#E5E9E9] pb-6">
               <div className="text-[10.5px] leading-[1.6] text-slate-400">
@@ -193,16 +193,14 @@ export function BriefLetterCard({ parcelId, record }: BriefLetterCardProps) {
               )}
             </div>
 
-            {/* naw — addressee */}
-            {(nawNaam || nawAdres) && (
-              <div className="mt-12 whitespace-pre-line">
+            {/* naw (links) + datum (rechts) op één rij onder de scheidingslijn */}
+            <div className="mt-12 flex items-start justify-between gap-6">
+              <div className="whitespace-pre-line">
                 {[nawNaam, nawAdres].filter(Boolean).join('\n')}
               </div>
-            )}
-
-            {/* pd — date (rechts uitgelijnd, NL-conventie) */}
-            <div className="mt-8 text-right text-slate-600">
-              {afzenderAdres ? deriveCity(afzenderAdres) : 'Venlo'}, {today}
+              <div className="shrink-0 text-right text-slate-600">
+                {afzenderAdres ? deriveCity(afzenderAdres) : 'Venlo'}, {today}
+              </div>
             </div>
 
             {/* body (generated markdown) — betreft + paragraphs (geen groet meer:
@@ -217,7 +215,7 @@ export function BriefLetterCard({ parcelId, record }: BriefLetterCardProps) {
                 </p>
               )}
               {gen.data && (
-                <div className="[&_h1]:mb-[18px] [&_h1]:text-[14px] [&_h1]:font-bold [&_h2]:mb-[18px] [&_h2]:font-bold [&_p]:mb-[18px] [&_p]:leading-[1.75] [&_p:first-child]:mb-7 [&_strong]:font-semibold last:[&_p]:mb-0">
+                <div className="[&_h1]:mb-6 [&_h1]:text-[14px] [&_h1]:font-bold [&_h2]:mb-6 [&_h2]:font-bold [&_p]:mb-6 [&_p]:leading-[1.75] [&_p:first-child]:mb-7 [&_strong]:font-semibold [&_p:last-child]:mb-0">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {gen.data.body}
                   </ReactMarkdown>
