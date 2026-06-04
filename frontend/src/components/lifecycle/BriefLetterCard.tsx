@@ -49,6 +49,8 @@ export function BriefLetterCard({ parcelId, record }: BriefLetterCardProps) {
   const [manualAanhef, setManualAanhef] = useState('')
   const [manualAdres, setManualAdres] = useState('')
   const [sent, setSent] = useState(false)
+  // Logo-slot: degrade to text-wordmark when /images/hauzer-partners-logo.svg ontbreekt.
+  const [logoFailed, setLogoFailed] = useState(false)
 
   // Auto-generate on mount (auto-modus) — particulier wacht op handmatige NAW.
   useEffect(() => {
@@ -65,7 +67,6 @@ export function BriefLetterCard({ parcelId, record }: BriefLetterCardProps) {
 
   // Letterhead (afzender)
   const bedrijfsnaam = afzender?.bedrijfsnaam ?? 'Uw organisatie'
-  const lhInitial = bedrijfsnaam.trim().charAt(0).toUpperCase() || 'P'
   const afzenderAdres = afzender?.afzender_adres ?? null
   const contactEmail = afzender?.contact_email ?? null
   const contactTelefoon = afzender?.contact_telefoon ?? null
@@ -156,62 +157,76 @@ export function BriefLetterCard({ parcelId, record }: BriefLetterCardProps) {
           </div>
         </div>
 
-        {/* letter (right) — paper */}
-        <div className="max-w-[720px] rounded-[6px] border border-[#EAEFEF] bg-white px-[52px] py-[46px] text-[12.5px] leading-[1.75] text-aura-ink shadow-[0_6px_28px_rgba(14,17,17,0.09)]">
-          {/* lh — letterhead */}
-          <div className="mb-[30px] flex items-start justify-between border-b-2 border-aura-obsidian pb-[14px]">
-            <div className="flex items-center gap-[9px] text-[16px] font-extrabold text-aura-obsidian">
-              <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-aura-obsidian text-[13px] text-aura-amber">
-                {lhInitial}
-              </span>
-              {bedrijfsnaam}
-            </div>
-            <div className="text-right text-[10px] leading-[1.6] text-slate-400">
-              {bedrijfsnaam}
-              {afzenderAdres && (
-                <>
-                  <br />
-                  {afzenderAdres}
-                </>
+        {/* letter (right) — A4 paper sheet (210 × 297 mm → ratio 1 : 1.414) */}
+        <div className="flex justify-center">
+          <div className="aspect-[210/297] w-full max-w-[660px] overflow-hidden rounded-[3px] border border-[#E5E9E9] bg-white px-14 py-16 text-[13.5px] leading-[1.7] text-aura-ink shadow-[0_2px_16px_rgba(14,17,17,0.06)]">
+            {/* lh — letterhead met logo-slot */}
+            <div className="flex flex-col items-start gap-[10px] border-b border-[#E5E9E9] pb-6">
+              {logoFailed ? (
+                <span className="text-[18px] font-extrabold tracking-tight text-aura-obsidian">
+                  {bedrijfsnaam}
+                </span>
+              ) : (
+                <img
+                  src="/images/hauzer-partners-logo.svg"
+                  alt={bedrijfsnaam}
+                  className="h-10 w-auto"
+                  onError={() => setLogoFailed(true)}
+                />
               )}
-              {(contactEmail || contactTelefoon) && (
-                <>
-                  <br />
-                  {[contactEmail, contactTelefoon].filter(Boolean).join(' · ')}
-                </>
+              <div className="text-[10.5px] leading-[1.6] text-slate-400">
+                {bedrijfsnaam}
+                {afzenderAdres && (
+                  <>
+                    {' · '}
+                    {afzenderAdres}
+                  </>
+                )}
+                {(contactEmail || contactTelefoon) && (
+                  <>
+                    <br />
+                    {[contactEmail, contactTelefoon].filter(Boolean).join(' · ')}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* naw — addressee */}
+            {(nawNaam || nawAdres) && (
+              <div className="mt-12 whitespace-pre-line">
+                {[nawNaam, nawAdres].filter(Boolean).join('\n')}
+              </div>
+            )}
+
+            {/* pd — date (rechts uitgelijnd, NL-conventie) */}
+            <div className="mt-8 text-right text-slate-600">
+              {afzenderAdres ? deriveCity(afzenderAdres) : 'Venlo'}, {today}
+            </div>
+
+            {/* body (generated markdown) — betreft + paragraphs + groet komen uit de template */}
+            <div className="mt-8">
+              {gen.isPending && (
+                <p className="text-slate-400">De brief wordt automatisch opgesteld…</p>
+              )}
+              {gen.isError && (
+                <p className="text-aura-red">
+                  Brief kon niet worden opgesteld. Probeer opnieuw.
+                </p>
+              )}
+              {gen.data && (
+                <div className="[&_h1]:mb-4 [&_h1]:text-[14px] [&_h1]:font-bold [&_h2]:mb-4 [&_h2]:font-bold [&_p]:mb-4 [&_p]:leading-[1.7] [&_strong]:font-bold last:[&_p]:mb-0">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {gen.data.markdown}
+                  </ReactMarkdown>
+                </div>
+              )}
+              {!gen.data && !gen.isPending && !gen.isError && isManual && (
+                <p className="text-slate-400">
+                  Vul de geadresseerde links in en klik &ldquo;Stel brief op&rdquo;.
+                </p>
               )}
             </div>
           </div>
-
-          {/* naw — addressee */}
-          {(nawNaam || nawAdres) && (
-            <div className="mb-[22px] whitespace-pre-line">
-              {[nawNaam, nawAdres].filter(Boolean).join('\n')}
-            </div>
-          )}
-
-          {/* pd — date */}
-          <div className="mb-[22px] text-slate-600">
-            {afzenderAdres ? deriveCity(afzenderAdres) : 'Venlo'}, {today}
-          </div>
-
-          {/* body (generated markdown) — betreft + paragraphs + groet komen uit de template */}
-          {gen.isPending && (
-            <p className="text-slate-400">De brief wordt automatisch opgesteld…</p>
-          )}
-          {gen.isError && (
-            <p className="text-aura-red">Brief kon niet worden opgesteld. Probeer opnieuw.</p>
-          )}
-          {gen.data && (
-            <div className="[&_h1]:mb-3 [&_h1]:text-[14px] [&_h1]:font-bold [&_h2]:mb-3 [&_h2]:font-bold [&_p]:mb-3 [&_strong]:font-bold last:[&_p]:mb-0">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{gen.data.markdown}</ReactMarkdown>
-            </div>
-          )}
-          {!gen.data && !gen.isPending && !gen.isError && isManual && (
-            <p className="text-slate-400">
-              Vul de geadresseerde links in en klik &ldquo;Stel brief op&rdquo;.
-            </p>
-          )}
         </div>
       </div>
     </div>
