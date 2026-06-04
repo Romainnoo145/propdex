@@ -40,7 +40,7 @@ describe('deriveContactDispatch — dispatcher branch logic', () => {
     expect(dispatch.showRescoreBanner).toBe(false)
   })
 
-  it('test_renders_persist_panel_when_no_records → persist panel always rendered post-load', () => {
+  it('test_renders_persist_panel_when_no_records → persist CTA shown only without records', () => {
     const dispatch = deriveContactDispatch({
       isLoading: false,
       hasRecords: false,
@@ -51,26 +51,19 @@ describe('deriveContactDispatch — dispatcher branch logic', () => {
     expect(dispatch.showRecordDisplay).toBe(false)
   })
 
-  it('test_renders_owner_card_when_records_present → showRecordDisplay true', () => {
+  it('test_renders_eigenaar_card_when_records_present → showRecordDisplay true, persist CTA hidden', () => {
     const dispatch = deriveContactDispatch({
       isLoading: false,
       hasRecords: true,
       pollStartAt: null,
     })
     expect(dispatch.showRecordDisplay).toBe(true)
-    expect(dispatch.showPersistPanel).toBe(true)  // SUCCESS chip
+    // With records present the standalone persist-panel CTA is hidden — the
+    // EigenaarCard "Bron: Kadaster" header subsumes the SUCCESS confirmation.
+    expect(dispatch.showPersistPanel).toBe(false)
   })
 
-  it('test_renders_hypotheek_card_when_records_present → covered by showRecordDisplay', () => {
-    const dispatch = deriveContactDispatch({
-      isLoading: false,
-      hasRecords: true,
-      pollStartAt: null,
-    })
-    expect(dispatch.showRecordDisplay).toBe(true)
-  })
-
-  it('test_renders_koopwaarde_timeline_when_records_present → covered by showRecordDisplay', () => {
+  it('test_renders_eigendomssituatie_card_when_records_present → covered by showRecordDisplay', () => {
     const dispatch = deriveContactDispatch({
       isLoading: false,
       hasRecords: true,
@@ -118,13 +111,14 @@ describe('ContactPhaseView.tsx structural composition (AD6)', () => {
     expect(src).toMatch(/ArrowLeft/)
   })
 
-  it('imports useBrkRecords + mounts BrkPersistPanel + sub-components + banner', async () => {
+  it('imports useBrkRecords + mounts BrkPersistPanel + mockup cards + banner', async () => {
     const src = await fs.readFile(SRC_PATH, 'utf-8')
     expect(src).toMatch(/useBrkRecords/)
     expect(src).toMatch(/BrkPersistPanel/)
-    expect(src).toMatch(/BrkOwnerCard/)
-    expect(src).toMatch(/BrkHypotheekCard/)
-    expect(src).toMatch(/BrkKoopwaardeTimeline/)
+    // Locked Contact.html mockup → three cards replace the old generic cards.
+    expect(src).toMatch(/EigenaarCard/)
+    expect(src).toMatch(/EigendomssituatieCard/)
+    expect(src).toMatch(/BriefLetterCard/)
     expect(src).toMatch(/RescoreProgressBanner/)
   })
 
