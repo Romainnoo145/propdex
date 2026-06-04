@@ -100,7 +100,7 @@ export function EigenaarCard({ record }: EigenaarCardProps) {
 
       {/* brknote2 — privacy note */}
       <div className="mt-[14px] flex items-center gap-[7px] text-[12px] leading-[1.5] text-slate-400">
-        <Shield size={14} strokeWidth={1.6} className="shrink-0 text-slate-400" />
+        <Shield size={14} strokeWidth={1.6} className="shrink-0 text-aura-amber fill-aura-amber" />
         BRK-persoonsgegevens worden niet bewaard (privacy) · getoond voor je afweging, vastgelegd in
         Realworks bij overdracht.
       </div>
