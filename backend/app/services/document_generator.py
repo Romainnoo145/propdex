@@ -29,7 +29,7 @@ Betreft: Interesse in uw pand aan {{ pand_adres }}
 
 {{ eigenaar_aanhef }},
 
-Met grote interesse hebben wij uw pand aan **{{ pand_adres }}** in {{ gemeente_naam }} bekeken. \
+Met grote interesse hebben wij uw pand aan **{{ pand_adres }}** bekeken. \
 Als ontwikkelaar van vastgoedprojecten zijn wij actief op zoek naar locaties met \
 ontwikkelpotentieel in de regio.
 
@@ -48,10 +48,6 @@ Wij zien mogelijkheden voor **sloop-nieuwbouw** op deze locatie. \
 Het perceel biedt ruimte voor een nieuwbouwproject dat past binnen de ambities van de gemeente.
 {% else -%}
 Wij zien ontwikkelmogelijkheden voor deze locatie en willen graag de opties met u bespreken.
-{% endif %}
-
-{% if score is not none -%}
-Op basis van onze analyse scoort deze locatie **{{ score }}/100** op ontwikkelpotentieel.
 {% endif %}
 
 Graag komen wij vrijblijvend met u in gesprek over de mogelijkheden. \
@@ -70,7 +66,7 @@ EIGENAAR_BRIEF_BODY_TEMPLATE = """\
 
 {{ eigenaar_aanhef }},
 
-Met grote interesse hebben wij uw pand aan **{{ pand_adres }}** in {{ gemeente_naam }} bekeken. \
+Met grote interesse hebben wij uw pand aan **{{ pand_adres }}** bekeken. \
 Als ontwikkelaar van vastgoedprojecten zijn wij actief op zoek naar locaties met \
 ontwikkelpotentieel in de regio.
 
@@ -89,10 +85,8 @@ Wij zien mogelijkheden voor **sloop-nieuwbouw** op deze locatie. \
 Het perceel biedt ruimte voor een nieuwbouwproject dat past binnen de ambities van de gemeente.
 {% else -%}
 Wij zien ontwikkelmogelijkheden voor deze locatie en willen graag de opties met u bespreken.
-{% endif -%}
-{% if score is not none %}
-Op basis van onze analyse scoort deze locatie **{{ score }}/100** op ontwikkelpotentieel.
 {% endif %}
+
 Graag komen wij vrijblijvend met u in gesprek over de mogelijkheden. \
 U kunt ons bereiken via onderstaande contactgegevens.
 """

@@ -1,4 +1,4 @@
-import { Search, Mail, ClipboardCheck, Handshake, FileCheck, Hammer, Key, Wrench, TrendingUp } from 'lucide-react'
+import { Search, Mail, ClipboardCheck, Send, FileCheck, Hammer, Key, Wrench, TrendingUp } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { PipelineStage } from '@/lib/types/portfolio'
 
@@ -9,9 +9,15 @@ import type { PipelineStage } from '@/lib/types/portfolio'
  *   1. Onderzoek     — scoring/scan/DD (huidige Propdex core)
  *   2. Contact       — eigenaar outreach + brief-feature (M050/S04+)
  *   3. Voorbereiding  — use-case checklist gedreven door projecttype (M052/S02+S06)
- *   4. Bod           — onderhandeling + koopovereenkomst (M060)
+ *   4. Samenvatting  — acquisitie-samenvatting + overdracht naar Realworks (M052/S07)
  *   5. Vergunning    — omgevingsvergunning + Wkb (M070)
  *   6. Bouw          — uitvoering + oplevering (M080)
+ *
+ * M052/S07 lock (UAT 2026-05-29, spec 2026-05-29-m052-s02-acquisitie-arc-design.md
+ * §"Realworks boundary + handoff"): de Bod-tab WORDT "Acquisitie-samenvatting &
+ * overdracht" (tab 4). Propdex = voortraject only (Onderzoek → Contact →
+ * Voorbereiding → Samenvatting); vanaf overdracht loopt het verder in Realworks.
+ * Tabs 5-9 blijven disabled future-placeholders.
  *
  * Tranche 2 (roadmap, M060-M110) — actie + beheer-tool:
  *   7. Verhuur     — huurder-acquisitie, contracten, onderverhuur, mutaties (M090)
@@ -26,7 +32,7 @@ export type LifecyclePhaseKey =
   | '1-onderzoek'
   | '2-contact'
   | '3-voorbereiding'
-  | '4-bod'
+  | '4-samenvatting'
   | '5-vergunning'
   | '6-bouw'
   | '7-verhuur'
@@ -49,7 +55,7 @@ export const LIFECYCLE_PHASES: readonly LifecyclePhase[] = [
   { key: '1-onderzoek',    order: 1, label: '1. Onderzoek',    shortLabel: 'Onderzoek',    icon: Search,        enabled: true,  plannedMilestone: 'M001-M050' },
   { key: '2-contact',      order: 2, label: '2. Contact',      shortLabel: 'Contact',      icon: Mail,          enabled: true,  plannedMilestone: 'M050/S06 cont. (Phase 8)' },
   { key: '3-voorbereiding', order: 3, label: '3. Voorbereiding', shortLabel: 'Voorbereiding', icon: ClipboardCheck, enabled: true,  plannedMilestone: 'M052/S02' },
-  { key: '4-bod',          order: 4, label: '4. Bod',          shortLabel: 'Bod',          icon: Handshake,     enabled: false, plannedMilestone: 'M060' },
+  { key: '4-samenvatting', order: 4, label: '4. Samenvatting', shortLabel: 'Samenvatting', icon: Send,          enabled: true,  plannedMilestone: 'M052/S07' },
   { key: '5-vergunning',   order: 5, label: '5. Vergunning',   shortLabel: 'Vergunning',   icon: FileCheck,     enabled: false, plannedMilestone: 'M070' },
   { key: '6-bouw',         order: 6, label: '6. Bouw',         shortLabel: 'Bouw',         icon: Hammer,        enabled: false, plannedMilestone: 'M080' },
   { key: '7-verhuur',      order: 7, label: '7. Verhuur',      shortLabel: 'Verhuur',      icon: Key,           enabled: false, plannedMilestone: 'M090' },
@@ -72,7 +78,7 @@ export function pipelineStageToLifecyclePhase(stage: PipelineStage): LifecyclePh
     case 'Contact':
       return LIFECYCLE_PHASES[1]! // 2-contact
     case 'Besluit':
-      return LIFECYCLE_PHASES[3]! // 4-bod
+      return LIFECYCLE_PHASES[3]! // 4-samenvatting (besluit = voortraject afgerond, klaar voor overdracht)
     case 'Afgerond':
       return LIFECYCLE_PHASES[5]! // 6-bouw (acquisitie afgerond = bouw-fase bereikt)
   }

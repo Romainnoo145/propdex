@@ -4,6 +4,7 @@ import { LIFECYCLE_PHASES, getLifecyclePhase, type LifecyclePhaseKey } from '@/l
 import { ArrowLeft } from 'lucide-react'
 import { ContactPhaseView } from '@/components/lifecycle/ContactPhaseView'
 import { HaalbaarheidPhaseView } from '@/components/lifecycle/HaalbaarheidPhaseView'
+import { SamenvattingPhaseView } from '@/components/lifecycle/SamenvattingPhaseView'
 
 const VALID_PHASE_KEYS: readonly LifecyclePhaseKey[] = LIFECYCLE_PHASES.map((p) => p.key)
 
@@ -60,7 +61,12 @@ function OpgeslagenPerceelPhasePage() {
     return <HaalbaarheidPhaseView parcelId={parcelId} />
   }
 
-  // Fallthrough: phases 4-9 remain placeholder until their milestones ship
+  // Fase 4 (M052/S07 lock) — Acquisitie-samenvatting & overdracht naar Realworks
+  if (phase === '4-samenvatting') {
+    return <SamenvattingPhaseView parcelId={parcelId} />
+  }
+
+  // Fallthrough: phases 5-9 remain placeholder until their milestones ship
   const phaseDef = getLifecyclePhase(phase)
   const Icon = phaseDef.icon
 

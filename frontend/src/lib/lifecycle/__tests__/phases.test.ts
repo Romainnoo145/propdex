@@ -12,12 +12,16 @@
  *   - 1-onderzoek:     enabled (Tranche 1 core — always live)
  *   - 2-contact:       enabled (M050/S06 cont. via Phase 8)
  *   - 3-voorbereiding:  enabled (M052/S02 acquisitie-arc — projecttype-gedreven checklist)
- *   - 4-bod through 9-exit: DISABLED until M060/M070/M080/M090/M100/M110 ship
+ *   - 4-samenvatting:  enabled (M052/S07 — acquisitie-samenvatting + Realworks-overdracht,
+ *                      sluitstuk van de demo-lifecycle; was de disabled '4-bod'-tab)
+ *   - 5-vergunning through 9-exit: DISABLED until M070/M080/M090/M100/M110 ship
  *
- * M052/S02: Haalbaarheid is ADDITIVE — inserted at order 3 between Contact and Bod,
- * downstream phases renumbered (8 → 9 fases). No phase removed; all original phases
- * (now relabeled) still present. If this test fails, someone toggled a phase
- * prematurely or dropped a phase. Revert before merging.
+ * M052/S02: Voorbereiding is ADDITIVE — inserted at order 3 between Contact en Bod,
+ * downstream phases renumbered (8 → 9 fases). M052/S07: de '4-bod'-tab WORDT
+ * '4-samenvatting' (lock UAT 2026-05-29 — Propdex = voortraject only, daarna overdracht
+ * naar Realworks). No phase removed; all original phases (now relabeled) still present.
+ * If this test fails, someone toggled a phase prematurely or dropped a phase. Revert
+ * before merging.
  */
 import { describe, it, expect } from 'vitest'
 import {
@@ -27,13 +31,14 @@ import {
 } from '../phases'
 
 describe('LIFECYCLE_PHASES — enablement + additive-Haalbaarheid contract', () => {
-  it('test_three_phases_enabled: exactly 3 phases have enabled: true', () => {
+  it('test_four_phases_enabled: exactly 4 phases have enabled: true (Samenvatting added M052/S07)', () => {
     const enabled = LIFECYCLE_PHASES.filter((p) => p.enabled === true)
-    expect(enabled).toHaveLength(3)
+    expect(enabled).toHaveLength(4)
     expect(enabled.map((p) => p.key).sort()).toEqual([
       '1-onderzoek',
       '2-contact',
       '3-voorbereiding',
+      '4-samenvatting',
     ])
   })
 
@@ -54,9 +59,16 @@ describe('LIFECYCLE_PHASES — enablement + additive-Haalbaarheid contract', () 
     expect(haalbaarheid.label).toBe('3. Voorbereiding')
   })
 
-  it('test_future_phases_disabled (REGRESSION-CRITICAL): all six future phases stay disabled', () => {
+  it('test_4_samenvatting_enabled: order 4, enabled, label "4. Samenvatting" (M052/S07 lock)', () => {
+    const samenvatting = getLifecyclePhase('4-samenvatting')
+    expect(samenvatting.order).toBe(4)
+    expect(samenvatting.enabled).toBe(true)
+    expect(samenvatting.label).toBe('4. Samenvatting')
+    expect(samenvatting.shortLabel).toBe('Samenvatting')
+  })
+
+  it('test_future_phases_disabled (REGRESSION-CRITICAL): all five future phases stay disabled', () => {
     const futurePhaseKeys: LifecyclePhaseKey[] = [
-      '4-bod',
       '5-vergunning',
       '6-bouw',
       '7-verhuur',
@@ -80,12 +92,14 @@ describe('LIFECYCLE_PHASES — enablement + additive-Haalbaarheid contract', () 
     expect(LIFECYCLE_PHASES).toHaveLength(9)
   })
 
-  it('test_no_original_phase_removed: all original 8 phases still present (relabeled)', () => {
-    // The original 8-phase model — every one must survive the additive insert.
-    const originalLabels = [
+  it('test_no_phase_dropped: all 9 lifecycle slots present (Bod → Samenvatting per M052/S07)', () => {
+    // The lifecycle slots that must survive. Per the M052/S07 lock the original
+    // "Bod" slot was RELABELED to "Samenvatting" (Propdex = voortraject only,
+    // overdracht naar Realworks) — every other original phase still present.
+    const expectedLabels = [
       'Onderzoek',
       'Contact',
-      'Bod',
+      'Samenvatting', // was "Bod" pre-M052/S07
       'Vergunning',
       'Bouw',
       'Verhuur',
@@ -93,11 +107,13 @@ describe('LIFECYCLE_PHASES — enablement + additive-Haalbaarheid contract', () 
       'Exit',
     ]
     const shortLabels = LIFECYCLE_PHASES.map((p) => p.shortLabel)
-    for (const label of originalLabels) {
-      expect(shortLabels, `original phase "${label}" must still exist`).toContain(label)
+    for (const label of expectedLabels) {
+      expect(shortLabels, `lifecycle phase "${label}" must exist`).toContain(label)
     }
-    // Plus the new one.
+    // Plus the additive Voorbereiding insert (M052/S02).
     expect(shortLabels).toContain('Voorbereiding')
+    // Bod is intentionally gone — replaced by Samenvatting.
+    expect(shortLabels).not.toContain('Bod')
   })
 
   it('test_ordered_keys: phases are sequentially ordered 1..9', () => {
@@ -105,7 +121,7 @@ describe('LIFECYCLE_PHASES — enablement + additive-Haalbaarheid contract', () 
       '1-onderzoek',
       '2-contact',
       '3-voorbereiding',
-      '4-bod',
+      '4-samenvatting',
       '5-vergunning',
       '6-bouw',
       '7-verhuur',
