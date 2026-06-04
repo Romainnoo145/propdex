@@ -3,12 +3,13 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user, get_current_organization_id
 from app.core.database import get_db
+from app.middleware.rate_limit import limiter
 from app.models.area_scan import AreaScan
 from app.models.brief_dispatch import BriefDispatch
 from app.models.organization import Organization
@@ -82,7 +83,9 @@ async def _load_parcel_facts(
 
 
 @router.post("/{parcel_id}/brief", response_model=GenerateBriefResponse)
+@limiter.limit("20/minute")
 async def generate_brief(
+    request: Request,
     parcel_id: str,
     payload: GenerateBriefRequest,
     current_user: User = Depends(get_current_active_user),
@@ -139,7 +142,9 @@ async def generate_brief(
 
 
 @router.post("/{parcel_id}/brief/send", response_model=SendBriefResponse)
+@limiter.limit("20/minute")
 async def send_brief(
+    request: Request,
     parcel_id: str,
     payload: SendBriefRequest,
     current_user: User = Depends(get_current_active_user),

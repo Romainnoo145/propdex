@@ -7,6 +7,9 @@ so the Contact brief-teaser renders a real Hauzer briefhoofd.
 This is the foundation the M052/S06 demo-org seed will extend (favorites in
 pipeline stages, projecttype, mock inbox).
 
+Override the demo password via HAUZER_DEMO_PASSWORD env var; rotate the default
+post-demo.
+
 Usage (from the backend/ directory):
     PYTHONPATH=. python -m app.tools.seed_hauzer_demo
 """
@@ -14,6 +17,7 @@ Usage (from the backend/ directory):
 from __future__ import annotations
 
 import asyncio
+import os
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -25,7 +29,9 @@ from app.models.user import User
 
 HAUZER_EMAIL = "info@hauzer.nl"
 HAUZER_FULL_NAME = "Hauzer Vastgoed"
-HAUZER_INITIAL_PASSWORD = "Hauzer-Venlo#Demo-2026"
+HAUZER_INITIAL_PASSWORD = os.environ.get(
+    "HAUZER_DEMO_PASSWORD", "Hauzer-Venlo#Demo-2026"
+)
 ORG_NAME = "Hauzer Vastgoed"
 
 # Briefhoofd (afzender) — mirrors the Contact.html demo mockup.
