@@ -34,7 +34,12 @@ function AuthenticatedLayout() {
   const [leftPanelOpen, setLeftPanelOpen] = useState(false)
   const matchRoute = useMatchRoute()
   const isMapVisible = !!matchRoute({ to: '/map', fuzzy: true })
-  const isOpgeslagenRoute = !!matchRoute({ to: '/opgeslagen/perceel/$parcelId', fuzzy: true })
+  const opgeslagenMatch = matchRoute({ to: '/opgeslagen/perceel/$parcelId', fuzzy: true }) as
+    | { parcelId?: string }
+    | false
+  const isOpgeslagenRoute = !!opgeslagenMatch
+  const parcelId =
+    opgeslagenMatch && typeof opgeslagenMatch === 'object' ? opgeslagenMatch.parcelId : undefined
   const phaseMatch = matchRoute({ to: '/opgeslagen/perceel/$parcelId/$phase' }) as { phase?: string } | false
   const activeLifecyclePhase: LifecyclePhaseKey =
     phaseMatch && phaseMatch.phase && LIFECYCLE_PHASES.some((p) => p.key === phaseMatch.phase)
@@ -109,7 +114,7 @@ function AuthenticatedLayout() {
 
         {/* Fixed sidebar — floats over the canvas, not in the flow */}
         <div className="hidden md:block">
-          {isOpgeslagenRoute ? <LifecycleSideRailNav activePhaseKey={activeLifecyclePhase} /> : <SideRailNav />}
+          {isOpgeslagenRoute ? <LifecycleSideRailNav activePhaseKey={activeLifecyclePhase} parcelId={parcelId} /> : <SideRailNav />}
         </div>
 
         {/* The App Container: floats on the desk with breathing room */}
