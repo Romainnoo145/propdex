@@ -103,12 +103,17 @@ describe('deriveContactDispatch — dispatcher branch logic', () => {
 // ============================================================================
 
 describe('ContactPhaseView.tsx structural composition (AD6)', () => {
-  it('test_back_to_onderzoek_link_present — Link + Terug naar Onderzoek copy', async () => {
+  it('shares the workspace shell — ParcelWorkspaceHeader + ResultsShell + favorite loading', async () => {
     const src = await fs.readFile(SRC_PATH, 'utf-8')
     expect(src).toMatch(/from '@tanstack\/react-router'/)
+    // Shared workspace header replaces the old standalone back-link; its own
+    // back button handles "terug naar Onderzoek/opgeslagen".
+    expect(src).toMatch(/ParcelWorkspaceHeader/)
+    // Favorite loaded by parcelId exactly like the index route.
+    expect(src).toMatch(/useParcelFavorites/)
+    expect(src).toMatch(/ResultsShell/)
+    // Not-found state keeps the "Terug naar Onderzoek" affordance.
     expect(src).toMatch(/Terug naar Onderzoek/i)
-    // ArrowLeft icon (matches existing $phase.tsx route convention)
-    expect(src).toMatch(/ArrowLeft/)
   })
 
   it('imports useBrkRecords + mounts BrkPersistPanel + mockup cards + banner', async () => {

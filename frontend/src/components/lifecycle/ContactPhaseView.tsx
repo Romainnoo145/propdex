@@ -4,25 +4,34 @@
  * Mounted by `routes/_authenticated/opgeslagen.perceel.$parcelId.$phase.tsx`
  * when `phase === '2-contact'`.
  *
- * Rebuilt to FAITHFULLY match the locked Contact.html mockup (three cards):
+ * Shares the workspace shell with fase-1 (Onderzoek): the SAME ResultsShell
+ * (max-w-5xl ≈ 1024px centered container, matching the locked Contact.html
+ * `.w5{max-width:1024px;margin:0 auto}`) + the SAME ParcelWorkspaceHeader
+ * (address + meta + projecttype badge + score pills + "Bekijk rapport").
+ * Below that shared header the three Contact-phase cards render:
  *   1. EigenaarCard          — "Eigendom & eigenaar" (ownerhero + 4-tile bidgrid + privacy-note)
  *   2. EigendomssituatieCard — "Eigendomssituatie" (A-list verwervings-aandachtspunten)
  *   3. BriefLetterCard       — "Persoonlijke brief" (.brief2 two-column: acties | letter)
  *
  * Data:
+ *   - useParcelFavorites(): the favorite (workspace header source), found by parcelId
+ *     the same way the index route (opgeslagen.perceel.$parcelId.index.tsx) does it.
  *   - useBrkRecords(parcelId): persisted rechtspersoon/overheid records (AVG-stripped).
  *   - records[0] drives the eigenaar + eigendomssituatie cards; brief auto-mode.
  *   - No record (particulier / not fetched) → BrkPersistPanel CTA state; the brief
  *     card falls back to manual NAW-input mode.
  *   - RescoreProgressBanner: gated on (pollStartAt !== null && hasRecords) per AD3.
  *
- * Back-link to /opgeslagen/perceel/$parcelId (fase 1, Onderzoek).
+ * onBack → /opgeslagen (workspace header back button); onOpenMap → /map.
  * Aura tokens per DESIGN.md: ResultsShell wrap, Pure Glass cards inside.
  */
-import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
-import { ArrowLeft, Mail } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import ResultsShell from '@/components/layout/ResultsShell'
+import { EmptyState } from '@/components/feedback/EmptyState'
+import { ParcelWorkspaceHeader } from '@/components/cockpit/ParcelWorkspaceHeader'
+import { PotentieModal, RisicoModal } from '@/components/projects/ScoreDetailModal'
+import { useParcelFavorites } from '@/hooks/useFavorites'
 import { useBrkRecords } from '@/hooks/useBrkRecords'
 import { BrkPersistPanel } from './BrkPersistPanel'
 import { RescoreProgressBanner } from './RescoreProgressBanner'
@@ -87,12 +96,26 @@ function SkeletonState() {
 }
 
 export function ContactPhaseView({ parcelId }: ContactPhaseViewProps) {
-  const { data: records, isLoading } = useBrkRecords(parcelId)
+  const navigate = useNavigate()
+  const favoritesQuery = useParcelFavorites()
+  const { data: records, isLoading: isLoadingRecords } = useBrkRecords(parcelId)
   const [pollStartAt, setPollStartAt] = useState<number | null>(null)
+  const [scoreModal, setScoreModal] = useState<'potentie' | 'risico' | null>(null)
+
+  // Favorite drives the shared workspace header — found by parcelId exactly like
+  // the index route (opgeslagen.perceel.$parcelId.index.tsx).
+  const favorite = useMemo(
+    () => favoritesQuery.data?.find((f) => f.parcel_id === parcelId),
+    [favoritesQuery.data, parcelId],
+  )
+
+  // onBack → terug naar opgeslagen lijst; onOpenMap → /map (mirrors index route).
+  const handleClose = () => void navigate({ to: '/opgeslagen', search: { stage: undefined } })
+  const handleOpenMap = () => void navigate({ to: '/map' })
 
   const recs = records ?? []
   const hasRecords = recs.length > 0
-  const dispatch = deriveContactDispatch({ isLoading, hasRecords, pollStartAt })
+  const dispatch = deriveContactDispatch({ isLoading: isLoadingRecords, hasRecords, pollStartAt })
 
   // record[0] = de primaire eigenaar (rechtspersoon/overheid) voor de auto-modus.
   const primary = recs[0] ?? null
@@ -101,31 +124,40 @@ export function ContactPhaseView({ parcelId }: ContactPhaseViewProps) {
     setPollStartAt(Date.now())
   }
 
+  // Favorite-loading shell — matches the index route's loading skeleton.
+  if (favoritesQuery.isLoading) {
+    return (
+      <ResultsShell>
+        <div className="h-screen w-full animate-pulse bg-white/40 rounded-[24px]" />
+      </ResultsShell>
+    )
+  }
+
+  // Not-found shell — matches the index route's EmptyState. The back-action copy
+  // keeps the "Terug naar Onderzoek" affordance for users who reached fase 2 for a
+  // parcel that's no longer in their opgeslagen lijst.
+  if (!favorite) {
+    return (
+      <ResultsShell>
+        <EmptyState
+          title="Perceel niet gevonden"
+          description="Dit perceel staat niet in je opgeslagen lijst. Terug naar Onderzoek om het opnieuw te openen."
+          action={{ label: 'Terug naar Onderzoek', onClick: handleClose }}
+        />
+      </ResultsShell>
+    )
+  }
+
   return (
     <ResultsShell>
-      <div className="px-6 pt-6 pb-12 max-w-3xl">
-        {/* Back-link to fase 1 (Onderzoek) */}
-        <Link
-          to="/opgeslagen/perceel/$parcelId"
-          params={{ parcelId }}
-          search={{ stage: undefined }}
-          className="inline-flex items-center gap-2 text-[13px] text-slate-500 hover:text-aura-ink mb-6"
-        >
-          <ArrowLeft size={14} strokeWidth={1.5} /> Terug naar Onderzoek
-        </Link>
-
-        {/* Phase header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/60 backdrop-blur-[24px] border border-white/40">
-            <Mail size={22} strokeWidth={1.5} className="text-aura-amber" />
-          </div>
-          <div>
-            <h1 className="text-[22px] font-semibold text-aura-ink">2. Contact</h1>
-            <p className="text-[12px] text-slate-500">
-              Eigendom-data + outreach voorbereiden
-            </p>
-          </div>
-        </div>
+      {/* Same shell + width + shared header as OnderzoekPhaseView. */}
+      <div className="pb-8">
+        <ParcelWorkspaceHeader
+          favorite={favorite}
+          onBack={handleClose}
+          onOpenMap={handleOpenMap}
+          onScoreClick={setScoreModal}
+        />
 
         {dispatch.showSkeleton && <SkeletonState />}
 
@@ -153,6 +185,17 @@ export function ContactPhaseView({ parcelId }: ContactPhaseViewProps) {
         {/* Card 3 — Persoonlijke brief (auto bij record, manual bij particulier). */}
         {!dispatch.showSkeleton && <BriefLetterCard parcelId={parcelId} record={primary} />}
       </div>
+
+      <PotentieModal
+        open={scoreModal === 'potentie'}
+        onClose={() => setScoreModal(null)}
+        parcelCacheId={favorite.parcel_cache_id}
+      />
+      <RisicoModal
+        open={scoreModal === 'risico'}
+        onClose={() => setScoreModal(null)}
+        parcelCacheId={favorite.parcel_cache_id}
+      />
     </ResultsShell>
   )
 }
