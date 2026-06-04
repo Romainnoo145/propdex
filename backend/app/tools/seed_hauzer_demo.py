@@ -102,11 +102,15 @@ async def seed_demo_dataset(
     set. Deletes are scoped strictly to the Hauzer user_id / org_id.
     """
     # 1. Pick 6 real Venlo parcels with an address, deterministic order.
+    # Filter op het adres (ILIKE '%venlo%'), NIET op gemeente_code: parcel_cache
+    # heeft een data-quirk waarbij Reuver-parcels (adres 595x) tóch gemeente_code
+    # 'GM0983' (Venlo) dragen. Het adres reflecteert de echte locatie — Hauzer = Venlo.
     parcels = (
         (
             await db.execute(
                 select(ParcelCache)
                 .where(ParcelCache.address.is_not(None))
+                .where(ParcelCache.address.ilike("%venlo%"))
                 .order_by(ParcelCache.parcel_id)
                 .limit(6)
             )
