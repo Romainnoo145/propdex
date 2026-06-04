@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   projectTypeChipLabel,
+  projectTypeToUseCase,
   shouldShowProjectTypeChip,
 } from '../projectTypeChip'
 
@@ -55,5 +56,43 @@ describe('projectTypeChipLabel', () => {
 
   it('falls back to raw string for unknown type (defensive)', () => {
     expect(projectTypeChipLabel('unknown_future_type')).toBe('unknown_future_type')
+  })
+})
+
+describe('projectTypeToUseCase (M052/S02 — projecttype → checklist use_case)', () => {
+  it('maps optoppen → optoppen', () => {
+    expect(projectTypeToUseCase('optoppen')).toBe('optoppen')
+  })
+
+  it('maps splitsen → splitsen', () => {
+    expect(projectTypeToUseCase('splitsen')).toBe('splitsen')
+  })
+
+  it('maps transformatie_wonen → transformatie', () => {
+    expect(projectTypeToUseCase('transformatie_wonen')).toBe('transformatie')
+  })
+
+  it('maps commercieel_naar_wonen → transformatie (UAT-confirmed)', () => {
+    expect(projectTypeToUseCase('commercieel_naar_wonen')).toBe('transformatie')
+  })
+
+  it('maps nieuwbouw_wonen → nieuwbouw', () => {
+    expect(projectTypeToUseCase('nieuwbouw_wonen')).toBe('nieuwbouw')
+  })
+
+  it('returns null for onbepaald (empty state → prompt picker)', () => {
+    expect(projectTypeToUseCase('onbepaald')).toBeNull()
+  })
+
+  it('returns null for null', () => {
+    expect(projectTypeToUseCase(null)).toBeNull()
+  })
+
+  it('returns null for undefined', () => {
+    expect(projectTypeToUseCase(undefined)).toBeNull()
+  })
+
+  it('returns null for unknown future type (defensive)', () => {
+    expect(projectTypeToUseCase('unknown_future_type')).toBeNull()
   })
 })
