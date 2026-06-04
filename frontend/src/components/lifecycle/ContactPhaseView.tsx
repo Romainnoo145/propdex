@@ -19,7 +19,7 @@
  *   - useBrkRecords(parcelId): persisted rechtspersoon/overheid records (AVG-stripped).
  *   - records[0] drives the eigenaar + eigendomssituatie cards; brief auto-mode.
  *   - No record (particulier / not fetched) → BrkPersistPanel CTA state; the brief
- *     card falls back to manual NAW-input mode.
+ *     card shows a graceful "geen eigenaar-gegevens" empty state.
  *   - RescoreProgressBanner: gated on (pollStartAt !== null && hasRecords) per AD3.
  *
  * onBack → /opgeslagen (workspace header back button); onOpenMap → /map.
@@ -189,7 +189,7 @@ export function ContactPhaseView({ parcelId }: ContactPhaseViewProps) {
           </>
         )}
 
-        {/* Card 3 — Persoonlijke brief (auto bij record, manual bij particulier). */}
+        {/* Card 3 — Persoonlijke brief (auto bij record, empty-state zonder record). */}
         {!dispatch.showSkeleton && <BriefLetterCard parcelId={parcelId} record={primary} />}
       </div>
 

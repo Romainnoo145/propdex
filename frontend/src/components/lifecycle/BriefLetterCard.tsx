@@ -8,12 +8,14 @@
  *   LEFT  (.briefacts): "Acties" label + 3 buttons (Versturen primary · Bewerken
  *          + Download PDF disabled stubs) + .anote.
  *   RIGHT (.letter): styled letter "paper" — letterhead (.lh / .lh-logo / .lh-meta)
- *          from useAfzender, .naw addressee block (BRK auto / manual inputs),
+ *          from useAfzender, .naw addressee block (BRK-record only),
  *          .pd date, .betreft, body paragraphs (generated markdown), .groet.
  *
- * Auto-generates on mount via useGenerateBrief (no separate click). The generated
- * markdown supplies the LETTER BODY; the chrome (letterhead/NAW/betreft/groet) is
- * laid out as distinct styled blocks from afzender + eigenaar data per the mockup.
+ * AUTO-only: the brief generates from the BRK record on mount via useGenerateBrief
+ * (no manual addressee entry). The generated markdown supplies the LETTER BODY; the
+ * chrome (letterhead/NAW/betreft/groet) is laid out as distinct styled blocks from
+ * afzender + the BRK eigenaar per the mockup. When no BRK record exists a small
+ * graceful empty state renders instead.
  *
  * Versturen is gated on user?.hauzer_demo (backend enforces 403 too); shows
  * "Verzonden ✓" after send.
@@ -21,14 +23,14 @@
 import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Mail, FileText, Download } from 'lucide-react'
+import { Mail, SquarePen, Download } from 'lucide-react'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useAfzender, useGenerateBrief, useSendBrief } from '@/hooks/useBrief'
 import type { BRKOwnershipRecordRead } from '@/lib/types/brk'
 
 export interface BriefLetterCardProps {
   parcelId: string
-  /** Auto-modus eigenaar (rechtspersoon/overheid) of null voor particulier (manual). */
+  /** Auto-modus eigenaar (rechtspersoon/overheid) of null (geen eigenaar-gegevens). */
   record: BRKOwnershipRecordRead | null
 }
 
@@ -43,27 +45,19 @@ export function BriefLetterCard({ parcelId, record }: BriefLetterCardProps) {
   const gen = useGenerateBrief(parcelId)
   const send = useSendBrief(parcelId)
 
-  const isManual = record === null
+  const hasRecord = record !== null
 
-  // Manual-mode NAW inputs (particulier) — feed the .naw block + generate payload.
-  const [manualAanhef, setManualAanhef] = useState('')
-  const [manualAdres, setManualAdres] = useState('')
   const [sent, setSent] = useState(false)
   // Logo-slot: degrade to text-wordmark when /images/hauzer-partners-logo.svg ontbreekt.
   const [logoFailed, setLogoFailed] = useState(false)
 
-  // Auto-generate on mount (auto-modus) — particulier wacht op handmatige NAW.
+  // Auto-generate on mount voor elk perceel met een BRK-record.
   useEffect(() => {
-    if (!isManual) {
+    if (hasRecord) {
       gen.mutate(undefined)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parcelId, isManual])
-
-  const handleManualGenerate = () => {
-    setSent(false)
-    gen.mutate({ eigenaar_aanhef: manualAanhef, eigenaar_adres: manualAdres })
-  }
+  }, [parcelId, hasRecord])
 
   // Letterhead (afzender)
   const bedrijfsnaam = afzender?.bedrijfsnaam ?? 'Uw organisatie'
@@ -71,9 +65,9 @@ export function BriefLetterCard({ parcelId, record }: BriefLetterCardProps) {
   const contactEmail = afzender?.contact_email ?? null
   const contactTelefoon = afzender?.contact_telefoon ?? null
 
-  // NAW addressee
-  const nawNaam = isManual ? manualAanhef.trim() : (record?.eigenaar_naam ?? '')
-  const nawAdres = isManual ? manualAdres.trim() : (record?.statutaire_zetel ?? '')
+  // NAW addressee — alleen uit het BRK-record.
+  const nawNaam = record?.eigenaar_naam ?? ''
+  const nawAdres = record?.statutaire_zetel ?? ''
 
   const today = formatLetterDate(new Date())
   const canSend = Boolean(user?.hauzer_demo) && Boolean(gen.data)
@@ -95,51 +89,25 @@ export function BriefLetterCard({ parcelId, record }: BriefLetterCardProps) {
             Acties
           </div>
 
-          {isManual ? (
-            <>
-              <input
-                value={manualAanhef}
-                onChange={(e) => setManualAanhef(e.target.value)}
-                placeholder="Naam geadresseerde"
-                className="h-9 w-full rounded-[9px] border border-[#E5E7EB] bg-white px-3 text-[13px] text-aura-ink focus:border-aura-amber focus:outline-none focus:ring-[3px] focus:ring-aura-amber/[0.12]"
-              />
-              <input
-                value={manualAdres}
-                onChange={(e) => setManualAdres(e.target.value)}
-                placeholder="Adres geadresseerde"
-                className="h-9 w-full rounded-[9px] border border-[#E5E7EB] bg-white px-3 text-[13px] text-aura-ink focus:border-aura-amber focus:outline-none focus:ring-[3px] focus:ring-aura-amber/[0.12]"
-              />
-              <button
-                type="button"
-                onClick={handleManualGenerate}
-                disabled={gen.isPending}
-                className="flex h-9 w-full items-center justify-center gap-[7px] rounded-[9px] bg-aura-amber text-[13px] font-semibold text-aura-obsidian hover:bg-aura-amber-hover disabled:opacity-60"
-              >
-                <FileText size={14} strokeWidth={1.7} />
-                {gen.isPending ? 'Genereren…' : 'Stel brief op'}
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                if (!gen.data) return
-                send.mutate(gen.data.markdown, { onSuccess: () => setSent(true) })
-              }}
-              disabled={!canSend || send.isPending || sent}
-              className="flex h-9 w-full items-center justify-center gap-[7px] rounded-[9px] bg-aura-amber text-[13px] font-semibold text-aura-obsidian hover:bg-aura-amber-hover disabled:opacity-60"
-            >
-              <Mail size={14} strokeWidth={1.7} />
-              {sent ? 'Verzonden ✓' : send.isPending ? 'Versturen…' : 'Versturen'}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => {
+              if (!gen.data) return
+              send.mutate(gen.data.markdown, { onSuccess: () => setSent(true) })
+            }}
+            disabled={!canSend || send.isPending || sent}
+            className="flex h-9 w-full items-center justify-center gap-[7px] rounded-[9px] bg-aura-amber text-[13px] font-semibold text-aura-obsidian hover:bg-aura-amber-hover disabled:opacity-60"
+          >
+            <Mail size={14} strokeWidth={1.7} />
+            {sent ? 'Verzonden ✓' : send.isPending ? 'Versturen…' : 'Versturen'}
+          </button>
 
           <button
             type="button"
             disabled
             className="flex h-9 w-full cursor-not-allowed items-center justify-center gap-[7px] rounded-[9px] border border-[#E5E7EB] bg-white text-[13px] font-semibold text-[#374151] opacity-60"
           >
-            <FileText size={14} strokeWidth={1.7} className="text-slate-600" />
+            <SquarePen size={14} strokeWidth={1.7} className="text-slate-600" />
             Bewerken
           </button>
           <button
@@ -221,10 +189,8 @@ export function BriefLetterCard({ parcelId, record }: BriefLetterCardProps) {
                   </ReactMarkdown>
                 </div>
               )}
-              {!gen.data && !gen.isPending && !gen.isError && isManual && (
-                <p className="text-slate-400">
-                  Vul de geadresseerde links in en klik &ldquo;Stel brief op&rdquo;.
-                </p>
+              {!gen.data && !gen.isPending && !gen.isError && !hasRecord && (
+                <p className="text-slate-400">Geen eigenaar-gegevens beschikbaar.</p>
               )}
             </div>
 

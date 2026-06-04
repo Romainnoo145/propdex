@@ -6,8 +6,8 @@ so the Contact brief-teaser renders a real Hauzer briefhoofd.
 
 M052/S06 extends this with a pitchable demo dataset for the Hauzer user/org:
 6 favorites spread across the pipeline stages, a projecttype per favorite, and
-one rechtspersoon BRK-record on the first Contact-stage parcel so the Contact
-brief renders in AUTO mode. The demo dataset is fully idempotent — re-running
+one rechtspersoon BRK-record on EACH of the 6 favorites so the Contact brief
+renders in AUTO mode for every parcel. The demo dataset is fully idempotent — re-running
 hard-deletes the prior Hauzer demo rows (scoped strictly to the Hauzer
 user_id / org_id) and re-inserts the canonical set.
 
@@ -85,18 +85,61 @@ DEMO_PROJECT_TYPES = [
     "optoppen",
 ]
 
-# Index of the favorite that receives the rechtspersoon BRK record (fallback when
-# no Contact parcel has a Waardeloket WOZ object).
-BRK_PARCEL_INDEX = 2
-
-DEMO_BRK_RECORD = {
-    "eigenaar_type": "rechtspersoon",
-    "eigenaar_naam": "Janssen Vastgoed Beheer B.V.",
-    "statutaire_zetel": "Industrieweg 12, 5928 PA Venlo",
-    "heeft_hypotheek": False,
-    "koopsom": 485000,
-    "koopjaar": 2018,
-}
+# One rechtspersoon BRK record per favorite (same order as the parcels) so the
+# Contact-fase brief renders in AUTO mode for EVERY demo parcel. Varied company
+# names + statutaire zetel (all Venlo-ish) + varied koopsom/koopjaar + a mix of
+# heeft_hypotheek. eigenaar_type stays "rechtspersoon" (CHECK constraint + D8
+# non-null naam). The real-WOZ fetch still targets the Contact parcels only.
+DEMO_BRK_RECORDS = [
+    {
+        "eigenaar_type": "rechtspersoon",
+        "eigenaar_naam": "Janssen Vastgoed Beheer B.V.",
+        "statutaire_zetel": "Industrieweg 12, 5928 PA Venlo",
+        "heeft_hypotheek": False,
+        "koopsom": 485000,
+        "koopjaar": 2018,
+    },
+    {
+        "eigenaar_type": "rechtspersoon",
+        "eigenaar_naam": "Maaszicht Investeringen B.V.",
+        "statutaire_zetel": "Kazernestraat 8, 5914 XR Venlo",
+        "heeft_hypotheek": True,
+        "koopsom": 620000,
+        "koopjaar": 2021,
+    },
+    {
+        "eigenaar_type": "rechtspersoon",
+        "eigenaar_naam": "Venlo Stadsontwikkeling B.V.",
+        "statutaire_zetel": "Nolensplein 22, 5912 BH Venlo",
+        "heeft_hypotheek": False,
+        "koopsom": 1_150_000,
+        "koopjaar": 2016,
+    },
+    {
+        "eigenaar_type": "rechtspersoon",
+        "eigenaar_naam": "Peelhorst Vastgoed Holding B.V.",
+        "statutaire_zetel": "Roermondsestraat 145, 5916 PJ Venlo",
+        "heeft_hypotheek": True,
+        "koopsom": 395000,
+        "koopjaar": 2019,
+    },
+    {
+        "eigenaar_type": "rechtspersoon",
+        "eigenaar_naam": "De Weerd Bouwgroep B.V.",
+        "statutaire_zetel": "Hogeweg 60, 5911 EC Venlo",
+        "heeft_hypotheek": False,
+        "koopsom": 875000,
+        "koopjaar": 2022,
+    },
+    {
+        "eigenaar_type": "rechtspersoon",
+        "eigenaar_naam": "Limburg Real Estate Partners B.V.",
+        "statutaire_zetel": "Keulsepoort 31, 5911 BX Venlo",
+        "heeft_hypotheek": True,
+        "koopsom": 540000,
+        "koopjaar": 2020,
+    },
+]
 
 GEMEENTE_NAAM = "Venlo"
 
@@ -267,12 +310,33 @@ async def seed_demo_dataset(
         )
         pt_count += 1
 
-    # 4. Pick the BRK parcel: prefer a Contact-stage parcel that has a REAL WOZ
+    # 4. Insert ONE rechtspersoon BRK record per favorite so the Contact-fase
+    # brief renders in AUTO mode for EVERY parcel. Each record gets its own
+    # varied demo data (company name, statutaire zetel, koopsom/koopjaar,
+    # heeft_hypotheek) from DEMO_BRK_RECORDS, same order as the parcels.
+    brk_count = 0
+    for idx, parcel in enumerate(parcels):
+        rec = DEMO_BRK_RECORDS[idx % len(DEMO_BRK_RECORDS)]
+        db.add(
+            BrkOwnershipRecord(
+                organization_id=org_id,
+                parcel_id=parcel.parcel_id,
+                eigenaar_type=rec["eigenaar_type"],
+                eigenaar_naam=rec["eigenaar_naam"],
+                statutaire_zetel=rec["statutaire_zetel"],
+                heeft_hypotheek=rec["heeft_hypotheek"],
+                koopsom=rec["koopsom"],
+                koopjaar=rec["koopjaar"],
+                fetched_at=datetime.utcnow(),
+            )
+        )
+        brk_count += 1
+
+    # 5. Real-WOZ enrichment: prefer a Contact-stage parcel that has a REAL WOZ
     # (Waardeloket object) so the Contact-fase EigenaarCard shows a real value
-    # next to the BRK eigenaar. Fall back to the canonical index when none of the
-    # Contact parcels has a Waardeloket object. WOZ is fetched live and cached
-    # into scan_results.flags['woz'] — never fabricated.
-    brk_index = BRK_PARCEL_INDEX
+    # next to the BRK eigenaar. WOZ is fetched live and cached into
+    # scan_results.flags['woz'] — never fabricated.
+    woz_index = CONTACT_PARCEL_INDICES[0] if CONTACT_PARCEL_INDICES else 0
     brk_woz: dict[str, Any] | None = None
     if client is not None:
         for idx in CONTACT_PARCEL_INDICES:
@@ -280,34 +344,15 @@ async def seed_demo_dataset(
                 continue
             woz = await _fetch_real_woz(db, client, parcels[idx].address)
             if woz is not None:
-                brk_index = idx
+                woz_index = idx
                 brk_woz = woz
                 break
 
-    # 5. Insert the rechtspersoon BRK record on the chosen Contact parcel.
-    brk_count = 0
+    # Cache the real WOZ (if any) into the chosen Contact parcel's scan flags so
+    # the enrich endpoint surfaces it to the EigenaarCard WOZ tile.
     woz_rows = 0
-    if len(parcels) > brk_index:
-        brk_parcel = parcels[brk_index]
-        db.add(
-            BrkOwnershipRecord(
-                organization_id=org_id,
-                parcel_id=brk_parcel.parcel_id,
-                eigenaar_type=DEMO_BRK_RECORD["eigenaar_type"],
-                eigenaar_naam=DEMO_BRK_RECORD["eigenaar_naam"],
-                statutaire_zetel=DEMO_BRK_RECORD["statutaire_zetel"],
-                heeft_hypotheek=DEMO_BRK_RECORD["heeft_hypotheek"],
-                koopsom=DEMO_BRK_RECORD["koopsom"],
-                koopjaar=DEMO_BRK_RECORD["koopjaar"],
-                fetched_at=datetime.utcnow(),
-            )
-        )
-        brk_count = 1
-
-        # Cache the real WOZ (if any) into the BRK parcel's scan flags so the
-        # enrich endpoint surfaces it to the EigenaarCard WOZ tile.
-        if brk_woz is not None:
-            woz_rows = await _cache_woz_into_scan_flags(db, brk_parcel.id, brk_woz)
+    if brk_woz is not None and len(parcels) > woz_index:
+        woz_rows = await _cache_woz_into_scan_flags(db, parcels[woz_index].id, brk_woz)
 
     await db.commit()
 
@@ -328,10 +373,12 @@ async def seed_demo_dataset(
         )
     print("[seed][demo] Pipeline:")
     for idx, parcel in enumerate(parcels):
-        marker = "  <- BRK rechtspersoon" if idx == brk_index else ""
+        rec = DEMO_BRK_RECORDS[idx % len(DEMO_BRK_RECORDS)]
+        woz_marker = "  <- real WOZ" if idx == woz_index and brk_woz is not None else ""
         print(
             f"  {idx}: {parcel.parcel_id} | {parcel.address} | "
-            f"{DEMO_PIPELINE_STAGES[idx]} | {DEMO_PROJECT_TYPES[idx]}{marker}"
+            f"{DEMO_PIPELINE_STAGES[idx]} | {DEMO_PROJECT_TYPES[idx]} | "
+            f"BRK: {rec['eigenaar_naam']}{woz_marker}"
         )
 
 
