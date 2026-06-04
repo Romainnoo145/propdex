@@ -89,18 +89,12 @@ Wij zien mogelijkheden voor **sloop-nieuwbouw** op deze locatie. \
 Het perceel biedt ruimte voor een nieuwbouwproject dat past binnen de ambities van de gemeente.
 {% else -%}
 Wij zien ontwikkelmogelijkheden voor deze locatie en willen graag de opties met u bespreken.
-{% endif %}
+{% endif -%}
 {% if score is not none %}
 Op basis van onze analyse scoort deze locatie **{{ score }}/100** op ontwikkelpotentieel.
 {% endif %}
 Graag komen wij vrijblijvend met u in gesprek over de mogelijkheden. \
 U kunt ons bereiken via onderstaande contactgegevens.
-
-Met vriendelijke groet,
-
-{{ contactpersoon }}
-
-{{ bedrijfsnaam }}
 """
 
 VOOROVERLEG_TEMPLATE = """\

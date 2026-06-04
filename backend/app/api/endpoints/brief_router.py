@@ -61,6 +61,11 @@ async def _load_parcel_facts(
         return None, None, None
     pc_id, address = cache_row.id, cache_row.address
 
+    # Gemeente-fallback uit het adres: de stad is het laatste woord van het
+    # ParcelCache-adres ("Gasthuisstraat 7, 5911JJ Venlo" → "Venlo"). Voorkomt
+    # "in  bekeken" bij percelen zonder scan (geen gemeente_naam).
+    gemeente_fallback = address.split()[-1] if address else None
+
     # 2. Potentie + gemeente uit de laatste scan (indien aanwezig).
     potentie_expr = ScanResult.flags["scores"]["potentie"].as_float()
     scan_row = (
@@ -76,8 +81,8 @@ async def _load_parcel_facts(
         )
     ).first()
     if scan_row is None:
-        return address, None, None
-    return address, scan_row.gemeente_naam, scan_row.potentie
+        return address, gemeente_fallback, None
+    return address, scan_row.gemeente_naam or gemeente_fallback, scan_row.potentie
 
 
 @router.post("/{parcel_id}/brief", response_model=GenerateBriefResponse)

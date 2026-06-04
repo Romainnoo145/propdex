@@ -40,6 +40,10 @@ async def test_generate_brief_manual_mode_when_no_brk(
     # vetgedrukt briefhoofd op de eerste regel.
     assert not body["body"].startswith("**Hauzer Vastgoed**")
     assert "**Hauzer Vastgoed**" not in body["body"]
+    # De groet/afsluiter is uit de BODY verwijderd (de frontend rendert die onderin
+    # de A4). De volledige markdown-brief houdt de groet wél — daar wordt-ie verstuurd.
+    assert "Met vriendelijke groet" not in body["body"]
+    assert "Met vriendelijke groet" in body["markdown"]
 
 
 @pytest.mark.asyncio
