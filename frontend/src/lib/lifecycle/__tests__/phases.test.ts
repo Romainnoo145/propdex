@@ -11,7 +11,7 @@
  * Iron rule:
  *   - 1-onderzoek:     enabled (Tranche 1 core — always live)
  *   - 2-contact:       enabled (M050/S06 cont. via Phase 8)
- *   - 3-haalbaarheid:  enabled (M052/S02 acquisitie-arc — projecttype-gedreven checklist)
+ *   - 3-voorbereiding:  enabled (M052/S02 acquisitie-arc — projecttype-gedreven checklist)
  *   - 4-bod through 9-exit: DISABLED until M060/M070/M080/M090/M100/M110 ship
  *
  * M052/S02: Haalbaarheid is ADDITIVE — inserted at order 3 between Contact and Bod,
@@ -33,7 +33,7 @@ describe('LIFECYCLE_PHASES — enablement + additive-Haalbaarheid contract', () 
     expect(enabled.map((p) => p.key).sort()).toEqual([
       '1-onderzoek',
       '2-contact',
-      '3-haalbaarheid',
+      '3-voorbereiding',
     ])
   })
 
@@ -47,11 +47,11 @@ describe('LIFECYCLE_PHASES — enablement + additive-Haalbaarheid contract', () 
     )
   })
 
-  it('test_3_haalbaarheid_added: order 3, enabled, label "3. Haalbaarheid"', () => {
-    const haalbaarheid = getLifecyclePhase('3-haalbaarheid')
+  it('test_3_haalbaarheid_added: order 3, enabled, label "3. Voorbereiding"', () => {
+    const haalbaarheid = getLifecyclePhase('3-voorbereiding')
     expect(haalbaarheid.order).toBe(3)
     expect(haalbaarheid.enabled).toBe(true)
-    expect(haalbaarheid.label).toBe('3. Haalbaarheid')
+    expect(haalbaarheid.label).toBe('3. Voorbereiding')
   })
 
   it('test_future_phases_disabled (REGRESSION-CRITICAL): all six future phases stay disabled', () => {
@@ -97,14 +97,14 @@ describe('LIFECYCLE_PHASES — enablement + additive-Haalbaarheid contract', () 
       expect(shortLabels, `original phase "${label}" must still exist`).toContain(label)
     }
     // Plus the new one.
-    expect(shortLabels).toContain('Haalbaarheid')
+    expect(shortLabels).toContain('Voorbereiding')
   })
 
   it('test_ordered_keys: phases are sequentially ordered 1..9', () => {
     expect(LIFECYCLE_PHASES.map((p) => p.key)).toEqual([
       '1-onderzoek',
       '2-contact',
-      '3-haalbaarheid',
+      '3-voorbereiding',
       '4-bod',
       '5-vergunning',
       '6-bouw',

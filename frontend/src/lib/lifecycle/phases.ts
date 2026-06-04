@@ -8,7 +8,7 @@ import type { PipelineStage } from '@/lib/types/portfolio'
  * Tranche 1 (shipping, M001-M050) — onderzoekstool:
  *   1. Onderzoek     — scoring/scan/DD (huidige Propdex core)
  *   2. Contact       — eigenaar outreach + brief-feature (M050/S04+)
- *   3. Haalbaarheid  — use-case checklist gedreven door projecttype (M052/S02+S06)
+ *   3. Voorbereiding  — use-case checklist gedreven door projecttype (M052/S02+S06)
  *   4. Bod           — onderhandeling + koopovereenkomst (M060)
  *   5. Vergunning    — omgevingsvergunning + Wkb (M070)
  *   6. Bouw          — uitvoering + oplevering (M080)
@@ -25,7 +25,7 @@ import type { PipelineStage } from '@/lib/types/portfolio'
 export type LifecyclePhaseKey =
   | '1-onderzoek'
   | '2-contact'
-  | '3-haalbaarheid'
+  | '3-voorbereiding'
   | '4-bod'
   | '5-vergunning'
   | '6-bouw'
@@ -48,7 +48,7 @@ export interface LifecyclePhase {
 export const LIFECYCLE_PHASES: readonly LifecyclePhase[] = [
   { key: '1-onderzoek',    order: 1, label: '1. Onderzoek',    shortLabel: 'Onderzoek',    icon: Search,        enabled: true,  plannedMilestone: 'M001-M050' },
   { key: '2-contact',      order: 2, label: '2. Contact',      shortLabel: 'Contact',      icon: Mail,          enabled: true,  plannedMilestone: 'M050/S06 cont. (Phase 8)' },
-  { key: '3-haalbaarheid', order: 3, label: '3. Haalbaarheid', shortLabel: 'Haalbaarheid', icon: ClipboardCheck, enabled: true,  plannedMilestone: 'M052/S02' },
+  { key: '3-voorbereiding', order: 3, label: '3. Voorbereiding', shortLabel: 'Voorbereiding', icon: ClipboardCheck, enabled: true,  plannedMilestone: 'M052/S02' },
   { key: '4-bod',          order: 4, label: '4. Bod',          shortLabel: 'Bod',          icon: Handshake,     enabled: false, plannedMilestone: 'M060' },
   { key: '5-vergunning',   order: 5, label: '5. Vergunning',   shortLabel: 'Vergunning',   icon: FileCheck,     enabled: false, plannedMilestone: 'M070' },
   { key: '6-bouw',         order: 6, label: '6. Bouw',         shortLabel: 'Bouw',         icon: Hammer,        enabled: false, plannedMilestone: 'M080' },

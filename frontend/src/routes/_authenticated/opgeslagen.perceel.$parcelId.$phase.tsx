@@ -55,8 +55,8 @@ function OpgeslagenPerceelPhasePage() {
     return <ContactPhaseView parcelId={parcelId} />
   }
 
-  // Fase 3 (M052/S02 acquisitie-arc) — Haalbaarheid: projecttype-gedreven checklist
-  if (phase === '3-haalbaarheid') {
+  // Fase 3 (M052/S02 acquisitie-arc) — Voorbereiding: projecttype-gedreven checklist
+  if (phase === '3-voorbereiding') {
     return <HaalbaarheidPhaseView parcelId={parcelId} />
   }
 
