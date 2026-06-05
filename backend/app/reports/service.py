@@ -1459,10 +1459,14 @@ async def generate_report_from_parcel(
     try:
         from app.reports.checklist_orchestrator import generate_checklist_documents
 
+        # Key checklist docs by the Kadaster string (parcel.parcel_id), NOT the
+        # ParcelCache UUID. The frontend (favorites route, dossier uploads, and the
+        # checklist-status query) all use the Kadaster string, so keying by the UUID
+        # made the generated docs invisible to the checklist UI.
         checklist_result = await generate_checklist_documents(
             report_data=report.report_data,
             report_name=report.report_name,
-            parcel_id=parcel_id,
+            parcel_id=parcel.parcel_id,
             user_id=user_id,
             organization_id=organization_id,
             db=session,
