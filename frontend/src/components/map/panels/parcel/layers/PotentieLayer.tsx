@@ -5,6 +5,7 @@ import { PageTitleToggle } from '@/components/map/panels/parcel/layers/PageTitle
 import type { ScanResultItem, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/types/scan'
 import { isScoreV3 } from '@/lib/score'
 import { WoonvisiePopup, type WijkPolicy } from '../WoonvisiePopup'
+import { OmgevingsvisiePopup, type GebiedPolicy } from '../OmgevingsvisiePopup'
 import { FactorCard, GhostCard } from '../FactorCard'
 import { useParcelProjectType } from '@/hooks/useParcelProjectType'
 import { useFactorPins } from '@/hooks/useFactorPins'
@@ -70,6 +71,7 @@ const FACTOR_LABELS: Record<string, string> = {
   vergunning_succeskans: 'LEGAL',
   capaciteit: 'CAPACITEIT',
   woonvisie_match: 'WOONVISIE',
+  beleidsalignement: 'OMGEVINGSVISIE',
 }
 
 function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResultItem): { value: string; sub: string } {
@@ -169,6 +171,24 @@ function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResu
       const sub = wijk ? `Wijk: ${wijk}` : 'Geen wijk-specifiek beleid'
       return { value, sub }
     }
+    case 'beleidsalignement': {
+      if (factor.missing) return { value: '—', sub: 'Geen omgevingsvisie beschikbaar' }
+      const w = factor.waarde as { matched_policy?: { karakter?: string; gebied_naam?: string } | null; matched_gebied?: string | null } | null
+      const matched = w && typeof w === 'object' ? w.matched_policy : null
+      const KARAKTER_VALUE: Record<string, string> = {
+        centraal_stedelijk: 'CENTRAAL STEDELIJK',
+        transformatie: 'TRANSFORMATIE',
+        stedelijk_wonen: 'STEDELIJK WONEN',
+        werklocatie: 'WERKLOCATIE',
+        dorp: 'DORPSKERN',
+        landschap: 'LANDSCHAP',
+      }
+      const karakter = matched && typeof matched === 'object' ? matched.karakter : null
+      const value = karakter && KARAKTER_VALUE[karakter] ? KARAKTER_VALUE[karakter] : 'GEMEENTE-BREED'
+      const gebied = matched?.gebied_naam ?? w?.matched_gebied ?? null
+      const sub = gebied ? `Gebied: ${gebied}` : 'Geen gebied-specifiek beleid'
+      return { value, sub }
+    }
     default:
       return { value: '—', sub: '' }
   }
@@ -259,12 +279,13 @@ interface PotentieLayerProps {
 const POTENTIE_KEYS = [
   'vrije_grond', 'optoppotentie', 'bestemming', 'leegstand',
   'funda_frictie', 'perceelgrootte', 'demografie', 'vergunning_succeskans',
-  'capaciteit', 'woonvisie_match',
+  'capaciteit', 'woonvisie_match', 'beleidsalignement',
 ] as const
 
 export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
   const [page, setPage] = useState(0)
   const [woonvisieOpen, setWoonvisieOpen] = useState(false)
+  const [omgevingsvisieOpen, setOmgevingsvisieOpen] = useState(false)
   const { data: projectTypeData } = useParcelProjectType(parcel.parcel_id)
   const projectType = projectTypeData?.project_type ?? 'onbepaald'
   const { pins, toggle, isPinned } = useFactorPins('potentie')
@@ -279,6 +300,16 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
     algemeen_citaat: string
   } | null
   const hasWoonvisieData = woonvisieWaarde !== null && woonvisieWaarde !== undefined
+
+  const omgevingsvisieFactor = (parcel.score_breakdown as ScoreBreakdownV3 | null)?.['beleidsalignement']
+  const omgevingsvisieWaarde = omgevingsvisieFactor?.waarde as {
+    matched_gebied: string | null
+    matched_policy: GebiedPolicy | null
+    algemeen_citaat: string
+    tijdshorizon: number
+  } | null
+  const hasOmgevingsvisieData = omgevingsvisieWaarde !== null && omgevingsvisieWaarde !== undefined
+
   const isV3 = isScoreV3(parcel.score_breakdown)
   const potentieScore = parcel.potentie_score != null
     ? Math.round(parcel.potentie_score)
@@ -398,7 +429,9 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
                   onCardClick={
                     card.factor_key === 'woonvisie_match' && hasWoonvisieData
                       ? () => setWoonvisieOpen(true)
-                      : undefined
+                      : card.factor_key === 'beleidsalignement' && hasOmgevingsvisieData
+                        ? () => setOmgevingsvisieOpen(true)
+                        : undefined
                   }
                 />
               )
@@ -418,6 +451,18 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
           algemeen_citaat={woonvisieWaarde!.algemeen_citaat ?? ''}
           project_type={projectType}
           confidence={1.0}
+        />
+      )}
+
+      {hasOmgevingsvisieData && (
+        <OmgevingsvisiePopup
+          isOpen={omgevingsvisieOpen}
+          onClose={() => setOmgevingsvisieOpen(false)}
+          gemeente={gemeenteNaam}
+          tijdshorizon={omgevingsvisieWaarde!.tijdshorizon ?? 0}
+          matched_policy={omgevingsvisieWaarde!.matched_policy}
+          algemeen_citaat={omgevingsvisieWaarde!.algemeen_citaat ?? ''}
+          project_type={projectType}
         />
       )}
     </div>

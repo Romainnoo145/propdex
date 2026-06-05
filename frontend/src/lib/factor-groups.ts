@@ -55,6 +55,7 @@ export const FACTOR_BRON: Record<string, Bron> = {
   demografie: 'markt',
   vergunning_succeskans: 'gemeente_beleid',
   woonvisie_match: 'gemeente_beleid',
+  beleidsalignement: 'gemeente_beleid',
   capaciteit: 'fysiek', // UI-only derived card — NOT in backend FACTOR_REGISTRY
 
   // Risico (13)
