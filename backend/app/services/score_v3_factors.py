@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 from app.services.score_v3 import FactorResult
 
 if TYPE_CHECKING:
+    from app.ai.factors.beleidsalignement import GebiedPolicy, OmgevingsvisiePayload
     from app.ai.factors.woonvisie_match import WijkPolicy, WoonvisiePayload
 
 # ---------------------------------------------------------------------------
@@ -1576,4 +1577,150 @@ def score_koopwaarde_trend(parcel_data: dict) -> FactorResult:
         ),
         missing=False,
         data_bronnen=["brk_ownership_records"],
+    )
+
+
+# ── beleidsalignement (M053/S01 cascade — Omgevingsvisie) ──────────────────
+
+_KARAKTER_BASE_SCORE: dict[str, float] = {
+    "centraal_stedelijk": 8.5,
+    "transformatie": 9.0,
+    "stedelijk_wonen": 6.0,
+    "werklocatie": 3.0,
+    "dorp": 6.5,
+    "landschap": 2.5,
+}
+
+# project_type → karakters that align especially well (small bonus)
+_PROJECTTYPE_KARAKTER_FIT: dict[str, set[str]] = {
+    "transformatie_wonen": {"transformatie", "centraal_stedelijk"},
+    "nieuwbouw_wonen": {"transformatie", "stedelijk_wonen", "dorp"},
+    "commercieel_naar_wonen": {"transformatie", "centraal_stedelijk"},
+    "optoppen": {"centraal_stedelijk", "stedelijk_wonen"},
+    "splitsen": {"stedelijk_wonen", "centraal_stedelijk"},
+    "onbepaald": set(),
+}
+
+_KARAKTER_LABEL: dict[str, str] = {
+    "centraal_stedelijk": "centraal stedelijk gebied",
+    "transformatie": "transformatiegebied",
+    "stedelijk_wonen": "stedelijk woongebied",
+    "werklocatie": "werklocatie",
+    "dorp": "dorpskern",
+    "landschap": "landschapszone",
+}
+
+
+def score_beleidsalignement(
+    payload: OmgevingsvisiePayload | None,
+    *,
+    wijk_naam: str | None,
+    project_type: str = "onbepaald",
+) -> FactorResult:
+    """M053/S01: per-deelgebied alignement-scoring uit de gemeentelijke omgevingsvisie.
+
+    Matcht het perceel-wijk/plaats tegen GebiedPolicy.gebonden_plaatsen. Cloned from
+    score_woonvisie_match: weight=0 when missing/no-match (sparse factor P5).
+    """
+    if payload is None:
+        return FactorResult(
+            waarde=None,
+            genormaliseerde_score=0.0,
+            gewicht=0,
+            bijdrage=0.0,
+            categorie="potentie",
+            toelichting_kort="Geen omgevingsvisie beschikbaar voor deze gemeente (factor niet meegewogen).",
+            toelichting_lang="Geen gemeentelijke omgevingsvisie beschikbaar. De factor wordt niet meegewogen.",
+            data_bronnen=[],
+            missing=True,
+        )
+
+    document_label = f"Omgevingsvisie {payload.tijdshorizon}"
+    algemeen_citaat = payload.algemeen_citaat or ""
+
+    # 1. Match deelgebied — longest-normalised gebonden_plaats wins (deterministic)
+    parcel_norm = _normalize_wijk(wijk_naam)
+    matched: GebiedPolicy | None = None
+    if parcel_norm and payload.gebied_policies:
+        candidates: list[tuple[int, GebiedPolicy]] = []
+        for g in payload.gebied_policies:
+            for plaats in g.gebonden_plaatsen:
+                pn = _normalize_wijk(plaats)
+                if pn and (pn in parcel_norm or parcel_norm in pn):
+                    candidates.append((len(pn), g))
+                    break
+        if candidates:
+            candidates.sort(key=lambda t: -t[0])
+            matched = candidates[0][1]
+
+    # 2. No-match fallback: neutraal with algemeen_citaat, not weighed
+    if matched is None:
+        uitleg_kort = (
+            f"Geen deelgebied-match in {document_label}; gemeente-brede context gebruikt"
+            if algemeen_citaat
+            else f"Geen deelgebied-match in {document_label}"
+        )
+        uitleg_lang = uitleg_kort + (
+            f". Citaat (gemeente-breed): {algemeen_citaat}" if algemeen_citaat else ""
+        )
+        uitleg_lang += f" (confidence {payload.confidence:.0%})"
+        no_match_pulled = 5.0 * payload.confidence + 5.0 * (1 - payload.confidence)  # = 5.0
+        return FactorResult(
+            waarde={
+                "matched_gebied": None,
+                "matched_policy": None,
+                "algemeen_citaat": algemeen_citaat,
+                "tijdshorizon": payload.tijdshorizon,
+            },
+            genormaliseerde_score=round(no_match_pulled / 10.0, 4),
+            gewicht=0,
+            bijdrage=0.0,
+            categorie="potentie",
+            toelichting_kort=uitleg_kort,
+            toelichting_lang=uitleg_lang,
+            data_bronnen=["Gemeentelijke omgevingsvisie (LLM-extracted)"],
+            missing=False,
+        )
+
+    # 3. Matched: karakter base + transformatie/prioriteit bonus + projecttype-fit
+    raw = _KARAKTER_BASE_SCORE.get(matched.karakter, 5.0)
+    if matched.transformatie_kansgebied:
+        raw += 0.5
+    if matched.woningbouwprioriteit == "hoog":
+        raw += 0.5
+    elif matched.woningbouwprioriteit == "laag":
+        raw -= 0.5
+    fit_note = ""
+    if matched.karakter in _PROJECTTYPE_KARAKTER_FIT.get(project_type, set()):
+        raw += 1.0
+        fit_note = f"; projecttype past bij {_KARAKTER_LABEL.get(matched.karakter, matched.karakter)}"
+
+    pulled = raw * payload.confidence + 5.0 * (1 - payload.confidence)
+    pulled = max(0.0, min(10.0, pulled))
+
+    pag_suffix = f", p.{matched.pagina}" if matched.pagina is not None else ""
+    uitleg_kort = (
+        f"Gebied '{matched.gebied_naam}' ({_KARAKTER_LABEL.get(matched.karakter, matched.karakter)}) "
+        f"in {document_label}{fit_note}"
+    )
+    uitleg_lang = (
+        f"{uitleg_kort}. Citaat ({matched.gebied_naam}{pag_suffix}): {matched.citaat}"
+        f" (confidence {payload.confidence:.0%})"
+    )
+
+    return FactorResult(
+        waarde={
+            "matched_gebied": matched.gebied_naam,
+            "matched_policy": matched.model_dump(),
+            "algemeen_citaat": algemeen_citaat,
+            "tijdshorizon": payload.tijdshorizon,
+        },
+        genormaliseerde_score=round(pulled / 10.0, 4),
+        gewicht=0,
+        bijdrage=0.0,
+        categorie="potentie",
+        toelichting_kort=uitleg_kort,
+        toelichting_lang=uitleg_lang,
+        data_bronnen=["Gemeentelijke omgevingsvisie (LLM-extracted)"],
+        missing=False,
     )
