@@ -63,6 +63,16 @@ DATASET_FALLBACK_CHAIN: list[str] = ["86165NED", "85984NED", "85618NED", "85318N
 INCOME_KEYS = {"inkomen", "inkomen_per_inwoner", "inkomen_gestandaardiseerd",
                "inkomen_laagste_40_personen", "inkomen_hoogste_20_personen"}
 
+
+def _income_to_euro(value: float | None) -> float | None:
+    """CBS reports income measures (M000222/223/224) in 1000-euro units.
+
+    Convert to whole euros at the source so every consumer (IncomeCard,
+    WijkMapPanel thresholds, WOZ/income ratio, score_v3 income factor) — all of
+    which assume euros — reads the right magnitude. €34 → €34.000.
+    """
+    return round(value * 1000) if value is not None else None
+
 # CBS Nabijheid voorzieningen dataset (proximity to amenities)
 NABIJHEID_DATASET_ID = "86134NED"
 
@@ -459,9 +469,11 @@ class CBSODataClient:
                     "gemiddelde_grootte": data.get("gem_huishoudensgrootte"),
                 },
                 "inkomen": {
-                    "gem_per_ontvanger": data.get("inkomen"),
-                    "gem_per_inwoner": data.get("inkomen_per_inwoner"),
-                    "gem_gestandaardiseerd": data.get("inkomen_gestandaardiseerd"),
+                    # ×1000: CBS reports these in 1000-euro units (€34 → €34.000).
+                    "gem_per_ontvanger": _income_to_euro(data.get("inkomen")),
+                    "gem_per_inwoner": _income_to_euro(data.get("inkomen_per_inwoner")),
+                    "gem_gestandaardiseerd": _income_to_euro(data.get("inkomen_gestandaardiseerd")),
+                    # Percentages — NOT scaled.
                     "perc_laagste_40": data.get("inkomen_laagste_40_personen"),
                     "perc_hoogste_20": data.get("inkomen_hoogste_20_personen"),
                     "peiljaar": inkomen_peiljaar,
