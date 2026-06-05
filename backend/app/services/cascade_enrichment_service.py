@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.factor_extraction_schemas import DOCUMENT_SENTINEL, FactorExtractionError
+from app.ai.factors.beleidsalignement import OMGEVINGSVISIE_FACTOR_DEF
 from app.ai.factors.woonvisie_match import WOONVISIE_MATCH_FACTOR_DEF
 from app.models.policy_document import PolicyDocument
 from app.services.factor_extraction_service import extract_factor
@@ -39,6 +40,29 @@ async def get_woonvisie_document(
             PolicyDocument.entity_type == "gemeente",
             PolicyDocument.entity_code == gemeente_code,
             PolicyDocument.source_key == "woonvisie",
+            PolicyDocument.organization_id == organization_id,
+            PolicyDocument.file_data.isnot(None),
+        )
+        .order_by(PolicyDocument.version_number.desc(), PolicyDocument.created_at.desc())
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def get_omgevingsvisie_document(
+    db: AsyncSession,
+    *,
+    gemeente_code: str,
+    organization_id: uuid.UUID,
+) -> PolicyDocument | None:
+    """Zoek de meest recente actieve omgevingsvisie op voor een gemeente (M053/S01)."""
+    stmt = (
+        select(PolicyDocument)
+        .where(
+            PolicyDocument.entity_type == "gemeente",
+            PolicyDocument.entity_code == gemeente_code,
+            PolicyDocument.source_key == "omgevingsvisie",
             PolicyDocument.organization_id == organization_id,
             PolicyDocument.file_data.isnot(None),
         )
@@ -88,6 +112,25 @@ async def get_cascade_payloads(
             parcel_id,
             gemeente_code,
             exc,
+        )
+
+    # beleidsalignement (omgevingsvisie)
+    try:
+        ov_doc = await get_omgevingsvisie_document(
+            db, gemeente_code=gemeente_code, organization_id=organization_id
+        )
+        if ov_doc is not None:
+            ov_extracted = await extract_factor(
+                db,
+                factor_def=OMGEVINGSVISIE_FACTOR_DEF,
+                parcel_id=DOCUMENT_SENTINEL,
+                policy_document=ov_doc,
+            )
+            payloads["beleidsalignement"] = ov_extracted.payload
+    except FactorExtractionError as exc:
+        logger.warning(
+            "cascade_enrich beleidsalignement failed parcel=%s gemeente=%s: %s",
+            parcel_id, gemeente_code, exc,
         )
 
     return payloads

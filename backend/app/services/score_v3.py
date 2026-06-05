@@ -148,7 +148,7 @@ def _rebalance_risico_weights(
 
 
 FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
-    # --- POTENTIE (9 factors, sum default_weight = 100) ---
+    # --- POTENTIE (10 factors, sum default_weight = 100) ---
     "vrije_grond": FactorRegistryEntry(
         id="vrije_grond",
         category="potentie",
@@ -481,6 +481,7 @@ def compute_score_v3(
     # Import here to avoid circular import (factors imports FactorResult)
     from app.services.score_v3_factors import (
         score_asbest,
+        score_beleidsalignement,
         score_bestemming,
         score_bestemmingswijziging,
         score_bodemverontreiniging,
@@ -626,6 +627,23 @@ def compute_score_v3(
         _wv_result.bijdrage = round(_wv_result.genormaliseerde_score * _wv_weight, 4)
         _wv_result.percentage_of_category = round(_wv_weight / 100.0, 4)
     breakdown["woonvisie_match"] = _wv_result
+
+    # Cascade factor: beleidsalignement (Omgevingsvisie — M053/S01). Same sparse
+    # treatment as woonvisie_match: appended after redistribution, weight=0 when missing.
+    _ba_result = score_beleidsalignement(
+        _cascade.get("beleidsalignement"),
+        wijk_naam=parcel_data.get("wijk_naam"),
+        project_type=project_type,
+    )
+    if not _ba_result.missing:
+        _ba_entry = FACTOR_REGISTRY["beleidsalignement"]
+        _ba_weight = float(
+            (_ba_entry.weight_by_projecttype or {}).get(project_type, _ba_entry.default_weight)
+        )
+        _ba_result.gewicht = _ba_weight
+        _ba_result.bijdrage = round(_ba_result.genormaliseerde_score * _ba_weight, 4)
+        _ba_result.percentage_of_category = round(_ba_weight / 100.0, 4)
+    breakdown["beleidsalignement"] = _ba_result
 
     # Apply custom weights if provided
     if custom_weights:
