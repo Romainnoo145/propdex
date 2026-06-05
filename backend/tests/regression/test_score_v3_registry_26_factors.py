@@ -1,4 +1,4 @@
-"""REGRESSION-CRITICAL: pins backend FACTOR_REGISTRY shape (25 factors post-M050/S03).
+"""REGRESSION-CRITICAL: pins backend FACTOR_REGISTRY shape (26 factors post-M053/S01).
 
 Drift-detector — if a future slice renames or removes a factor, this test fails
 BEFORE the parallel frontend test
@@ -7,8 +7,9 @@ silently rots. Backend test is the canary: any rename here breaks CI immediately
 forcing the frontend KNOWN_25_FACTOR_KEYS list + FACTOR_LABELS to be updated
 in lockstep before merge.
 
-Source of truth: ``backend/app/services/score_v3.py`` FACTOR_REGISTRY 2026-05-19
-(9 potentie + 13 pre-M050 risico + 3 M050/S03 BRK risico).
+Source of truth: ``backend/app/services/score_v3.py`` FACTOR_REGISTRY
+(10 potentie + 13 pre-M050 risico + 3 M050/S03 BRK risico). beleidsalignement
+added in M053/S01 (potentie cascade — Omgevingsvisie).
 
 Iron-rule pattern (per MEMORY.md ``feedback_iron_rule_regression_pattern``):
 encode 'X must not change' as a regression test, never as a comment.
@@ -19,10 +20,11 @@ from app.services.score_v3 import FACTOR_REGISTRY
 
 # Source of truth — keep in sync with the parallel frontend list:
 #   frontend/src/components/map/panels/parcel/layers/__tests__/RisicoLayer.factor-coverage.test.tsx
-KNOWN_25_FACTOR_KEYS: frozenset[str] = frozenset({
-    # Potentie (9)
+KNOWN_26_FACTOR_KEYS: frozenset[str] = frozenset({
+    # Potentie (10)
     "vrije_grond", "optoppotentie", "bestemming", "leegstand", "funda_frictie",
     "perceelgrootte", "demografie", "vergunning_succeskans", "woonvisie_match",
+    "beleidsalignement",
     # Risico — pre-M050 (13)
     "funderingsrisico", "asbest", "bodemverontreiniging", "monument",
     "bestemmingswijziging", "constructieve_staat", "juridisch_klimaat",
@@ -37,24 +39,24 @@ BRK_FACTOR_KEYS: frozenset[str] = frozenset({
 })
 
 
-def test_registry_count_is_25() -> None:
-    """FACTOR_REGISTRY must contain exactly 25 factors."""
-    assert len(FACTOR_REGISTRY) == 25, (
-        f"Expected 25 factors in FACTOR_REGISTRY, got {len(FACTOR_REGISTRY)}. "
-        "If you added/removed a factor, update KNOWN_25_FACTOR_KEYS in both "
+def test_registry_count_is_26() -> None:
+    """FACTOR_REGISTRY must contain exactly 26 factors."""
+    assert len(FACTOR_REGISTRY) == 26, (
+        f"Expected 26 factors in FACTOR_REGISTRY, got {len(FACTOR_REGISTRY)}. "
+        "If you added/removed a factor, update KNOWN_26_FACTOR_KEYS in both "
         "this file AND the parallel frontend test."
     )
 
 
 def test_registry_keys_match_known_set() -> None:
-    """FACTOR_REGISTRY keys must equal KNOWN_25_FACTOR_KEYS exactly."""
+    """FACTOR_REGISTRY keys must equal KNOWN_26_FACTOR_KEYS exactly."""
     actual = set(FACTOR_REGISTRY.keys())
-    expected = set(KNOWN_25_FACTOR_KEYS)
+    expected = set(KNOWN_26_FACTOR_KEYS)
     missing = expected - actual
     extra = actual - expected
     assert actual == expected, (
         f"FACTOR_REGISTRY key drift detected. Missing: {missing}; "
-        f"Extra (renamed?): {extra}. Update KNOWN_25_FACTOR_KEYS in both "
+        f"Extra (renamed?): {extra}. Update KNOWN_26_FACTOR_KEYS in both "
         "this file AND the parallel frontend test."
     )
 
