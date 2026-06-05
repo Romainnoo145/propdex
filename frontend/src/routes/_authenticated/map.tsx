@@ -1958,6 +1958,11 @@ function MapPage() {
       const currentGemeente = activeGemeenteRef.current
       if (!currentGemeente || !mapRef.current) return
 
+      // Only one level is the green "active" state at a time: drilling into a
+      // wijk returns the gemeente fill to amber context so the green wijk stands
+      // out instead of green-on-green.
+      clearGemeenteSelection(mapRef.current)
+
       // Highlight selected wijk
       removeScanAreaHighlightManaged()
       addScanAreaHighlightManaged(geometry)
