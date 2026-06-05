@@ -34,10 +34,10 @@ const IconMap = () => (
     <circle cx="12" cy="10" r="3" />
   </svg>
 )
-const IconFile = () => (
+const IconGauge = () => (
   <svg viewBox="0 0 24 24" className={ic}>
-    <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
-    <path d="M14 2v5a1 1 0 0 0 1 1h5" />
+    <path d="m12 14 4-4" />
+    <path d="M3.34 19a10 10 0 1 1 17.32 0" />
   </svg>
 )
 const IconSpark = () => (
@@ -79,6 +79,107 @@ function ScoreRing({ score }: { score: number | null }) {
   )
 }
 
+function ScoreStat({
+  label,
+  score,
+  color,
+  hint,
+}: {
+  label: string
+  score: number | null
+  color: string
+  hint: string
+}) {
+  const pct = Math.max(0, Math.min(100, score ?? 0))
+  const dash = `${(pct / 100) * 100.5} 100.5`
+  return (
+    <div className="flex flex-col items-center rounded-2xl border border-[#EEF1F1] bg-aura-canvas/60 px-3 py-4">
+      <svg viewBox="0 0 36 36" className="h-16 w-16">
+        <circle cx="18" cy="18" r="16" fill="none" stroke="#E6EAE7" strokeWidth="3.2" />
+        <circle
+          cx="18"
+          cy="18"
+          r="16"
+          fill="none"
+          stroke={color}
+          strokeWidth="3.2"
+          strokeDasharray={dash}
+          strokeLinecap="round"
+          transform="rotate(-90 18 18)"
+        />
+        <text x="18" y="22" textAnchor="middle" fontSize="11" fontWeight="800" fill={color}>
+          {score != null ? Math.round(score) : '-'}
+        </text>
+      </svg>
+      <div className="mt-2 text-[12px] font-bold text-aura-ink">{label}</div>
+      <div className="mt-0.5 text-[10px] text-neutral-400">{hint}</div>
+    </div>
+  )
+}
+
+function KansScoresModal({
+  kans,
+  onClose,
+  onOpenMap,
+}: {
+  kans: Kans
+  onClose: () => void
+  onOpenMap: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-[24px] border border-white/60 bg-white p-6 shadow-[0_12px_48px_rgba(14,17,17,0.18)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="truncate text-[15px] font-bold text-aura-ink">
+              {kans.address ?? 'Ontwikkelkavel'}
+            </div>
+            <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-neutral-400">
+              <span className="h-[5px] w-[5px] rounded-full bg-aura-amber" />
+              {kans.projecttype ?? 'Ontwikkelpotentie'}
+              {kans.wijk ? ` · ${kans.wijk}` : ''}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex-none px-1 text-xl leading-none text-neutral-300 hover:text-neutral-500"
+          >
+            &times;
+          </button>
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <ScoreStat label="Potentie" score={kans.potentie_score} color="#22C55E" hint="hoger = beter" />
+          <ScoreStat label="Risico" score={kans.risico_score} color="#F9A826" hint="lager = beter" />
+        </div>
+
+        {kans.reason && (
+          <div className="mt-4 flex items-start gap-2 rounded-[12px] bg-aura-canvas px-3 py-2.5 text-xs leading-snug text-aura-ink/70">
+            <span className="mt-0.5">
+              <IconSpark />
+            </span>
+            {kans.reason}
+          </div>
+        )}
+
+        <button
+          onClick={onOpenMap}
+          className="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-[12px] bg-aura-obsidian text-[13px] font-semibold text-aura-amber hover:bg-aura-obsidian/90"
+        >
+          <IconMap />
+          Bekijk op kaart
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function SectionHead({ children }: { children: React.ReactNode }) {
   return (
     <h2 className="mb-3 text-[13px] font-bold uppercase tracking-[0.06em] text-aura-ink">
@@ -100,10 +201,12 @@ function fmtDate(iso: string): string {
 function KansCard({
   kans,
   onDismiss,
+  onScores,
   onView,
 }: {
   kans: Kans
   onDismiss: () => void
+  onScores: () => void
   onView: () => void
 }) {
   return (
@@ -138,11 +241,11 @@ function KansCard({
       )}
       <div className="mt-2.5 flex gap-2">
         <button
-          onClick={onView}
+          onClick={onScores}
           className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[10px] border border-aura-amber/40 bg-aura-amber/[0.12] text-[12.5px] font-semibold text-aura-amber-hover hover:bg-aura-amber/20"
         >
-          <IconFile />
-          Bekijk rapport
+          <IconGauge />
+          Bekijk scores
         </button>
         <button
           onClick={onView}
@@ -166,6 +269,7 @@ function DashboardPage() {
   const pipelineSet = new Set(pipelineParcels.data ?? [])
   const dismissKans = useDismissKans()
   const [dismissed, setDismissed] = useState<Set<string>>(() => new Set())
+  const [scoresKans, setScoresKans] = useState<Kans | null>(null)
 
   const visibleKansen = (kansen.data?.kansen ?? []).filter((k) => !dismissed.has(k.parcel_id))
 
@@ -279,6 +383,7 @@ function DashboardPage() {
                   key={k.parcel_id}
                   kans={k}
                   onDismiss={() => handleDismiss(k.parcel_id)}
+                  onScores={() => setScoresKans(k)}
                   onView={() => openOnMap(k.parcel_id)}
                 />
               ))}
@@ -305,6 +410,18 @@ function DashboardPage() {
           </button>
         </div>
       </div>
+
+      {scoresKans && (
+        <KansScoresModal
+          kans={scoresKans}
+          onClose={() => setScoresKans(null)}
+          onOpenMap={() => {
+            const parcelId = scoresKans.parcel_id
+            setScoresKans(null)
+            openOnMap(parcelId)
+          }}
+        />
+      )}
     </ResultsShell>
   )
 }

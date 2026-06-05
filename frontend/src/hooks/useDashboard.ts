@@ -24,6 +24,7 @@ export interface Kans {
   address: string | null
   wijk: string | null
   potentie_score: number | null
+  risico_score: number | null
   projecttype: string | null
   reason: string | null
 }

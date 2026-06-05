@@ -85,6 +85,7 @@ class Kans(BaseModel):
     address: str | None
     wijk: str | None
     potentie_score: float | None
+    risico_score: float | None
     projecttype: str | None
     reason: str | None
 
@@ -110,11 +111,13 @@ async def get_kansen(
     key als ``list_favorites`` / tiles), en neemt per perceel de meest recente scan.
     """
     potentie = ScanResult.flags["scores"]["potentie"].as_float()
+    risico = ScanResult.flags["scores"]["risico"].as_float()
 
     ranked = (
         select(
             ScanResult.parcel_id.label("pc_id"),
             potentie.label("potentie"),
+            risico.label("risico"),
             AreaScan.wijk_naam.label("wijk"),
             ScanResult.flags["score_breakdown"].label("breakdown"),
             func.row_number()
@@ -142,6 +145,7 @@ async def get_kansen(
             ParcelCache.address,
             ranked.c.wijk,
             ranked.c.potentie,
+            ranked.c.risico,
             ranked.c.breakdown,
         )
         .join(ranked, ranked.c.pc_id == ParcelCache.id)
@@ -157,7 +161,7 @@ async def get_kansen(
     )
 
     kansen = []
-    for parcel_id, address, wijk, potentie_score, breakdown in result.all():
+    for parcel_id, address, wijk, potentie_score, risico_score, breakdown in result.all():
         projecttype, reason = _best_use_case(breakdown)
         kansen.append(
             Kans(
@@ -165,6 +169,7 @@ async def get_kansen(
                 address=address,
                 wijk=wijk,
                 potentie_score=round(potentie_score, 1) if potentie_score is not None else None,
+                risico_score=round(risico_score, 1) if risico_score is not None else None,
                 projecttype=projecttype,
                 reason=reason,
             )
