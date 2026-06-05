@@ -27,12 +27,16 @@
  */
 import { useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { toMapParcelSearch } from '@/lib/navigation/mapSearch'
 import {
   ArrowRight,
   FileText,
   Download,
   ExternalLink,
   Check,
+  Scale,
+  MoreHorizontal,
+  type LucideIcon,
 } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { EmptyState } from '@/components/feedback/EmptyState'
@@ -54,8 +58,10 @@ import type { BRKOwnershipRecordRead } from '@/lib/types/brk'
 export type Accent = 'ok' | 'warn' | 'neutral'
 
 export interface AcquisitieVerdict {
-  /** Korte badge-tekst: "GO" / "AFWEGEN" / "—" als scores ontbreken. */
+  /** Korte badge-tekst voor schermlezers/fallback: "GO" / "AFWEGEN" / "—". */
   badge: string
+  /** Statusglyph in de ring — woord cramt niet meer; kicker+title dragen de betekenis. */
+  Icon: LucideIcon
   badgeAccent: Accent
   /** Kop boven de samenvatting. */
   kicker: string
@@ -86,6 +92,7 @@ export function deriveAcquisitieVerdict(
   if (pot === null || pot === undefined) {
     return {
       badge: '—',
+      Icon: MoreHorizontal,
       badgeAccent: 'neutral',
       kicker: 'Voortraject in beeld',
       title: typeLabel ? `${typeLabel} · scores nog niet bekend` : 'Scores nog niet bekend',
@@ -101,6 +108,7 @@ export function deriveAcquisitieVerdict(
   if (hogePotentie && beheersbaarRisico) {
     return {
       badge: 'GO',
+      Icon: Check,
       badgeAccent: 'ok',
       kicker: 'Ontwikkelkans bevestigd',
       title: `${typePrefix}haalbaar · sterke positie`.trim(),
@@ -112,6 +120,7 @@ export function deriveAcquisitieVerdict(
   if (hogePotentie && !beheersbaarRisico) {
     return {
       badge: 'GO',
+      Icon: Check,
       badgeAccent: 'warn',
       kicker: 'Kansrijk met aandachtspunten',
       title: `${typePrefix}kansrijk · risico beheersen`.trim(),
@@ -122,6 +131,7 @@ export function deriveAcquisitieVerdict(
 
   return {
     badge: 'AFWEGEN',
+    Icon: Scale,
     badgeAccent: 'warn',
     kicker: 'Beperkte potentie',
     title: `${typePrefix}afweging nodig`.trim(),
@@ -285,7 +295,11 @@ export function SamenvattingPhaseView({ parcelId }: SamenvattingPhaseViewProps) 
   const enrichmentQuery = useParcelEnrichment(favorite?.parcel_cache_id ?? null)
 
   const handleClose = () => void navigate({ to: '/opgeslagen', search: { stage: undefined } })
-  const handleOpenMap = () => void navigate({ to: '/map' })
+  const handleOpenMap = () =>
+    void navigate({
+      to: '/map',
+      search: toMapParcelSearch({ parcelId, fallbackAddress: favorite?.address ?? null }),
+    })
   const openRapport = () => {
     if (favorite?.has_report && favorite.report_id) {
       void navigate({ to: '/rapport/$id', params: { id: favorite.report_id } })
@@ -361,9 +375,10 @@ export function SamenvattingPhaseView({ parcelId }: SamenvattingPhaseViewProps) 
             className={`mt-[18px] flex items-center gap-[18px] rounded-[20px] border px-6 py-5 ${verdictBox}`}
           >
             <div
-              className={`flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full border-2 bg-white text-[15px] font-extrabold ${badgeRing}`}
+              aria-label={verdict.badge}
+              className={`flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full border-2 bg-white ${badgeRing}`}
             >
-              {verdict.badge}
+              <verdict.Icon size={23} strokeWidth={2} aria-hidden />
             </div>
             <div className="min-w-0 flex-1">
               <div

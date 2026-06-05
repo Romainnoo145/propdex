@@ -27,6 +27,7 @@
  */
 import { useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { toMapParcelSearch } from '@/lib/navigation/mapSearch'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { ParcelWorkspaceHeader } from '@/components/cockpit/ParcelWorkspaceHeader'
@@ -116,9 +117,13 @@ export function ContactPhaseView({ parcelId }: ContactPhaseViewProps) {
   const enrichmentQuery = useParcelEnrichment(favorite?.parcel_cache_id ?? null)
   const wozData = enrichmentQuery.data?.woz_data ?? null
 
-  // onBack → terug naar opgeslagen lijst; onOpenMap → /map (mirrors index route).
+  // onBack → terug naar opgeslagen lijst; onOpenMap → /map met perceel-focus.
   const handleClose = () => void navigate({ to: '/opgeslagen', search: { stage: undefined } })
-  const handleOpenMap = () => void navigate({ to: '/map' })
+  const handleOpenMap = () =>
+    void navigate({
+      to: '/map',
+      search: toMapParcelSearch({ parcelId, fallbackAddress: favorite?.address ?? null }),
+    })
 
   const recs = records ?? []
   const hasRecords = recs.length > 0

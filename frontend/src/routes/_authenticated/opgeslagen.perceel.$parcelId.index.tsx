@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
 import { useMemo } from 'react'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { useParcelFavorites } from '@/hooks/useFavorites'
+import { toMapParcelSearch } from '@/lib/navigation/mapSearch'
 import { OnderzoekPhaseView } from '@/components/cockpit/OnderzoekPhaseView'
 import { EmptyState } from '@/components/feedback/EmptyState'
 
@@ -20,7 +21,11 @@ function OpgeslagenPerceelIndexPage() {
   )
 
   const handleClose = () => void navigate({ to: '/opgeslagen', search: { stage: undefined } })
-  const handleOpenMap = () => void navigate({ to: '/map' })
+  const handleOpenMap = () =>
+    void navigate({
+      to: '/map',
+      search: toMapParcelSearch({ parcelId, fallbackAddress: parcel?.address ?? null }),
+    })
 
   if (favoritesQuery.isLoading) {
     return (

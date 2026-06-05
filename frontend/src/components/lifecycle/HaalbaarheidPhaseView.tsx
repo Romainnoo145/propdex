@@ -21,6 +21,7 @@
  */
 import { useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { toMapParcelSearch } from '@/lib/navigation/mapSearch'
 import { ClipboardCheck } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { EmptyState } from '@/components/feedback/EmptyState'
@@ -57,7 +58,11 @@ export function HaalbaarheidPhaseView({ parcelId }: HaalbaarheidPhaseViewProps) 
   )
 
   const handleClose = () => void navigate({ to: '/opgeslagen', search: { stage: undefined } })
-  const handleOpenMap = () => void navigate({ to: '/map' })
+  const handleOpenMap = () =>
+    void navigate({
+      to: '/map',
+      search: toMapParcelSearch({ parcelId, fallbackAddress: favorite?.address ?? null }),
+    })
 
   // Favorite-loading shell — matches the index route's loading skeleton.
   if (favoritesQuery.isLoading) {
