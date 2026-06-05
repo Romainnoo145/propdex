@@ -1471,6 +1471,10 @@ async def generate_report_from_parcel(
             organization_id=organization_id,
             db=session,
         )
+        # The orchestrator only flushes its inserts; get_db never commits (it just
+        # closes the session), so without an explicit commit here the checklist docs
+        # are discarded on request teardown — the report saved but 0 docs persisted.
+        await session.commit()
         logger.info(
             "Checklist docs for parcel=%s (%s): generated=%d failed=%d skipped=%d",
             parcel_id,

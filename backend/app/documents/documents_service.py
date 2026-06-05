@@ -278,11 +278,24 @@ async def get_checklist_status(
     # Lazy generation from saved report (user_id scoped — report belongs to user)
     if not docs:
         try:
+            from app.models.parcel_cache import ParcelCache
             from app.reports import service as report_service
             from app.reports.checklist_orchestrator import generate_checklist_documents
 
-            report = await report_service.get_report_by_source_parcel(
-                parcel_id=parcel_id, user_id=user_id, session=db,
+            # `parcel_id` here is the Kadaster string (favorites/route key), but
+            # source_parcel_id on reports is the ParcelCache UUID. Resolve it first,
+            # otherwise the lookup never matches and lazy-gen silently no-ops.
+            cache_id = (
+                await db.execute(
+                    select(ParcelCache.id).where(ParcelCache.parcel_id == parcel_id)
+                )
+            ).scalar_one_or_none()
+            report = (
+                await report_service.get_report_by_source_parcel(
+                    parcel_id=cache_id, user_id=user_id, session=db,
+                )
+                if cache_id
+                else None
             )
             if report and report.report_data:
                 gen_result = await generate_checklist_documents(
