@@ -42,17 +42,23 @@ async def _insert_parcel_document(
     filename: str,
     file_data: bytes,
     user_id: uuid.UUID,
+    organization_id: uuid.UUID,
 ) -> uuid.UUID:
-    """Insert a ParcelDocument row via raw SQL (same pattern as documents router)."""
+    """Insert a ParcelDocument row via raw SQL (same pattern as documents router).
+
+    organization_id is NOT NULL with no DB default — it must be provided
+    explicitly (the documents-router upload path passes it too). Omitting it
+    raised a NOT NULL violation, which silently broke checklist-doc generation.
+    """
     result = await db.execute(
         text(
             """
             INSERT INTO parcel_documents (
                 parcel_id, document_type, filename, content_type,
-                file_data, file_size, uploaded_by_user_id
+                file_data, file_size, uploaded_by_user_id, organization_id
             ) VALUES (
                 :parcel_id, :document_type, :filename, :content_type,
-                :file_data, :file_size, :uploaded_by_user_id
+                :file_data, :file_size, :uploaded_by_user_id, :organization_id
             )
             RETURNING id
             """
@@ -65,6 +71,7 @@ async def _insert_parcel_document(
             "file_data": file_data,
             "file_size": len(file_data),
             "uploaded_by_user_id": str(user_id),
+            "organization_id": str(organization_id),
         },
     )
     return result.scalar_one()
@@ -75,6 +82,7 @@ async def generate_checklist_documents(
     report_name: str,
     parcel_id: str,
     user_id: uuid.UUID,
+    organization_id: uuid.UUID,
     db: AsyncSession,
 ) -> ChecklistGenerationResult:
     """Generate and persist all applicable checklist PDFs for a report.
@@ -90,6 +98,7 @@ async def generate_checklist_documents(
         report_name: Human-readable address/report name for the PDF header.
         parcel_id: Kadaster parcel identifier.
         user_id: ID of the user who owns these documents.
+        organization_id: Tenant that owns these documents (NOT NULL column).
         db: Async database session.
 
     Returns:
@@ -126,6 +135,7 @@ async def generate_checklist_documents(
                 filename=filename,
                 file_data=pdf_bytes,
                 user_id=user_id,
+                organization_id=organization_id,
             )
 
             result.generated.append(doc_type)
