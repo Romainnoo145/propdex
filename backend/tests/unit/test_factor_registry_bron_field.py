@@ -5,11 +5,11 @@ and assigns a value to all 22 entries.
 """
 from typing import get_args
 
-from app.services.score_v3 import FACTOR_REGISTRY, FactorRegistryEntry
+from app.services.score_v3 import FACTOR_REGISTRY, Bron, FactorRegistryEntry
 
-VALID_BRON_VALUES = {
-    "gemeente_beleid", "markt", "fysiek", "klimaat", "juridisch", "planologisch",
-}
+# Derive from the Bron Literal so this never goes stale when new brons are added
+# (e.g. "brk" in M050/S03). Previously hardcoded → drifted out of sync.
+VALID_BRON_VALUES = set(get_args(Bron))
 
 
 def test_factor_registry_entry_has_bron_field() -> None:
