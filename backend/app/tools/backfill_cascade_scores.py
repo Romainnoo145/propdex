@@ -1,8 +1,11 @@
-"""Recompute scan_results score_breakdown with cascade factors (woonvisie_match).
+"""Recompute scan_results score_breakdown with cascade factors (woonvisie_match, beleidsalignement).
 
-Zero-cost approach: reads the woonvisie payload once from factor_extraction_cache
-(a gemeente-level document produces identical payload for every parcel), then
-applies it directly to all scan_results without any Claude API calls.
+Zero-cost approach: reads the cascade payloads once from factor_extraction_cache
+(gemeente-level documents produce identical payloads for every parcel), then
+applies them directly to all scan_results without any Claude API calls.
+
+At least one of woonvisie or omgevingsvisie must be present; both are optional
+individually so the tool works for organisations that only have one type.
 
 Usage:
     python -m app.tools.backfill_cascade_scores --gemeente GM0983
@@ -22,6 +25,7 @@ from dataclasses import asdict
 from sqlalchemy import func, select, text
 
 from app.ai.factor_extraction_schemas import SCHEMA_VERSION
+from app.ai.factors.beleidsalignement import OmgevingsvisiePayload
 from app.ai.factors.woonvisie_match import WoonvisiePayload
 from app.core.database import async_session_factory
 from app.models.area_scan import AreaScan
@@ -117,11 +121,70 @@ async def _load_woonvisie_payload(
             return None
 
 
+async def _load_omgevingsvisie_payload(
+    gemeente_code: str,
+    org_id: uuid.UUID,
+) -> OmgevingsvisiePayload | None:
+    """Fetch the omgevingsvisie payload from cache (one entry is enough — all are identical).
+
+    The omgevingsvisie document is gemeente-level; the extracted payload doesn't
+    depend on the specific parcel. We reuse one cached extraction for all parcels.
+    """
+    async with async_session_factory() as session:
+        doc_stmt = (
+            select(PolicyDocument)
+            .where(
+                PolicyDocument.entity_type == "gemeente",
+                PolicyDocument.entity_code == gemeente_code,
+                PolicyDocument.source_key == "omgevingsvisie",
+                PolicyDocument.organization_id == org_id,
+                PolicyDocument.file_data.isnot(None),
+            )
+            .order_by(PolicyDocument.version_number.desc(), PolicyDocument.created_at.desc())
+            .limit(1)
+        )
+        doc = (await session.execute(doc_stmt)).scalar_one_or_none()
+        if doc is None:
+            logger.info("No omgevingsvisie document found for gemeente=%s org=%s", gemeente_code, org_id)
+            return None
+
+        cache_stmt = (
+            select(FactorExtractionCache)
+            .where(
+                FactorExtractionCache.policy_document_id == doc.id,
+                FactorExtractionCache.factor_id == "beleidsalignement",
+                FactorExtractionCache.schema_version == SCHEMA_VERSION,
+            )
+            .limit(1)
+        )
+        cached = (await session.execute(cache_stmt)).scalar_one_or_none()
+        if cached is None:
+            logger.info(
+                "No cached beleidsalignement extraction at SCHEMA_VERSION=%s for doc=%s "
+                "— run rescore_cascade_job first to refresh the cache",
+                SCHEMA_VERSION,
+                doc.id,
+            )
+            return None
+
+        try:
+            payload = OmgevingsvisiePayload.model_validate(cached.extracted_payload)
+            logger.info(
+                "Loaded omgevingsvisie payload from cache: doc=%s parcel=%s extracted_at=%s",
+                doc.id, cached.parcel_id, cached.extracted_at,
+            )
+            return payload
+        except Exception:
+            logger.exception("Failed to parse cached omgevingsvisie payload from doc=%s", doc.id)
+            return None
+
+
 async def _backfill_gemeente(
     gemeente_code: str,
     org_id: uuid.UUID,
-    woonvisie_payload: WoonvisiePayload,
     *,
+    woonvisie_payload: WoonvisiePayload | None,
+    omgevingsvisie_payload: OmgevingsvisiePayload | None,
     batch_size: int,
     dry_run: bool,
 ) -> tuple[int, int]:
@@ -129,7 +192,11 @@ async def _backfill_gemeente(
     processed = 0
     updated = 0
 
-    cascade_payloads = {"woonvisie_match": woonvisie_payload}
+    cascade_payloads: dict[str, object] = {}
+    if woonvisie_payload is not None:
+        cascade_payloads["woonvisie_match"] = woonvisie_payload
+    if omgevingsvisie_payload is not None:
+        cascade_payloads["beleidsalignement"] = omgevingsvisie_payload
 
     async with async_session_factory() as session:
         await session.execute(text(f"SET app.current_tenant_id = '{org_id}'"))
@@ -253,9 +320,15 @@ async def _run(
     if org_id is None:
         return 1
 
-    payload = await _load_woonvisie_payload(gemeente_code, org_id)
-    if payload is None:
+    woonvisie_payload = await _load_woonvisie_payload(gemeente_code, org_id)
+    omgevingsvisie_payload = await _load_omgevingsvisie_payload(gemeente_code, org_id)
+    if woonvisie_payload is None and omgevingsvisie_payload is None:
+        logger.error("No cascade payloads (woonvisie or omgevingsvisie) for gemeente=%s org=%s", gemeente_code, org_id)
         return 1
+    logger.info(
+        "Cascade payloads present: woonvisie=%s omgevingsvisie=%s",
+        woonvisie_payload is not None, omgevingsvisie_payload is not None,
+    )
 
     mode = "DRY RUN" if dry_run else "LIVE"
     logger.info(
@@ -264,7 +337,12 @@ async def _run(
     )
 
     processed, updated = await _backfill_gemeente(
-        gemeente_code, org_id, payload, batch_size=batch_size, dry_run=dry_run
+        gemeente_code,
+        org_id,
+        woonvisie_payload=woonvisie_payload,
+        omgevingsvisie_payload=omgevingsvisie_payload,
+        batch_size=batch_size,
+        dry_run=dry_run,
     )
 
     logger.info(
