@@ -173,7 +173,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "bestemming": FactorRegistryEntry(
         id="bestemming",
         category="potentie",
-        default_weight=13,
+        default_weight=11,  # was 13, rebalanced by M053/S01
         weight_by_projecttype=None,
         data_source="Bestemmingsplan / Ruimtelijkeplannen.nl",
         bron="gemeente_beleid",
@@ -181,7 +181,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "leegstand": FactorRegistryEntry(
         id="leegstand",
         category="potentie",
-        default_weight=9,
+        default_weight=7,  # was 9, rebalanced by M053/S01
         weight_by_projecttype=None,
         data_source="BAG",
         bron="fysiek",
@@ -189,7 +189,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "funda_frictie": FactorRegistryEntry(
         id="funda_frictie",
         category="potentie",
-        default_weight=5,
+        default_weight=4,  # was 5, rebalanced by M053/S01
         weight_by_projecttype=None,
         data_source="Funda (pilot)",
         bron="markt",
@@ -197,7 +197,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "perceelgrootte": FactorRegistryEntry(
         id="perceelgrootte",
         category="potentie",
-        default_weight=13,
+        default_weight=11,  # was 13, rebalanced by M053/S01
         weight_by_projecttype=None,
         data_source="Kadaster",
         bron="fysiek",
@@ -205,7 +205,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "demografie": FactorRegistryEntry(
         id="demografie",
         category="potentie",
-        default_weight=9,
+        default_weight=8,  # was 9, rebalanced by M053/S01
         weight_by_projecttype=None,
         data_source="CBS StatLine",
         bron="markt",
@@ -213,7 +213,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "vergunning_succeskans": FactorRegistryEntry(
         id="vergunning_succeskans",
         category="potentie",
-        default_weight=15,
+        default_weight=13,  # was 15, rebalanced by M053/S01
         weight_by_projecttype=None,
         data_source="Rechtspraak.nl",
         bron="gemeente_beleid",
@@ -227,6 +227,14 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
             "optoppen": 8,
         },
         data_source="Gemeentelijke woonvisie (LLM-extracted)",
+        bron="gemeente_beleid",
+    ),
+    "beleidsalignement": FactorRegistryEntry(
+        id="beleidsalignement",
+        category="potentie",
+        default_weight=10,
+        weight_by_projecttype=None,  # constant — projecttype-fit lives in the score, not the weight
+        data_source="Gemeentelijke omgevingsvisie (LLM-extracted)",
         bron="gemeente_beleid",
     ),
     # --- RISICO (16 factors, sum default_weight = 100) ---
