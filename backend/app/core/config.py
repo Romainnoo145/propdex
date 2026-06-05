@@ -386,8 +386,21 @@ class Settings(BaseSettings):
 
     @property
     def migration_database_url(self) -> str:
-        """Return migration URL, falling back to DATABASE_URL."""
-        return self.MIGRATION_DATABASE_URL or self.DATABASE_URL
+        """Return migration URL (async driver enforced), falling back to DATABASE_URL.
+
+        alembic/env.py runs migrations through an async engine, so the URL must use
+        the asyncpg driver. Railway (and most hosts) provide MIGRATION_DATABASE_URL as
+        a plain ``postgresql://`` superuser string; normalize it so alembic doesn't try
+        to load psycopg2 (which isn't installed — the app is asyncpg-only).
+        """
+        raw = self.MIGRATION_DATABASE_URL or self.DATABASE_URL
+        if raw.startswith("postgresql+asyncpg://"):
+            return raw
+        if raw.startswith("postgresql://"):
+            return raw.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if raw.startswith("postgres://"):
+            return raw.replace("postgres://", "postgresql+asyncpg://", 1)
+        return raw
 
 
 # Singleton settings instance
