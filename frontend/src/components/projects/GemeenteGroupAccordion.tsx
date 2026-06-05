@@ -1,7 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { staggerContainer, fadeUp } from '@/lib/animations'
-import { STAGES } from '@/components/projects/PipelineStagePill'
 import { SavedParcelCard } from '@/components/projects/SavedParcelCard'
 import type { FavoriteResponse, PipelineStage } from '@/lib/types/portfolio'
 
@@ -63,13 +62,6 @@ export function GemeenteGroupAccordion({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1">
-            {STAGES.filter((s) => group.stageCounts[s] > 0).map((stage) => (
-              <span key={stage} className="text-[10px] font-bold text-slate-400 tabular-nums">
-                {group.stageCounts[stage]}
-              </span>
-            ))}
-          </div>
           {isExpanded ? (
             <ChevronDown size={16} className="text-slate-400" />
           ) : (
