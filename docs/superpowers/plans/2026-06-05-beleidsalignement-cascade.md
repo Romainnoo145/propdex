@@ -16,6 +16,16 @@
 
 ---
 
+## Data-gate outcome (Task 2, run 2026-06-05) + plan deviation
+
+The Venlo Omgevingsvisie 2040 PDF is **30 MB** (→ ~40 MB base64, over Anthropic's ~32 MB request limit) → the PDF document-block path returns `EMPTY_RESPONSE`. **Fix: extract text first.** fitz (PyMuPDF) extracts 70 pages → ~175k chars (~44k tokens), and extraction then yields **10 deelgebieden at confidence 0.92** with real Venlo place-names + literal citaten. Gate PASSED via the text path.
+
+Two deviations from the original plan, folded in below:
+- **New Task 2b:** `extract_factor_live` auto-detects PDF (`%PDF` magic → base64 document block, woonvisie unchanged) vs text (→ text block). Small, safe, regression-guarded by Task 6.
+- **Task 7 revised:** the seed extracts text with fitz and stores it as `text/plain` (tiny), not the 30 MB PDF.
+
+---
+
 ## File Structure
 
 **Backend create:**
@@ -331,6 +341,99 @@ rm backend/app/tools/_probe_omgevingsvisie.py
 ```
 
 No commit (probe is throwaway; the confirmed URL feeds Task 7).
+
+**Confirmed URL:** `https://gemeenteraad.venlo.nl/Vergaderingen/Agendacommissie/2025/02-april/17:30/Concept-agenda-s-commissies/381324-Bijl01-Omgevingsvisie-Venlo-2040.pdf` (30 MB, 70 pp).
+
+---
+
+## Task 2b: Extractor text-document support (enables large PDFs via text)
+
+**Files:**
+- Modify: `backend/app/ai/factor_extractor.py` (`extract_factor_live` — content-block construction, ~lines 87, 122-138)
+- Test: `backend/tests/unit/test_factor_extractor_text.py`
+
+Anthropic caps requests at ~32 MB; image-heavy policy PDFs exceed it. Auto-detect: `%PDF` magic → existing base64 PDF document block (woonvisie byte-identical); otherwise treat `file_data` as UTF-8 text → text block. Both followed by the instructions text block.
+
+- [ ] **Step 1: Write the failing test** (`backend/tests/unit/test_factor_extractor_text.py`)
+
+```python
+import uuid
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from app.ai.factor_extractor import extract_factor_live
+from app.ai.factors.beleidsalignement import OMGEVINGSVISIE_FACTOR_DEF
+
+
+def _mock_client(captured: dict):
+    client = MagicMock()
+    async def _create(**kwargs):
+        captured.update(kwargs)
+        tool_use = SimpleNamespace(type="tool_use", name=OMGEVINGSVISIE_FACTOR_DEF.tool_name,
+                                   input={"tijdshorizon": 2040, "confidence": 0.9, "gebied_policies": [], "algemeen_citaat": ""})
+        return SimpleNamespace(content=[tool_use], usage=SimpleNamespace(input_tokens=1, output_tokens=1))
+    client.messages = SimpleNamespace(create=AsyncMock(side_effect=_create))
+    return client
+
+
+@pytest.mark.asyncio
+async def test_text_document_sent_as_text_block():
+    captured: dict = {}
+    doc = SimpleNamespace(id=uuid.uuid4(), filename="ov.txt",
+                          file_data="Omgevingsvisie 2040 tekst".encode("utf-8"))
+    await extract_factor_live(factor_def=OMGEVINGSVISIE_FACTOR_DEF, parcel_id="p",
+                              policy_document=doc, claude_client=_mock_client(captured))
+    blocks = captured["messages"][0]["content"]
+    assert blocks[0]["type"] == "text"
+    assert "Omgevingsvisie 2040 tekst" in blocks[0]["text"]
+    assert all(b["type"] != "document" for b in blocks)
+
+
+@pytest.mark.asyncio
+async def test_pdf_still_sent_as_document_block():
+    captured: dict = {}
+    doc = SimpleNamespace(id=uuid.uuid4(), filename="wv.pdf", file_data=b"%PDF-1.7\n...")
+    await extract_factor_live(factor_def=OMGEVINGSVISIE_FACTOR_DEF, parcel_id="p",
+                              policy_document=doc, claude_client=_mock_client(captured))
+    blocks = captured["messages"][0]["content"]
+    assert blocks[0]["type"] == "document"
+    assert blocks[0]["source"]["media_type"] == "application/pdf"
+```
+
+- [ ] **Step 2: Run → FAIL** (`cd backend && python -m pytest tests/unit/test_factor_extractor_text.py -q`) — current code always builds a document block, so `test_text_document_sent_as_text_block` fails.
+
+- [ ] **Step 3: Edit `extract_factor_live`** — replace the `pdf_base64 = ...` line (≈87) and the `messages=[...]` content list (≈122-138) with:
+
+```python
+    file_data = policy_document.file_data
+    if file_data[:5] == b"%PDF-":
+        pdf_base64 = base64.standard_b64encode(file_data).decode("utf-8")
+        doc_block = {
+            "type": "document",
+            "source": {"type": "base64", "media_type": "application/pdf", "data": pdf_base64},
+            "cache_control": {"type": "ephemeral"},
+        }
+    else:
+        text = file_data.decode("utf-8", errors="replace")
+        doc_block = {
+            "type": "text",
+            "text": f"<beleidsdocument filename=\"{policy_document.filename}\">\n{text}\n</beleidsdocument>",
+            "cache_control": {"type": "ephemeral"},
+        }
+```
+
+and the message content becomes `"content": [doc_block, {"type": "text", "text": user_instructions}]`.
+
+- [ ] **Step 4: Run → PASS** (both tests). Also run the existing extractor/woonvisie tests to confirm no regression: `cd backend && python -m pytest tests/unit -k "factor_extract or woonvisie" -q`.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add backend/app/ai/factor_extractor.py backend/tests/unit/test_factor_extractor_text.py
+git commit -m "M053/S01: extract_factor_live handles text documents (large-PDF workaround)"
+```
 
 ---
 
@@ -911,7 +1014,16 @@ async def _run(url: str) -> int:
         logger.error("URL did not return a PDF (status=%s)", resp.status_code)
         return 1
     pdf = resp.content
-    logger.info("Fetched %.1f KB", len(pdf) / 1024)
+    logger.info("Fetched %.1f KB PDF", len(pdf) / 1024)
+
+    # Extract text (the 30 MB image-PDF is too large for the API; text is ~175 KB).
+    import fitz  # PyMuPDF
+
+    doc_pdf = fitz.open(stream=pdf, filetype="pdf")
+    text = "\n".join(f"[p.{i}]\n{page.get_text()}" for i, page in enumerate(doc_pdf, start=1))
+    text = text[:480_000]  # ~120k tokens safety cap
+    text_bytes = text.encode("utf-8")
+    logger.info("Extracted %d pages → %.1f KB text", doc_pdf.page_count, len(text_bytes) / 1024)
 
     async with async_session_factory() as session:
         user = (await session.execute(
@@ -938,10 +1050,10 @@ async def _run(url: str) -> int:
             entity_type="gemeente",
             entity_code=VENLO_GM,
             source_key="omgevingsvisie",
-            filename="omgevingsvisie_venlo_2040.pdf",
-            content_type="application/pdf",
-            file_data=pdf,
-            file_size=len(pdf),
+            filename="omgevingsvisie_venlo_2040.txt",
+            content_type="text/plain",
+            file_data=text_bytes,
+            file_size=len(text_bytes),
             uploaded_by_user_id=user.id,
             organization_id=org_id,
             is_global=False,
