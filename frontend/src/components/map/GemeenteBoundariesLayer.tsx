@@ -112,11 +112,18 @@ export function addGemeenteBoundariesLayer(
       type: 'fill',
       source: GEMEENTE_SOURCE_ID,
       paint: {
-        'fill-color': '#d4a843',
+        // Shared active-state language: selected gemeente gets the same green
+        // fill as a selected parcel/wijk (#22c55e); hover/default stay amber.
+        'fill-color': [
+          'case',
+          ['boolean', ['feature-state', 'selected'], false],
+          '#22c55e',
+          '#d4a843',
+        ],
         'fill-opacity': [
           'case',
           ['boolean', ['feature-state', 'selected'], false],
-          0.35, // Selected — constant highlight
+          0.18, // Selected — constant green highlight
           ['boolean', ['feature-state', 'hover'], false],
           0.4, // Hover opacity
           0.15, // Default opacity
@@ -126,14 +133,19 @@ export function addGemeenteBoundariesLayer(
     beforeLayer
   );
 
-  // Add line layer for gemeente borders
+  // Add line layer for gemeente borders (selected = bold green, matches active state)
   map.addLayer(
     {
       id: GEMEENTE_LINE_LAYER,
       type: 'line',
       source: GEMEENTE_SOURCE_ID,
       paint: {
-        'line-color': '#d4a843',
+        'line-color': [
+          'case',
+          ['boolean', ['feature-state', 'selected'], false],
+          '#16a34a',
+          '#d4a843',
+        ],
         'line-width': [
           'case',
           ['boolean', ['feature-state', 'selected'], false],
@@ -143,7 +155,7 @@ export function addGemeenteBoundariesLayer(
         'line-opacity': [
           'case',
           ['boolean', ['feature-state', 'selected'], false],
-          0.9,
+          1,
           0.5,
         ],
       },

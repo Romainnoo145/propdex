@@ -67,41 +67,50 @@ export function addWijkBoundariesLayer(
       type: 'fill',
       source: WIJK_SOURCE_ID,
       paint: {
-        'fill-color': '#d97706',
-        // Subtle amber wash on the selected wijk so you can see which one you're
-        // looking at, without obscuring parcel-score colors on the rest.
+        // Shared active-state language: the selected wijk gets the same green
+        // fill as a selected parcel (#22c55e); others stay faint amber context.
+        'fill-color': [
+          'case',
+          ['boolean', ['feature-state', 'selected'], false],
+          '#22c55e',
+          '#d97706',
+        ],
         'fill-opacity': [
           'case',
           ['boolean', ['feature-state', 'selected'], false],
-          0.16,
-          0.08,
+          0.15,
+          0.06,
         ],
       },
     },
     beforeLayer
   );
 
-  // Add line layer for wijk borders (dashed — subordinate to parcel data;
-  // the selected wijk gets a bold, opaque border, others stay subordinate).
+  // Add line layer for wijk borders. Selected wijk = bold green border (matches
+  // the selected-parcel/gemeente active state); others = thin faint amber context.
   map.addLayer(
     {
       id: WIJK_LINE_LAYER,
       type: 'line',
       source: WIJK_SOURCE_ID,
       paint: {
-        'line-color': '#d97706', // Amber-600 — visible as highlighted context
+        'line-color': [
+          'case',
+          ['boolean', ['feature-state', 'selected'], false],
+          '#16a34a',
+          '#d97706',
+        ],
         'line-width': [
           'case',
           ['boolean', ['feature-state', 'selected'], false],
-          4,
-          1.5,
+          2.5,
+          1,
         ],
-        'line-dasharray': [3, 2],
         'line-opacity': [
           'case',
           ['boolean', ['feature-state', 'selected'], false],
           1,
-          0.6,
+          0.45,
         ],
       },
     },
