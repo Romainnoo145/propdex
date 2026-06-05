@@ -21,7 +21,7 @@ import base64
 import logging
 import time
 from datetime import datetime
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from anthropic import AsyncAnthropic
 from pydantic import BaseModel, ValidationError
@@ -84,7 +84,21 @@ async def extract_factor_live(
         from app.core.config import settings
         model = settings.AI_MODEL
 
-    pdf_base64 = base64.standard_b64encode(policy_document.file_data).decode("utf-8")
+    file_data = policy_document.file_data
+    if file_data[:5] == b"%PDF-":
+        pdf_base64 = base64.standard_b64encode(file_data).decode("utf-8")
+        doc_block: dict[str, Any] = {
+            "type": "document",
+            "source": {"type": "base64", "media_type": "application/pdf", "data": pdf_base64},
+            "cache_control": {"type": "ephemeral"},
+        }
+    else:
+        text = file_data.decode("utf-8", errors="replace")
+        doc_block = {
+            "type": "text",
+            "text": f'<beleidsdocument filename="{policy_document.filename}">\n{text}\n</beleidsdocument>',
+            "cache_control": {"type": "ephemeral"},
+        }
 
     system_text = (
         f"Je extraheert gestructureerde data uit een beleidsdocument voor factor "
@@ -100,7 +114,7 @@ async def extract_factor_live(
 
     try:
         t0 = time.monotonic()
-        response = await client.messages.create(
+        response = await client.messages.create(  # type: ignore[call-overload]
             model=model,
             max_tokens=_MAX_TOKENS,
             temperature=_TEMPERATURE,
@@ -123,15 +137,7 @@ async def extract_factor_live(
                 {
                     "role": "user",
                     "content": [
-                        {
-                            "type": "document",
-                            "source": {
-                                "type": "base64",
-                                "media_type": "application/pdf",
-                                "data": pdf_base64,
-                            },
-                            "cache_control": {"type": "ephemeral"},
-                        },
+                        doc_block,
                         {"type": "text", "text": user_instructions},
                     ],
                 }
