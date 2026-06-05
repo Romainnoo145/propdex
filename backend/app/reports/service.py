@@ -1464,6 +1464,7 @@ async def generate_report_from_parcel(
             report_name=report.report_name,
             parcel_id=parcel_id,
             user_id=user_id,
+            organization_id=organization_id,
             db=session,
         )
         logger.info(

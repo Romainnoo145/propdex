@@ -51,11 +51,16 @@ def user_id():
     return uuid.uuid4()
 
 
+@pytest.fixture
+def organization_id():
+    return uuid.uuid4()
+
+
 class TestChecklistOrchestrator:
     """Test generate_checklist_documents orchestration logic."""
 
     @pytest.mark.asyncio
-    async def test_generates_all_available_docs(self, mock_db, user_id):
+    async def test_generates_all_available_docs(self, mock_db, user_id, organization_id):
         """Full report data → all 11 doc types generated."""
         report_data = _make_full_report_data()
 
@@ -69,6 +74,7 @@ class TestChecklistOrchestrator:
                 report_name="Test Report",
                 parcel_id="ASD01-F-1234",
                 user_id=user_id,
+                organization_id=organization_id,
                 db=mock_db,
             )
 
@@ -80,7 +86,7 @@ class TestChecklistOrchestrator:
         assert mock_pdf.call_count == 12
 
     @pytest.mark.asyncio
-    async def test_skips_unavailable_docs(self, mock_db, user_id):
+    async def test_skips_unavailable_docs(self, mock_db, user_id, organization_id):
         """Partial data → only available types generated, rest skipped."""
         report_data = {
             "cadastral_parcels": [{"kadastraal_nummer": "X"}],
@@ -97,6 +103,7 @@ class TestChecklistOrchestrator:
                 report_name="Partial",
                 parcel_id="X",
                 user_id=user_id,
+                organization_id=organization_id,
                 db=mock_db,
             )
 
@@ -107,7 +114,7 @@ class TestChecklistOrchestrator:
         assert mock_pdf.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_handles_single_template_failure(self, mock_db, user_id):
+    async def test_handles_single_template_failure(self, mock_db, user_id, organization_id):
         """One template raises → others still generated, failure recorded."""
         report_data = _make_full_report_data()
 
@@ -125,6 +132,7 @@ class TestChecklistOrchestrator:
                 report_name="Test",
                 parcel_id="X",
                 user_id=user_id,
+                organization_id=organization_id,
                 db=mock_db,
             )
 
@@ -135,7 +143,7 @@ class TestChecklistOrchestrator:
         assert len(result.generated) == 11  # 12 - 1 failure
 
     @pytest.mark.asyncio
-    async def test_returns_summary_dict_structure(self, mock_db, user_id):
+    async def test_returns_summary_dict_structure(self, mock_db, user_id, organization_id):
         """Result has generated/failed/skipped/total_bytes fields."""
         report_data = {"cadastral_parcels": [{"kadastraal_nummer": "X"}]}
 
@@ -149,6 +157,7 @@ class TestChecklistOrchestrator:
                 report_name="Test",
                 parcel_id="X",
                 user_id=user_id,
+                organization_id=organization_id,
                 db=mock_db,
             )
 
@@ -162,7 +171,7 @@ class TestChecklistOrchestrator:
         assert isinstance(result.total_bytes, int)
 
     @pytest.mark.asyncio
-    async def test_empty_data_generates_nothing(self, mock_db, user_id):
+    async def test_empty_data_generates_nothing(self, mock_db, user_id, organization_id):
         """Empty report_data → no PDFs generated, all types skipped."""
         with patch(
             "app.reports.checklist_orchestrator.generate_checklist_pdf"
@@ -172,6 +181,7 @@ class TestChecklistOrchestrator:
                 report_name="Empty",
                 parcel_id="X",
                 user_id=user_id,
+                organization_id=organization_id,
                 db=mock_db,
             )
 
@@ -182,7 +192,7 @@ class TestChecklistOrchestrator:
         mock_pdf.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_db_insert_called_per_generated_doc(self, mock_db, user_id):
+    async def test_db_insert_called_per_generated_doc(self, mock_db, user_id, organization_id):
         """Each generated doc results in a DB insert."""
         report_data = {
             "cadastral_parcels": [{"kadastraal_nummer": "X"}],
@@ -199,10 +209,38 @@ class TestChecklistOrchestrator:
                 report_name="Test",
                 parcel_id="X",
                 user_id=user_id,
+                organization_id=organization_id,
                 db=mock_db,
             )
 
         # 2 available types (kadaster, bestemmingsplan) → 2 inserts + 1 flush
         assert mock_db.execute.call_count == 2
         mock_db.flush.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_insert_includes_organization_id(self, mock_db, user_id, organization_id):
+        """Regression: every INSERT must carry organization_id (NOT NULL column).
+
+        Omitting it raised a NOT NULL violation that silently broke checklist-doc
+        generation everywhere. The org_id must reach the SQL params as a string.
+        """
+        report_data = {"cadastral_parcels": [{"kadastraal_nummer": "X"}]}
+
+        with patch(
+            "app.reports.checklist_orchestrator.generate_checklist_pdf"
+        ) as mock_pdf:
+            mock_pdf.return_value = b"%PDF-x"
+
+            await generate_checklist_documents(
+                report_data=report_data,
+                report_name="Test",
+                parcel_id="X",
+                user_id=user_id,
+                organization_id=organization_id,
+                db=mock_db,
+            )
+
+        # The params dict is the second positional arg to db.execute(text, params)
+        params = mock_db.execute.call_args.args[1]
+        assert params["organization_id"] == str(organization_id)
 

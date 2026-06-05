@@ -290,6 +290,7 @@ async def get_checklist_status(
                     report_name=report.report_name,
                     parcel_id=parcel_id,
                     user_id=user_id,
+                    organization_id=organization_id,
                     db=db,
                 )
                 await db.commit()
