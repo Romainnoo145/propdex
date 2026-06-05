@@ -12,6 +12,10 @@ let wijkGeoJSONData: GeoJSON.FeatureCollection | null = null;
 // Track hovered wijk for feature-state management
 let hoveredWijkId: string | null = null;
 
+// Track selected (clicked) wijk for persistent highlight — so you can see the
+// boundary of the wijk you're looking at (mirrors GemeenteBoundariesLayer).
+let selectedWijkId: string | null = null;
+
 /**
  * Add CBS wijk boundary layer to the map with click, hover interaction, and labels.
  *
@@ -64,13 +68,21 @@ export function addWijkBoundariesLayer(
       source: WIJK_SOURCE_ID,
       paint: {
         'fill-color': '#d97706',
-        'fill-opacity': 0.08,
+        // Subtle amber wash on the selected wijk so you can see which one you're
+        // looking at, without obscuring parcel-score colors on the rest.
+        'fill-opacity': [
+          'case',
+          ['boolean', ['feature-state', 'selected'], false],
+          0.16,
+          0.08,
+        ],
       },
     },
     beforeLayer
   );
 
-  // Add line layer for wijk borders (dashed — subordinate to parcel data)
+  // Add line layer for wijk borders (dashed — subordinate to parcel data;
+  // the selected wijk gets a bold, opaque border, others stay subordinate).
   map.addLayer(
     {
       id: WIJK_LINE_LAYER,
@@ -78,9 +90,19 @@ export function addWijkBoundariesLayer(
       source: WIJK_SOURCE_ID,
       paint: {
         'line-color': '#d97706', // Amber-600 — visible as highlighted context
-        'line-width': 2,
+        'line-width': [
+          'case',
+          ['boolean', ['feature-state', 'selected'], false],
+          4,
+          1.5,
+        ],
         'line-dasharray': [3, 2],
-        'line-opacity': 0.85,
+        'line-opacity': [
+          'case',
+          ['boolean', ['feature-state', 'selected'], false],
+          1,
+          0.6,
+        ],
       },
     },
     beforeLayer
@@ -132,6 +154,19 @@ export function addWijkBoundariesLayer(
         geometry &&
         (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon')
       ) {
+        // Clear previous selection, then highlight the clicked wijk's boundary.
+        if (selectedWijkId) {
+          map.setFeatureState(
+            { source: WIJK_SOURCE_ID, id: selectedWijkId },
+            { selected: false }
+          );
+        }
+        selectedWijkId = statcode;
+        map.setFeatureState(
+          { source: WIJK_SOURCE_ID, id: selectedWijkId },
+          { selected: true }
+        );
+
         const bbox = calculateBboxFromGeometry(geometry);
         onWijkClick(statcode, statnaam, bbox, geometry);
       }
@@ -202,8 +237,10 @@ export function removeWijkBoundariesLayer(map: maplibregl.Map): void {
   }
   map.getCanvas().style.cursor = '';
 
-  // Clear cached GeoJSON
+  // Clear cached GeoJSON + selection/hover state
   wijkGeoJSONData = null;
+  selectedWijkId = null;
+  hoveredWijkId = null;
 
   // Remove layers (this also removes layer-specific event handlers)
   // Remove labels first, then line, then fill
