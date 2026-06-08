@@ -351,10 +351,6 @@ async def rescore_parcel(
 
             flags = dict(scan.flags or {})
             flags["parcel_id"] = parcel_id
-            if wijk_naam:
-                # Cascade gebied-match key — not persisted on scan flags, so inject
-                # it here or score_beleidsalignement/woonvisie_match can't match.
-                flags["wijk_naam"] = wijk_naam
             flags = await enrich_parcel_data_with_brk(flags, org_uuid, db)
             pt_response = await get_project_type(
                 db, parcel_id=parcel_id, organization_id=org_uuid
@@ -368,8 +364,12 @@ async def rescore_parcel(
                 gemeente_code=gemeente_code,
                 organization_id=org_uuid,
             )
+            # wijk_naam is the cascade gebied-match key but isn't persisted on scan
+            # flags (area_scan only injects it at score time). Add it to the scoring
+            # input only — not the stored flags — to avoid a schema divergence.
+            scoring_input = {**flags, "wijk_naam": wijk_naam} if wijk_naam else flags
             score_result = compute_score_v3(
-                flags,
+                scoring_input,
                 project_type=project_type_value,
                 cascade_payloads=cascade_payloads,
             )
