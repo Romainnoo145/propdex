@@ -7,7 +7,7 @@
  *
  * Visual pattern mirrors CredentialConfigModal (Plan 05-03):
  *  - AnimatePresence backdrop (bg-black/30 backdrop-blur-sm)
- *  - Glass panel (bg-white/60 backdrop-blur-[24px], rounded-[24px])
+ *  - Solid white panel (bg-white, rounded-[24px]) — matches content popups
  *  - Plus Jakarta Sans inline style
  *  - Close on X button or backdrop click
  *
@@ -65,7 +65,7 @@ export function ActionItemDetailModal({ open, onClose, sourceKey }: Props) {
           onClick={onClose}
         >
           <motion.div
-            className="relative w-full max-w-lg mx-4 rounded-[24px] bg-white/60 backdrop-blur-[24px] border border-white/40 shadow-xl p-7"
+            className="relative w-full max-w-lg mx-4 rounded-[24px] bg-white border border-[#EAEFEF] shadow-2xl p-7"
             style={{ fontFamily: 'Plus Jakarta Sans, ui-sans-serif, system-ui' }}
             initial={{ opacity: 0, scale: 0.96, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -125,7 +125,7 @@ export function ActionItemDetailModal({ open, onClose, sourceKey }: Props) {
             </p>
 
             {entry.contact && (
-              <div className="mt-4 rounded-xl bg-white/40 border border-white/60 p-3">
+              <div className="mt-4 rounded-xl bg-[#F2F6F3] border border-[#EAEFEF] p-3">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
                   Contact
                 </p>
