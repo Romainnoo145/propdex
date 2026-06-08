@@ -226,14 +226,14 @@ export function OmgevingsvisieDetailContent({
       {/* Verdict — colored keyline statement (editorial, no box/emoji) */}
       {verdict && verdictCopy && (
         <div className={`mt-7 border-l-[3px] pl-5 ${VERDICT_KEYLINE[verdict].border}`}>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2">
             <p className={`text-[20px] font-black tracking-tight ${VERDICT_KEYLINE[verdict].label}`}>
               {verdictCopy.label}
             </p>
             {(() => {
               const Icon = VERDICT_ICON[verdict]
               return Icon ? (
-                <Icon size={19} strokeWidth={3} className={VERDICT_KEYLINE[verdict].label} />
+                <Icon size={20} strokeWidth={3} className={VERDICT_KEYLINE[verdict].label} />
               ) : null
             })()}
           </div>
