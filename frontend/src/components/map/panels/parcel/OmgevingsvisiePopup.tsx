@@ -140,6 +140,125 @@ export function resolvePopupCitaat(
   return matched_policy ? (matched_policy.citaat || algemeen_citaat) : algemeen_citaat
 }
 
+/* ── Detail content (reusable: popup drawer + in-panel drill-down) ── */
+
+export interface OmgevingsvisieDetailContentProps {
+  gemeente: string
+  tijdshorizon: number
+  matched_policy: GebiedPolicy | null
+  algemeen_citaat: string
+  verdict?: BeleidsVerdict
+  randvoorwaarden?: Randvoorwaarde[]
+}
+
+/**
+ * The omgevingsvisie detail body — meta line, gebied title, karakter,
+ * verdict, citaat, and the Randvoorwaarden section. Renders ONLY content
+ * (no portal, no backdrop, no close button), so it can live inside the
+ * drawer chrome OR inside the parcel detail panel's own scroll + back button.
+ */
+export function OmgevingsvisieDetailContent({
+  gemeente,
+  tijdshorizon,
+  matched_policy,
+  algemeen_citaat,
+  verdict,
+  randvoorwaarden,
+}: OmgevingsvisieDetailContentProps) {
+  const hasMatch = matched_policy != null && typeof matched_policy === 'object'
+  const karakter = hasMatch ? matched_policy!.karakter : null
+  const citaat = resolvePopupCitaat(matched_policy, algemeen_citaat)
+  const titel = hasMatch ? matched_policy!.gebied_naam : 'Gemeente-breed'
+  const pagina = hasMatch ? (matched_policy!.pagina ?? null) : null
+  const verdictCopy = verdict ? VERDICT_COPY[verdict] : undefined
+  const randvoorwaardeGroups =
+    randvoorwaarden && randvoorwaarden.length > 0 ? groupRandvoorwaarden(randvoorwaarden) : []
+
+  return (
+    <>
+      {/* Meta line — small, single row */}
+      <div className="flex items-center gap-2 text-[11px] text-[#9CA3AF]">
+        <span>Omgevingsvisie {gemeente} {tijdshorizon}</span>
+        {pagina != null && (
+          <>
+            <span>·</span>
+            <span>p. {pagina}</span>
+          </>
+        )}
+      </div>
+
+      {/* Gebied title */}
+      <h2 className="mt-3 text-[36px] font-black tracking-[-0.03em] text-[#0E1111] leading-[1.05]">
+        {titel}
+      </h2>
+
+      {/* Karakter + prioriteit — meta */}
+      {karakter && (
+        <div className="mt-3 flex items-center gap-2 text-[13px] text-[#6B7280]">
+          <span className={`inline-block h-1.5 w-1.5 rounded-full ${KARAKTER_DOT[karakter]}`} />
+          <span>{KARAKTER_LABEL[karakter]}</span>
+          {hasMatch && matched_policy!.woningbouwprioriteit !== 'niet_benoemd' && (
+            <>
+              <span>·</span>
+              <span>woningbouwprioriteit {matched_policy!.woningbouwprioriteit}</span>
+            </>
+          )}
+        </div>
+      )}
+      {!hasMatch && (
+        <div className="mt-3 text-[13px] text-[#6B7280] italic">geen gebied-specifieke tekst</div>
+      )}
+
+      {/* Verdict — the new focal point */}
+      {verdictCopy && (
+        <p className={`mt-8 text-[18px] font-semibold leading-snug ${verdictCopy.color}`}>
+          {verdictCopy.mark} {verdictCopy.line}
+        </p>
+      )}
+
+      {/* Citaat — demoted to supporting evidence */}
+      {citaat && (
+        <p className="mt-6 text-[13px] leading-[1.7] text-[#6B7280] whitespace-pre-line">
+          {citaat}
+        </p>
+      )}
+
+      {/* Randvoorwaarden — gemeente-brede toetsingsregels, grouped by categorie */}
+      {randvoorwaardeGroups.length > 0 && (
+        <div className="mt-8 border-t border-[#F2F6F3] pt-6">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            Randvoorwaarden
+          </p>
+          <div className="mt-4 space-y-6">
+            {randvoorwaardeGroups.map((group) => (
+              <div key={group.categorie}>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
+                  {RANDVOORWAARDE_LABEL[group.categorie] ?? group.categorie}
+                </p>
+                <div className="mt-2 space-y-3">
+                  {group.items.map((rv, i) => (
+                    <div key={`${group.categorie}-${i}`}>
+                      <p className="text-[13px] font-semibold text-[#0E1111]">{rv.titel}</p>
+                      <p className="text-[12px] leading-relaxed text-[#6B7280]">
+                        {rv.samenvatting}
+                      </p>
+                      {rv.citaat && (
+                        <p className="mt-1 text-[11px] italic text-slate-400">
+                          “{rv.citaat}”{rv.pagina ? ` · p.${rv.pagina}` : ''}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 /* ── Component ─────────────────────────────────────────────────── */
 
 export function OmgevingsvisiePopup({
@@ -153,15 +272,6 @@ export function OmgevingsvisiePopup({
   randvoorwaarden,
 }: OmgevingsvisiePopupProps) {
   if (!isOpen) return null
-
-  const hasMatch = matched_policy != null && typeof matched_policy === 'object'
-  const karakter = hasMatch ? matched_policy!.karakter : null
-  const citaat = resolvePopupCitaat(matched_policy, algemeen_citaat)
-  const titel = hasMatch ? matched_policy!.gebied_naam : 'Gemeente-breed'
-  const pagina = hasMatch ? (matched_policy!.pagina ?? null) : null
-  const verdictCopy = verdict ? VERDICT_COPY[verdict] : undefined
-  const randvoorwaardeGroups =
-    randvoorwaarden && randvoorwaarden.length > 0 ? groupRandvoorwaarden(randvoorwaarden) : []
 
   return createPortal(
     <AnimatePresence>
@@ -193,85 +303,14 @@ export function OmgevingsvisiePopup({
           </button>
 
           <div className="flex-1 min-h-0 overflow-y-auto px-12 py-12">
-            {/* Meta line — small, single row */}
-            <div className="flex items-center gap-2 text-[11px] text-[#9CA3AF]">
-              <span>Omgevingsvisie {gemeente} {tijdshorizon}</span>
-              {pagina != null && (
-                <>
-                  <span>·</span>
-                  <span>p. {pagina}</span>
-                </>
-              )}
-            </div>
-
-            {/* Gebied title */}
-            <h2 className="mt-3 text-[36px] font-black tracking-[-0.03em] text-[#0E1111] leading-[1.05]">
-              {titel}
-            </h2>
-
-            {/* Karakter + prioriteit — meta */}
-            {karakter && (
-              <div className="mt-3 flex items-center gap-2 text-[13px] text-[#6B7280]">
-                <span className={`inline-block h-1.5 w-1.5 rounded-full ${KARAKTER_DOT[karakter]}`} />
-                <span>{KARAKTER_LABEL[karakter]}</span>
-                {hasMatch && matched_policy!.woningbouwprioriteit !== 'niet_benoemd' && (
-                  <>
-                    <span>·</span>
-                    <span>woningbouwprioriteit {matched_policy!.woningbouwprioriteit}</span>
-                  </>
-                )}
-              </div>
-            )}
-            {!hasMatch && (
-              <div className="mt-3 text-[13px] text-[#6B7280] italic">geen gebied-specifieke tekst</div>
-            )}
-
-            {/* Verdict — the new focal point */}
-            {verdictCopy && (
-              <p className={`mt-8 text-[18px] font-semibold leading-snug ${verdictCopy.color}`}>
-                {verdictCopy.mark} {verdictCopy.line}
-              </p>
-            )}
-
-            {/* Citaat — demoted to supporting evidence */}
-            {citaat && (
-              <p className="mt-6 text-[13px] leading-[1.7] text-[#6B7280] whitespace-pre-line">
-                {citaat}
-              </p>
-            )}
-
-            {/* Randvoorwaarden — gemeente-brede toetsingsregels, grouped by categorie */}
-            {randvoorwaardeGroups.length > 0 && (
-              <div className="mt-8 border-t border-[#F2F6F3] pt-6">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                  Randvoorwaarden
-                </p>
-                <div className="mt-4 space-y-6">
-                  {randvoorwaardeGroups.map((group) => (
-                    <div key={group.categorie}>
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
-                        {RANDVOORWAARDE_LABEL[group.categorie] ?? group.categorie}
-                      </p>
-                      <div className="mt-2 space-y-3">
-                        {group.items.map((rv, i) => (
-                          <div key={`${group.categorie}-${i}`}>
-                            <p className="text-[13px] font-semibold text-[#0E1111]">{rv.titel}</p>
-                            <p className="text-[12px] leading-relaxed text-[#6B7280]">
-                              {rv.samenvatting}
-                            </p>
-                            {rv.citaat && (
-                              <p className="mt-1 text-[11px] italic text-slate-400">
-                                “{rv.citaat}”{rv.pagina ? ` · p.${rv.pagina}` : ''}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <OmgevingsvisieDetailContent
+              gemeente={gemeente}
+              tijdshorizon={tijdshorizon}
+              matched_policy={matched_policy}
+              algemeen_citaat={algemeen_citaat}
+              verdict={verdict}
+              randvoorwaarden={randvoorwaarden}
+            />
           </div>
         </motion.div>
       </motion.div>

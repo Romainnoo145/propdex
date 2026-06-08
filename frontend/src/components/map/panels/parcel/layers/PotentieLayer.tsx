@@ -267,6 +267,12 @@ function deriveV21Cards(parcel: ScanResultItem): Omit<PageCard, 'factor_key' | '
 interface PotentieLayerProps {
   parcel: ScanResultItem
   gemeenteNaam: string
+  /**
+   * When provided, the omgevingsvisie card drills down in-panel (handled by
+   * the parent ParcelDetailPanel view-stack) instead of opening the standalone
+   * OmgevingsvisiePopup drawer. Absent → old popup behavior (back-compat).
+   */
+  onOpenOmgevingsvisie?: () => void
 }
 
 const POTENTIE_KEYS = [
@@ -275,7 +281,7 @@ const POTENTIE_KEYS = [
   'capaciteit', 'woonvisie_match', 'beleidsalignement',
 ] as const
 
-export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
+export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie }: PotentieLayerProps) {
   const [page, setPage] = useState(0)
   const [woonvisieOpen, setWoonvisieOpen] = useState(false)
   const [omgevingsvisieOpen, setOmgevingsvisieOpen] = useState(false)
@@ -425,7 +431,7 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
                     card.factor_key === 'woonvisie_match' && hasWoonvisieData
                       ? () => setWoonvisieOpen(true)
                       : card.factor_key === 'beleidsalignement' && hasOmgevingsvisieData
-                        ? () => setOmgevingsvisieOpen(true)
+                        ? onOpenOmgevingsvisie ?? (() => setOmgevingsvisieOpen(true))
                         : undefined
                   }
                 />
@@ -449,7 +455,7 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
         />
       )}
 
-      {hasOmgevingsvisieData && (
+      {hasOmgevingsvisieData && !onOpenOmgevingsvisie && (
         <OmgevingsvisiePopup
           isOpen={omgevingsvisieOpen}
           onClose={() => setOmgevingsvisieOpen(false)}

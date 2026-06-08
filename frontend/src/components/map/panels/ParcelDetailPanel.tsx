@@ -13,6 +13,7 @@ import {
 } from './parcel/ParcelBentoOverview'
 import { CategoryTabs } from './parcel/CategoryTabs'
 import { PotentieLayer } from './parcel/layers/PotentieLayer'
+import { OmgevingsvisieDetailContent, type GebiedPolicy, type BeleidsVerdict, type Randvoorwaarde } from './parcel/OmgevingsvisiePopup'
 import { RisicoLayer } from './parcel/layers/RisicoLayer'
 
 import { BronnenLayer } from './parcel/layers/BronnenLayer'
@@ -32,6 +33,7 @@ type PanelView =
   | { kind: 'potentie' }
   | { kind: 'risico' }
   | { kind: 'dossiers' }
+  | { kind: 'omgevingsvisie' }
 
 const prefersReducedMotion =
   typeof window !== 'undefined' &&
@@ -41,6 +43,7 @@ const VIEW_LABELS: Record<Exclude<PanelView['kind'], 'overview'>, string> = {
   potentie: 'Potentie',
   risico: 'Risico',
   dossiers: 'Dossiers',
+  omgevingsvisie: 'Omgevingsvisie',
 }
 
 interface ParcelDetailPanelProps {
@@ -75,7 +78,10 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
   }, [])
 
   const handleBack = useCallback(() => {
-    setView({ kind: 'overview' })
+    // Omgevingsvisie is a drill-down from within the Potentie tab → back to Potentie.
+    setView((prev) =>
+      prev.kind === 'omgevingsvisie' ? { kind: 'potentie' } : { kind: 'overview' },
+    )
   }, [])
 
   const hasReport = !!(matchedFavorite?.has_report && matchedFavorite?.report_id)
@@ -136,11 +142,48 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
   function renderDetailLayer() {
     switch (view.kind) {
       case 'potentie':
-        return <PotentieLayer parcel={parcel} gemeenteNaam={gemeenteNaam ?? ''} />
+        return (
+          <PotentieLayer
+            parcel={parcel}
+            gemeenteNaam={gemeenteNaam ?? ''}
+            onOpenOmgevingsvisie={() => setView({ kind: 'omgevingsvisie' })}
+          />
+        )
       case 'risico':
         return <RisicoLayer parcel={parcel} />
       case 'dossiers':
         return <BronnenLayer parcel={parcel} hasReport={hasReport} />
+      case 'omgevingsvisie': {
+        // Same shape PotentieLayer reads off score_breakdown['beleidsalignement'].
+        const waarde = (parcel.score_breakdown as Record<string, { waarde?: unknown } | undefined> | null)
+          ?.['beleidsalignement']?.waarde as {
+          matched_gebied: string | null
+          matched_policy: GebiedPolicy | null
+          algemeen_citaat: string
+          tijdshorizon: number
+          verdict?: string
+          randvoorwaarden?: Randvoorwaarde[]
+        } | null | undefined
+        if (!waarde) {
+          return (
+            <div className="px-8 py-6 text-[13px] text-slate-400 italic">
+              Geen omgevingsvisie-beleid voor dit perceel.
+            </div>
+          )
+        }
+        return (
+          <div className="px-8 py-6 overflow-y-auto">
+            <OmgevingsvisieDetailContent
+              gemeente={gemeenteNaam ?? ''}
+              tijdshorizon={waarde.tijdshorizon ?? 0}
+              matched_policy={waarde.matched_policy}
+              algemeen_citaat={waarde.algemeen_citaat ?? ''}
+              verdict={waarde.verdict as BeleidsVerdict | undefined}
+              randvoorwaarden={waarde.randvoorwaarden}
+            />
+          </div>
+        )
+      }
       default:
         return null
     }
@@ -191,7 +234,13 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
           {/* Category tabs */}
           <div className="mt-4">
             <CategoryTabs
-              activeCategory={view.kind !== 'overview' ? view.kind : null}
+              activeCategory={
+                view.kind === 'overview'
+                  ? null
+                  : view.kind === 'omgevingsvisie'
+                    ? 'potentie' // drill-down lives in the Potentie tab
+                    : view.kind
+              }
               onSelect={handleSelectCategory}
             />
           </div>
