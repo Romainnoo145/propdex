@@ -5,7 +5,7 @@ import { PageTitleToggle } from '@/components/map/panels/parcel/layers/PageTitle
 import type { ScanResultItem, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/types/scan'
 import { isScoreV3 } from '@/lib/score'
 import { WoonvisiePopup, type WijkPolicy } from '../WoonvisiePopup'
-import { OmgevingsvisiePopup, type GebiedPolicy, type BeleidsVerdict } from '../OmgevingsvisiePopup'
+import { OmgevingsvisiePopup, type GebiedPolicy, type BeleidsVerdict, type Randvoorwaarde } from '../OmgevingsvisiePopup'
 import { FactorCard, GhostCard } from '../FactorCard'
 import { useParcelProjectType } from '@/hooks/useParcelProjectType'
 import { useFactorPins } from '@/hooks/useFactorPins'
@@ -301,6 +301,7 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
     algemeen_citaat: string
     tijdshorizon: number
     verdict?: string
+    randvoorwaarden?: Randvoorwaarde[]
   } | null
   const hasOmgevingsvisieData = omgevingsvisieWaarde !== null && omgevingsvisieWaarde !== undefined
 
@@ -458,6 +459,7 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
           algemeen_citaat={omgevingsvisieWaarde!.algemeen_citaat ?? ''}
           project_type={projectType}
           verdict={omgevingsvisieWaarde!.verdict as BeleidsVerdict | undefined}
+          randvoorwaarden={omgevingsvisieWaarde?.randvoorwaarden}
         />
       )}
     </div>

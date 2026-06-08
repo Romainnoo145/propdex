@@ -10,7 +10,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, within, userEvent } from 'storybook/test'
 import { OmgevingsvisiePopup } from '@/components/map/panels/parcel/OmgevingsvisiePopup'
-import type { GebiedPolicy, BeleidsVerdict } from '@/components/map/panels/parcel/OmgevingsvisiePopup'
+import type { GebiedPolicy, BeleidsVerdict, Randvoorwaarde } from '@/components/map/panels/parcel/OmgevingsvisiePopup'
 
 const meta: Meta<typeof OmgevingsvisiePopup> = {
   title: 'Parcel/OmgevingsvisiePopup',
@@ -57,6 +57,50 @@ const WERKLOCATIE: GebiedPolicy = {
 
 const ALGEMEEN_CITAAT =
   'We kiezen voor de compacte stad: verdichten binnen 15 minuten fietsafstand van de stations. Wonen, werken en ontspanning komen dichter bij elkaar. We bouwen slim, duurzaam en toekomstbestendig.'
+
+/* ── Mock randvoorwaarden (gemeente-brede toetsingsregels) ──────── */
+
+const RANDVOORWAARDEN: Randvoorwaarde[] = [
+  {
+    categorie: 'programmering',
+    titel: '70/30 verdeling',
+    samenvatting:
+      'Bij projecten vanaf 30 woningen geldt minimaal 30% sociale huur en maximaal 70% vrije sector.',
+    citaat: 'Bij nieuwbouwprogramma’s vanaf 30 woningen hanteren wij 70% vrije sector en 30% sociale huur',
+    pagina: 18,
+  },
+  {
+    categorie: 'programmering',
+    titel: 'Levensloopbestendig bouwen',
+    samenvatting: 'Minimaal 40% van de woningen moet levensloopbestendig of nultreden worden uitgevoerd.',
+    citaat: null,
+    pagina: 19,
+  },
+  {
+    categorie: 'financieel',
+    titel: 'Kostenverhaal',
+    samenvatting:
+      'De gemeente verhaalt plankosten en bovenwijkse voorzieningen via een anterieure overeenkomst.',
+    citaat: 'Kosten voor bovenwijkse voorzieningen worden verhaald via een anterieure overeenkomst',
+    pagina: 41,
+  },
+  {
+    categorie: 'duurzaamheid',
+    titel: 'Klimaatadaptief inrichten',
+    samenvatting:
+      'Nieuwe ontwikkelingen moeten waterberging op eigen terrein realiseren (minimaal 60 mm).',
+    citaat: 'Ontwikkelingen vangen minimaal 60 mm neerslag op eigen terrein op',
+    pagina: 52,
+  },
+  {
+    categorie: 'proces',
+    titel: 'Vroegtijdige participatie',
+    samenvatting:
+      'Initiatiefnemers betrekken omwonenden in een vroeg stadium en leveren een participatieverslag aan.',
+    citaat: null,
+    pagina: 63,
+  },
+]
 
 /* ── Story 1: Transformatiegebied — match (transformatie_wonen) ──── */
 
@@ -205,6 +249,35 @@ export const GeenBeleid: Story = {
     await expect(body.getByText('Gemeente-breed')).toBeInTheDocument()
     await expect(body.getByText(/geen gebied-specifieke tekst/)).toBeInTheDocument()
     await expect(body.getByText(/Geen gebied-specifiek beleid voor dit perceel/)).toBeInTheDocument()
+  },
+}
+
+/* ── Story: Met randvoorwaarden — grouped toetsingskader ────────── */
+
+export const MetRandvoorwaarden: Story = {
+  name: 'Met randvoorwaarden (grouped)',
+  args: {
+    isOpen: true,
+    onClose: () => {},
+    gemeente: 'Venlo',
+    tijdshorizon: 2040,
+    project_type: 'transformatie_wonen',
+    algemeen_citaat: ALGEMEEN_CITAAT,
+    matched_policy: TRANSFORMATIE,
+    verdict: 'kansrijk',
+    randvoorwaarden: RANDVOORWAARDEN,
+  },
+  play: async () => {
+    const body = within(document.body)
+    // Section label
+    await expect(body.getByText('Randvoorwaarden')).toBeInTheDocument()
+    // Categorie sub-labels (NL display labels)
+    await expect(body.getByText('Programmering')).toBeInTheDocument()
+    await expect(body.getByText('Financieel')).toBeInTheDocument()
+    await expect(body.getByText('Duurzaamheid')).toBeInTheDocument()
+    // Item titel + samenvatting
+    await expect(body.getByText('70/30 verdeling')).toBeInTheDocument()
+    await expect(body.getByText(/anterieure overeenkomst/)).toBeInTheDocument()
   },
 }
 

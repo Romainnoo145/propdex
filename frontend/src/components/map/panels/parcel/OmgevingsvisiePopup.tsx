@@ -31,6 +31,14 @@ export interface GebiedPolicy {
   pagina: number | null
 }
 
+export interface Randvoorwaarde {
+  categorie: string
+  titel: string
+  samenvatting: string
+  citaat?: string | null
+  pagina?: number | null
+}
+
 export interface OmgevingsvisiePopupProps {
   isOpen: boolean
   onClose: () => void
@@ -40,6 +48,48 @@ export interface OmgevingsvisiePopupProps {
   algemeen_citaat: string
   project_type: string
   verdict?: BeleidsVerdict
+  randvoorwaarden?: Randvoorwaarde[]
+}
+
+/* ── Randvoorwaarde categorie display labels (NL) + render order ── */
+
+const RANDVOORWAARDE_LABEL: Record<string, string> = {
+  programmering: 'Programmering',
+  financieel: 'Financieel',
+  doelgroep: 'Doelgroep',
+  duurzaamheid: 'Duurzaamheid',
+  ruimtelijk: 'Ruimtelijk',
+  proces: 'Proces',
+  markt: 'Markt',
+  overig: 'Overig',
+}
+
+const RANDVOORWAARDE_ORDER = [
+  'programmering', 'financieel', 'doelgroep', 'duurzaamheid',
+  'ruimtelijk', 'proces', 'markt', 'overig',
+]
+
+/** Group randvoorwaarden by categorie, in RANDVOORWAARDE_ORDER. */
+export function groupRandvoorwaarden(
+  randvoorwaarden: Randvoorwaarde[],
+): Array<{ categorie: string; items: Randvoorwaarde[] }> {
+  const byCategorie = new Map<string, Randvoorwaarde[]>()
+  for (const rv of randvoorwaarden) {
+    const bucket = byCategorie.get(rv.categorie)
+    if (bucket) bucket.push(rv)
+    else byCategorie.set(rv.categorie, [rv])
+  }
+  const ordered: Array<{ categorie: string; items: Randvoorwaarde[] }> = []
+  for (const cat of RANDVOORWAARDE_ORDER) {
+    const items = byCategorie.get(cat)
+    if (items) {
+      ordered.push({ categorie: cat, items })
+      byCategorie.delete(cat)
+    }
+  }
+  // Any unknown categorie not in the order list, appended in insertion order.
+  for (const [categorie, items] of byCategorie) ordered.push({ categorie, items })
+  return ordered
 }
 
 /* ── Karakter label (inline text, no chip) ─────────────────────── */
@@ -100,6 +150,7 @@ export function OmgevingsvisiePopup({
   matched_policy,
   algemeen_citaat,
   verdict,
+  randvoorwaarden,
 }: OmgevingsvisiePopupProps) {
   if (!isOpen) return null
 
@@ -109,6 +160,8 @@ export function OmgevingsvisiePopup({
   const titel = hasMatch ? matched_policy!.gebied_naam : 'Gemeente-breed'
   const pagina = hasMatch ? (matched_policy!.pagina ?? null) : null
   const verdictCopy = verdict ? VERDICT_COPY[verdict] : undefined
+  const randvoorwaardeGroups =
+    randvoorwaarden && randvoorwaarden.length > 0 ? groupRandvoorwaarden(randvoorwaarden) : []
 
   return createPortal(
     <AnimatePresence>
@@ -185,6 +238,39 @@ export function OmgevingsvisiePopup({
               <p className="mt-6 text-[13px] leading-[1.7] text-[#6B7280] whitespace-pre-line">
                 {citaat}
               </p>
+            )}
+
+            {/* Randvoorwaarden — gemeente-brede toetsingsregels, grouped by categorie */}
+            {randvoorwaardeGroups.length > 0 && (
+              <div className="mt-8 border-t border-[#F2F6F3] pt-6">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  Randvoorwaarden
+                </p>
+                <div className="mt-4 space-y-6">
+                  {randvoorwaardeGroups.map((group) => (
+                    <div key={group.categorie}>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
+                        {RANDVOORWAARDE_LABEL[group.categorie] ?? group.categorie}
+                      </p>
+                      <div className="mt-2 space-y-3">
+                        {group.items.map((rv, i) => (
+                          <div key={`${group.categorie}-${i}`}>
+                            <p className="text-[13px] font-semibold text-[#0E1111]">{rv.titel}</p>
+                            <p className="text-[12px] leading-relaxed text-[#6B7280]">
+                              {rv.samenvatting}
+                            </p>
+                            {rv.citaat && (
+                              <p className="mt-1 text-[11px] italic text-slate-400">
+                                “{rv.citaat}”{rv.pagina ? ` · p.${rv.pagina}` : ''}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </motion.div>
