@@ -35,7 +35,7 @@ concept, no new card, no second score.
 |---|---|
 | Name | **Randvoorwaarden** (section in the OmgevingsvisiePopup) |
 | Schema | `randvoorwaarden: list[Randvoorwaarde]` on `OmgevingsvisiePayload`, document-wide |
-| Categories | toetsingskader · kostenverhaal · short_stay · milieucategorie · natuurinclusiviteit · warmtenet · netcongestie · overig |
+| Categories | **generic cross-document set** (works for omgevingsvisie AND woonvisie): programmering · financieel · doelgroep · duurzaamheid · proces · ruimtelijk · markt · overig |
 | Scoring | unchanged (richting only). Randvoorwaarden = display-only, excluded from score/verdict |
 | Extraction | same Claude call (already reads the whole doc); `SCHEMA_VERSION` 4 → 5 → re-extract + re-backfill |
 | UI | a "Randvoorwaarden" section under the verdict/citaat in `OmgevingsvisiePopup` |
@@ -46,9 +46,18 @@ concept, no new card, no second score.
 In `backend/app/ai/factors/beleidsalignement.py`:
 
 ```python
+# Generic, cross-document categories so the SAME Randvoorwaarde schema serves both the
+# omgevingsvisie and the woonvisie (slice 2). Examples of what maps where:
+#   programmering  → 70/30-regel, segmenten, woningaantallen
+#   financieel     → kostenverhaal, grondbeleid, anti-speculatie/zelfbewoning
+#   doelgroep      → studenten-voorkeurszones, short-stay, woonzorg/ouderen
+#   duurzaamheid   → circulair/bio-based bouwen, warmtenet, natuurinclusiviteit
+#   proces         → toetsingskader, participatie, vergunning
+#   ruimtelijk     → milieucategorie, stedelijke contour, dichtheid
+#   markt          → tekorten, kansen, prijsklassen
 RandvoorwaardeCategorie = Literal[
-    "toetsingskader", "kostenverhaal", "short_stay", "milieucategorie",
-    "natuurinclusiviteit", "warmtenet", "netcongestie", "overig",
+    "programmering", "financieel", "doelgroep", "duurzaamheid",
+    "proces", "ruimtelijk", "markt", "overig",
 ]
 
 class Randvoorwaarde(BaseModel):
@@ -119,8 +128,32 @@ calls `extract_factor` cache-aware → live extraction on the v5 miss), then re-
 - Popup renders the Randvoorwaarden section + renders nothing when empty (story/component test).
 - Existing beleidsalignement + `test_woonvisie_unchanged` regressions stay green.
 
-## Out of scope
+## Slice 2 — Woonvisie randvoorwaarden (defined, near-identical reuse)
 
-- Location-aware randvoorwaarden (fase 2).
+The woonvisie has the same shape (richting + randvoorwaarden) and the randvoorwaarden are
+even more concrete. Slice 2 applies the IDENTICAL pattern: add `randvoorwaarden:
+list[Randvoorwaarde]` (same model) to `WoonvisiePayload`, extend the woonvisie prompt, bump
+the schema, re-extract the Venlo woonvisie, and add the same "Randvoorwaarden" section to
+`WoonvisiePopup`. Woonvisie randvoorwaarden to expect (from a manual read of Woonvisie Venlo
+2021-2026):
+- **programmering:** the 70/30-regel (≥30 woningen → 70% vrije sector / 30% sociale huur,
+  middenhuur-invulling mogelijk; doelgroepenverordening as stick).
+- **doelgroep:** student-voorkeurszones (Zone A binnenstad/Kazerne Kwartier/Maaswaard,
+  Zone B periferie); woonzorg-tekort (geclusterde woonvormen, ~580-1790 eenheden richting
+  2040, koop €200k-€400k, VG-voorziening).
+- **financieel:** zelfbewoningsplicht + anti-speculatiebeding + kettingbeding bij
+  gemeentegrond; paraplubestemmingsplan kamerbewoning (max 2 personen).
+- **ruimtelijk:** woningbouw binnen de stedelijke contour (uitzonderingen Velden,
+  Hout-Blerick/dijkverlegging).
+- **duurzaamheid:** circulair/bio-based bouwen (50% minder grondstoffen 2030,
+  materialenpaspoort, grondstoffendepot).
+- **markt:** ruimte voor CPO/wooncoöperaties, flexwoningen, alternatieve woonvormen
+  (Tiny Houses, knarrenhofjes, Magic Mix).
+
+Same measurability principle: display-only, no scoring.
+
+## Out of scope (this slice)
+
+- Location-aware randvoorwaarden (fase 2 — highlight which rule applies to *this* parcel).
 - Finer development-location extraction (the named sub-projects) — separate slice.
-- Woonvisie randvoorwaarden — separate.
+- Slice 2 (woonvisie) ships right after slice 1 validates the pattern.
