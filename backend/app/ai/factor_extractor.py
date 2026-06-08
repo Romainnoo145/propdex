@@ -41,7 +41,8 @@ PayloadT = TypeVar("PayloadT", bound=BaseModel)
 
 # Iron-rule knobs — changes require schema-version bump and cache-invalidation.
 _TEMPERATURE: float = 0.0
-_MAX_TOKENS: int = 4096
+_MAX_TOKENS: int = 16384  # rich structured extraction from ~60-page docs; reasoning
+# models exhaust a 4096 budget on thinking before emitting the tool input (→ empty {}).
 
 
 async def extract_factor_live(
