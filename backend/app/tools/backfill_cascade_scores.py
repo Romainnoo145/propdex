@@ -32,8 +32,11 @@ from app.models.area_scan import AreaScan
 from app.models.factor_extraction_cache import FactorExtractionCache
 from app.models.organization import Organization
 from app.models.parcel_cache import ParcelCache
-from app.models.policy_document import PolicyDocument
 from app.models.scan_result import ScanResult
+from app.services.cascade_enrichment_service import (
+    get_omgevingsvisie_document,
+    get_woonvisie_document,
+)
 from app.services.score_v3 import compute_score_v3
 
 logger = logging.getLogger(__name__)
@@ -73,19 +76,9 @@ async def _load_woonvisie_payload(
     depend on the specific parcel. We reuse one cached extraction for all parcels.
     """
     async with async_session_factory() as session:
-        doc_stmt = (
-            select(PolicyDocument)
-            .where(
-                PolicyDocument.entity_type == "gemeente",
-                PolicyDocument.entity_code == gemeente_code,
-                PolicyDocument.source_key == "woonvisie",
-                PolicyDocument.organization_id == org_id,
-                PolicyDocument.file_data.isnot(None),
-            )
-            .order_by(PolicyDocument.version_number.desc(), PolicyDocument.created_at.desc())
-            .limit(1)
+        doc = await get_woonvisie_document(
+            session, gemeente_code=gemeente_code, organization_id=org_id
         )
-        doc = (await session.execute(doc_stmt)).scalar_one_or_none()
         if doc is None:
             logger.error("No woonvisie document found for gemeente=%s org=%s", gemeente_code, org_id)
             return None
@@ -131,19 +124,9 @@ async def _load_omgevingsvisie_payload(
     depend on the specific parcel. We reuse one cached extraction for all parcels.
     """
     async with async_session_factory() as session:
-        doc_stmt = (
-            select(PolicyDocument)
-            .where(
-                PolicyDocument.entity_type == "gemeente",
-                PolicyDocument.entity_code == gemeente_code,
-                PolicyDocument.source_key == "omgevingsvisie",
-                PolicyDocument.organization_id == org_id,
-                PolicyDocument.file_data.isnot(None),
-            )
-            .order_by(PolicyDocument.version_number.desc(), PolicyDocument.created_at.desc())
-            .limit(1)
+        doc = await get_omgevingsvisie_document(
+            session, gemeente_code=gemeente_code, organization_id=org_id
         )
-        doc = (await session.execute(doc_stmt)).scalar_one_or_none()
         if doc is None:
             logger.info("No omgevingsvisie document found for gemeente=%s org=%s", gemeente_code, org_id)
             return None
