@@ -99,7 +99,6 @@ export function OmgevingsvisiePopup({
   tijdshorizon,
   matched_policy,
   algemeen_citaat,
-  project_type,
   verdict,
 }: OmgevingsvisiePopupProps) {
   if (!isOpen) return null
