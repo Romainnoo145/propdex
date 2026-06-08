@@ -172,22 +172,15 @@ function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResu
       return { value, sub }
     }
     case 'beleidsalignement': {
-      if (factor.missing) return { value: '—', sub: 'Geen omgevingsvisie beschikbaar' }
-      const w = factor.waarde as { matched_policy?: { karakter?: string; gebied_naam?: string } | null; matched_gebied?: string | null } | null
-      const matched = w && typeof w === 'object' ? w.matched_policy : null
-      const KARAKTER_VALUE: Record<string, string> = {
-        centraal_stedelijk: 'CENTRAAL STEDELIJK',
-        transformatie: 'TRANSFORMATIE',
-        stedelijk_wonen: 'STEDELIJK WONEN',
-        werklocatie: 'WERKLOCATIE',
-        dorp: 'DORPSKERN',
-        landschap: 'LANDSCHAP',
+      const w = factor.waarde as { matched_gebied?: string | null; verdict?: string } | null
+      if (factor.missing || !w?.matched_gebied) return { value: 'OMGEVINGSVISIE', sub: 'Geen gebied-specifiek beleid' }
+      const verdictLabel: Record<string, string> = {
+        kansrijk: 'Kansrijk',
+        neutraal: 'Past bij visie',
+        strijdig: '⚠ Strijdig met visie',
+        geen_beleid: 'Geen beleid',
       }
-      const karakter = matched && typeof matched === 'object' ? matched.karakter : null
-      const value = karakter && KARAKTER_VALUE[karakter] ? KARAKTER_VALUE[karakter] : 'GEMEENTE-BREED'
-      const gebied = matched?.gebied_naam ?? w?.matched_gebied ?? null
-      const sub = gebied ? `Gebied: ${gebied}` : 'Geen gebied-specifiek beleid'
-      return { value, sub }
+      return { value: w.matched_gebied, sub: verdictLabel[w.verdict ?? ''] ?? 'Past bij visie' }
     }
     default:
       return { value: '—', sub: '' }
