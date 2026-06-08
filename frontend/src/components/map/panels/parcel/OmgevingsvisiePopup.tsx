@@ -21,12 +21,12 @@ const VERDICT_COPY: Record<BeleidsVerdict, { mark: string; color: string; line: 
   geen_beleid: { mark: '•', color: 'text-[#9CA3AF]', label: 'Geen beleid', line: 'Geen gebied-specifiek beleid voor dit perceel.' },
 }
 
-/** Bold verdict-hero styling per verdict (gradient wash + colored icon + big label). */
-const VERDICT_BANNER: Record<BeleidsVerdict, { wrap: string; icon: string; label: string }> = {
-  kansrijk: { wrap: 'bg-gradient-to-br from-[#15803d]/[0.12] to-transparent border-[#15803d]/20', icon: 'bg-[#15803d] text-white shadow-[0_6px_16px_rgba(21,128,61,0.30)]', label: 'text-[#15803d]' },
-  strijdig: { wrap: 'bg-gradient-to-br from-[#DC2626]/[0.10] to-transparent border-[#DC2626]/20', icon: 'bg-[#DC2626] text-white shadow-[0_6px_16px_rgba(220,38,38,0.28)]', label: 'text-[#DC2626]' },
-  neutraal: { wrap: 'bg-gradient-to-br from-[#F2F6F3] to-white border-[#E3E9E5]', icon: 'bg-[#9CA3AF] text-white', label: 'text-[#4B5563]' },
-  geen_beleid: { wrap: 'bg-gradient-to-br from-[#F2F6F3] to-white border-[#E3E9E5]', icon: 'bg-[#D1D5DB] text-white', label: 'text-[#6B7280]' },
+/** Verdict keyline — editorial colored left-rule + label (no box, no emoji). */
+const VERDICT_KEYLINE: Record<BeleidsVerdict, { border: string; label: string }> = {
+  kansrijk: { border: 'border-[#15803d]', label: 'text-[#15803d]' },
+  strijdig: { border: 'border-[#DC2626]', label: 'text-[#DC2626]' },
+  neutraal: { border: 'border-[#9CA3AF]', label: 'text-[#4B5563]' },
+  geen_beleid: { border: 'border-[#D1D5DB]', label: 'text-[#9CA3AF]' },
 }
 
 export interface GebiedPolicy {
@@ -195,40 +195,35 @@ export function OmgevingsvisieDetailContent({
         )}
       </div>
 
-      {/* Gebied title */}
-      <h2 className="mt-3 text-[36px] font-black tracking-[-0.03em] text-[#0E1111] leading-[1.05]">
+      {/* Eyebrow — karakter as a colored kicker above the headline */}
+      {karakter ? (
+        <div className="mt-4 flex items-center gap-2">
+          <span className={`inline-block h-2 w-2 rounded-full ${KARAKTER_DOT[karakter]}`} />
+          <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#6B7280]">
+            {KARAKTER_LABEL[karakter]}
+            {hasMatch && matched_policy!.woningbouwprioriteit !== 'niet_benoemd' && (
+              <span className="text-[#9CA3AF]"> · prioriteit {matched_policy!.woningbouwprioriteit}</span>
+            )}
+          </span>
+        </div>
+      ) : (
+        <div className="mt-4 text-[11px] font-bold uppercase tracking-[0.14em] text-[#9CA3AF]">
+          Gemeente-breed
+        </div>
+      )}
+
+      {/* Gebied title — editorial headline */}
+      <h2 className="mt-2 text-[40px] font-black tracking-[-0.035em] text-[#0E1111] leading-[0.98]">
         {titel}
       </h2>
 
-      {/* Karakter + prioriteit — meta */}
-      {karakter && (
-        <div className="mt-3 flex items-center gap-2 text-[13px] text-[#6B7280]">
-          <span className={`inline-block h-1.5 w-1.5 rounded-full ${KARAKTER_DOT[karakter]}`} />
-          <span>{KARAKTER_LABEL[karakter]}</span>
-          {hasMatch && matched_policy!.woningbouwprioriteit !== 'niet_benoemd' && (
-            <>
-              <span>·</span>
-              <span>woningbouwprioriteit {matched_policy!.woningbouwprioriteit}</span>
-            </>
-          )}
-        </div>
-      )}
-      {!hasMatch && (
-        <div className="mt-3 text-[13px] text-[#6B7280] italic">geen gebied-specifieke tekst</div>
-      )}
-
-      {/* Verdict — bold hero (the focal moment) */}
+      {/* Verdict — colored keyline statement (editorial, no box/emoji) */}
       {verdict && verdictCopy && (
-        <div className={`mt-7 rounded-[26px] border p-6 ${VERDICT_BANNER[verdict].wrap}`}>
-          <div className="flex items-center gap-4">
-            <span className={`grid size-12 shrink-0 place-items-center rounded-2xl text-[22px] font-bold ${VERDICT_BANNER[verdict].icon}`}>
-              {verdictCopy.mark}
-            </span>
-            <p className={`text-[28px] font-black leading-none tracking-tight ${VERDICT_BANNER[verdict].label}`}>
-              {verdictCopy.label}
-            </p>
-          </div>
-          <p className="mt-4 text-[14px] leading-relaxed text-[#374151]">{verdictCopy.line}</p>
+        <div className={`mt-7 border-l-[3px] pl-5 ${VERDICT_KEYLINE[verdict].border}`}>
+          <p className={`text-[20px] font-black tracking-tight ${VERDICT_KEYLINE[verdict].label}`}>
+            {verdictCopy.label}
+          </p>
+          <p className="mt-1.5 text-[14px] leading-relaxed text-[#374151]">{verdictCopy.line}</p>
         </div>
       )}
 
@@ -250,22 +245,28 @@ export function OmgevingsvisieDetailContent({
           <p className="mt-0.5 text-[12px] text-[#9CA3AF]">
             Wat de gemeente vraagt bij elke ontwikkeling
           </p>
-          <div className="mt-5 space-y-7">
+          <div className="mt-5 space-y-3">
             {randvoorwaardeGroups.map((group) => (
-              <div key={group.categorie}>
-                {/* Categorie header — amber-accented section divider */}
+              <div
+                key={group.categorie}
+                className="rounded-[20px] border border-[#EAEFEF] bg-white p-4 transition-shadow hover:shadow-sm"
+              >
+                {/* Categorie header — amber accent + count */}
                 <div className="flex items-center gap-2">
                   <span className="h-3.5 w-1 rounded-full bg-[#F9A826]" />
                   <p className="text-[12px] font-bold uppercase tracking-wide text-[#0E1111]">
                     {RANDVOORWAARDE_LABEL[group.categorie] ?? group.categorie}
                   </p>
-                  <span className="text-[11px] font-semibold text-slate-300">
+                  <span className="ml-auto text-[11px] font-bold tabular-nums text-slate-300">
                     {group.items.length}
                   </span>
                 </div>
-                <div className="mt-3 space-y-3 border-l border-[#F2F6F3] pl-3.5">
+                <div className="mt-3 space-y-3">
                   {group.items.map((rv, i) => (
-                    <div key={`${group.categorie}-${i}`}>
+                    <div
+                      key={`${group.categorie}-${i}`}
+                      className={i > 0 ? 'border-t border-[#F4F7F5] pt-3' : ''}
+                    >
                       <p className="text-[13px] font-semibold text-[#0E1111]">{rv.titel}</p>
                       <p className="mt-0.5 text-[12px] leading-relaxed text-[#6B7280]">
                         {rv.samenvatting}
