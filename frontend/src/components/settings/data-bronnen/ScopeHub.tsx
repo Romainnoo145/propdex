@@ -1,33 +1,27 @@
 /**
  * ScopeHub — beleid-style hero for the data-bronnen hub (M053/S05).
  *
- * Replaces the flat, low-contrast ScopePicker. Three calm, labeled level
- * groups (Landelijk · Provincie · Gemeente) rendered as defined solid-white
- * cards. The gemeente group renders SVG silhouettes (same compute pattern as
- * GemeenteBeleidGrid: useGemeenteGeoJSON + geoJsonToSvgPath, memoized) but ONLY
- * for the codes present in useGemeentenSummary, each carrying its status dot
- * (groen all-live / amber any-missing / rood any-broken — mirrors
- * GemeentePicker.dotColor).
+ * Split-canvas layout: clicking any scope slides a 620px ScopeDetailPanel in on
+ * the LEFT (the app's signature Dynamic Split-Canvas) while the hub content to
+ * the right reflows/shrinks. One UNIFORM card design across all three levels
+ * (Landelijk · Provincie · Gemeente) — solid white cards on the Morning-Mist
+ * page, with only the gemeente cards carrying a status dot (groen all-live /
+ * amber any-missing / rood any-broken — mirrors GemeentePicker.dotColor). No
+ * silhouettes, no big icons. A top search bar live-filters all scopes by name.
  *
- * Clicking any scope opens ScopeDetailModal in-place (pop-up) instead of
- * navigating to the $entityType/$entityCode route.
- *
- * Aura tokens (DESIGN.md): Plus Jakarta Sans, Morning Mist #F2F6F3 group
- * backgrounds, solid white cards, Warm Amber #F9A826 as the only decorative
- * accent, Obsidian #0E1111 for text. Minimal Calm Intelligence — one focal
- * point per group, no gratuitous icons.
+ * Aura tokens (DESIGN.md): Plus Jakarta Sans, Warm Amber #F9A826 as the only
+ * decorative accent, Obsidian #0E1111 for text. Minimal Calm Intelligence.
  */
 import { useMemo, useState } from 'react'
-import { Landmark, Building2, MapPin, Loader2 } from 'lucide-react'
+import { AnimatePresence } from 'framer-motion'
+import { Search, Loader2 } from 'lucide-react'
 
-import { useGemeenteGeoJSON } from '@/hooks/useGemeenteGeoJSON'
-import { geoJsonToSvgPath } from '@/lib/geo-utils'
 import { useScopes, useGemeentenSummary } from '@/lib/queries/data-sources-admin'
 import type {
   EntityType,
   GemeenteSummary,
 } from '@/lib/types/data-sources-admin'
-import { ScopeDetailModal } from '@/components/settings/data-bronnen/ScopeDetailModal'
+import { ScopeDetailPanel } from '@/components/settings/data-bronnen/ScopeDetailPanel'
 
 interface SelectedScope {
   entityType: EntityType
@@ -42,12 +36,6 @@ function dotColor(summary: GemeenteSummary): string {
   return 'bg-[#22C55E]'
 }
 
-/** Pre-computed silhouette for a single monitored gemeente. */
-interface SilhouetteGemeente {
-  summary: GemeenteSummary
-  svgData: { primaryD: string; viewBox: string } | null
-}
-
 function GroupLabel({ children }: { children: React.ReactNode }) {
   return (
     <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">
@@ -56,221 +44,200 @@ function GroupLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
+/** One uniform scope card, used for landelijk · provincie · gemeente. */
+function ScopeCard({
+  naam,
+  entityType,
+  entityCode,
+  active,
+  dot,
+  onClick,
+}: {
+  naam: string
+  entityType: EntityType
+  entityCode: string
+  active: boolean
+  dot?: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={naam}
+      className={`group flex items-center gap-2 rounded-[16px] border bg-white px-4 py-3 text-left transition-all hover:border-[#F9A826]/50 hover:shadow-sm ${
+        active
+          ? 'border-[#0E1111]/40 shadow-sm'
+          : 'border-[#EAEFEF]'
+      }`}
+      data-entity-type={entityType}
+      data-entity-code={entityCode}
+      data-active={active ? 'true' : 'false'}
+    >
+      {dot && (
+        <span className={`size-1.5 shrink-0 rounded-full ${dot}`} aria-hidden />
+      )}
+      <span className="truncate text-[13px] font-semibold text-[#0E1111]">
+        {naam}
+      </span>
+    </button>
+  )
+}
+
 export function ScopeHub() {
   const scopesQuery = useScopes()
   const gemeentenQuery = useGemeentenSummary()
-  const { data: geojson, isLoading: geojsonLoading } = useGemeenteGeoJSON()
 
   const [selected, setSelected] = useState<SelectedScope | null>(null)
+  const [query, setQuery] = useState('')
+
+  const needle = query.trim().toLowerCase()
+  const match = (naam: string) =>
+    needle === '' || naam.toLowerCase().includes(needle)
 
   const scopes = scopesQuery.data ?? []
   const landelijk = scopes.find((s) => s.entity_type === 'landelijk') ?? null
   const provincies = scopes.filter((s) => s.entity_type === 'provincie')
+  const gemeenten = gemeentenQuery.data
 
-  const gemeenten = gemeentenQuery.data ?? []
-
-  // Lookup of statcode → svg path, computed once over all geojson features but
-  // only resolved for the monitored gemeente codes (cheap: 1 pass + N lookups).
-  const svgByCode = useMemo(() => {
-    const map = new Map<string, { primaryD: string; viewBox: string }>()
-    if (!geojson) return map
-    const wanted = new Set(gemeenten.map((g) => g.gemeente_code))
-    if (wanted.size === 0) return map
-    for (const feature of geojson.features) {
-      const props = feature.properties as Record<string, unknown> | null
-      const code = String(props?.statcode ?? '')
-      if (!code || !wanted.has(code)) continue
-      const geometry = feature.geometry as
-        | GeoJSON.Polygon
-        | GeoJSON.MultiPolygon
-      if (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon')
-        continue
-      const { d, viewBox } = geoJsonToSvgPath(geometry)
-      map.set(code, { primaryD: d, viewBox })
-    }
-    return map
-  }, [geojson, gemeenten])
-
-  const silhouettes = useMemo<SilhouetteGemeente[]>(
+  const sortedGemeenten = useMemo(
     () =>
-      gemeenten
-        .map((summary) => ({
-          summary,
-          svgData: svgByCode.get(summary.gemeente_code) ?? null,
-        }))
-        .sort((a, b) =>
-          a.summary.gemeente_naam.localeCompare(b.summary.gemeente_naam, 'nl'),
-        ),
-    [gemeenten, svgByCode],
+      [...(gemeenten ?? [])].sort((a, b) =>
+        a.gemeente_naam.localeCompare(b.gemeente_naam, 'nl'),
+      ),
+    [gemeenten],
+  )
+
+  // Filtered groups (used both to render and to decide whether to show headers).
+  const landelijkVisible = landelijk && match(landelijk.entity_naam)
+  const provinciesVisible = provincies.filter((p) => match(p.entity_naam))
+  const gemeentenVisible = sortedGemeenten.filter((g) =>
+    match(g.gemeente_naam),
   )
 
   return (
-    <div className="space-y-8" data-component="scope-hub">
-      {/* ── LANDELIJK ───────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <GroupLabel>Landelijk</GroupLabel>
+    <div className="flex items-start gap-4" data-component="scope-hub">
+      <AnimatePresence>
+        {selected && (
+          <ScopeDetailPanel
+            key="scope-panel"
+            open
+            onClose={() => setSelected(null)}
+            entityType={selected.entityType}
+            entityCode={selected.entityCode}
+            entityNaam={selected.entityNaam}
+          />
+        )}
+      </AnimatePresence>
+
+      <div className="min-w-0 flex-1 space-y-6">
+        {/* ── SEARCH ──────────────────────────────────────────────── */}
+        <div className="relative max-w-md">
+          <Search
+            size={16}
+            strokeWidth={1.5}
+            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Zoek scope…"
+            aria-label="Zoek scope"
+            className="w-full rounded-full border border-[#EAEFEF] bg-white py-2.5 pl-10 pr-4 text-[13px] text-[#0E1111] placeholder:text-slate-400 focus:border-[#F9A826]/60 focus:outline-none"
+          />
+        </div>
+
+        {/* ── LANDELIJK ───────────────────────────────────────────── */}
         {scopesQuery.isLoading ? (
           <div className="flex items-center gap-2 text-[12px] text-slate-500">
             <Loader2 size={14} className="animate-spin" /> Scopes laden…
           </div>
-        ) : landelijk ? (
-          <button
-            type="button"
-            onClick={() =>
-              setSelected({
-                entityType: 'landelijk',
-                entityCode: landelijk.entity_code,
-                entityNaam: landelijk.entity_naam,
-              })
-            }
-            className="group flex w-full max-w-md items-center gap-4 rounded-[20px] border border-[#EAEFEF] bg-white p-5 text-left transition-all hover:border-[#F9A826]/50 hover:shadow-sm"
-            data-entity-type="landelijk"
-            data-entity-code={landelijk.entity_code}
-          >
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-[14px] bg-[#0E1111] transition-colors">
-              <Landmark
-                size={22}
-                strokeWidth={1.5}
-                className="text-[#F9A826]"
-              />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[15px] font-bold tracking-tight text-[#0E1111]">
-                {landelijk.entity_naam}
-              </span>
-              <span className="mt-0.5 block text-[12px] text-slate-500">
-                Rijksbeleid &amp; nationale databronnen
-              </span>
-            </span>
-          </button>
-        ) : (
-          <p className="text-[12px] text-slate-400">Geen landelijke scope.</p>
-        )}
-      </section>
-
-      {/* ── PROVINCIE ───────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <GroupLabel>Provincie</GroupLabel>
-        {scopesQuery.isLoading ? (
-          <div className="flex items-center gap-2 text-[12px] text-slate-500">
-            <Loader2 size={14} className="animate-spin" /> Provincies laden…
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-            {provincies.map((p) => (
-              <button
-                key={p.entity_code}
-                type="button"
+        ) : landelijkVisible ? (
+          <section className="space-y-3">
+            <GroupLabel>Landelijk</GroupLabel>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <ScopeCard
+                naam={landelijk.entity_naam}
+                entityType="landelijk"
+                entityCode={landelijk.entity_code}
+                active={
+                  selected?.entityType === 'landelijk' &&
+                  selected.entityCode === landelijk.entity_code
+                }
                 onClick={() =>
                   setSelected({
-                    entityType: 'provincie',
-                    entityCode: p.entity_code,
-                    entityNaam: p.entity_naam,
+                    entityType: 'landelijk',
+                    entityCode: landelijk.entity_code,
+                    entityNaam: landelijk.entity_naam,
                   })
                 }
-                className="group flex items-center gap-2.5 rounded-[16px] border border-[#EAEFEF] bg-white px-4 py-3 text-left transition-all hover:border-[#F9A826]/50 hover:shadow-sm"
-                data-entity-type="provincie"
-                data-entity-code={p.entity_code}
-              >
-                <Building2
-                  size={16}
-                  strokeWidth={1.5}
-                  className="shrink-0 text-slate-400 transition-colors group-hover:text-[#F9A826]"
-                />
-                <span className="truncate text-[13px] font-semibold text-[#0E1111]">
-                  {p.entity_naam}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
+              />
+            </div>
+          </section>
+        ) : null}
 
-      {/* ── GEMEENTE ────────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <GroupLabel>Gemeente</GroupLabel>
+        {/* ── PROVINCIE ───────────────────────────────────────────── */}
+        {!scopesQuery.isLoading && provinciesVisible.length > 0 && (
+          <section className="space-y-3">
+            <GroupLabel>Provincie</GroupLabel>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {provinciesVisible.map((p) => (
+                <ScopeCard
+                  key={p.entity_code}
+                  naam={p.entity_naam}
+                  entityType="provincie"
+                  entityCode={p.entity_code}
+                  active={
+                    selected?.entityType === 'provincie' &&
+                    selected.entityCode === p.entity_code
+                  }
+                  onClick={() =>
+                    setSelected({
+                      entityType: 'provincie',
+                      entityCode: p.entity_code,
+                      entityNaam: p.entity_naam,
+                    })
+                  }
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── GEMEENTE ────────────────────────────────────────────── */}
         {gemeentenQuery.isLoading ? (
           <div className="flex items-center gap-2 text-[12px] text-slate-500">
             <Loader2 size={14} className="animate-spin" /> Gemeenten laden…
           </div>
-        ) : silhouettes.length === 0 ? (
-          <p className="text-[12px] text-slate-400">
-            Nog geen gemeenten gemonitord.
-          </p>
-        ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {silhouettes.map(({ summary, svgData }) => (
-              <button
-                key={summary.gemeente_code}
-                type="button"
-                onClick={() =>
-                  setSelected({
-                    entityType: 'gemeente',
-                    entityCode: summary.gemeente_code,
-                    entityNaam: summary.gemeente_naam,
-                  })
-                }
-                className="group flex flex-col overflow-hidden rounded-[16px] border border-[#EAEFEF] bg-white text-left transition-all hover:border-[#F9A826]/50 hover:shadow-sm"
-                data-entity-type="gemeente"
-                data-entity-code={summary.gemeente_code}
-              >
-                {/* Silhouette */}
-                <div className="relative aspect-[4/3] border-b border-[#EAEFEF] bg-[#F2F6F3]">
-                  <span
-                    className={`absolute right-2.5 top-2.5 size-2 rounded-full ${dotColor(summary)}`}
-                    aria-hidden
-                  />
-                  {svgData ? (
-                    <svg
-                      viewBox={svgData.viewBox}
-                      className="h-full w-full"
-                      preserveAspectRatio="xMidYMid meet"
-                    >
-                      <path
-                        d={svgData.primaryD}
-                        fill="#F9A826"
-                        fillOpacity={0.14}
-                        stroke="#F9A826"
-                        strokeWidth={1}
-                        strokeLinejoin="round"
-                        className="transition-all duration-200 group-hover:fill-opacity-25"
-                      />
-                    </svg>
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-slate-300">
-                      {geojsonLoading ? (
-                        <Loader2 size={18} className="animate-spin" />
-                      ) : (
-                        <MapPin size={20} strokeWidth={1.5} />
-                      )}
-                    </div>
-                  )}
-                </div>
-                {/* Label */}
-                <div className="px-3 py-2.5">
-                  <span
-                    className="block truncate text-[13px] font-semibold text-[#0E1111]"
-                    title={summary.gemeente_naam}
-                  >
-                    {summary.gemeente_naam}
-                  </span>
-                  <span className="mt-0.5 block text-[11px] text-slate-400">
-                    {summary.total_sources} bronnen
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <ScopeDetailModal
-        open={selected !== null}
-        onClose={() => setSelected(null)}
-        entityType={selected?.entityType ?? null}
-        entityCode={selected?.entityCode ?? null}
-        entityNaam={selected?.entityNaam}
-      />
+        ) : gemeentenVisible.length > 0 ? (
+          <section className="space-y-3">
+            <GroupLabel>Gemeente</GroupLabel>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {gemeentenVisible.map((summary) => (
+                <ScopeCard
+                  key={summary.gemeente_code}
+                  naam={summary.gemeente_naam}
+                  entityType="gemeente"
+                  entityCode={summary.gemeente_code}
+                  dot={dotColor(summary)}
+                  active={
+                    selected?.entityType === 'gemeente' &&
+                    selected.entityCode === summary.gemeente_code
+                  }
+                  onClick={() =>
+                    setSelected({
+                      entityType: 'gemeente',
+                      entityCode: summary.gemeente_code,
+                      entityNaam: summary.gemeente_naam,
+                    })
+                  }
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
+      </div>
     </div>
   )
 }
