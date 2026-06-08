@@ -11,7 +11,7 @@ import logging
 import uuid
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.factor_extraction_schemas import DOCUMENT_SENTINEL, FactorExtractionError
@@ -40,10 +40,17 @@ async def get_woonvisie_document(
             PolicyDocument.entity_type == "gemeente",
             PolicyDocument.entity_code == gemeente_code,
             PolicyDocument.source_key == "woonvisie",
-            PolicyDocument.organization_id == organization_id,
+            or_(
+                PolicyDocument.is_global.is_(True),
+                PolicyDocument.organization_id == organization_id,
+            ),
             PolicyDocument.file_data.isnot(None),
         )
-        .order_by(PolicyDocument.version_number.desc(), PolicyDocument.created_at.desc())
+        .order_by(
+            PolicyDocument.is_global.asc(),
+            PolicyDocument.version_number.desc(),
+            PolicyDocument.created_at.desc(),
+        )
         .limit(1)
     )
     result = await db.execute(stmt)
@@ -63,10 +70,17 @@ async def get_omgevingsvisie_document(
             PolicyDocument.entity_type == "gemeente",
             PolicyDocument.entity_code == gemeente_code,
             PolicyDocument.source_key == "omgevingsvisie",
-            PolicyDocument.organization_id == organization_id,
+            or_(
+                PolicyDocument.is_global.is_(True),
+                PolicyDocument.organization_id == organization_id,
+            ),
             PolicyDocument.file_data.isnot(None),
         )
-        .order_by(PolicyDocument.version_number.desc(), PolicyDocument.created_at.desc())
+        .order_by(
+            PolicyDocument.is_global.asc(),
+            PolicyDocument.version_number.desc(),
+            PolicyDocument.created_at.desc(),
+        )
         .limit(1)
     )
     result = await db.execute(stmt)
