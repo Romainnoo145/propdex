@@ -141,10 +141,32 @@ def test_werklocatie_is_strijdig(make_omgevingsvisie_payload):
     assert result.waarde["verdict"] == "strijdig"
 
 
-def test_centraal_hoog_fit_is_kansrijk(make_omgevingsvisie_payload):
+def test_centraal_hoog_baseline_is_kansrijk(make_omgevingsvisie_payload):
+    """No projecttype-lens (onbepaald): a high-value gebied + prioriteit hoog reads
+    kansrijk because the gemeente actively steers development there."""
+    payload = make_omgevingsvisie_payload()
+    result = score_beleidsalignement(
+        payload, wijk_naam="Wijk 11 Venlo-Centrum", project_type="onbepaald"
+    )
+    assert result.waarde["verdict"] == "kansrijk"
+    assert result.waarde["strijdig_met_visie"] is False
+
+
+def test_centraal_with_nonfitting_projecttype_is_neutraal(make_omgevingsvisie_payload):
+    """With a real projecttype that does NOT fit the karakter, the lens wins: the
+    baseline high-value shortcut is gated off, so verdict is neutraal (not kansrijk).
+    nieuwbouw_wonen does not list centraal_stedelijk as a fit."""
     payload = make_omgevingsvisie_payload()
     result = score_beleidsalignement(
         payload, wijk_naam="Wijk 11 Venlo-Centrum", project_type="nieuwbouw_wonen"
     )
+    assert result.waarde["verdict"] == "neutraal"
+
+
+def test_centraal_with_fitting_projecttype_is_kansrijk(make_omgevingsvisie_payload):
+    """A projecttype that fits centraal_stedelijk (transformatie_wonen) + hoog → kansrijk."""
+    payload = make_omgevingsvisie_payload()
+    result = score_beleidsalignement(
+        payload, wijk_naam="Wijk 11 Venlo-Centrum", project_type="transformatie_wonen"
+    )
     assert result.waarde["verdict"] == "kansrijk"
-    assert result.waarde["strijdig_met_visie"] is False

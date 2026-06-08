@@ -1660,12 +1660,16 @@ def _beleids_verdict(
     strijdig = matched.karakter in _RESTRICTIVE_KARAKTERS
     if strijdig:
         return "strijdig", True
-    high_value = (
-        matched.karakter in _HIGH_VALUE_KARAKTERS
+    # Baseline only (no projecttype-lens): a high-value gebied + prioriteit hoog reads
+    # kansrijk because the gemeente actively steers development there. When a real
+    # projecttype IS set, respect the fit map instead — don't override the lens.
+    high_value_baseline = (
+        project_type == "onbepaald"
+        and matched.karakter in _HIGH_VALUE_KARAKTERS
         and matched.woningbouwprioriteit == "hoog"
     )
     fits = matched.karakter in _PROJECTTYPE_KARAKTER_FIT.get(project_type, set())
-    if high_value or (fits and matched.woningbouwprioriteit in ("hoog", "gemiddeld")):
+    if high_value_baseline or (fits and matched.woningbouwprioriteit in ("hoog", "gemiddeld")):
         return "kansrijk", False
     return "neutraal", False
 
