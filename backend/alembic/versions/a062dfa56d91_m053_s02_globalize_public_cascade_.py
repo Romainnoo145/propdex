@@ -31,5 +31,6 @@ def downgrade() -> None:
         UPDATE policy_documents
         SET is_global = false
         WHERE source_key IN ('woonvisie', 'omgevingsvisie')
+          AND is_global = true
         """
     )
