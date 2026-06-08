@@ -132,15 +132,15 @@ export function WoonvisiePopup({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-md"
+        className="fixed inset-0 z-[60] flex items-stretch justify-end bg-black/30 backdrop-blur-md"
         onClick={onClose}
       >
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 16 }}
-          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-          className="relative flex flex-col bg-white rounded-[32px] shadow-2xl w-full max-w-xl mx-4 max-h-[calc(100vh-80px)]"
+          initial={{ x: '100%' }}
+          animate={{ x: 0 }}
+          exit={{ x: '100%' }}
+          transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+          className="relative flex h-full w-full max-w-[680px] flex-col bg-white rounded-l-[32px] shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close — no header chrome */}
