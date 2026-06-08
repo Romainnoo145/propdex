@@ -29,10 +29,10 @@ const VERDICT_KEYLINE: Record<BeleidsVerdict, { border: string; label: string }>
   geen_beleid: { border: 'border-[#D1D5DB]', label: 'text-[#9CA3AF]' },
 }
 
-/** Clean lucide icon after the verdict label (green check / red warning). */
-const VERDICT_ICON: Partial<Record<BeleidsVerdict, LucideIcon>> = {
-  kansrijk: Check,
-  strijdig: AlertTriangle,
+/** Soft-tinted circular status badge, right-aligned on the verdict row (app pattern). */
+const VERDICT_BADGE: Partial<Record<BeleidsVerdict, { icon: LucideIcon; bg: string; fg: string }>> = {
+  kansrijk: { icon: Check, bg: 'bg-[#15803d]/10', fg: 'text-[#15803d]' },
+  strijdig: { icon: AlertTriangle, bg: 'bg-[#DC2626]/10', fg: 'text-[#DC2626]' },
 }
 
 export interface GebiedPolicy {
@@ -231,10 +231,16 @@ export function OmgevingsvisieDetailContent({
               {verdictCopy.label}
             </p>
             {(() => {
-              const Icon = VERDICT_ICON[verdict]
-              return Icon ? (
-                <Icon size={20} strokeWidth={3} className={VERDICT_KEYLINE[verdict].label} />
-              ) : null
+              const badge = VERDICT_BADGE[verdict]
+              if (!badge) return null
+              const Icon = badge.icon
+              return (
+                <span
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${badge.bg}`}
+                >
+                  <Icon size={16} strokeWidth={2.75} className={badge.fg} />
+                </span>
+              )
             })()}
           </div>
           <p className="mt-1.5 text-[14px] leading-relaxed text-[#374151]">{verdictCopy.line}</p>
