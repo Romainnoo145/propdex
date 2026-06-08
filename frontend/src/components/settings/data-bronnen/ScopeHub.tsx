@@ -4,20 +4,22 @@
  * Clicking any scope opens its bronnen in a LeftPanelShell — the same shell the
  * map's parcel/gemeente panels use. It portals into the layout's left panel slot
  * (leftPanelPortalRef) and setLeftPanelOpen shrinks <main>, so this page gets the
- * exact Dynamic Split-Canvas behaviour as the map. One UNIFORM card design across
- * all three levels
- * (Landelijk · Provincie · Gemeente) — solid white cards on the Morning-Mist
- * page, with only the gemeente cards carrying a status dot (groen all-live /
- * amber any-missing / rood any-broken — mirrors GemeentePicker.dotColor). No
- * silhouettes, no big icons. A top search bar live-filters all scopes by name.
+ * exact Dynamic Split-Canvas behaviour as the map.
+ *
+ * One UNIFORM card across all three levels (Landelijk · Provincie · Gemeente).
+ * ALL ~340 gemeenten are listed (from the CBS geojson); only the monitored ones
+ * (those in useGemeentenSummary, e.g. Venlo) carry data — those cards POP in amber
+ * with a status dot, the rest are quiet white. A monogram chip gives the dense grid
+ * visual rhythm without silhouettes. A top search bar live-filters by name.
  *
  * Aura tokens (DESIGN.md): Plus Jakarta Sans, Warm Amber #F9A826 as the only
- * decorative accent, Obsidian #0E1111 for text. Minimal Calm Intelligence.
+ * decorative accent (marks where intelligence sits), Obsidian #0E1111 for text.
  */
 import { useMemo, useState } from 'react'
 import { Search, Loader2 } from 'lucide-react'
 
 import { useScopes, useGemeentenSummary } from '@/lib/queries/data-sources-admin'
+import { useGemeenteGeoJSON } from '@/hooks/useGemeenteGeoJSON'
 import type {
   EntityType,
   GemeenteSummary,
@@ -38,49 +40,76 @@ function dotColor(summary: GemeenteSummary): string {
   return 'bg-[#22C55E]'
 }
 
-function GroupLabel({ children }: { children: React.ReactNode }) {
+function GroupLabel({ count, children }: { count: number; children: React.ReactNode }) {
   return (
-    <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-      {children}
-    </span>
+    <div className="flex items-center gap-2">
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+        {children}
+      </span>
+      <span className="text-[11px] font-semibold text-slate-300">{count}</span>
+    </div>
   )
 }
 
-/** One uniform scope card, used for landelijk · provincie · gemeente. */
+/** One uniform scope card — landelijk · provincie · gemeente. */
 function ScopeCard({
   naam,
   entityType,
   entityCode,
   active,
-  dot,
+  hasData,
+  statusDot,
   onClick,
 }: {
   naam: string
   entityType: EntityType
   entityCode: string
   active: boolean
-  dot?: string
+  hasData: boolean
+  statusDot?: string
   onClick: () => void
 }) {
+  const initial = naam.trim().charAt(0).toUpperCase()
   return (
     <button
       type="button"
       onClick={onClick}
       title={naam}
-      className={`group flex items-center gap-2 rounded-[16px] border bg-white px-4 py-3 text-left transition-all hover:border-[#F9A826]/50 hover:shadow-sm ${
-        active
-          ? 'border-[#0E1111]/40 shadow-sm'
-          : 'border-[#EAEFEF]'
-      }`}
       data-entity-type={entityType}
       data-entity-code={entityCode}
       data-active={active ? 'true' : 'false'}
+      className={[
+        'group relative flex items-center gap-3 rounded-[16px] border px-3 py-2.5 text-left transition-all duration-200',
+        'hover:-translate-y-0.5 hover:shadow-md hover:border-[#F9A826]/60',
+        active
+          ? 'border-[#0E1111]/40 shadow-sm ring-2 ring-[#0E1111]/5'
+          : hasData
+            ? 'border-[#F9A826]/40 bg-gradient-to-br from-[#FFF8EE] to-white'
+            : 'border-[#EAEFEF] bg-white',
+      ].join(' ')}
     >
-      {dot && (
-        <span className={`size-1.5 shrink-0 rounded-full ${dot}`} aria-hidden />
-      )}
-      <span className="truncate text-[13px] font-semibold text-[#0E1111]">
-        {naam}
+      {/* Monogram chip */}
+      <span
+        className={[
+          'grid size-9 shrink-0 place-items-center rounded-[11px] text-[14px] font-bold',
+          hasData ? 'bg-[#F9A826]/15 text-[#B45309]' : 'bg-[#F2F6F3] text-slate-400',
+        ].join(' ')}
+      >
+        {initial}
+      </span>
+
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5">
+          <span className="truncate text-[13px] font-semibold text-[#0E1111]">
+            {naam}
+          </span>
+          {statusDot && (
+            <span className={`size-1.5 shrink-0 rounded-full ${statusDot}`} aria-hidden />
+          )}
+        </span>
+        <span className="block text-[11px] text-slate-400">
+          {hasData ? 'Bronnen beschikbaar' : 'Geen bronnen'}
+        </span>
       </span>
     </button>
   )
@@ -89,6 +118,7 @@ function ScopeCard({
 export function ScopeHub() {
   const scopesQuery = useScopes()
   const gemeentenQuery = useGemeentenSummary()
+  const geojsonQuery = useGemeenteGeoJSON()
 
   const [selected, setSelected] = useState<SelectedScope | null>(null)
   const [query, setQuery] = useState('')
@@ -100,22 +130,30 @@ export function ScopeHub() {
   const scopes = scopesQuery.data ?? []
   const landelijk = scopes.find((s) => s.entity_type === 'landelijk') ?? null
   const provincies = scopes.filter((s) => s.entity_type === 'provincie')
-  const gemeenten = gemeentenQuery.data
 
-  const sortedGemeenten = useMemo(
-    () =>
-      [...(gemeenten ?? [])].sort((a, b) =>
-        a.gemeente_naam.localeCompare(b.gemeente_naam, 'nl'),
-      ),
-    [gemeenten],
-  )
+  // Monitored gemeenten (those with real data) keyed by code, for status + pop.
+  const summaryByCode = useMemo(() => {
+    const m = new Map<string, GemeenteSummary>()
+    for (const g of gemeentenQuery.data ?? []) m.set(g.gemeente_code, g)
+    return m
+  }, [gemeentenQuery.data])
 
-  // Filtered groups (used both to render and to decide whether to show headers).
+  // ALL ~340 gemeenten from the CBS geojson (statcode/statnaam), sorted by name.
+  const allGemeenten = useMemo(() => {
+    const feats = geojsonQuery.data?.features ?? []
+    return feats
+      .map((f) => {
+        const p = (f.properties ?? {}) as Record<string, unknown>
+        return { code: String(p.statcode ?? ''), naam: String(p.statnaam ?? '') }
+      })
+      .filter((g) => g.code && g.naam)
+      .sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
+  }, [geojsonQuery.data])
+
+  // Filtered groups.
   const landelijkVisible = landelijk && match(landelijk.entity_naam)
   const provinciesVisible = provincies.filter((p) => match(p.entity_naam))
-  const gemeentenVisible = sortedGemeenten.filter((g) =>
-    match(g.gemeente_naam),
-  )
+  const gemeentenVisible = allGemeenten.filter((g) => match(g.naam))
 
   return (
     <div className="space-y-6" data-component="scope-hub">
@@ -156,14 +194,15 @@ export function ScopeHub() {
           <div className="flex items-center gap-2 text-[12px] text-slate-500">
             <Loader2 size={14} className="animate-spin" /> Scopes laden…
           </div>
-        ) : landelijkVisible ? (
+        ) : landelijkVisible && landelijk ? (
           <section className="space-y-3">
-            <GroupLabel>Landelijk</GroupLabel>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <GroupLabel count={1}>Landelijk</GroupLabel>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
               <ScopeCard
                 naam={landelijk.entity_naam}
                 entityType="landelijk"
                 entityCode={landelijk.entity_code}
+                hasData={false}
                 active={
                   selected?.entityType === 'landelijk' &&
                   selected.entityCode === landelijk.entity_code
@@ -183,14 +222,15 @@ export function ScopeHub() {
         {/* ── PROVINCIE ───────────────────────────────────────────── */}
         {!scopesQuery.isLoading && provinciesVisible.length > 0 && (
           <section className="space-y-3">
-            <GroupLabel>Provincie</GroupLabel>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <GroupLabel count={provinciesVisible.length}>Provincie</GroupLabel>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
               {provinciesVisible.map((p) => (
                 <ScopeCard
                   key={p.entity_code}
                   naam={p.entity_naam}
                   entityType="provincie"
                   entityCode={p.entity_code}
+                  hasData={false}
                   active={
                     selected?.entityType === 'provincie' &&
                     selected.entityCode === p.entity_code
@@ -209,34 +249,38 @@ export function ScopeHub() {
         )}
 
         {/* ── GEMEENTE ────────────────────────────────────────────── */}
-        {gemeentenQuery.isLoading ? (
+        {geojsonQuery.isLoading ? (
           <div className="flex items-center gap-2 text-[12px] text-slate-500">
             <Loader2 size={14} className="animate-spin" /> Gemeenten laden…
           </div>
         ) : gemeentenVisible.length > 0 ? (
           <section className="space-y-3">
-            <GroupLabel>Gemeente</GroupLabel>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {gemeentenVisible.map((summary) => (
-                <ScopeCard
-                  key={summary.gemeente_code}
-                  naam={summary.gemeente_naam}
-                  entityType="gemeente"
-                  entityCode={summary.gemeente_code}
-                  dot={dotColor(summary)}
-                  active={
-                    selected?.entityType === 'gemeente' &&
-                    selected.entityCode === summary.gemeente_code
-                  }
-                  onClick={() =>
-                    setSelected({
-                      entityType: 'gemeente',
-                      entityCode: summary.gemeente_code,
-                      entityNaam: summary.gemeente_naam,
-                    })
-                  }
-                />
-              ))}
+            <GroupLabel count={gemeentenVisible.length}>Gemeente</GroupLabel>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+              {gemeentenVisible.map((g) => {
+                const summary = summaryByCode.get(g.code)
+                return (
+                  <ScopeCard
+                    key={g.code}
+                    naam={g.naam}
+                    entityType="gemeente"
+                    entityCode={g.code}
+                    hasData={!!summary}
+                    statusDot={summary ? dotColor(summary) : undefined}
+                    active={
+                      selected?.entityType === 'gemeente' &&
+                      selected.entityCode === g.code
+                    }
+                    onClick={() =>
+                      setSelected({
+                        entityType: 'gemeente',
+                        entityCode: g.code,
+                        entityNaam: g.naam,
+                      })
+                    }
+                  />
+                )
+              })}
             </div>
           </section>
         ) : null}
