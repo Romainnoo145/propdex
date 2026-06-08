@@ -5,7 +5,7 @@
  */
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X } from 'lucide-react'
+import { X, Check, AlertTriangle, type LucideIcon } from 'lucide-react'
 
 export type GebiedKarakter =
   | 'centraal_stedelijk' | 'transformatie' | 'stedelijk_wonen'
@@ -27,6 +27,12 @@ const VERDICT_KEYLINE: Record<BeleidsVerdict, { border: string; label: string }>
   strijdig: { border: 'border-[#DC2626]', label: 'text-[#DC2626]' },
   neutraal: { border: 'border-[#9CA3AF]', label: 'text-[#4B5563]' },
   geen_beleid: { border: 'border-[#D1D5DB]', label: 'text-[#9CA3AF]' },
+}
+
+/** Clean lucide icon after the verdict label (green check / red warning). */
+const VERDICT_ICON: Partial<Record<BeleidsVerdict, LucideIcon>> = {
+  kansrijk: Check,
+  strijdig: AlertTriangle,
 }
 
 export interface GebiedPolicy {
@@ -220,9 +226,17 @@ export function OmgevingsvisieDetailContent({
       {/* Verdict — colored keyline statement (editorial, no box/emoji) */}
       {verdict && verdictCopy && (
         <div className={`mt-7 border-l-[3px] pl-5 ${VERDICT_KEYLINE[verdict].border}`}>
-          <p className={`text-[20px] font-black tracking-tight ${VERDICT_KEYLINE[verdict].label}`}>
-            {verdictCopy.label}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className={`text-[20px] font-black tracking-tight ${VERDICT_KEYLINE[verdict].label}`}>
+              {verdictCopy.label}
+            </p>
+            {(() => {
+              const Icon = VERDICT_ICON[verdict]
+              return Icon ? (
+                <Icon size={19} strokeWidth={3} className={VERDICT_KEYLINE[verdict].label} />
+              ) : null
+            })()}
+          </div>
           <p className="mt-1.5 text-[14px] leading-relaxed text-[#374151]">{verdictCopy.line}</p>
         </div>
       )}
