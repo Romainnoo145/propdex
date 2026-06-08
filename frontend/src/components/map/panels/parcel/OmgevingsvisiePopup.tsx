@@ -12,6 +12,15 @@ export type GebiedKarakter =
   | 'werklocatie' | 'dorp' | 'landschap'
 export type Woningbouwprioriteit = 'hoog' | 'gemiddeld' | 'laag' | 'niet_benoemd'
 
+export type BeleidsVerdict = 'kansrijk' | 'neutraal' | 'strijdig' | 'geen_beleid'
+
+const VERDICT_COPY: Record<BeleidsVerdict, { mark: string; color: string; line: string }> = {
+  kansrijk: { mark: '✓', color: 'text-[#15803d]', line: 'Kansrijk — gemeente stuurt hier op wonen; jouw plan past bij de visie.' },
+  neutraal: { mark: '•', color: 'text-[#6B7280]', line: 'Past binnen de gemeentelijke richting voor dit gebied.' },
+  strijdig: { mark: '⚠', color: 'text-[#DC2626]', line: 'Strijdig met de gemeentevisie — reken op verzet.' },
+  geen_beleid: { mark: '•', color: 'text-[#9CA3AF]', line: 'Geen gebied-specifiek beleid voor dit perceel.' },
+}
+
 export interface GebiedPolicy {
   gebied_naam: string
   karakter: GebiedKarakter
@@ -30,6 +39,7 @@ export interface OmgevingsvisiePopupProps {
   matched_policy: GebiedPolicy | null
   algemeen_citaat: string
   project_type: string
+  verdict?: BeleidsVerdict
 }
 
 /* ── Karakter label (inline text, no chip) ─────────────────────── */
@@ -90,6 +100,7 @@ export function OmgevingsvisiePopup({
   matched_policy,
   algemeen_citaat,
   project_type,
+  verdict,
 }: OmgevingsvisiePopupProps) {
   if (!isOpen) return null
 
@@ -98,7 +109,6 @@ export function OmgevingsvisiePopup({
   const citaat = resolvePopupCitaat(matched_policy, algemeen_citaat)
   const titel = hasMatch ? matched_policy!.gebied_naam : 'Gemeente-breed'
   const pagina = hasMatch ? (matched_policy!.pagina ?? null) : null
-  const align = hasMatch && karakter ? alignmentSentence(project_type, karakter) : null
 
   return createPortal(
     <AnimatePresence>
@@ -146,15 +156,15 @@ export function OmgevingsvisiePopup({
               {titel}
             </h2>
 
-            {/* Karakter — inline, understated */}
+            {/* Karakter + prioriteit — meta */}
             {karakter && (
               <div className="mt-3 flex items-center gap-2 text-[13px] text-[#6B7280]">
                 <span className={`inline-block h-1.5 w-1.5 rounded-full ${KARAKTER_DOT[karakter]}`} />
                 <span>{KARAKTER_LABEL[karakter]}</span>
-                {hasMatch && matched_policy!.transformatie_kansgebied && (
+                {hasMatch && matched_policy!.woningbouwprioriteit !== 'niet_benoemd' && (
                   <>
                     <span>·</span>
-                    <span>transformatie-kansgebied</span>
+                    <span>woningbouwprioriteit {matched_policy!.woningbouwprioriteit}</span>
                   </>
                 )}
               </div>
@@ -163,16 +173,18 @@ export function OmgevingsvisiePopup({
               <div className="mt-3 text-[13px] text-[#6B7280] italic">geen gebied-specifieke tekst</div>
             )}
 
-            {/* Citaat — the focal point */}
-            <p className="mt-10 text-[15px] leading-[1.75] text-[#1A1C1E] whitespace-pre-line">
-              {citaat || 'Geen beleidstekst beschikbaar voor deze gemeente.'}
-            </p>
+            {/* Verdict — the new focal point */}
+            {verdict && (
+              <p className={`mt-8 text-[18px] font-semibold leading-snug ${VERDICT_COPY[verdict].color}`}>
+                {VERDICT_COPY[verdict].mark} {VERDICT_COPY[verdict].line}
+              </p>
+            )}
 
-            {/* Alignment sentence — single sentence */}
-            {align && (
-              <div className="mt-10 pt-8 border-t border-[#F2F6F3]">
-                <p className="text-[13px] leading-[1.6] text-[#6B7280]">{align}.</p>
-              </div>
+            {/* Citaat — demoted to supporting evidence */}
+            {citaat && (
+              <p className="mt-6 text-[13px] leading-[1.7] text-[#6B7280] whitespace-pre-line">
+                {citaat}
+              </p>
             )}
           </div>
         </motion.div>

@@ -44,6 +44,17 @@ const CENTRAAL: GebiedPolicy = {
   pagina: 18,
 }
 
+const WERKLOCATIE: GebiedPolicy = {
+  gebied_naam: 'Werklocaties',
+  karakter: 'werklocatie',
+  woningbouwprioriteit: 'niet_benoemd',
+  transformatie_kansgebied: false,
+  gebonden_plaatsen: ['Tradeport Venlo', 'Trade-Port'],
+  citaat:
+    'De werklocaties zijn gereserveerd voor bedrijvigheid, logistiek en maakindustrie. Wonen is hier niet gewenst; functiemenging met wonen wordt actief ontmoedigd om milieuruimte voor bedrijven te behouden.',
+  pagina: 32,
+}
+
 const ALGEMEEN_CITAAT =
   'We kiezen voor de compacte stad: verdichten binnen 15 minuten fietsafstand van de stations. Wonen, werken en ontspanning komen dichter bij elkaar. We bouwen slim, duurzaam en toekomstbestendig.'
 
@@ -58,6 +69,7 @@ export const Transformatiegebied: Story = {
     project_type: 'transformatie_wonen',
     algemeen_citaat: ALGEMEEN_CITAAT,
     matched_policy: TRANSFORMATIE,
+    verdict: 'kansrijk',
   },
   play: async () => {
     const body = within(document.body)
@@ -65,12 +77,12 @@ export const Transformatiegebied: Story = {
     await expect(body.getByText('Transformatiegebieden')).toBeInTheDocument()
     // Karakter label (dot + label, not a chip)
     await expect(body.getByText('Transformatiegebied')).toBeInTheDocument()
-    // Transformatie kansgebied badge
-    await expect(body.getByText('transformatie-kansgebied')).toBeInTheDocument()
-    // Citaat content (plain <p>)
+    // Woningbouwprioriteit meta
+    await expect(body.getByText(/woningbouwprioriteit hoog/)).toBeInTheDocument()
+    // Verdict — focal point
+    await expect(body.getByText(/jouw plan past bij de visie/)).toBeInTheDocument()
+    // Citaat content (demoted supporting text)
     await expect(body.getByText(/klimaatadaptieve en goed functionerende stadsbuurten/)).toBeInTheDocument()
-    // Alignment sentence (single line)
-    await expect(body.getByText(/sluit aan bij de gemeentelijke richting/)).toBeInTheDocument()
   },
 }
 
@@ -86,14 +98,15 @@ export const CentraalStedeijkMismatch: Story = {
     project_type: 'nieuwbouw_wonen',
     algemeen_citaat: ALGEMEEN_CITAAT,
     matched_policy: CENTRAAL,
+    verdict: 'neutraal',
   },
   play: async () => {
     const body = within(document.body)
     await expect(body.getByText('Centraal Stedelijk Gebied')).toBeInTheDocument()
     await expect(body.getByText('Centraal stedelijk gebied')).toBeInTheDocument()
     await expect(body.getByText(/motor van Venlo/)).toBeInTheDocument()
-    // nieuwbouw_wonen fit list = [transformatie, stedelijk_wonen, dorp] → centraal_stedelijk is a mismatch
-    await expect(body.getByText(/wijkt af van de gemeentelijke richting/)).toBeInTheDocument()
+    // neutraal verdict sentence is the focal point
+    await expect(body.getByText(/Past binnen de gemeentelijke richting/)).toBeInTheDocument()
     // Confirm no chip-design artefacts
     const html = document.body.innerHTML
     await expect(html).not.toMatch(/border-l-4 border-amber-400/)
@@ -125,6 +138,74 @@ export const GeenMatch: Story = {
     // No alignment sentence when project_type is onbepaald
     await expect(body.queryByText(/sluit aan/)).not.toBeInTheDocument()
     await expect(body.queryByText(/wijkt af/)).not.toBeInTheDocument()
+  },
+}
+
+/* ── Story: Kansrijk — verdict-first match ──────────────────────── */
+
+export const Kansrijk: Story = {
+  name: 'Verdict — Kansrijk',
+  args: {
+    isOpen: true,
+    onClose: () => {},
+    gemeente: 'Venlo',
+    tijdshorizon: 2040,
+    project_type: 'transformatie_wonen',
+    algemeen_citaat: ALGEMEEN_CITAAT,
+    matched_policy: TRANSFORMATIE,
+    verdict: 'kansrijk',
+  },
+  play: async () => {
+    const body = within(document.body)
+    await expect(body.getByText('Transformatiegebieden')).toBeInTheDocument()
+    await expect(body.getByText(/woningbouwprioriteit hoog/)).toBeInTheDocument()
+    await expect(body.getByText(/Kansrijk — gemeente stuurt hier op wonen/)).toBeInTheDocument()
+  },
+}
+
+/* ── Story: Strijdig — werklocatie conflicts with wonen ─────────── */
+
+export const Strijdig: Story = {
+  name: 'Verdict — Strijdig',
+  args: {
+    isOpen: true,
+    onClose: () => {},
+    gemeente: 'Venlo',
+    tijdshorizon: 2040,
+    project_type: 'nieuwbouw_wonen',
+    algemeen_citaat: ALGEMEEN_CITAAT,
+    matched_policy: WERKLOCATIE,
+    verdict: 'strijdig',
+  },
+  play: async () => {
+    const body = within(document.body)
+    await expect(body.getByText('Werklocaties')).toBeInTheDocument()
+    await expect(body.getByText('Werklocatie')).toBeInTheDocument()
+    // woningbouwprioriteit niet_benoemd → no prioriteit meta
+    await expect(body.queryByText(/woningbouwprioriteit/)).not.toBeInTheDocument()
+    await expect(body.getByText(/Strijdig met de gemeentevisie/)).toBeInTheDocument()
+  },
+}
+
+/* ── Story: GeenBeleid — no gebied match ────────────────────────── */
+
+export const GeenBeleid: Story = {
+  name: 'Verdict — Geen beleid',
+  args: {
+    isOpen: true,
+    onClose: () => {},
+    gemeente: 'Venlo',
+    tijdshorizon: 2040,
+    project_type: 'onbepaald',
+    matched_policy: null,
+    algemeen_citaat: ALGEMEEN_CITAAT,
+    verdict: 'geen_beleid',
+  },
+  play: async () => {
+    const body = within(document.body)
+    await expect(body.getByText('Gemeente-breed')).toBeInTheDocument()
+    await expect(body.getByText(/geen gebied-specifieke tekst/)).toBeInTheDocument()
+    await expect(body.getByText(/Geen gebied-specifiek beleid voor dit perceel/)).toBeInTheDocument()
   },
 }
 
