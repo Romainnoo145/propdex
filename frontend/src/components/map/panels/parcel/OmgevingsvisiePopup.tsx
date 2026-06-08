@@ -100,6 +100,66 @@ export function groupRandvoorwaarden(
   return ordered
 }
 
+/**
+ * Randvoorwaarden section — gemeente-brede toetsingsregels as bento cards grouped
+ * by categorie. Shared by the omgevingsvisie + woonvisie detail bodies (identical
+ * UI, single source of truth). Renders nothing when there are no randvoorwaarden.
+ */
+export function RandvoorwaardenSection({
+  randvoorwaarden,
+}: {
+  randvoorwaarden?: Randvoorwaarde[]
+}) {
+  const groups =
+    randvoorwaarden && randvoorwaarden.length > 0 ? groupRandvoorwaarden(randvoorwaarden) : []
+  if (groups.length === 0) return null
+  return (
+    <div className="mt-9 border-t border-[#E3E9E5] pt-7">
+      <p className="text-[15px] font-bold tracking-tight text-[#0E1111]">Randvoorwaarden</p>
+      <p className="mt-0.5 text-[12px] text-[#9CA3AF]">
+        Wat de gemeente vraagt bij elke ontwikkeling
+      </p>
+      <div className="mt-5 space-y-3">
+        {groups.map((group) => (
+          <div
+            key={group.categorie}
+            className="rounded-[20px] border border-[#EAEFEF] bg-white p-4 transition-shadow hover:shadow-sm"
+          >
+            {/* Categorie header — amber accent + count */}
+            <div className="flex items-center gap-2">
+              <span className="h-3.5 w-1 rounded-full bg-[#F9A826]" />
+              <p className="text-[12px] font-bold uppercase tracking-wide text-[#0E1111]">
+                {RANDVOORWAARDE_LABEL[group.categorie] ?? group.categorie}
+              </p>
+              <span className="ml-auto text-[11px] font-bold tabular-nums text-slate-300">
+                {group.items.length}
+              </span>
+            </div>
+            <div className="mt-3 space-y-3">
+              {group.items.map((rv, i) => (
+                <div
+                  key={`${group.categorie}-${i}`}
+                  className={i > 0 ? 'border-t border-[#F4F7F5] pt-3' : ''}
+                >
+                  <p className="text-[13px] font-semibold text-[#0E1111]">{rv.titel}</p>
+                  <p className="mt-0.5 text-[12px] leading-relaxed text-[#6B7280]">
+                    {rv.samenvatting}
+                  </p>
+                  {rv.citaat && (
+                    <p className="mt-1 text-[11px] italic text-slate-400">
+                      “{rv.citaat}”{rv.pagina ? ` · p.${rv.pagina}` : ''}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /* ── Karakter label (inline text, no chip) ─────────────────────── */
 
 export const KARAKTER_LABEL: Record<GebiedKarakter, string> = {
@@ -179,8 +239,6 @@ export function OmgevingsvisieDetailContent({
   const titel = hasMatch ? matched_policy!.gebied_naam : 'Gemeente-breed'
   const pagina = hasMatch ? (matched_policy!.pagina ?? null) : null
   const verdictCopy = verdict ? VERDICT_COPY[verdict] : undefined
-  const randvoorwaardeGroups =
-    randvoorwaarden && randvoorwaarden.length > 0 ? groupRandvoorwaarden(randvoorwaarden) : []
 
   return (
     <>
@@ -237,53 +295,7 @@ export function OmgevingsvisieDetailContent({
       )}
 
       {/* Randvoorwaarden — gemeente-brede toetsingsregels, grouped by categorie */}
-      {randvoorwaardeGroups.length > 0 && (
-        <div className="mt-9 border-t border-[#E3E9E5] pt-7">
-          <p className="text-[15px] font-bold tracking-tight text-[#0E1111]">
-            Randvoorwaarden
-          </p>
-          <p className="mt-0.5 text-[12px] text-[#9CA3AF]">
-            Wat de gemeente vraagt bij elke ontwikkeling
-          </p>
-          <div className="mt-5 space-y-3">
-            {randvoorwaardeGroups.map((group) => (
-              <div
-                key={group.categorie}
-                className="rounded-[20px] border border-[#EAEFEF] bg-white p-4 transition-shadow hover:shadow-sm"
-              >
-                {/* Categorie header — amber accent + count */}
-                <div className="flex items-center gap-2">
-                  <span className="h-3.5 w-1 rounded-full bg-[#F9A826]" />
-                  <p className="text-[12px] font-bold uppercase tracking-wide text-[#0E1111]">
-                    {RANDVOORWAARDE_LABEL[group.categorie] ?? group.categorie}
-                  </p>
-                  <span className="ml-auto text-[11px] font-bold tabular-nums text-slate-300">
-                    {group.items.length}
-                  </span>
-                </div>
-                <div className="mt-3 space-y-3">
-                  {group.items.map((rv, i) => (
-                    <div
-                      key={`${group.categorie}-${i}`}
-                      className={i > 0 ? 'border-t border-[#F4F7F5] pt-3' : ''}
-                    >
-                      <p className="text-[13px] font-semibold text-[#0E1111]">{rv.titel}</p>
-                      <p className="mt-0.5 text-[12px] leading-relaxed text-[#6B7280]">
-                        {rv.samenvatting}
-                      </p>
-                      {rv.citaat && (
-                        <p className="mt-1 text-[11px] italic text-slate-400">
-                          “{rv.citaat}”{rv.pagina ? ` · p.${rv.pagina}` : ''}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <RandvoorwaardenSection randvoorwaarden={randvoorwaarden} />
     </>
   )
 }

@@ -273,6 +273,12 @@ interface PotentieLayerProps {
    * OmgevingsvisiePopup drawer. Absent → old popup behavior (back-compat).
    */
   onOpenOmgevingsvisie?: () => void
+  /**
+   * When provided, the woonvisie card drills down in-panel (handled by the parent
+   * ParcelDetailPanel view-stack) instead of opening the standalone WoonvisiePopup
+   * drawer. Absent → old popup behavior (back-compat).
+   */
+  onOpenWoonvisie?: () => void
 }
 
 const POTENTIE_KEYS = [
@@ -281,7 +287,7 @@ const POTENTIE_KEYS = [
   'capaciteit', 'woonvisie_match', 'beleidsalignement',
 ] as const
 
-export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie }: PotentieLayerProps) {
+export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie, onOpenWoonvisie }: PotentieLayerProps) {
   const [page, setPage] = useState(0)
   const [woonvisieOpen, setWoonvisieOpen] = useState(false)
   const [omgevingsvisieOpen, setOmgevingsvisieOpen] = useState(false)
@@ -297,6 +303,9 @@ export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie }: Po
     matched_policy: WijkPolicy | null
     prioritized_segment: string | null
     algemeen_citaat: string
+    periode_start?: number
+    periode_einde?: number
+    randvoorwaarden?: Randvoorwaarde[]
   } | null
   const hasWoonvisieData = woonvisieWaarde !== null && woonvisieWaarde !== undefined
 
@@ -429,7 +438,7 @@ export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie }: Po
                   onStarClick={() => toggle(card.factor_key)}
                   onCardClick={
                     card.factor_key === 'woonvisie_match' && hasWoonvisieData
-                      ? () => setWoonvisieOpen(true)
+                      ? onOpenWoonvisie ?? (() => setWoonvisieOpen(true))
                       : card.factor_key === 'beleidsalignement' && hasOmgevingsvisieData
                         ? onOpenOmgevingsvisie ?? (() => setOmgevingsvisieOpen(true))
                         : undefined
@@ -441,17 +450,18 @@ export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie }: Po
         </AnimatePresence>
       </div>
 
-      {hasWoonvisieData && (
+      {hasWoonvisieData && !onOpenWoonvisie && (
         <WoonvisiePopup
           isOpen={woonvisieOpen}
           onClose={() => setWoonvisieOpen(false)}
           gemeente={gemeenteNaam}
-          periode_start={0}
-          periode_einde={0}
+          periode_start={woonvisieWaarde!.periode_start ?? 0}
+          periode_einde={woonvisieWaarde!.periode_einde ?? 0}
           matched_policy={woonvisieWaarde!.matched_policy}
           algemeen_citaat={woonvisieWaarde!.algemeen_citaat ?? ''}
           project_type={projectType}
           confidence={1.0}
+          randvoorwaarden={woonvisieWaarde!.randvoorwaarden}
         />
       )}
 
