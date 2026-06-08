@@ -1,15 +1,16 @@
 /**
  * /instellingen/data-bronnen/ — index handler (scope-consolidation).
  *
- * Landing surface for the data-bronnen hub: renders the ScopePicker so the
- * admin chooses Landelijk / Provincie / Gemeente. Empty-state when no
- * gemeenten exist yet. Superuser gate is enforced by the parent layout.
+ * Landing surface for the data-bronnen hub: renders the ScopeHub hero so the
+ * admin chooses Landelijk / Provincie / Gemeente (clicking a scope opens its
+ * data-bronnen in a pop-up). Empty-state when no gemeenten exist yet.
+ * Superuser gate is enforced by the parent layout.
  */
 import { createFileRoute } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { useGemeentenSummary } from '@/lib/queries/data-sources-admin'
 import { DataSourcesEmptyState } from '@/components/settings/data-bronnen/DataSourcesEmptyState'
-import { ScopePicker } from '@/components/settings/data-bronnen/ScopePicker'
+import { ScopeHub } from '@/components/settings/data-bronnen/ScopeHub'
 
 export const Route = createFileRoute(
   '/_authenticated/instellingen/data-bronnen/',
@@ -54,7 +55,7 @@ function DataBronnenIndexPage() {
           Kies een scope om de bronnen te beheren.
         </p>
       </header>
-      <ScopePicker />
+      <ScopeHub />
     </div>
   )
 }
