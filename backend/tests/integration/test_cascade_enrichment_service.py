@@ -85,3 +85,78 @@ async def test_woonvisie_uses_document_sentinel(
     assert captured_kwargs["factor_id"] == "woonvisie_match"
     assert captured_kwargs["policy_document_id"] == doc.id
     assert "woonvisie_match" in payloads
+
+
+@pytest.mark.asyncio
+async def test_get_woonvisie_document_finds_global_doc_from_other_org(
+    test_db, create_test_user
+):
+    """A vendor-global woonvisie owned by org A must resolve when queried as org B."""
+    from app.models.policy_document import PolicyDocument
+    from app.services import cascade_enrichment_service
+
+    vendor_user, vendor_org = await create_test_user(
+        email="vendor@example.com", org_name="Vendor Org"
+    )
+    _other_user, other_org = await create_test_user(
+        email="other@example.com", org_name="Other Org"
+    )
+
+    doc = PolicyDocument(
+        id=uuid.uuid4(),
+        organization_id=vendor_org.id,
+        is_global=True,
+        entity_type="gemeente",
+        entity_code="GM0983",
+        source_key="woonvisie",
+        filename="venlo-woonvisie.pdf",
+        content_type="application/pdf",
+        file_data=b"%PDF-1.4\n%fake\n%%EOF",
+        file_size=22,
+        uploaded_by_user_id=vendor_user.id,
+    )
+    test_db.add(doc)
+    await test_db.commit()
+
+    found = await cascade_enrichment_service.get_woonvisie_document(
+        test_db, gemeente_code="GM0983", organization_id=other_org.id
+    )
+    assert found is not None
+    assert found.id == doc.id
+
+
+@pytest.mark.asyncio
+async def test_get_woonvisie_document_does_not_leak_org_private_doc(
+    test_db, create_test_user
+):
+    """An org-private (is_global=false) doc owned by org A must NOT resolve for org B."""
+    from app.models.policy_document import PolicyDocument
+    from app.services import cascade_enrichment_service
+
+    owner_user, owner_org = await create_test_user(
+        email="owner@example.com", org_name="Owner Org"
+    )
+    _other_user, other_org = await create_test_user(
+        email="reader@example.com", org_name="Reader Org"
+    )
+
+    doc = PolicyDocument(
+        id=uuid.uuid4(),
+        organization_id=owner_org.id,
+        is_global=False,
+        entity_type="gemeente",
+        entity_code="GM0983",
+        source_key="woonvisie",
+        filename="private-woonvisie.pdf",
+        content_type="application/pdf",
+        file_data=b"%PDF-1.4\n%fake\n%%EOF",
+        file_size=22,
+        uploaded_by_user_id=owner_user.id,
+    )
+    test_db.add(doc)
+    await test_db.commit()
+
+    found = await cascade_enrichment_service.get_woonvisie_document(
+        test_db, gemeente_code="GM0983", organization_id=other_org.id
+    )
+    assert found is None
