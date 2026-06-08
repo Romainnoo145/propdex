@@ -18,7 +18,7 @@ import logging
 
 import fitz  # type: ignore[import-untyped]  # PyMuPDF — no py.typed marker
 import httpx
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from app.core.database import async_session_factory
 from app.models.policy_document import PolicyDocument
@@ -71,7 +71,10 @@ async def _run(url: str) -> int:
                     PolicyDocument.entity_type == "gemeente",
                     PolicyDocument.entity_code == VENLO_GM,
                     PolicyDocument.source_key == "omgevingsvisie",
-                    PolicyDocument.organization_id == org_id,
+                    or_(
+                        PolicyDocument.is_global.is_(True),
+                        PolicyDocument.organization_id == org_id,
+                    ),
                 )
             )
         ).scalar_one_or_none()
@@ -91,7 +94,7 @@ async def _run(url: str) -> int:
             file_size=len(text_bytes),
             uploaded_by_user_id=user.id,
             organization_id=org_id,
-            is_global=False,
+            is_global=True,  # vendor-global: gemeente policy docs are shared across orgs
             status="uploaded",
             version_number=1,
         )
