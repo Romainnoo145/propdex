@@ -1,9 +1,11 @@
 /**
  * ScopeHub — beleid-style hero for the data-bronnen hub (M053/S05).
  *
- * Split-canvas layout: clicking any scope slides a 620px ScopeDetailPanel in on
- * the LEFT (the app's signature Dynamic Split-Canvas) while the hub content to
- * the right reflows/shrinks. One UNIFORM card design across all three levels
+ * Clicking any scope opens its bronnen in a LeftPanelShell — the same shell the
+ * map's parcel/gemeente panels use. It portals into the layout's left panel slot
+ * (leftPanelPortalRef) and setLeftPanelOpen shrinks <main>, so this page gets the
+ * exact Dynamic Split-Canvas behaviour as the map. One UNIFORM card design across
+ * all three levels
  * (Landelijk · Provincie · Gemeente) — solid white cards on the Morning-Mist
  * page, with only the gemeente cards carrying a status dot (groen all-live /
  * amber any-missing / rood any-broken — mirrors GemeentePicker.dotColor). No
@@ -13,7 +15,6 @@
  * decorative accent, Obsidian #0E1111 for text. Minimal Calm Intelligence.
  */
 import { useMemo, useState } from 'react'
-import { AnimatePresence } from 'framer-motion'
 import { Search, Loader2 } from 'lucide-react'
 
 import { useScopes, useGemeentenSummary } from '@/lib/queries/data-sources-admin'
@@ -21,7 +22,8 @@ import type {
   EntityType,
   GemeenteSummary,
 } from '@/lib/types/data-sources-admin'
-import { ScopeDetailPanel } from '@/components/settings/data-bronnen/ScopeDetailPanel'
+import { LeftPanelShell } from '@/components/map/panels/LeftPanelShell'
+import { ScopeDataSourcesView } from '@/components/settings/data-bronnen/ScopeDataSourcesView'
 
 interface SelectedScope {
   entityType: EntityType
@@ -116,21 +118,22 @@ export function ScopeHub() {
   )
 
   return (
-    <div className="flex items-start gap-4" data-component="scope-hub">
-      <AnimatePresence>
-        {selected && (
-          <ScopeDetailPanel
-            key="scope-panel"
-            open
-            onClose={() => setSelected(null)}
-            entityType={selected.entityType}
-            entityCode={selected.entityCode}
-            entityNaam={selected.entityNaam}
-          />
-        )}
-      </AnimatePresence>
+    <div className="space-y-6" data-component="scope-hub">
+      {/* The detail panel portals into the layout's left slot (LeftPanelShell →
+          leftPanelPortalRef) and setLeftPanelOpen shrinks <main> — the exact
+          Dynamic Split-Canvas the map's parcel/gemeente panels use. */}
+      {selected && (
+        <LeftPanelShell onClose={() => setSelected(null)}>
+          <div className="px-8 pt-12 pb-8">
+            <ScopeDataSourcesView
+              entityType={selected.entityType}
+              entityCode={selected.entityCode}
+            />
+          </div>
+        </LeftPanelShell>
+      )}
 
-      <div className="min-w-0 flex-1 space-y-6">
+      <div className="min-w-0 space-y-6">
         {/* ── SEARCH ──────────────────────────────────────────────── */}
         <div className="relative max-w-md">
           <Search
