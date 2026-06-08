@@ -1610,6 +1610,32 @@ _KARAKTER_LABEL: dict[str, str] = {
     "landschap": "landschapszone",
 }
 
+# M053/S03: deterministic CBS-wijk → omgevingsvisie-gebied crosswalk for Venlo (GM0983).
+# The omgevingsvisie gebonden_plaatsen ("Binnenstad Venlo", "Tradeport Venlo") don't
+# substring-match the CBS wijk names ("Wijk 11 Venlo-Centrum"), so the high-value
+# gebieden never matched. Keyed by _normalize_wijk(cbs_wijk_naam). Geocode-generic = todo.
+_VENLO_WIJK_TO_GEBIED: dict[str, str] = {
+    _normalize_wijk("Wijk 11 Venlo-Centrum"): "Hart van het Centraal stedelijk gebied",
+    _normalize_wijk("Wijk 21 Blerick-Midden"): "Hart van het Centraal stedelijk gebied",
+    _normalize_wijk("Wijk 28 Trade-Port"): "Werklocaties",
+    _normalize_wijk("Wijk 12 Venlo-Zuid"): "Stedelijke woongebieden",
+    _normalize_wijk("Wijk 13 Venlo-Oost-Noord"): "Stedelijke woongebieden",
+    _normalize_wijk("Wijk 14 Venlo-Noord"): "Stedelijke woongebieden",
+    _normalize_wijk("Wijk 15 Venlo-Oost-Zuid"): "Stedelijke woongebieden",
+    _normalize_wijk("Wijk 16 Het Ven"): "Stedelijke woongebieden",
+    _normalize_wijk("Wijk 23 Blerick-Zuid"): "Stedelijke woongebieden",
+    _normalize_wijk("Wijk 24 Vossener"): "Stedelijke woongebieden",
+    _normalize_wijk("Wijk 26 Hout-Blerick"): "Stedelijke woongebieden",
+    _normalize_wijk("Wijk 27 Boekend"): "Stedelijke woongebieden",
+    _normalize_wijk("Wijk 31 Tegelen-Centrum"): "Stedelijke woongebieden",
+    _normalize_wijk("Wijk 32 Op de Hei"): "Stedelijke woongebieden",
+    _normalize_wijk("Wijk 35 Steyl"): "Stedelijke woongebieden",
+    _normalize_wijk("Wijk 41 Velden"): "Velden",
+    _normalize_wijk("Wijk 43 Lomm"): "Lomm",
+    _normalize_wijk("Wijk 44 Arcen"): "Arcen",
+    _normalize_wijk("Wijk 51 Belfeld"): "Belfeld",
+}
+
 
 def score_beleidsalignement(
     payload: OmgevingsvisiePayload | None,
@@ -1638,10 +1664,16 @@ def score_beleidsalignement(
     document_label = f"Omgevingsvisie {payload.tijdshorizon}"
     algemeen_citaat = payload.algemeen_citaat or ""
 
-    # 1. Match deelgebied — longest-normalised gebonden_plaats wins (deterministic)
+    # 1. Match deelgebied — crosswalk first (deterministic), substring fallback.
     parcel_norm = _normalize_wijk(wijk_naam)
     matched: GebiedPolicy | None = None
-    if parcel_norm and payload.gebied_policies:
+    crosswalk_gebied = _VENLO_WIJK_TO_GEBIED.get(parcel_norm)
+    if crosswalk_gebied:
+        matched = next(
+            (g for g in payload.gebied_policies if g.gebied_naam == crosswalk_gebied),
+            None,
+        )
+    if matched is None and parcel_norm and payload.gebied_policies:
         candidates: list[tuple[int, GebiedPolicy]] = []
         for g in payload.gebied_policies:
             for plaats in g.gebonden_plaatsen:

@@ -1,3 +1,5 @@
+import pytest
+
 from app.ai.factors.beleidsalignement import GebiedPolicy, OmgevingsvisiePayload
 from app.services.score_v3_factors import score_beleidsalignement
 
@@ -6,6 +8,52 @@ def _payload(policies, algemeen="", conf=1.0):
     return OmgevingsvisiePayload(
         tijdshorizon=2040, gebied_policies=policies, algemeen_citaat=algemeen, confidence=conf
     )
+
+
+@pytest.fixture
+def make_omgevingsvisie_payload():
+    """Build an OmgevingsvisiePayload mirroring the real Venlo extraction's high-value gebieden.
+
+    Includes the centraal_stedelijk "Hart van het Centraal stedelijk gebied" (woningbouw=hoog),
+    the werklocatie "Werklocaties", and a stedelijk_wonen gebied — exactly the gebied_naam strings
+    the Venlo crosswalk maps wijken to.
+    """
+
+    def _make(algemeen="compacte stad", conf=1.0):
+        policies = [
+            GebiedPolicy(
+                gebied_naam="Hart van het Centraal stedelijk gebied",
+                karakter="centraal_stedelijk",
+                woningbouwprioriteit="hoog",
+                transformatie_kansgebied=True,
+                gebonden_plaatsen=["Binnenstad Venlo"],
+                citaat="verdichten in het centraal stedelijk gebied",
+                pagina=8,
+            ),
+            GebiedPolicy(
+                gebied_naam="Werklocaties",
+                karakter="werklocatie",
+                woningbouwprioriteit="niet_benoemd",
+                transformatie_kansgebied=False,
+                gebonden_plaatsen=["Tradeport Venlo"],
+                citaat="ruimte voor bedrijvigheid en logistiek",
+                pagina=22,
+            ),
+            GebiedPolicy(
+                gebied_naam="Stedelijke woongebieden",
+                karakter="stedelijk_wonen",
+                woningbouwprioriteit="gemiddeld",
+                transformatie_kansgebied=False,
+                gebonden_plaatsen=["Venlo-Zuid"],
+                citaat="bestaande woonwijken behouden en versterken",
+                pagina=14,
+            ),
+        ]
+        return OmgevingsvisiePayload(
+            tijdshorizon=2040, gebied_policies=policies, algemeen_citaat=algemeen, confidence=conf
+        )
+
+    return _make
 
 
 def test_missing_payload_not_weighed():
@@ -57,3 +105,14 @@ def test_hyphen_and_casing_match():
     )
     r = score_beleidsalignement(_payload([pol]), wijk_naam="oud‐blerick", project_type="onbepaald")
     assert r.waarde["matched_policy"]["gebied_naam"] == "Stedelijke woongebieden"
+
+
+def test_crosswalk_maps_venlo_centrum_to_centraal_gebied(make_omgevingsvisie_payload):
+    """Wijk 11 Venlo-Centrum must resolve to the centraal-stedelijk gebied via the
+    crosswalk, even though 'Binnenstad Venlo' does not substring-match 'Wijk 11 Venlo-Centrum'."""
+    payload = make_omgevingsvisie_payload()  # must include the centraal_stedelijk gebied
+    result = score_beleidsalignement(
+        payload, wijk_naam="Wijk 11 Venlo-Centrum", project_type="nieuwbouw_wonen"
+    )
+    assert result.missing is False
+    assert result.waarde["matched_gebied"] == "Hart van het Centraal stedelijk gebied"
