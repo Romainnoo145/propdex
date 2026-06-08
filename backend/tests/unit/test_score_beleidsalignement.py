@@ -175,6 +175,33 @@ def test_centraal_with_nonfitting_projecttype_is_neutraal(make_omgevingsvisie_pa
     assert result.waarde["verdict"] == "neutraal"
 
 
+def test_randvoorwaarden_surfaced_in_waarde(make_omgevingsvisie_payload):
+    from app.ai.factors.beleidsalignement import Randvoorwaarde
+    payload = make_omgevingsvisie_payload()
+    payload.randvoorwaarden = [
+        Randvoorwaarde(categorie="programmering", titel="70/30",
+                       samenvatting="70% vrije sector / 30% sociaal vanaf 30 woningen."),
+    ]
+    r = score_beleidsalignement(payload, wijk_naam="Wijk 11 Venlo-Centrum", project_type="onbepaald")
+    assert isinstance(r.waarde["randvoorwaarden"], list)
+    assert r.waarde["randvoorwaarden"][0]["categorie"] == "programmering"
+
+
+def test_randvoorwaarden_do_not_change_score(make_omgevingsvisie_payload):
+    """Measurability guard: randvoorwaarden are display-only — score + verdict identical."""
+    from app.ai.factors.beleidsalignement import Randvoorwaarde
+    base = make_omgevingsvisie_payload()
+    enriched = make_omgevingsvisie_payload()
+    enriched.randvoorwaarden = [
+        Randvoorwaarde(categorie="financieel", titel="Kostenverhaal", samenvatting="..."),
+    ]
+    a = score_beleidsalignement(base, wijk_naam="Wijk 11 Venlo-Centrum", project_type="onbepaald")
+    b = score_beleidsalignement(enriched, wijk_naam="Wijk 11 Venlo-Centrum", project_type="onbepaald")
+    assert a.genormaliseerde_score == b.genormaliseerde_score
+    assert a.waarde["verdict"] == b.waarde["verdict"]
+    assert a.waarde["strijdig_met_visie"] == b.waarde["strijdig_met_visie"]
+
+
 def test_centraal_with_fitting_projecttype_is_kansrijk(make_omgevingsvisie_payload):
     """A projecttype that fits centraal_stedelijk (transformatie_wonen) + hoog → kansrijk."""
     payload = make_omgevingsvisie_payload()
