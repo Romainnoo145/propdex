@@ -181,11 +181,13 @@ function ScopeDocumentsView({
         ))}
       </DataSourceSection>
 
-      {/* UploadDocumentModal — niveau defaults internally; admin selects entity. */}
+      {/* UploadDocumentModal — prefill niveau + entity from the current scope. */}
       <UploadDocumentModal
         open={openUploadFor !== null}
         onClose={() => setOpenUploadFor(null)}
         gemeenten={gemeentenForModal}
+        initialNiveau={entityType}
+        initialEntityCode={entityCode}
         initialSourceKey={openUploadFor ?? undefined}
         onSuccess={handleUploadSuccess}
       />

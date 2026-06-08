@@ -47,6 +47,8 @@ interface Props {
   onClose: () => void
   gemeenten: GemeenteEntry[]
   initialGemeente?: GemeenteEntry          // pre-selects gemeente when opened from data-bronnen row
+  initialNiveau?: CascadeLevel             // pre-selects niveau when opened from provincie/landelijk scope
+  initialEntityCode?: string               // pre-selects entity (e.g. provincie code) for non-gemeente scope
   initialSourceKey?: string                 // pre-selects source_key dropdown
   onSuccess?: (versionId: string) => void   // called after upload + toast, before modal closes
 }
@@ -65,18 +67,31 @@ export function UploadDocumentModal(props: Props): ReactElement | null {
   return <UploadDocumentForm {...props} />
 }
 
-function UploadDocumentForm({ onClose, gemeenten, initialGemeente, initialSourceKey, onSuccess }: Props) {
+function UploadDocumentForm({
+  onClose,
+  gemeenten,
+  initialGemeente,
+  initialNiveau: initialNiveauProp,
+  initialEntityCode,
+  initialSourceKey,
+  onSuccess,
+}: Props) {
   const queryClient = useQueryClient()
   const uploadMutation = useUploadPolicyDocument()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Lazy initial state — derived from props at open time. When opened from the
-  // data-bronnen hub with an initialGemeente, prefill gemeente + entity; an
-  // initialSourceKey prefills the documenttype dropdown.
-  const initialNiveau: CascadeLevel = initialGemeente ? 'gemeente' : 'landelijk'
+  // Lazy initial state — derived from props at open time. When opened from a
+  // data-bronnen scope, prefill niveau + entity from where the upload was clicked:
+  // a gemeente row → gemeente + that gemeente; a provincie/landelijk scope →
+  // initialNiveau + initialEntityCode. An initialSourceKey prefills documenttype.
+  const initialNiveau: CascadeLevel = initialGemeente
+    ? 'gemeente'
+    : (initialNiveauProp ?? 'landelijk')
   const [niveau, setNiveau] = useState<CascadeLevel>(initialNiveau)
   const [entityCode, setEntityCode] = useState<string>(
-    initialGemeente ? initialGemeente.code : defaultEntityCode(initialNiveau, gemeenten),
+    initialGemeente
+      ? initialGemeente.code
+      : (initialEntityCode ?? defaultEntityCode(initialNiveau, gemeenten)),
   )
   const [sourceKey, setSourceKey] = useState<string>(
     initialSourceKey ?? getSourcesForLevel(initialNiveau)[0]?.key ?? '',
