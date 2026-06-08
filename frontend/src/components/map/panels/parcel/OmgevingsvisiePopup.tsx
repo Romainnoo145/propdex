@@ -14,11 +14,19 @@ export type Woningbouwprioriteit = 'hoog' | 'gemiddeld' | 'laag' | 'niet_benoemd
 
 export type BeleidsVerdict = 'kansrijk' | 'neutraal' | 'strijdig' | 'geen_beleid'
 
-const VERDICT_COPY: Record<BeleidsVerdict, { mark: string; color: string; line: string }> = {
-  kansrijk: { mark: '✓', color: 'text-[#15803d]', line: 'Kansrijk — gemeente stuurt hier op wonen; jouw plan past bij de visie.' },
-  neutraal: { mark: '•', color: 'text-[#6B7280]', line: 'Past binnen de gemeentelijke richting voor dit gebied.' },
-  strijdig: { mark: '⚠', color: 'text-[#DC2626]', line: 'Strijdig met de gemeentevisie — reken op verzet.' },
-  geen_beleid: { mark: '•', color: 'text-[#9CA3AF]', line: 'Geen gebied-specifiek beleid voor dit perceel.' },
+const VERDICT_COPY: Record<BeleidsVerdict, { mark: string; color: string; line: string; label: string }> = {
+  kansrijk: { mark: '✓', color: 'text-[#15803d]', label: 'Kansrijk', line: 'Gemeente stuurt hier op wonen — jouw plan past bij de visie.' },
+  neutraal: { mark: '•', color: 'text-[#6B7280]', label: 'Neutraal', line: 'Past binnen de gemeentelijke richting voor dit gebied.' },
+  strijdig: { mark: '⚠', color: 'text-[#DC2626]', label: 'Strijdig', line: 'Strijdig met de gemeentevisie — reken op verzet.' },
+  geen_beleid: { mark: '•', color: 'text-[#9CA3AF]', label: 'Geen beleid', line: 'Geen gebied-specifiek beleid voor dit perceel.' },
+}
+
+/** Prominent verdict-banner styling per verdict. */
+const VERDICT_BANNER: Record<BeleidsVerdict, { wrap: string; icon: string; label: string }> = {
+  kansrijk: { wrap: 'bg-[#15803d]/[0.07] border-[#15803d]/25', icon: 'bg-[#15803d] text-white', label: 'text-[#15803d]' },
+  strijdig: { wrap: 'bg-[#DC2626]/[0.06] border-[#DC2626]/25', icon: 'bg-[#DC2626] text-white', label: 'text-[#DC2626]' },
+  neutraal: { wrap: 'bg-[#F2F6F3] border-[#E3E9E5]', icon: 'bg-[#9CA3AF] text-white', label: 'text-[#4B5563]' },
+  geen_beleid: { wrap: 'bg-[#F2F6F3] border-[#E3E9E5]', icon: 'bg-[#D1D5DB] text-white', label: 'text-[#6B7280]' },
 }
 
 export interface GebiedPolicy {
@@ -209,37 +217,54 @@ export function OmgevingsvisieDetailContent({
         <div className="mt-3 text-[13px] text-[#6B7280] italic">geen gebied-specifieke tekst</div>
       )}
 
-      {/* Verdict — the new focal point */}
-      {verdictCopy && (
-        <p className={`mt-8 text-[18px] font-semibold leading-snug ${verdictCopy.color}`}>
-          {verdictCopy.mark} {verdictCopy.line}
-        </p>
+      {/* Verdict — prominent banner (the focal point) */}
+      {verdict && verdictCopy && (
+        <div className={`mt-7 flex items-start gap-3 rounded-2xl border p-4 ${VERDICT_BANNER[verdict].wrap}`}>
+          <span className={`grid size-7 shrink-0 place-items-center rounded-full text-[14px] font-bold ${VERDICT_BANNER[verdict].icon}`}>
+            {verdictCopy.mark}
+          </span>
+          <div className="min-w-0">
+            <p className={`text-[13px] font-bold uppercase tracking-wide ${VERDICT_BANNER[verdict].label}`}>
+              {verdictCopy.label}
+            </p>
+            <p className="mt-0.5 text-[13px] leading-snug text-[#374151]">{verdictCopy.line}</p>
+          </div>
+        </div>
       )}
 
-      {/* Citaat — demoted to supporting evidence */}
+      {/* Citaat — supporting evidence as a quote block */}
       {citaat && (
-        <p className="mt-6 text-[13px] leading-[1.7] text-[#6B7280] whitespace-pre-line">
-          {citaat}
-        </p>
+        <div className="mt-6 border-l-2 border-[#EAEFEF] pl-4">
+          <p className="text-[13px] italic leading-[1.7] text-[#6B7280] whitespace-pre-line">
+            {citaat}
+          </p>
+        </div>
       )}
 
       {/* Randvoorwaarden — gemeente-brede toetsingsregels, grouped by categorie */}
       {randvoorwaardeGroups.length > 0 && (
-        <div className="mt-8 border-t border-[#F2F6F3] pt-6">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+        <div className="mt-9 border-t border-[#E3E9E5] pt-7">
+          <p className="text-[15px] font-bold tracking-tight text-[#0E1111]">
             Randvoorwaarden
           </p>
-          <div className="mt-4 space-y-6">
+          <p className="mt-0.5 text-[12px] text-[#9CA3AF]">
+            Wat de gemeente vraagt bij elke ontwikkeling
+          </p>
+          <div className="mt-5 space-y-7">
             {randvoorwaardeGroups.map((group) => (
               <div key={group.categorie}>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
-                  {RANDVOORWAARDE_LABEL[group.categorie] ?? group.categorie}
-                </p>
-                <div className="mt-2 space-y-3">
+                {/* Categorie header — amber-accented section divider */}
+                <div className="flex items-center gap-2">
+                  <span className="h-3.5 w-1 rounded-full bg-[#F9A826]" />
+                  <p className="text-[12px] font-bold uppercase tracking-wide text-[#0E1111]">
+                    {RANDVOORWAARDE_LABEL[group.categorie] ?? group.categorie}
+                  </p>
+                </div>
+                <div className="mt-3 space-y-3 border-l border-[#F2F6F3] pl-3.5">
                   {group.items.map((rv, i) => (
                     <div key={`${group.categorie}-${i}`}>
                       <p className="text-[13px] font-semibold text-[#0E1111]">{rv.titel}</p>
-                      <p className="text-[12px] leading-relaxed text-[#6B7280]">
+                      <p className="mt-0.5 text-[12px] leading-relaxed text-[#6B7280]">
                         {rv.samenvatting}
                       </p>
                       {rv.citaat && (
