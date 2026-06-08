@@ -23,6 +23,24 @@ GebiedKarakter = Literal[
 ]
 Woningbouwprioriteit = Literal["hoog", "gemiddeld", "laag", "niet_benoemd"]
 
+RandvoorwaardeCategorie = Literal[
+    "programmering", "financieel", "doelgroep", "duurzaamheid",
+    "proces", "ruimtelijk", "markt", "overig",
+]
+
+
+class Randvoorwaarde(BaseModel):
+    """Een gemeente-brede randvoorwaarde / toetsingsregel uit de omgevingsvisie.
+
+    Display-only: deze beïnvloeden de score NIET (zie spec — meetbaarheid).
+    """
+
+    categorie: RandvoorwaardeCategorie
+    titel: str = Field(min_length=1, description="Korte titel van de randvoorwaarde")
+    samenvatting: str = Field(min_length=1, description="1-3 zinnen: wat betekent dit voor een ontwikkelaar")
+    citaat: str | None = Field(default=None, description="Letterlijk citaat dat het onderbouwt")
+    pagina: int | None = Field(default=None, ge=1)
+
 
 class GebiedPolicy(BaseModel):
     """Per-deelgebied ontwikkelrichting uit een gemeentelijke omgevingsvisie."""
@@ -47,6 +65,10 @@ class OmgevingsvisiePayload(BaseModel):
     algemeen_citaat: str = Field(
         default="",
         description="Gemeente-brede citaat-fallback als geen deelgebied matcht",
+    )
+    randvoorwaarden: list[Randvoorwaarde] = Field(
+        default_factory=list,
+        description="Gemeente-brede randvoorwaarden / toetsingskader (display-only, niet gescoord)",
     )
     confidence: float = Field(ge=0.0, le=1.0, description="0=onzeker, 1=zeker")
 
@@ -95,6 +117,32 @@ _INPUT_SCHEMA: dict[str, Any] = {
             },
         },
         "algemeen_citaat": {"type": "string", "description": "Gemeente-brede fallback-citaat"},
+        "randvoorwaarden": {
+            "type": "array",
+            "description": (
+                "Gemeente-brede randvoorwaarden / toetsingsregels die voor ELKE ontwikkeling "
+                "in de gemeente gelden (niet gebied-specifiek): bv. programmerings-eisen, "
+                "kostenverhaal, doelgroep/short-stay regels, duurzaamheidseisen, milieucategorie, "
+                "proces/toetsingskader. Laat weg zonder letterlijke basis in het document."
+            ),
+            "items": {
+                "type": "object",
+                "properties": {
+                    "categorie": {
+                        "type": "string",
+                        "enum": ["programmering", "financieel", "doelgroep", "duurzaamheid",
+                                 "proces", "ruimtelijk", "markt", "overig"],
+                    },
+                    "titel": {"type": "string", "minLength": 1},
+                    "samenvatting": {"type": "string", "minLength": 1,
+                                     "description": "1-3 zinnen, wat betekent dit voor een ontwikkelaar"},
+                    "citaat": {"type": "string", "description": "Letterlijk citaat"},
+                    "pagina": {"type": "integer", "minimum": 1},
+                },
+                "required": ["categorie", "titel", "samenvatting"],
+                "additionalProperties": False,
+            },
+        },
         "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
     },
     "required": ["tijdshorizon", "confidence"],
@@ -128,9 +176,19 @@ OMGEVINGSVISIE_FACTOR_DEF = FactorDefinition[OmgevingsvisiePayload](
         "   - citaat: letterlijk citaat dat de richting onderbouwt (1-3 zinnen)\n"
         "   - pagina: paginanummer indien zichtbaar, anders null\n"
         "3. Gemeente-brede tekst zonder deelgebied → algemeen_citaat.\n"
-        "4. Confidence: 0.9+ bij heldere gebiedsindeling; 0.5-0.7 bij vage tekst; <0.5 bij twijfel.\n\n"
+        "4. Welke gemeente-brede randvoorwaarden / toetsingsregels gelden voor ELKE ontwikkeling "
+        "(niet gebied-specifiek)? Verzamel ze in randvoorwaarden. Voor ELKE randvoorwaarde:\n"
+        "   - categorie: programmering (woningbouw-mix/aantallen), financieel (kostenverhaal/bijdragen), "
+        "doelgroep (short-stay/sociaal/senioren), duurzaamheid (energie/klimaat/circulair), "
+        "proces (toetsingskader/participatie), ruimtelijk (groen/parkeren/dichtheid), markt, overig\n"
+        "   - titel: korte titel van de randvoorwaarde\n"
+        "   - samenvatting: 1-3 zinnen, wat betekent dit voor een ontwikkelaar\n"
+        "   - citaat: letterlijk citaat dat het onderbouwt, anders null\n"
+        "   - pagina: paginanummer indien zichtbaar, anders null\n"
+        "5. Confidence: 0.9+ bij heldere gebiedsindeling; 0.5-0.7 bij vage tekst; <0.5 bij twijfel.\n\n"
         "HARDE REGELS:\n"
-        "- Laat een GebiedPolicy weg als je geen letterlijk citaat kunt vinden. Geen hallucinaties.\n"
+        "- Laat een GebiedPolicy of randvoorwaarde weg als je geen letterlijke basis kunt vinden. "
+        "Geen hallucinaties.\n"
         "- Kopieer citaten letterlijk. Geen parafrases.\n"
         "- Gebruik alleen informatie uit het document."
     ),

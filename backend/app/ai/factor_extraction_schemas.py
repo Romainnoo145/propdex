@@ -111,7 +111,7 @@ ERROR_CODES: frozenset[str] = frozenset(
 """Iron-rule constant: uitbreiding vereist schema-versie-bump + S05-logging update."""
 
 
-SCHEMA_VERSION: int = 4  # bumped 3->4 in M048/Phase 6 for WijkPolicy payload shape
+SCHEMA_VERSION: int = 5  # M053/S06 randvoorwaarden on OmgevingsvisiePayload
 """Current cache-schema versie. Bump bij: (a) payload-shape change in >=1 factor,
 (b) toevoeging nieuwe required metadata-veld, (c) cache-key component change.
 Oude cache-entries met lagere SCHEMA_VERSION worden bij read als miss behandeld.

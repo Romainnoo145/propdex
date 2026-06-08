@@ -46,6 +46,23 @@ def test_payload_full_roundtrip():
     assert OmgevingsvisiePayload.model_validate(p.model_dump()) == p
 
 
+def test_randvoorwaarde_on_payload():
+    from app.ai.factors.beleidsalignement import OmgevingsvisiePayload, Randvoorwaarde
+
+    rv = Randvoorwaarde(
+        categorie="programmering",
+        titel="70/30 verdeling",
+        samenvatting="Bij projecten vanaf 30 woningen geldt 70% vrije sector / 30% sociaal.",
+        citaat="70% vrije sector en 30% sociale huur",
+        pagina=18,
+    )
+    p = OmgevingsvisiePayload(tijdshorizon=2040, confidence=0.9, randvoorwaarden=[rv])
+    assert p.randvoorwaarden[0].categorie == "programmering"
+    # default is empty list (back-compat with v4 payloads)
+    p2 = OmgevingsvisiePayload(tijdshorizon=2040, confidence=0.9)
+    assert p2.randvoorwaarden == []
+
+
 def test_factor_def_contract():
     assert OMGEVINGSVISIE_FACTOR_DEF.factor_id == "beleidsalignement"
     assert OMGEVINGSVISIE_FACTOR_DEF.tool_name == "extract_beleidsalignement"
