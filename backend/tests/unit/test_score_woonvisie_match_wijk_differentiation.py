@@ -93,3 +93,28 @@ def test_longest_match_wins() -> None:
     )
     r = score_woonvisie_match(payload, wijk_naam="Blerick-Noord", project_type="nieuwbouw_wonen")
     assert r.waarde["matched_policy"]["wijk_naam"] == "Blerick-Noord"
+
+
+def test_crosswalk_venlo_centrum_to_binnenstad() -> None:
+    """Wijk 11 Venlo-Centrum resolves to the 'Binnenstad' woonvisie policy via the
+    crosswalk — 'Binnenstad' does not substring-match the CBS wijk name, so without the
+    crosswalk it would fall back to the gemeente-brede citaat."""
+    payload = WoonvisiePayload(
+        periode_start=2024,
+        periode_einde=2030,
+        wijk_policies=[
+            WijkPolicy(
+                wijk_naam="Binnenstad",
+                prioriteit="groei",
+                gewenste_segmenten=["midden"],
+                citaat="In de binnenstad zetten we in op wonen boven winkels.",
+                pagina=12,
+            ),
+        ],
+        algemeen_citaat="gemeente-breed",
+        confidence=0.9,
+    )
+    r = score_woonvisie_match(
+        payload, wijk_naam="Wijk 11 Venlo-Centrum", project_type="onbepaald"
+    )
+    assert "Binnenstad" in r.toelichting_kort

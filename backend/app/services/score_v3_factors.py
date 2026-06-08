@@ -1232,6 +1232,15 @@ _PROJECTTYPE_SEGMENT_MAP: dict[str, list[str]] = {
 }
 
 
+# CBS-wijk → woonvisie wijk-policy crosswalk for Venlo (GM0983). The woonvisie names some
+# policies ("Binnenstad", "Kazerne Kwartier") that don't substring-match the CBS wijk names
+# ("Wijk 11 Venlo-Centrum"), so those policies never landed. Mirrors _VENLO_WIJK_TO_GEBIED.
+_VENLO_WIJK_TO_WOONVISIE: dict[str, str] = {
+    _normalize_wijk("Wijk 11 Venlo-Centrum"): "Binnenstad",
+    _normalize_wijk("Wijk 21 Blerick-Midden"): "Kazerne Kwartier",
+}
+
+
 def score_woonvisie_match(
     payload: WoonvisiePayload | None,
     *,
@@ -1260,10 +1269,18 @@ def score_woonvisie_match(
     document_label = f"Woonvisie {payload.periode_start}–{payload.periode_einde}"
     algemeen_citaat = payload.algemeen_citaat or ""
 
-    # 1. Find matching WijkPolicy — longest-normalised-name wins (deterministic over Claude's list-order)
+    # 1. Match WijkPolicy — crosswalk first (deterministic), then substring fallback
+    #    (longest-normalised-name wins, deterministic over Claude's list-order).
     parcel_norm = _normalize_wijk(wijk_naam)
     matched: WijkPolicy | None = None
-    if parcel_norm and payload.wijk_policies:
+    crosswalk_wijk = _VENLO_WIJK_TO_WOONVISIE.get(parcel_norm)
+    if crosswalk_wijk:
+        target = _normalize_wijk(crosswalk_wijk)
+        matched = next(
+            (p for p in payload.wijk_policies if _normalize_wijk(p.wijk_naam) == target),
+            None,
+        )
+    if matched is None and parcel_norm and payload.wijk_policies:
         candidates: list[tuple[int, WijkPolicy]] = []
         for p in payload.wijk_policies:
             pn = _normalize_wijk(p.wijk_naam)
