@@ -635,7 +635,13 @@ def compute_score_v3(
         wijk_naam=parcel_data.get("wijk_naam"),
         project_type=project_type,
     )
-    if not _ba_result.missing:
+    # M053: only let beleidsalignement MOVE the score where the gemeente actively steers
+    # development (verdict 'kansrijk' = centraal/transformatie + hoog prioriteit). Neutraal
+    # (woongebied/dorp) and strijdig (werklocatie/landschap) stay context-only — shown in
+    # popup/card but weight 0 — so coarse gebied-zoning doesn't colour the whole map.
+    _ba_waarde = _ba_result.waarde if isinstance(_ba_result.waarde, dict) else {}
+    _ba_kansrijk = _ba_waarde.get("verdict") == "kansrijk"
+    if not _ba_result.missing and _ba_kansrijk:
         _ba_entry = FACTOR_REGISTRY["beleidsalignement"]
         _ba_weight = float(
             (_ba_entry.weight_by_projecttype or {}).get(project_type, _ba_entry.default_weight)
