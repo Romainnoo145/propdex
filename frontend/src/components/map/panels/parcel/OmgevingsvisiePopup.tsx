@@ -21,12 +21,12 @@ const VERDICT_COPY: Record<BeleidsVerdict, { mark: string; color: string; line: 
   geen_beleid: { mark: '•', color: 'text-[#9CA3AF]', label: 'Geen beleid', line: 'Geen gebied-specifiek beleid voor dit perceel.' },
 }
 
-/** Prominent verdict-banner styling per verdict. */
+/** Bold verdict-hero styling per verdict (gradient wash + colored icon + big label). */
 const VERDICT_BANNER: Record<BeleidsVerdict, { wrap: string; icon: string; label: string }> = {
-  kansrijk: { wrap: 'bg-[#15803d]/[0.07] border-[#15803d]/25', icon: 'bg-[#15803d] text-white', label: 'text-[#15803d]' },
-  strijdig: { wrap: 'bg-[#DC2626]/[0.06] border-[#DC2626]/25', icon: 'bg-[#DC2626] text-white', label: 'text-[#DC2626]' },
-  neutraal: { wrap: 'bg-[#F2F6F3] border-[#E3E9E5]', icon: 'bg-[#9CA3AF] text-white', label: 'text-[#4B5563]' },
-  geen_beleid: { wrap: 'bg-[#F2F6F3] border-[#E3E9E5]', icon: 'bg-[#D1D5DB] text-white', label: 'text-[#6B7280]' },
+  kansrijk: { wrap: 'bg-gradient-to-br from-[#15803d]/[0.12] to-transparent border-[#15803d]/20', icon: 'bg-[#15803d] text-white shadow-[0_6px_16px_rgba(21,128,61,0.30)]', label: 'text-[#15803d]' },
+  strijdig: { wrap: 'bg-gradient-to-br from-[#DC2626]/[0.10] to-transparent border-[#DC2626]/20', icon: 'bg-[#DC2626] text-white shadow-[0_6px_16px_rgba(220,38,38,0.28)]', label: 'text-[#DC2626]' },
+  neutraal: { wrap: 'bg-gradient-to-br from-[#F2F6F3] to-white border-[#E3E9E5]', icon: 'bg-[#9CA3AF] text-white', label: 'text-[#4B5563]' },
+  geen_beleid: { wrap: 'bg-gradient-to-br from-[#F2F6F3] to-white border-[#E3E9E5]', icon: 'bg-[#D1D5DB] text-white', label: 'text-[#6B7280]' },
 }
 
 export interface GebiedPolicy {
@@ -217,18 +217,18 @@ export function OmgevingsvisieDetailContent({
         <div className="mt-3 text-[13px] text-[#6B7280] italic">geen gebied-specifieke tekst</div>
       )}
 
-      {/* Verdict — prominent banner (the focal point) */}
+      {/* Verdict — bold hero (the focal moment) */}
       {verdict && verdictCopy && (
-        <div className={`mt-7 flex items-start gap-3 rounded-2xl border p-4 ${VERDICT_BANNER[verdict].wrap}`}>
-          <span className={`grid size-7 shrink-0 place-items-center rounded-full text-[14px] font-bold ${VERDICT_BANNER[verdict].icon}`}>
-            {verdictCopy.mark}
-          </span>
-          <div className="min-w-0">
-            <p className={`text-[13px] font-bold uppercase tracking-wide ${VERDICT_BANNER[verdict].label}`}>
+        <div className={`mt-7 rounded-[26px] border p-6 ${VERDICT_BANNER[verdict].wrap}`}>
+          <div className="flex items-center gap-4">
+            <span className={`grid size-12 shrink-0 place-items-center rounded-2xl text-[22px] font-bold ${VERDICT_BANNER[verdict].icon}`}>
+              {verdictCopy.mark}
+            </span>
+            <p className={`text-[28px] font-black leading-none tracking-tight ${VERDICT_BANNER[verdict].label}`}>
               {verdictCopy.label}
             </p>
-            <p className="mt-0.5 text-[13px] leading-snug text-[#374151]">{verdictCopy.line}</p>
           </div>
+          <p className="mt-4 text-[14px] leading-relaxed text-[#374151]">{verdictCopy.line}</p>
         </div>
       )}
 
@@ -259,6 +259,9 @@ export function OmgevingsvisieDetailContent({
                   <p className="text-[12px] font-bold uppercase tracking-wide text-[#0E1111]">
                     {RANDVOORWAARDE_LABEL[group.categorie] ?? group.categorie}
                   </p>
+                  <span className="text-[11px] font-semibold text-slate-300">
+                    {group.items.length}
+                  </span>
                 </div>
                 <div className="mt-3 space-y-3 border-l border-[#F2F6F3] pl-3.5">
                   {group.items.map((rv, i) => (
