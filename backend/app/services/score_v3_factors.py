@@ -1310,6 +1310,8 @@ def score_woonvisie_match(
                 "matched_policy": None,
                 "prioritized_segment": payload.prioritized_segment,
                 "algemeen_citaat": algemeen_citaat,
+                "periode_start": payload.periode_start,
+                "periode_einde": payload.periode_einde,
                 "randvoorwaarden": [r.model_dump(mode="json") for r in payload.randvoorwaarden],
             },
             genormaliseerde_score=round(pulled / 10.0, 4),
@@ -1355,6 +1357,8 @@ def score_woonvisie_match(
                 matched.gewenste_segmenten[0] if matched.gewenste_segmenten else payload.prioritized_segment
             ),
             "algemeen_citaat": algemeen_citaat,
+            "periode_start": payload.periode_start,
+            "periode_einde": payload.periode_einde,
             "randvoorwaarden": [r.model_dump(mode="json") for r in payload.randvoorwaarden],
         },
         genormaliseerde_score=round(pulled / 10.0, 4),
