@@ -1616,7 +1616,10 @@ _KARAKTER_LABEL: dict[str, str] = {
 # gebieden never matched. Keyed by _normalize_wijk(cbs_wijk_naam). Geocode-generic = todo.
 _VENLO_WIJK_TO_GEBIED: dict[str, str] = {
     _normalize_wijk("Wijk 11 Venlo-Centrum"): "Hart van het Centraal stedelijk gebied",
-    _normalize_wijk("Wijk 21 Blerick-Midden"): "Hart van het Centraal stedelijk gebied",
+    # Blerick-Midden is grotendeels woonwijk; alleen de kleine Blerick-kern valt onder
+    # het centraal-stedelijk gebied. Op wijk-niveau is woongebied de juiste classificatie
+    # (anders krijgt de hele wijk onterecht het centrum-niveau → kansrijk).
+    _normalize_wijk("Wijk 21 Blerick-Midden"): "Stedelijke woongebieden",
     _normalize_wijk("Wijk 28 Trade-Port"): "Werklocaties",
     _normalize_wijk("Wijk 12 Venlo-Zuid"): "Stedelijke woongebieden",
     _normalize_wijk("Wijk 13 Venlo-Oost-Noord"): "Stedelijke woongebieden",

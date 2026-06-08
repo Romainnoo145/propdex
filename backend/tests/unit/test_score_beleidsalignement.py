@@ -107,6 +107,18 @@ def test_hyphen_and_casing_match():
     assert r.waarde["matched_policy"]["gebied_naam"] == "Stedelijke woongebieden"
 
 
+def test_crosswalk_blerick_midden_is_woongebied_not_centraal(make_omgevingsvisie_payload):
+    """Blerick-Midden is mostly residential — the crosswalk maps it to Stedelijke
+    woongebieden (neutraal), NOT the centraal-stedelijk gebied. Only the small Blerick
+    kern is centraal; classifying the whole wijk as centrum over-inflated it to kansrijk."""
+    payload = make_omgevingsvisie_payload()
+    result = score_beleidsalignement(
+        payload, wijk_naam="Wijk 21 Blerick-Midden", project_type="onbepaald"
+    )
+    assert result.waarde["matched_gebied"] == "Stedelijke woongebieden"
+    assert result.waarde["verdict"] == "neutraal"
+
+
 def test_crosswalk_maps_venlo_centrum_to_centraal_gebied(make_omgevingsvisie_payload):
     """Wijk 11 Venlo-Centrum must resolve to the centraal-stedelijk gebied via the
     crosswalk, even though 'Binnenstad Venlo' does not substring-match 'Wijk 11 Venlo-Centrum'."""
