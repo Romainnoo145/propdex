@@ -301,7 +301,6 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
     algemeen_citaat: string
     tijdshorizon: number
     verdict?: string
-    strijdig_met_visie?: boolean
   } | null
   const hasOmgevingsvisieData = omgevingsvisieWaarde !== null && omgevingsvisieWaarde !== undefined
 
@@ -309,7 +308,7 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
   const potentieScore = parcel.potentie_score != null
     ? Math.round(parcel.potentie_score)
     : parcel.score != null ? Math.round(parcel.score) : null
-  const verdict = deriveVerdict(potentieScore)
+  const potentieVerdict = deriveVerdict(potentieScore)
 
   const allCards: PageCard[] = (() => {
     if (isV3 && parcel.score_breakdown) {
@@ -380,18 +379,18 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
           </span>
 
           <div className="flex-1 px-6 min-w-0">
-            <p className={`text-xl font-bold uppercase tracking-wide ${verdict.color}`}>
-              {verdict.label}
+            <p className={`text-xl font-bold uppercase tracking-wide ${potentieVerdict.color}`}>
+              {potentieVerdict.label}
             </p>
           </div>
 
-          <div className={`size-12 rounded-full flex items-center justify-center shrink-0 ${verdict.badgeColor}`}>
-            <verdict.Icon className="size-6 text-white" strokeWidth={2.5} />
+          <div className={`size-12 rounded-full flex items-center justify-center shrink-0 ${potentieVerdict.badgeColor}`}>
+            <potentieVerdict.Icon className="size-6 text-white" strokeWidth={2.5} />
           </div>
         </div>
 
         <div className="mt-4 h-3 rounded-full bg-slate-100 overflow-hidden">
-          <motion.div className={`h-full rounded-full ${verdict.barColor}`} style={{ width: barWidth }} />
+          <motion.div className={`h-full rounded-full ${potentieVerdict.barColor}`} style={{ width: barWidth }} />
         </div>
       </div>
 

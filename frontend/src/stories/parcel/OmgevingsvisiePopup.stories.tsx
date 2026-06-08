@@ -10,7 +10,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, within, userEvent } from 'storybook/test'
 import { OmgevingsvisiePopup } from '@/components/map/panels/parcel/OmgevingsvisiePopup'
-import type { GebiedPolicy } from '@/components/map/panels/parcel/OmgevingsvisiePopup'
+import type { GebiedPolicy, BeleidsVerdict } from '@/components/map/panels/parcel/OmgevingsvisiePopup'
 
 const meta: Meta<typeof OmgevingsvisiePopup> = {
   title: 'Parcel/OmgevingsvisiePopup',
@@ -135,9 +135,8 @@ export const GeenMatch: Story = {
     await expect(body.getByText(/geen gebied-specifieke tekst/)).toBeInTheDocument()
     // Algemeen citaat content
     await expect(body.getByText(/compacte stad/)).toBeInTheDocument()
-    // No alignment sentence when project_type is onbepaald
-    await expect(body.queryByText(/sluit aan/)).not.toBeInTheDocument()
-    await expect(body.queryByText(/wijkt af/)).not.toBeInTheDocument()
+    // No verdict sentence renders when no verdict is passed
+    await expect(body.queryByText(/Kansrijk|Strijdig|Past binnen/)).not.toBeInTheDocument()
   },
 }
 
@@ -251,10 +250,13 @@ function InteractiveDemo() {
   const [open, setOpen] = useState(false)
   const [variant, setVariant] = useState<'transformatie' | 'centraal' | 'geen'>('transformatie')
 
-  const scenarios = {
-    transformatie: { policy: TRANSFORMATIE, label: 'Transformatie', projectType: 'transformatie_wonen' },
-    centraal: { policy: CENTRAAL, label: 'Centraal stedelijk', projectType: 'nieuwbouw_wonen' },
-    geen: { policy: null, label: 'Geen match', projectType: 'onbepaald' },
+  const scenarios: Record<
+    'transformatie' | 'centraal' | 'geen',
+    { policy: GebiedPolicy | null; label: string; projectType: string; verdict: BeleidsVerdict }
+  > = {
+    transformatie: { policy: TRANSFORMATIE, label: 'Transformatie', projectType: 'transformatie_wonen', verdict: 'kansrijk' },
+    centraal: { policy: CENTRAAL, label: 'Centraal stedelijk', projectType: 'nieuwbouw_wonen', verdict: 'neutraal' },
+    geen: { policy: null, label: 'Geen match', projectType: 'onbepaald', verdict: 'geen_beleid' },
   }
 
   const s = scenarios[variant]
@@ -326,6 +328,7 @@ function InteractiveDemo() {
           matched_policy={s.policy}
           algemeen_citaat={ALGEMEEN_CITAAT}
           project_type={s.projectType}
+          verdict={s.verdict}
         />
       </div>
     </div>

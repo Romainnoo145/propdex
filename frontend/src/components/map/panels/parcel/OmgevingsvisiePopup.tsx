@@ -109,6 +109,7 @@ export function OmgevingsvisiePopup({
   const citaat = resolvePopupCitaat(matched_policy, algemeen_citaat)
   const titel = hasMatch ? matched_policy!.gebied_naam : 'Gemeente-breed'
   const pagina = hasMatch ? (matched_policy!.pagina ?? null) : null
+  const verdictCopy = verdict ? VERDICT_COPY[verdict] : undefined
 
   return createPortal(
     <AnimatePresence>
@@ -174,9 +175,9 @@ export function OmgevingsvisiePopup({
             )}
 
             {/* Verdict — the new focal point */}
-            {verdict && (
-              <p className={`mt-8 text-[18px] font-semibold leading-snug ${VERDICT_COPY[verdict].color}`}>
-                {VERDICT_COPY[verdict].mark} {VERDICT_COPY[verdict].line}
+            {verdictCopy && (
+              <p className={`mt-8 text-[18px] font-semibold leading-snug ${verdictCopy.color}`}>
+                {verdictCopy.mark} {verdictCopy.line}
               </p>
             )}
 
