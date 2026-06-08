@@ -116,3 +116,35 @@ def test_crosswalk_maps_venlo_centrum_to_centraal_gebied(make_omgevingsvisie_pay
     )
     assert result.missing is False
     assert result.waarde["matched_gebied"] == "Hart van het Centraal stedelijk gebied"
+
+
+def test_no_match_is_missing_not_plus_floor(make_omgevingsvisie_payload):
+    """A parcel that matches no gebied must NOT receive the +0.5 floor — it is missing."""
+    payload = make_omgevingsvisie_payload()
+    result = score_beleidsalignement(
+        payload, wijk_naam="Onbekende Wijk Buitengebied", project_type="onbepaald"
+    )
+    assert result.missing is True
+    assert result.bijdrage == 0.0
+    assert result.waarde["verdict"] == "geen_beleid"
+    assert result.waarde["strijdig_met_visie"] is False
+
+
+def test_werklocatie_is_strijdig(make_omgevingsvisie_payload):
+    """A parcel in a werklocatie gebied is strijdig met de gemeentevisie voor wonen."""
+    payload = make_omgevingsvisie_payload()  # must include the Werklocaties gebied
+    result = score_beleidsalignement(
+        payload, wijk_naam="Wijk 28 Trade-Port", project_type="nieuwbouw_wonen"
+    )
+    assert result.waarde["matched_gebied"] == "Werklocaties"
+    assert result.waarde["strijdig_met_visie"] is True
+    assert result.waarde["verdict"] == "strijdig"
+
+
+def test_centraal_hoog_fit_is_kansrijk(make_omgevingsvisie_payload):
+    payload = make_omgevingsvisie_payload()
+    result = score_beleidsalignement(
+        payload, wijk_naam="Wijk 11 Venlo-Centrum", project_type="nieuwbouw_wonen"
+    )
+    assert result.waarde["verdict"] == "kansrijk"
+    assert result.waarde["strijdig_met_visie"] is False

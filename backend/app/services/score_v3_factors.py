@@ -1636,6 +1636,39 @@ _VENLO_WIJK_TO_GEBIED: dict[str, str] = {
     _normalize_wijk("Wijk 51 Belfeld"): "Belfeld",
 }
 
+_RESTRICTIVE_KARAKTERS: frozenset[str] = frozenset({"landschap", "werklocatie"})
+# Gebieden waar de gemeente expliciet op ontwikkeling stuurt: kansrijk los van
+# projecttype (de meeste percelen worden gescoord met project_type="onbepaald").
+_HIGH_VALUE_KARAKTERS: frozenset[str] = frozenset({"centraal_stedelijk", "transformatie"})
+
+
+def _beleids_verdict(
+    matched: GebiedPolicy | None, project_type: str
+) -> tuple[str, bool]:
+    """Return (verdict, strijdig_met_visie) for popup + card.
+
+    verdict ∈ {kansrijk, neutraal, strijdig, geen_beleid}. Soft score is unchanged;
+    this is the qualitative read a developer acts on (gemeente-medewerkingskans).
+
+    Kansrijk fires two ways: (1) een high-value gebied (centraal-stedelijk/transformatie)
+    met prioriteit hoog stuurt de gemeente actief op ontwikkeling — kansrijk ongeacht
+    projecttype (default scoring gebruikt 'onbepaald'); (2) het projecttype past expliciet
+    bij het gebied-karakter én de prioriteit is hoog/gemiddeld.
+    """
+    if matched is None:
+        return "geen_beleid", False
+    strijdig = matched.karakter in _RESTRICTIVE_KARAKTERS
+    if strijdig:
+        return "strijdig", True
+    high_value = (
+        matched.karakter in _HIGH_VALUE_KARAKTERS
+        and matched.woningbouwprioriteit == "hoog"
+    )
+    fits = matched.karakter in _PROJECTTYPE_KARAKTER_FIT.get(project_type, set())
+    if high_value or (fits and matched.woningbouwprioriteit in ("hoog", "gemiddeld")):
+        return "kansrijk", False
+    return "neutraal", False
+
 
 def score_beleidsalignement(
     payload: OmgevingsvisiePayload | None,
@@ -1685,8 +1718,9 @@ def score_beleidsalignement(
             candidates.sort(key=lambda t: -t[0])
             matched = candidates[0][1]
 
-    # 2. No-match fallback: neutraal with algemeen_citaat, not weighed
+    # 2. No-match: factor not weighed (was a +0.5 floor — that inflated every parcel).
     if matched is None:
+        verdict, strijdig = _beleids_verdict(None, project_type)
         uitleg_kort = (
             f"Geen deelgebied-match in {document_label}; gemeente-brede context gebruikt"
             if algemeen_citaat
@@ -1696,22 +1730,23 @@ def score_beleidsalignement(
             f". Citaat (gemeente-breed): {algemeen_citaat}" if algemeen_citaat else ""
         )
         uitleg_lang += f" (confidence {payload.confidence:.0%})"
-        no_match_pulled = 5.0 * payload.confidence + 5.0 * (1 - payload.confidence)  # = 5.0
         return FactorResult(
             waarde={
                 "matched_gebied": None,
                 "matched_policy": None,
                 "algemeen_citaat": algemeen_citaat,
                 "tijdshorizon": payload.tijdshorizon,
+                "verdict": verdict,
+                "strijdig_met_visie": strijdig,
             },
-            genormaliseerde_score=round(no_match_pulled / 10.0, 4),
+            genormaliseerde_score=0.0,
             gewicht=0,
             bijdrage=0.0,
             categorie="potentie",
             toelichting_kort=uitleg_kort,
             toelichting_lang=uitleg_lang,
             data_bronnen=["Gemeentelijke omgevingsvisie (LLM-extracted)"],
-            missing=False,
+            missing=True,
         )
 
     # 3. Matched: karakter base + transformatie/prioriteit bonus + projecttype-fit
@@ -1740,12 +1775,15 @@ def score_beleidsalignement(
         f" (confidence {payload.confidence:.0%})"
     )
 
+    verdict, strijdig = _beleids_verdict(matched, project_type)
     return FactorResult(
         waarde={
             "matched_gebied": matched.gebied_naam,
             "matched_policy": matched.model_dump(),
             "algemeen_citaat": algemeen_citaat,
             "tijdshorizon": payload.tijdshorizon,
+            "verdict": verdict,
+            "strijdig_met_visie": strijdig,
         },
         genormaliseerde_score=round(pulled / 10.0, 4),
         gewicht=0,
