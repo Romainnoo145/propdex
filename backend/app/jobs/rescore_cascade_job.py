@@ -24,6 +24,7 @@ import json
 import logging
 import time
 import uuid
+from dataclasses import asdict
 from datetime import datetime
 from typing import Any
 
@@ -291,6 +292,7 @@ async def rescore_parcel(
         result-store for observability.
     """
     # Local imports to avoid circular-import surprises during worker bootstrap
+    from app.models.area_scan import AreaScan
     from app.models.parcel_cache import ParcelCache
     from app.models.scan_result import ScanResult
     from app.services.parcel_project_type_service import get_project_type
@@ -316,17 +318,24 @@ async def rescore_parcel(
     try:
         async with session_factory() as db:
             # ScanResult.parcel_id is parcel_cache.id (UUID), so we resolve via
-            # ParcelCache.parcel_id (the IMKAD string).
+            # ParcelCache.parcel_id (the IMKAD string). Also pull gemeente_code
+            # (cascade payload lookup) and wijk_naam (cascade gebied-match key) —
+            # wijk_naam lives on AreaScan, never on the persisted scan flags.
             stmt = (
-                select(ScanResult)
+                select(
+                    ScanResult,
+                    ParcelCache.gemeente_code,
+                    AreaScan.wijk_naam,
+                )
                 .join(ParcelCache, ParcelCache.id == ScanResult.parcel_id)
+                .join(AreaScan, AreaScan.id == ScanResult.scan_id)
                 .where(ParcelCache.parcel_id == parcel_id)
                 .order_by(ScanResult.created_at.desc())
                 .limit(1)
             )
             result = await db.execute(stmt)
-            scan = result.scalar_one_or_none()
-            if scan is None:
+            row = result.first()
+            if row is None:
                 logger.warning(
                     "rescore_parcel: no scan_result for parcel=%s org=%s",
                     parcel_id,
@@ -338,24 +347,37 @@ async def rescore_parcel(
                     "reason": "no_scan_result",
                 }
 
+            scan, gemeente_code, wijk_naam = row
+
             flags = dict(scan.flags or {})
             flags["parcel_id"] = parcel_id
+            if wijk_naam:
+                # Cascade gebied-match key — not persisted on scan flags, so inject
+                # it here or score_beleidsalignement/woonvisie_match can't match.
+                flags["wijk_naam"] = wijk_naam
             flags = await enrich_parcel_data_with_brk(flags, org_uuid, db)
             pt_response = await get_project_type(
                 db, parcel_id=parcel_id, organization_id=org_uuid
             )
             project_type_value = pt_response.project_type  # "onbepaald" when unset
-            score_result = compute_score_v3(flags, project_type=project_type_value)
+            # Cascade payloads (beleidsalignement/woonvisie_match) — without these
+            # the cascade factors come back missing=True and the popup card vanishes.
+            cascade_payloads = await get_cascade_payloads(
+                db,
+                parcel_id=parcel_id,
+                gemeente_code=gemeente_code,
+                organization_id=org_uuid,
+            )
+            score_result = compute_score_v3(
+                flags,
+                project_type=project_type_value,
+                cascade_payloads=cascade_payloads,
+            )
+            # Full breakdown (asdict) — preserves `waarde` (verdict/matched_gebied/
+            # citaat) that the Omgevingsvisie/Woonvisie popup reads. Mirrors the
+            # authoritative backfill_cascade_scores path.
             flags["score_breakdown"] = {
-                k: {
-                    "genormaliseerde_score": v.genormaliseerde_score,
-                    "gewicht": v.gewicht,
-                    "bijdrage": v.bijdrage,
-                    "categorie": v.categorie,
-                    "toelichting_kort": v.toelichting_kort,
-                    "missing": v.missing,
-                }
-                for k, v in score_result.score_breakdown.items()
+                k: asdict(v) for k, v in score_result.score_breakdown.items()
             }
             stamped_at = datetime.utcnow().isoformat()
             flags["m050_s03_factors_at"] = stamped_at

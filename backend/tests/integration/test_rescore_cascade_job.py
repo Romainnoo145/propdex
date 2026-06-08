@@ -252,6 +252,101 @@ async def test_rescore_job_idempotent(test_db):
 
 
 @pytest.mark.asyncio
+async def test_rescore_parcel_preserves_cascade_factor(test_db):
+    """rescore_parcel (single-parcel job) must keep the cascade factor.
+
+    Regression for the vanishing Omgevingsvisie/Woonvisie card: setting a
+    projecttype on a saved parcel enqueues rescore_parcel, which previously
+    re-scored WITHOUT cascade payloads or wijk_naam and rebuilt a thin
+    breakdown — dropping beleidsalignement.waarde (verdict/matched_gebied).
+    """
+    from app.ai.factors.beleidsalignement import GebiedPolicy, OmgevingsvisiePayload
+    from app.jobs.rescore_cascade_job import rescore_parcel
+
+    # Seed org + user + an AreaScan carrying the CBS wijk_naam (crosswalk key),
+    # a ParcelCache in that gemeente, and a v3 ScanResult.
+    org = await _seed_org(test_db, "Org Cascade")
+    user = await _seed_user(test_db, org, "cascade@test.com")  # noqa: F841
+
+    scan = AreaScan(
+        gemeente_code="GM0983",
+        gemeente_naam="Venlo",
+        bbox_minx=195000,
+        bbox_miny=412000,
+        bbox_maxx=196000,
+        bbox_maxy=413000,
+        status="completed",
+        wijk_naam="Wijk 11 Venlo-Centrum",
+    )
+    test_db.add(scan)
+    await test_db.flush()
+
+    parcel = await _seed_parcel(test_db, "GM0983", "VENLO-A-1")
+    await _seed_scan_result(test_db, scan, parcel)
+    await test_db.commit()
+
+    # Crosswalk: "Wijk 11 Venlo-Centrum" → "Hart van het Centraal stedelijk gebied".
+    # centraal_stedelijk + prioriteit hoog + project_type "onbepaald" → verdict "kansrijk".
+    payload = OmgevingsvisiePayload(
+        tijdshorizon=2040,
+        gebied_policies=[
+            GebiedPolicy(
+                gebied_naam="Hart van het Centraal stedelijk gebied",
+                karakter="centraal_stedelijk",
+                woningbouwprioriteit="hoog",
+                transformatie_kansgebied=True,
+                gebonden_plaatsen=["Binnenstad Venlo"],
+                citaat="De binnenstad verdicht tot een levendig centraal stedelijk hart.",
+                pagina=12,
+            )
+        ],
+        algemeen_citaat="",
+        confidence=0.9,
+    )
+
+    mock_get_cascade = AsyncMock(return_value={"beleidsalignement": payload})
+
+    with (
+        patch(
+            "app.jobs.rescore_cascade_job.get_cascade_payloads",
+            new=mock_get_cascade,
+        ),
+        patch(
+            "app.services.cascade_enrichment_service.get_cascade_payloads",
+            new=mock_get_cascade,
+        ),
+        patch(
+            "app.jobs.rescore_cascade_job.settings.DATABASE_URL",
+            new=_test_db_url(),
+        ),
+    ):
+        result = await rescore_parcel(
+            {"redis": None},
+            organization_id=str(org.id),
+            parcel_id="VENLO-A-1",
+        )
+
+    assert result["updated"] is True
+    assert "beleidsalignement" in result["breakdown_keys"]
+
+    # Re-query the ScanResult and inspect the persisted breakdown.
+    from sqlalchemy import select
+
+    sr = (
+        await test_db.execute(
+            select(ScanResult).where(ScanResult.parcel_id == parcel.id)
+        )
+    ).scalar_one()
+    breakdown = sr.flags["score_breakdown"]
+    ba = breakdown["beleidsalignement"]
+
+    assert ba["missing"] is False
+    # waarde carries the popup payload (verdict / matched_gebied / citaat).
+    assert ba["waarde"]["verdict"] == "kansrijk"
+    assert ba["waarde"]["matched_gebied"] == "Hart van het Centraal stedelijk gebied"
+
+
+@pytest.mark.asyncio
 async def test_rescore_job_tenant_isolation(test_db):
     """get_affected_parcel_ids returns [] when org_id doesn't match the document.
 
