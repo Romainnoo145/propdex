@@ -20,6 +20,7 @@ import { Search, Loader2 } from 'lucide-react'
 
 import { useScopes, useGemeentenSummary } from '@/lib/queries/data-sources-admin'
 import { useGemeenteGeoJSON } from '@/hooks/useGemeenteGeoJSON'
+import { useProvincieGeoJSON } from '@/hooks/useProvincieGeoJSON'
 import { geoJsonToSvgPath } from '@/lib/geo-utils'
 import type {
   EntityType,
@@ -52,74 +53,11 @@ function GroupLabel({ count, children }: { count: number; children: React.ReactN
   )
 }
 
-/** One uniform scope card — landelijk · provincie · gemeente. */
-function ScopeCard({
-  naam,
-  entityType,
-  entityCode,
-  active,
-  hasData,
-  statusDot,
-  onClick,
-}: {
-  naam: string
-  entityType: EntityType
-  entityCode: string
-  active: boolean
-  hasData: boolean
-  statusDot?: string
-  onClick: () => void
-}) {
-  const initial = naam.trim().charAt(0).toUpperCase()
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={naam}
-      data-entity-type={entityType}
-      data-entity-code={entityCode}
-      data-active={active ? 'true' : 'false'}
-      className={[
-        'group relative flex items-center gap-3 rounded-[16px] border px-3 py-2.5 text-left transition-all duration-200',
-        'hover:-translate-y-0.5 hover:shadow-md hover:border-[#F9A826]/60',
-        active
-          ? 'border-[#0E1111]/40 shadow-sm ring-2 ring-[#0E1111]/5'
-          : hasData
-            ? 'border-[#F9A826]/40 bg-gradient-to-br from-[#FFF8EE] to-white'
-            : 'border-[#EAEFEF] bg-white',
-      ].join(' ')}
-    >
-      {/* Monogram chip */}
-      <span
-        className={[
-          'grid size-9 shrink-0 place-items-center rounded-[11px] text-[14px] font-bold',
-          hasData ? 'bg-[#F9A826]/15 text-[#B45309]' : 'bg-[#F2F6F3] text-slate-400',
-        ].join(' ')}
-      >
-        {initial}
-      </span>
-
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1.5">
-          <span className="truncate text-[13px] font-semibold text-[#0E1111]">
-            {naam}
-          </span>
-          {statusDot && (
-            <span className={`size-1.5 shrink-0 rounded-full ${statusDot}`} aria-hidden />
-          )}
-        </span>
-        <span className="block text-[11px] text-slate-400">
-          {hasData ? 'Bronnen beschikbaar' : 'Geen bronnen'}
-        </span>
-      </span>
-    </button>
-  )
-}
-
 export function ScopeHub() {
   const scopesQuery = useScopes()
   const gemeentenQuery = useGemeentenSummary()
   const geojsonQuery = useGemeenteGeoJSON()
+  const provincieGeojsonQuery = useProvincieGeoJSON()
 
   const [selected, setSelected] = useState<SelectedScope | null>(null)
   const [query, setQuery] = useState('')
@@ -163,6 +101,34 @@ export function ScopeHub() {
       .filter((g): g is GemeenteEntry => g !== null)
       .sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
   }, [geojsonQuery.data])
+
+  // Province silhouettes keyed by statcode (PV..) — same images as the map's province layer.
+  const provincieSvgByCode = useMemo(() => {
+    const m = new Map<string, { primaryD: string; viewBox: string }>()
+    for (const f of provincieGeojsonQuery.data?.features ?? []) {
+      const p = (f.properties ?? {}) as Record<string, unknown>
+      const code = String(p.statcode ?? '')
+      const geom = f.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon | null
+      if (!code || !geom || (geom.type !== 'Polygon' && geom.type !== 'MultiPolygon')) continue
+      const { d, viewBox } = geoJsonToSvgPath(geom)
+      m.set(code, { primaryD: d, viewBox })
+    }
+    return m
+  }, [provincieGeojsonQuery.data])
+
+  // Landelijk silhouette = all provinces merged into one MultiPolygon (the NL outline).
+  const landelijkSvg = useMemo(() => {
+    const coords: GeoJSON.Position[][][] = []
+    for (const f of provincieGeojsonQuery.data?.features ?? []) {
+      const g = f.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon | null
+      if (!g) continue
+      if (g.type === 'Polygon') coords.push(g.coordinates)
+      else if (g.type === 'MultiPolygon') coords.push(...g.coordinates)
+    }
+    if (coords.length === 0) return null
+    const { d, viewBox } = geoJsonToSvgPath({ type: 'MultiPolygon', coordinates: coords })
+    return { primaryD: d, viewBox }
+  }, [provincieGeojsonQuery.data])
 
   // Filtered groups.
   const landelijkVisible = landelijk && match(landelijk.entity_naam)
@@ -211,24 +177,29 @@ export function ScopeHub() {
         ) : landelijkVisible && landelijk ? (
           <section className="space-y-3">
             <GroupLabel count={1}>Landelijk</GroupLabel>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-              <ScopeCard
-                naam={landelijk.entity_naam}
-                entityType="landelijk"
-                entityCode={landelijk.entity_code}
-                hasData={false}
-                active={
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              <div
+                className={
                   selected?.entityType === 'landelijk' &&
                   selected.entityCode === landelijk.entity_code
+                    ? 'rounded-xl ring-2 ring-[#0E1111]/40'
+                    : undefined
                 }
-                onClick={() =>
-                  setSelected({
-                    entityType: 'landelijk',
-                    entityCode: landelijk.entity_code,
-                    entityNaam: landelijk.entity_naam,
-                  })
-                }
-              />
+              >
+                <GemeenteCard
+                  gemeenteName={landelijk.entity_naam}
+                  gemeenteCode={landelijk.entity_code}
+                  svgData={landelijkSvg}
+                  totalUnread={0}
+                  onClick={() =>
+                    setSelected({
+                      entityType: 'landelijk',
+                      entityCode: landelijk.entity_code,
+                      entityNaam: landelijk.entity_naam,
+                    })
+                  }
+                />
+              </div>
             </div>
           </section>
         ) : null}
@@ -237,27 +208,32 @@ export function ScopeHub() {
         {!scopesQuery.isLoading && provinciesVisible.length > 0 && (
           <section className="space-y-3">
             <GroupLabel count={provinciesVisible.length}>Provincie</GroupLabel>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-              {provinciesVisible.map((p) => (
-                <ScopeCard
-                  key={p.entity_code}
-                  naam={p.entity_naam}
-                  entityType="provincie"
-                  entityCode={p.entity_code}
-                  hasData={false}
-                  active={
-                    selected?.entityType === 'provincie' &&
-                    selected.entityCode === p.entity_code
-                  }
-                  onClick={() =>
-                    setSelected({
-                      entityType: 'provincie',
-                      entityCode: p.entity_code,
-                      entityNaam: p.entity_naam,
-                    })
-                  }
-                />
-              ))}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {provinciesVisible.map((p) => {
+                const isActive =
+                  selected?.entityType === 'provincie' &&
+                  selected.entityCode === p.entity_code
+                return (
+                  <div
+                    key={p.entity_code}
+                    className={isActive ? 'rounded-xl ring-2 ring-[#0E1111]/40' : undefined}
+                  >
+                    <GemeenteCard
+                      gemeenteName={p.entity_naam}
+                      gemeenteCode={p.entity_code}
+                      svgData={provincieSvgByCode.get(p.entity_code) ?? null}
+                      totalUnread={0}
+                      onClick={() =>
+                        setSelected({
+                          entityType: 'provincie',
+                          entityCode: p.entity_code,
+                          entityNaam: p.entity_naam,
+                        })
+                      }
+                    />
+                  </div>
+                )
+              })}
             </div>
           </section>
         )}
