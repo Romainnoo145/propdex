@@ -21,12 +21,12 @@ const VERDICT_COPY: Record<BeleidsVerdict, { mark: string; color: string; line: 
   geen_beleid: { mark: '•', color: 'text-[#9CA3AF]', label: 'Geen beleid', line: 'Geen gebied-specifiek beleid voor dit perceel.' },
 }
 
-/** Verdict keyline — editorial colored left-rule + label (no box, no emoji). */
-const VERDICT_KEYLINE: Record<BeleidsVerdict, { border: string; label: string }> = {
-  kansrijk: { border: 'border-[#15803d]', label: 'text-[#15803d]' },
-  strijdig: { border: 'border-[#DC2626]', label: 'text-[#DC2626]' },
-  neutraal: { border: 'border-[#9CA3AF]', label: 'text-[#4B5563]' },
-  geen_beleid: { border: 'border-[#D1D5DB]', label: 'text-[#9CA3AF]' },
+/** Verdict zone — soft colored field + accent bar + label (clear, not babyish). */
+const VERDICT_ZONE: Record<BeleidsVerdict, { bg: string; bar: string; label: string }> = {
+  kansrijk: { bg: 'bg-[#15803d]/[0.06]', bar: 'bg-[#15803d]', label: 'text-[#15803d]' },
+  strijdig: { bg: 'bg-[#DC2626]/[0.05]', bar: 'bg-[#DC2626]', label: 'text-[#DC2626]' },
+  neutraal: { bg: 'bg-[#F2F6F3]', bar: 'bg-[#9CA3AF]', label: 'text-[#4B5563]' },
+  geen_beleid: { bg: 'bg-[#F2F6F3]', bar: 'bg-[#D1D5DB]', label: 'text-[#9CA3AF]' },
 }
 
 export interface GebiedPolicy {
@@ -217,13 +217,19 @@ export function OmgevingsvisieDetailContent({
         {titel}
       </h2>
 
-      {/* Verdict — colored keyline statement (editorial, no box/emoji) */}
+      {/* Verdict — labelled colored zone (clear focal point, editorial) */}
       {verdict && verdictCopy && (
-        <div className={`mt-7 border-l-[3px] pl-5 ${VERDICT_KEYLINE[verdict].border}`}>
-          <p className={`text-[20px] font-black tracking-tight ${VERDICT_KEYLINE[verdict].label}`}>
-            {verdictCopy.label}
-          </p>
-          <p className="mt-1.5 text-[14px] leading-relaxed text-[#374151]">{verdictCopy.line}</p>
+        <div className={`mt-7 flex gap-4 rounded-[18px] p-5 ${VERDICT_ZONE[verdict].bg}`}>
+          <span className={`w-1.5 shrink-0 self-stretch rounded-full ${VERDICT_ZONE[verdict].bar}`} />
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9CA3AF]">
+              Gemeentelijke richting
+            </p>
+            <p className={`mt-1 text-[24px] font-black leading-none tracking-tight ${VERDICT_ZONE[verdict].label}`}>
+              {verdictCopy.label}
+            </p>
+            <p className="mt-2 text-[14px] leading-relaxed text-[#374151]">{verdictCopy.line}</p>
+          </div>
         </div>
       )}
 
