@@ -20,24 +20,25 @@ import { Search, Loader2 } from 'lucide-react'
 
 import { useScopes, useGemeentenSummary } from '@/lib/queries/data-sources-admin'
 import { useGemeenteGeoJSON } from '@/hooks/useGemeenteGeoJSON'
+import { geoJsonToSvgPath } from '@/lib/geo-utils'
 import type {
   EntityType,
   GemeenteSummary,
 } from '@/lib/types/data-sources-admin'
 import { LeftPanelShell } from '@/components/map/panels/LeftPanelShell'
+import { GemeenteCard } from '@/components/projects/GemeenteCard'
 import { ScopeDataSourcesView } from '@/components/settings/data-bronnen/ScopeDataSourcesView'
+
+interface GemeenteEntry {
+  code: string
+  naam: string
+  svgData: { primaryD: string; viewBox: string }
+}
 
 interface SelectedScope {
   entityType: EntityType
   entityCode: string
   entityNaam: string
-}
-
-/** Status dot color — mirrors GemeentePicker.dotColor. */
-function dotColor(summary: GemeenteSummary): string {
-  if ((summary.status_counts.broken ?? 0) > 0) return 'bg-[#EF4444]'
-  if ((summary.status_counts.missing ?? 0) > 0) return 'bg-[#F9A826]'
-  return 'bg-[#22C55E]'
 }
 
 function GroupLabel({ count, children }: { count: number; children: React.ReactNode }) {
@@ -138,15 +139,28 @@ export function ScopeHub() {
     return m
   }, [gemeentenQuery.data])
 
-  // ALL ~340 gemeenten from the CBS geojson (statcode/statnaam), sorted by name.
-  const allGemeenten = useMemo(() => {
+  // ALL ~340 gemeenten from the CBS geojson with their SVG silhouette (the same
+  // images as the beleid grid — geoJsonToSvgPath), sorted by name. Memoized (heavy).
+  const allGemeenten = useMemo<GemeenteEntry[]>(() => {
     const feats = geojsonQuery.data?.features ?? []
     return feats
       .map((f) => {
         const p = (f.properties ?? {}) as Record<string, unknown>
-        return { code: String(p.statcode ?? ''), naam: String(p.statnaam ?? '') }
+        const code = String(p.statcode ?? '')
+        const naam = String(p.statnaam ?? '')
+        const geom = f.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon | null
+        if (
+          !code ||
+          !naam ||
+          !geom ||
+          (geom.type !== 'Polygon' && geom.type !== 'MultiPolygon')
+        ) {
+          return null
+        }
+        const { d, viewBox } = geoJsonToSvgPath(geom)
+        return { code, naam, svgData: { primaryD: d, viewBox } }
       })
-      .filter((g) => g.code && g.naam)
+      .filter((g): g is GemeenteEntry => g !== null)
       .sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
   }, [geojsonQuery.data])
 
@@ -256,29 +270,35 @@ export function ScopeHub() {
         ) : gemeentenVisible.length > 0 ? (
           <section className="space-y-3">
             <GroupLabel count={gemeentenVisible.length}>Gemeente</GroupLabel>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {gemeentenVisible.map((g) => {
                 const summary = summaryByCode.get(g.code)
+                const isActive =
+                  selected?.entityType === 'gemeente' &&
+                  selected.entityCode === g.code
+                // Monitored gemeenten (real data) get an amber ring so they pop
+                // among the ~340; the selected one gets an obsidian ring.
+                const ring = isActive
+                  ? 'rounded-xl ring-2 ring-[#0E1111]/40'
+                  : summary
+                    ? 'rounded-xl ring-2 ring-[#F9A826]/50'
+                    : undefined
                 return (
-                  <ScopeCard
-                    key={g.code}
-                    naam={g.naam}
-                    entityType="gemeente"
-                    entityCode={g.code}
-                    hasData={!!summary}
-                    statusDot={summary ? dotColor(summary) : undefined}
-                    active={
-                      selected?.entityType === 'gemeente' &&
-                      selected.entityCode === g.code
-                    }
-                    onClick={() =>
-                      setSelected({
-                        entityType: 'gemeente',
-                        entityCode: g.code,
-                        entityNaam: g.naam,
-                      })
-                    }
-                  />
+                  <div key={g.code} className={ring}>
+                    <GemeenteCard
+                      gemeenteName={g.naam}
+                      gemeenteCode={g.code}
+                      svgData={g.svgData}
+                      totalUnread={0}
+                      onClick={() =>
+                        setSelected({
+                          entityType: 'gemeente',
+                          entityCode: g.code,
+                          entityNaam: g.naam,
+                        })
+                      }
+                    />
+                  </div>
                 )
               })}
             </div>
