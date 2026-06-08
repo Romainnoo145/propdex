@@ -160,3 +160,78 @@ async def test_get_woonvisie_document_does_not_leak_org_private_doc(
         test_db, gemeente_code="GM0983", organization_id=other_org.id
     )
     assert found is None
+
+
+@pytest.mark.asyncio
+async def test_get_omgevingsvisie_document_finds_global_doc_from_other_org(
+    test_db, create_test_user
+):
+    """A vendor-global omgevingsvisie owned by org A must resolve when queried as org B."""
+    from app.models.policy_document import PolicyDocument
+    from app.services import cascade_enrichment_service
+
+    vendor_user, vendor_org = await create_test_user(
+        email="ov-vendor@example.com", org_name="OV Vendor Org"
+    )
+    _other_user, other_org = await create_test_user(
+        email="ov-other@example.com", org_name="OV Other Org"
+    )
+
+    doc = PolicyDocument(
+        id=uuid.uuid4(),
+        organization_id=vendor_org.id,
+        is_global=True,
+        entity_type="gemeente",
+        entity_code="GM0983",
+        source_key="omgevingsvisie",
+        filename="venlo-omgevingsvisie.pdf",
+        content_type="application/pdf",
+        file_data=b"%PDF-1.4\n%fake\n%%EOF",
+        file_size=22,
+        uploaded_by_user_id=vendor_user.id,
+    )
+    test_db.add(doc)
+    await test_db.commit()
+
+    found = await cascade_enrichment_service.get_omgevingsvisie_document(
+        test_db, gemeente_code="GM0983", organization_id=other_org.id
+    )
+    assert found is not None
+    assert found.id == doc.id
+
+
+@pytest.mark.asyncio
+async def test_get_omgevingsvisie_document_does_not_leak_org_private_doc(
+    test_db, create_test_user
+):
+    """An org-private (is_global=false) omgevingsvisie owned by org A must NOT resolve for org B."""
+    from app.models.policy_document import PolicyDocument
+    from app.services import cascade_enrichment_service
+
+    owner_user, owner_org = await create_test_user(
+        email="ov-owner@example.com", org_name="OV Owner Org"
+    )
+    _other_user, other_org = await create_test_user(
+        email="ov-reader@example.com", org_name="OV Reader Org"
+    )
+
+    doc = PolicyDocument(
+        id=uuid.uuid4(),
+        organization_id=owner_org.id,
+        is_global=False,
+        entity_type="gemeente",
+        entity_code="GM0983",
+        source_key="omgevingsvisie",
+        filename="private-omgevingsvisie.pdf",
+        content_type="application/pdf",
+        file_data=b"%PDF-1.4\n%fake\n%%EOF",
+        file_size=22,
+        uploaded_by_user_id=owner_user.id,
+    )
+    test_db.add(doc)
+    await test_db.commit()
+
+    found = await cascade_enrichment_service.get_omgevingsvisie_document(
+        test_db, gemeente_code="GM0983", organization_id=other_org.id
+    )
+    assert found is None
