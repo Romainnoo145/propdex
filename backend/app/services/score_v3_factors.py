@@ -1233,11 +1233,17 @@ _PROJECTTYPE_SEGMENT_MAP: dict[str, list[str]] = {
 
 
 # CBS-wijk → woonvisie wijk-policy crosswalk for Venlo (GM0983). The woonvisie names some
-# policies ("Binnenstad", "Kazerne Kwartier") that don't substring-match the CBS wijk names
-# ("Wijk 11 Venlo-Centrum"), so those policies never landed. Mirrors _VENLO_WIJK_TO_GEBIED.
+# policies ("Binnenstad", "Blerik") that don't substring-match the CBS wijk names
+# ("Wijk 11 Venlo-Centrum", "Wijk 21 Blerick-Midden" — note the extracted "Blerik" typo
+# breaks the substring fallback), so those policies never landed. Mirrors _VENLO_WIJK_TO_GEBIED.
+#
+# NB: Blerick-Midden maps to the general "Blerik" policy (groei), NOT "Kazerne Kwartier".
+# Kazerne Kwartier is a single development site inside Blerick, not its own CBS wijk — pinning
+# it to the whole wijk over-attributed the project-specific citaat to every Blerick parcel.
+# Without parcel-level geometry we can't locate it, so it falls through (gemeente-breed context).
 _VENLO_WIJK_TO_WOONVISIE: dict[str, str] = {
     _normalize_wijk("Wijk 11 Venlo-Centrum"): "Binnenstad",
-    _normalize_wijk("Wijk 21 Blerick-Midden"): "Kazerne Kwartier",
+    _normalize_wijk("Wijk 21 Blerick-Midden"): "Blerik",
 }
 
 
