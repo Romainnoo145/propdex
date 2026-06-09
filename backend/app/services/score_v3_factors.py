@@ -1246,6 +1246,13 @@ _VENLO_WIJK_TO_WOONVISIE: dict[str, str] = {
     _normalize_wijk("Wijk 21 Blerick-Midden"): "Blerik",
 }
 
+# Display-name corrections for known extraction typos in woonvisie policy names. The
+# crosswalk + matching still use the raw extracted name (e.g. "Blerik"); only the
+# user-facing wijk_naam is corrected (e.g. "Blerick") to avoid confusion in the UI.
+_WOONVISIE_POLICY_DISPLAY: dict[str, str] = {
+    "Blerik": "Blerick",
+}
+
 
 def score_woonvisie_match(
     payload: WoonvisiePayload | None,
@@ -1346,19 +1353,23 @@ def score_woonvisie_match(
     pulled = raw_score * payload.confidence + 5.0 * (1 - payload.confidence)
     pulled = max(0.0, min(10.0, pulled))
 
+    display_naam = _WOONVISIE_POLICY_DISPLAY.get(matched.wijk_naam, matched.wijk_naam)
     pag_suffix = f", p.{matched.pagina}" if matched.pagina is not None else ""
     uitleg_kort = (
-        f"Wijk '{matched.wijk_naam}' prioriteit '{matched.prioriteit}' in {document_label}{segment_note}"
+        f"Wijk '{display_naam}' prioriteit '{matched.prioriteit}' in {document_label}{segment_note}"
     )
     uitleg_lang = (
-        f"{uitleg_kort}. Citaat ({matched.wijk_naam}{pag_suffix}): {matched.citaat}"
+        f"{uitleg_kort}. Citaat ({display_naam}{pag_suffix}): {matched.citaat}"
         f" (confidence {payload.confidence:.0%})"
     )
+
+    matched_dump = matched.model_dump()
+    matched_dump["wijk_naam"] = display_naam
 
     return FactorResult(
         waarde={
             "matched_wijk": wijk_naam,
-            "matched_policy": matched.model_dump(),
+            "matched_policy": matched_dump,
             "prioritized_segment": (
                 matched.gewenste_segmenten[0] if matched.gewenste_segmenten else payload.prioritized_segment
             ),
