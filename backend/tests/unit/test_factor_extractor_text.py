@@ -41,3 +41,32 @@ async def test_pdf_still_sent_as_document_block():
     blocks = captured["messages"][0]["content"]
     assert blocks[0]["type"] == "document"
     assert blocks[0]["source"]["media_type"] == "application/pdf"
+
+
+def _make_pdf(text: str) -> bytes:
+    """A real, parseable single-page PDF with an extractable text layer."""
+    import fitz
+
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((72, 72), text)
+    return doc.tobytes()
+
+
+@pytest.mark.asyncio
+async def test_oversized_pdf_extracted_to_text_block():
+    # A PDF over Anthropic's document size limit (54.5 MB Venlo omgevingsvisie is
+    # 20 image-bloated pages with a 48 KB text layer) must have its text layer
+    # extracted and sent as a text block — the raw PDF would 32 MB-overflow the API.
+    captured: dict = {}
+    pdf_bytes = _make_pdf("Omgevingsvisie 2040 ZONE-A groeigebied")
+    doc = SimpleNamespace(id=uuid.uuid4(), filename="ov.pdf", file_data=pdf_bytes)
+    await extract_factor_live(
+        factor_def=OMGEVINGSVISIE_FACTOR_DEF, parcel_id="p",
+        policy_document=doc, claude_client=_mock_client(captured),
+        max_pdf_doc_bytes=10,  # tiny threshold → force the oversized path
+    )
+    blocks = captured["messages"][0]["content"]
+    assert blocks[0]["type"] == "text"
+    assert "ZONE-A groeigebied" in blocks[0]["text"]
+    assert all(b["type"] != "document" for b in blocks)

@@ -44,6 +44,25 @@ _TEMPERATURE: float = 0.0
 _MAX_TOKENS: int = 16384  # rich structured extraction from ~60-page docs; reasoning
 # models exhaust a 4096 budget on thinking before emitting the tool input (→ empty {}).
 
+# Anthropic rejects PDF document blocks over 32 MB (the API returns an empty content
+# list via OpenRouter). Larger policy PDFs — often image-bloated rather than text-heavy
+# (the Venlo omgevingsvisie is 54.5 MB / 20 pages / 48 KB of text) — get their text
+# layer extracted via PyMuPDF and sent as a text block instead. The stored file_data
+# (the original PDF) is never modified, so it remains viewable/downloadable.
+_MAX_PDF_DOC_BYTES: int = 30 * 1024 * 1024
+
+
+def _pdf_to_text(pdf_bytes: bytes) -> str:
+    """Extract the text layer from a PDF. PyMuPDF is already a dependency
+    (see app/tools/seed_omgevingsvisie_venlo.py)."""
+    import fitz  # type: ignore[import-untyped]  # PyMuPDF — no py.typed marker
+
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    try:
+        return "\n".join(page.get_text() for page in doc)
+    finally:
+        doc.close()
+
 
 async def extract_factor_live(
     *,
@@ -51,6 +70,7 @@ async def extract_factor_live(
     parcel_id: str,
     policy_document: PolicyDocument,
     claude_client: AsyncAnthropic | None = None,
+    max_pdf_doc_bytes: int = _MAX_PDF_DOC_BYTES,
 ) -> ExtractedFactor[PayloadT]:
     """Live Claude-call, no cache. T05 wraps this with caching.
 
@@ -86,7 +106,8 @@ async def extract_factor_live(
         model = settings.AI_MODEL
 
     file_data = policy_document.file_data
-    if file_data[:5] == b"%PDF-":
+    is_pdf = file_data[:5] == b"%PDF-"
+    if is_pdf and len(file_data) <= max_pdf_doc_bytes:
         pdf_base64 = base64.standard_b64encode(file_data).decode("utf-8")
         doc_block: dict[str, Any] = {
             "type": "document",
@@ -94,7 +115,9 @@ async def extract_factor_live(
             "cache_control": {"type": "ephemeral"},
         }
     else:
-        text = file_data.decode("utf-8", errors="replace")
+        # Oversized PDF → extract its text layer (Anthropic's 32 MB document cap);
+        # plain-text docs already land here. The stored file_data stays untouched.
+        text = _pdf_to_text(file_data) if is_pdf else file_data.decode("utf-8", errors="replace")
         doc_block = {
             "type": "text",
             "text": f'<beleidsdocument filename="{policy_document.filename}">\n{text}\n</beleidsdocument>',
