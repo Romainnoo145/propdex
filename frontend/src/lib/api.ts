@@ -917,7 +917,7 @@ export async function fetchScanResults(
  * @returns Tile URL template with {z}/{x}/{y} placeholders
  */
 export function getScanTileUrl(scanId: string, cacheBuster?: string): string {
-  const TILE_SCHEMA_VERSION = '14'
+  const TILE_SCHEMA_VERSION = '15'
   // Absolute URL required — MapLibre fetches vector tiles in a web worker
   // which cannot resolve relative paths.
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
