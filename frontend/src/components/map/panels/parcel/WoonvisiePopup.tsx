@@ -36,7 +36,6 @@ export interface WoonvisiePopupProps {
   matched_policy: WijkPolicy | null
   algemeen_citaat: string
   project_type: string
-  confidence: number
   randvoorwaarden?: Randvoorwaarde[]
 }
 

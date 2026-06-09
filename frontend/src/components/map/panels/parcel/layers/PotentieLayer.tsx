@@ -157,8 +157,8 @@ function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResu
       return { value: capacityValue(parcel), sub: capacitySub(parcel) }
     case 'woonvisie_match': {
       if (factor.missing) return { value: '—', sub: 'Geen woonvisie beschikbaar' }
-      const w = factor.waarde as { matched_policy?: { prioriteit?: string; wijk_naam?: string } | null; matched_wijk?: string | null } | null
-      const matched = w && typeof w === 'object' ? w.matched_policy : null
+      const wv = factor.waarde as { matched_policy?: { prioriteit?: string; wijk_naam?: string } | null; matched_wijk?: string | null } | null
+      const matched = wv && typeof wv === 'object' ? wv.matched_policy : null
       const prio = matched && typeof matched === 'object' ? matched.prioriteit : null
       const PRIO_VALUE: Record<string, string> = {
         groei: 'GROEIGEBIED',
@@ -167,20 +167,20 @@ function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResu
         neutraal: 'NEUTRAAL',
       }
       const value = prio && PRIO_VALUE[prio] ? PRIO_VALUE[prio] : 'GEMEENTE-BREED'
-      const wijk = matched?.wijk_naam ?? w?.matched_wijk ?? null
+      const wijk = matched?.wijk_naam ?? wv?.matched_wijk ?? null
       const sub = wijk ? `Wijk: ${wijk}` : 'Geen wijk-specifiek beleid'
       return { value, sub }
     }
     case 'beleidsalignement': {
-      const w = factor.waarde as { matched_gebied?: string | null; verdict?: string } | null
-      if (factor.missing || !w?.matched_gebied) return { value: 'OMGEVINGSVISIE', sub: 'Geen gebied-specifiek beleid' }
+      const ba = factor.waarde as { matched_gebied?: string | null; verdict?: string } | null
+      if (factor.missing || !ba?.matched_gebied) return { value: 'OMGEVINGSVISIE', sub: 'Geen gebied-specifiek beleid' }
       const verdictLabel: Record<string, string> = {
         kansrijk: 'Kansrijk',
         neutraal: 'Past bij visie',
         strijdig: '⚠ Strijdig met visie',
         geen_beleid: 'Geen beleid',
       }
-      return { value: w.matched_gebied, sub: verdictLabel[w.verdict ?? ''] ?? 'Past bij visie' }
+      return { value: ba.matched_gebied, sub: verdictLabel[ba.verdict ?? ''] ?? 'Past bij visie' }
     }
     default:
       return { value: '—', sub: '' }
@@ -460,7 +460,6 @@ export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie, onOp
           matched_policy={woonvisieWaarde!.matched_policy}
           algemeen_citaat={woonvisieWaarde!.algemeen_citaat ?? ''}
           project_type={projectType}
-          confidence={1.0}
           randvoorwaarden={woonvisieWaarde!.randvoorwaarden}
         />
       )}

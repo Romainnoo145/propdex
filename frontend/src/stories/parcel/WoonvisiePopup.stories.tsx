@@ -64,7 +64,6 @@ const baseArgs = {
   periode_einde: 2030,
   algemeen_citaat: ALGEMEEN_CITAAT,
   project_type: 'nieuwbouw_wonen',
-  confidence: 0.82,
 }
 
 /* ── Variant 1: Blerick groei, project = sociaal nieuwbouw ─────── */
@@ -136,30 +135,17 @@ export const GeenMatchFallback: Story = {
     ...baseArgs,
     matched_policy: null,
     project_type: 'nieuwbouw_wonen',
-    confidence: 0.45,
   },
   play: async () => {
     const body = within(document.body)
-    await expect(body.getByText('Gemeente-breed')).toBeInTheDocument()
-    await expect(body.getByText(/geen wijk-specifieke tekst/)).toBeInTheDocument()
+    // No-match: editorial layout shows "Gemeente-breed" as both eyebrow + headline.
+    await expect(body.getAllByText('Gemeente-breed').length).toBeGreaterThan(0)
     // Algemeen citaat content
     await expect(body.getByText(/2\.800 nieuwe woningen/)).toBeInTheDocument()
-    // No segmentmatch sentence on fallback (matched_policy === null hides it)
+    // No prioriteit keyline + no segmentmatch sentence on fallback (matched_policy === null)
+    await expect(body.queryByText(/Kansrijk voor woningbouw/)).not.toBeInTheDocument()
     await expect(body.queryByText(/Jouw project past volledig/)).not.toBeInTheDocument()
     await expect(body.queryByText(/sluit aan/)).not.toBeInTheDocument()
-    // Low confidence note appears (confidence < 0.5)
-    await expect(body.getByText(/Extractie-zekerheid laag/)).toBeInTheDocument()
-  },
-}
-
-/* ── Variant 5: lage confidence (vage woonvisie) ────────────────── */
-
-export const LageConfidence: Story = {
-  name: '5. Blerick — lage confidence (vage doc)',
-  args: {
-    ...baseArgs,
-    matched_policy: BLERICK,
-    confidence: 0.32,
   },
 }
 
@@ -184,7 +170,6 @@ function EscDismissDemo() {
         matched_policy={BLERICK}
         algemeen_citaat={ALGEMEEN_CITAAT}
         project_type="nieuwbouw_wonen"
-        confidence={0.82}
       />
     </>
   )
@@ -223,7 +208,6 @@ function ClickOutsideDemo() {
         matched_policy={BLERICK}
         algemeen_citaat={ALGEMEEN_CITAAT}
         project_type="nieuwbouw_wonen"
-        confidence={0.82}
       />
     </>
   )
@@ -252,10 +236,10 @@ function InteractiveDemo() {
   const [variant, setVariant] = useState<'blerick' | 'centrum' | 'tegelen' | 'geen'>('blerick')
 
   const scenarios = {
-    blerick: { policy: BLERICK, label: 'Blerick', projectType: 'nieuwbouw_wonen', conf: 0.82 },
-    centrum: { policy: VENLO_CENTRUM, label: 'Venlo-Centrum', projectType: 'nieuwbouw_wonen', conf: 0.78 },
-    tegelen: { policy: TEGELEN, label: 'Tegelen', projectType: 'transformatie_wonen', conf: 0.74 },
-    geen: { policy: null, label: 'Onbekende-wijk', projectType: 'nieuwbouw_wonen', conf: 0.45 },
+    blerick: { policy: BLERICK, label: 'Blerick', projectType: 'nieuwbouw_wonen' },
+    centrum: { policy: VENLO_CENTRUM, label: 'Venlo-Centrum', projectType: 'nieuwbouw_wonen' },
+    tegelen: { policy: TEGELEN, label: 'Tegelen', projectType: 'transformatie_wonen' },
+    geen: { policy: null, label: 'Onbekende-wijk', projectType: 'nieuwbouw_wonen' },
   }
 
   const s = scenarios[variant]
@@ -375,7 +359,6 @@ function InteractiveDemo() {
           matched_policy={s.policy}
           algemeen_citaat={ALGEMEEN_CITAAT}
           project_type={s.projectType}
-          confidence={s.conf}
         />
       </div>
     </div>
