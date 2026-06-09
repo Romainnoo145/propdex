@@ -34,12 +34,14 @@ def test_temperature_is_zero_iron_rule():
 
 
 def test_schema_version_exists_and_is_int():
-    """Iron-rule: SCHEMA_VERSION must exist as int. Current value == 3
-    after M048/Phase 5 document-level cache sentinel bump (was 2 in Phase 1,
-    was 1 at M047/S04 introduction)."""
+    """Iron-rule: SCHEMA_VERSION must exist as int. Current value == 6
+    after M053/S06-S07 randvoorwaarden on both cascade payloads (was 3 at
+    M048/Phase 5 document-level cache sentinel, 2 in Phase 1, 1 at M047/S04).
+    A bump here is intentional and forces cache re-extraction — update this
+    assertion in the same commit."""
     from app.ai.factor_extraction_schemas import SCHEMA_VERSION
 
-    assert SCHEMA_VERSION == 3
+    assert SCHEMA_VERSION == 6
     assert isinstance(SCHEMA_VERSION, int)
 
 
