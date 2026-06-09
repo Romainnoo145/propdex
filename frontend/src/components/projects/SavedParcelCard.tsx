@@ -95,35 +95,33 @@ export function SavedParcelCard({
         </div>
       </div>
 
-      {/* RIGHT: Project-type chip (top) + score cluster (bottom).
+      {/* RIGHT: Project-type chip + score cluster on one row (chip left of potentie).
           stopPropagation on outer wrapper so card-click doesn't fire on chip/badge-click. */}
       <div
-        className="shrink-0 flex flex-col items-end gap-2"
+        className="shrink-0 flex items-center gap-2"
         onClick={(e) => e.stopPropagation()}
       >
         {shouldShowProjectTypeChip(parcel.project_type) && (
-          <span className="inline-flex max-w-full items-center rounded-full bg-amber-50/80 border border-aura-amber/30 px-2.5 py-0.5 text-[11px] font-medium text-amber-700 truncate">
+          <span className="inline-flex min-h-[26px] max-w-[140px] items-center rounded-full bg-amber-50/80 border border-aura-amber/30 px-2.5 text-[11px] font-medium text-amber-700 truncate">
             {projectTypeChipLabel(parcel.project_type!)}
           </span>
         )}
-        <div className="flex items-center gap-2">
-          {parcel.potentie_score != null && (
-            <ScoreBadge
-              type="potentie"
-              score={parcel.potentie_score}
-              size="sm"
-              onClick={() => onPotentieClick?.()}
-            />
-          )}
-          {parcel.risico_score != null && (
-            <ScoreBadge
-              type="risico"
-              score={parcel.risico_score}
-              size="sm"
-              onClick={() => onRisicoClick?.()}
-            />
-          )}
-        </div>
+        {parcel.potentie_score != null && (
+          <ScoreBadge
+            type="potentie"
+            score={parcel.potentie_score}
+            size="sm"
+            onClick={() => onPotentieClick?.()}
+          />
+        )}
+        {parcel.risico_score != null && (
+          <ScoreBadge
+            type="risico"
+            score={parcel.risico_score}
+            size="sm"
+            onClick={() => onRisicoClick?.()}
+          />
+        )}
       </div>
     </motion.div>
   )
