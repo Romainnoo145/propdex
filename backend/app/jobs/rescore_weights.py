@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core.config import settings
 from app.models.organization import Organization
 from app.models.scan_result import ScanResult
-from app.services.score_v3 import DEFAULT_WEIGHTS
+from app.services.score_v3 import CASCADE_GATED_FACTORS, DEFAULT_WEIGHTS
 
 logger = logging.getLogger(__name__)
 
@@ -86,8 +86,11 @@ def _rescore_from_breakdown(
         gen_score = float(gen_score)
 
         if categorie == "potentie":
-            # Use override if specified, else default weight
-            if factor_name in potentie_weights_override:
+            # Verdict-gated cascade factors keep the weight compute_score_v3 assigned
+            # (stored in the breakdown); neither override nor default may bypass the gate.
+            if factor_name in CASCADE_GATED_FACTORS:
+                new_weight = float(factor_data.get("gewicht", 0))
+            elif factor_name in potentie_weights_override:
                 new_weight = float(potentie_weights_override[factor_name])
             else:
                 new_weight = float(default_potentie.get(factor_name, 0))
@@ -309,7 +312,11 @@ def _update_breakdown_in_flags(
         gen_score = float(gen_score)
 
         if categorie == "potentie":
-            if factor_name in potentie_weights_override:
+            # Verdict-gated cascade factors keep the weight compute_score_v3 assigned;
+            # neither override nor default may bypass the gate.
+            if factor_name in CASCADE_GATED_FACTORS:
+                new_weight = float(factor_data.get("gewicht", 0))
+            elif factor_name in potentie_weights_override:
                 new_weight = float(potentie_weights_override[factor_name])
             else:
                 new_weight = float(default_potentie.get(factor_name, 0))

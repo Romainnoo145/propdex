@@ -449,6 +449,12 @@ DEFAULT_WEIGHTS: dict[str, Any] = {
     "score_threshold": 50,
 }
 
+# Cascade beleidsfactoren whose weight is decided by compute_score_v3's verdict logic
+# (woonvisie_match = always context-only/0; beleidsalignement = weight only when
+# verdict 'kansrijk'). No weight path — custom-weight overrides (_apply_custom_weights)
+# nor the rescore_weights recompute — may override the verdict gate for these.
+CASCADE_GATED_FACTORS: frozenset[str] = frozenset({"woonvisie_match", "beleidsalignement"})
+
 
 def compute_score_v3(
     parcel_data: dict[str, Any],
@@ -708,6 +714,11 @@ def _apply_custom_weights(
     potentie_w = custom_weights.get("potentie_weights") or {}
     risico_w = custom_weights.get("risico_weights") or {}
     for name, factor in breakdown.items():
+        # Verdict-gated cascade factors (woonvisie_match, beleidsalignement) get their
+        # weight from compute_score_v3's verdict logic — a stray org custom weight must
+        # NOT bypass the verdict gate. Skip them.
+        if name in CASCADE_GATED_FACTORS:
+            continue
         weight_map = potentie_w if factor.categorie == "potentie" else risico_w
         if name in weight_map:
             new_weight = float(weight_map[name])
