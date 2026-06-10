@@ -240,9 +240,14 @@ function DashboardPage() {
                   <div
                     key={s.id}
                     onClick={() => openOnMap(s.matched_parcel_id)}
-                    className={`group flex cursor-pointer items-center gap-3.5 px-[18px] py-3 ${i > 0 ? 'border-t border-aura-ink/5' : ''} ${inPipeline ? 'bg-aura-amber/[0.07] hover:bg-aura-amber/[0.11]' : 'hover:bg-white/70'}`}
+                    className={`flex cursor-pointer items-center gap-3 px-[18px] py-3.5 transition-colors hover:bg-white/60 ${i > 0 ? 'border-t border-aura-ink/[0.04]' : ''}`}
                   >
-                    <span className="w-12 flex-none text-[11px] text-neutral-400">
+                    {/* Quiet pipeline cue — single amber dot, transparent placeholder keeps rows aligned */}
+                    <span
+                      title={inPipeline ? 'In je pijplijn' : undefined}
+                      className={`flex-none h-1.5 w-1.5 rounded-full ${inPipeline ? 'bg-aura-amber' : 'bg-transparent'}`}
+                    />
+                    <span className="w-11 flex-none text-[11px] tabular-nums text-neutral-400">
                       {fmtDate(s.change_date)}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -253,16 +258,6 @@ function DashboardPage() {
                         {s.address ?? s.gemeente_naam}
                       </div>
                     </div>
-                    {inPipeline && (
-                      <span className="flex-none rounded-md bg-aura-amber/15 px-1.5 py-1 text-[10px] font-bold text-aura-amber-hover">
-                        In je pijplijn
-                      </span>
-                    )}
-                    <span
-                      className={`flex-none ${inPipeline ? 'text-aura-amber-hover' : 'text-neutral-400 group-hover:text-aura-amber-hover'}`}
-                    >
-                      <IconMap />
-                    </span>
                   </div>
                 )
               })}
