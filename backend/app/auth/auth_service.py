@@ -2,8 +2,9 @@
 
 import logging
 import uuid
+from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Any, Callable
+from typing import Any
 
 from fastapi import HTTPException, status
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
