@@ -130,8 +130,8 @@ async def rescore_parcels_for_document(ctx: dict[str, Any], *, document_id: str)
     """ARQ job: re-score all parcels in a document's gemeente.
 
     Creates its own DB engine (worker pattern). Loads the PolicyDocument,
-    fetches affected parcel IDs, and processes each parcel behind a semaphore
-    for controlled concurrency.
+    fetches affected parcel IDs, and processes each parcel serially, sharing
+    one database session.
 
     Args:
         ctx: ARQ context dict (may contain redis pool).
