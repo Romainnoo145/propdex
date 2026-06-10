@@ -46,9 +46,7 @@ from app.services.address_resolver import resolve_address
 
 HAUZER_EMAIL = "info@hauzer.nl"
 HAUZER_FULL_NAME = "Hauzer Vastgoed"
-HAUZER_INITIAL_PASSWORD = os.environ.get(
-    "HAUZER_DEMO_PASSWORD", "Hauzer-Venlo#Demo-2026"
-)
+HAUZER_INITIAL_PASSWORD = os.environ.get("HAUZER_DEMO_PASSWORD")
 ORG_NAME = "Hauzer Vastgoed"
 
 # Briefhoofd (afzender) — mirrors the Contact.html demo mockup.
@@ -383,6 +381,10 @@ async def seed_demo_dataset(
 
 
 async def seed() -> None:
+    if not HAUZER_INITIAL_PASSWORD:
+        raise SystemExit(
+            "HAUZER_DEMO_PASSWORD env var is required to run this seed script."
+        )
     engine = create_async_engine(settings.DATABASE_URL)
     Session = async_sessionmaker(engine, expire_on_commit=False)
 

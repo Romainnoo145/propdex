@@ -10,6 +10,7 @@ Usage (from the backend/ directory):
 from __future__ import annotations
 
 import asyncio
+import os
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -21,11 +22,15 @@ from app.models.user import User
 
 TOM_EMAIL = "tom@propdex.nl"
 TOM_FULL_NAME = "Tom"
-TOM_INITIAL_PASSWORD = "Propdex-Tom#9Zq!mK4x_Vrt"
+TOM_INITIAL_PASSWORD = os.environ.get("TOM_SEED_PASSWORD")
 ORG_NAME = "Propdex"
 
 
 async def seed() -> None:
+    if not TOM_INITIAL_PASSWORD:
+        raise SystemExit(
+            "TOM_SEED_PASSWORD env var is required to run this seed script."
+        )
     engine = create_async_engine(settings.DATABASE_URL)
     Session = async_sessionmaker(engine, expire_on_commit=False)
 
