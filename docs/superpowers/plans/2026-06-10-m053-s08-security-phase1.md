@@ -561,7 +561,7 @@ This removes hardcoded secrets from source. **Production rotation is a separate 
 Add `import os` near the top imports (after `import asyncio`), then replace line 24:
 
 ```python
-TOM_INITIAL_PASSWORD = "Propdex-Tom#9Zq!mK4x_Vrt"
+TOM_INITIAL_PASSWORD = "<REDACTED-HARDCODED-PASSWORD>"
 ```
 
 with:
@@ -585,7 +585,7 @@ Replace lines 49-51:
 
 ```python
 HAUZER_INITIAL_PASSWORD = os.environ.get(
-    "HAUZER_DEMO_PASSWORD", "Hauzer-Venlo#Demo-2026"
+    "HAUZER_DEMO_PASSWORD", "<REDACTED-HARDCODED-FALLBACK>"
 )
 ```
 
@@ -622,7 +622,7 @@ git commit -m "M053/S08: require env-var passwords in seed scripts (remove hardc
 Removing the constants does not remove them from git history. After merge, the user must:
 1. Set `TOM_SEED_PASSWORD` and `HAUZER_DEMO_PASSWORD` in Railway env (new values).
 2. Re-run both seed scripts on prod to reset the live passwords.
-3. Rotate the `partner-site/build.mjs` content password (`venlo-mgeqcr-2026`) and redeploy partner-site.
+3. Rotate the `partner-site/build.mjs` content password (the committed `venlo-…-2026` value) and redeploy partner-site.
 4. Consider a history scrub (git filter-repo / BFG) if the repo will ever be shared.
 
 > This step is a checklist item for the human, not an automated change. Flag it in the PR description.
