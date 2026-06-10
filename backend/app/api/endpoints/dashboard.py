@@ -32,15 +32,17 @@ from app.services.use_case_scoring import compute_use_case_scores
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
 
-def _best_use_case(breakdown: dict | None) -> tuple[str | None, str | None]:
-    """Leid het best-scorende projecttype + een reden af uit een score_breakdown."""
+def _best_use_case(breakdown: dict | None) -> tuple[str | None, str | None, float | None]:
+    """Leid het best-scorende projecttype + reden + diens score af uit een
+    score_breakdown. De score is use-case-specifiek (bv. nieuwbouw), zodat het
+    getal op de kaart-kaart matcht met het type-label (niet de algemene score)."""
     if not breakdown:
-        return None, None
+        return None, None, None
     scores = compute_use_case_scores(breakdown)
     if not scores:
-        return None, None
+        return None, None, None
     best = max(scores.values(), key=lambda s: s.score)
-    return best.label, f"{best.category} scorend voor {best.label.lower()}"
+    return best.label, f"{best.category} scorend voor {best.label.lower()}", float(best.score)
 
 
 class PijplijnStageCount(BaseModel):
@@ -164,14 +166,17 @@ async def get_kansen(
 
     kansen = []
     for parcel_id, pc_uuid, address, wijk, potentie_score, risico_score, breakdown in result.all():
-        projecttype, reason = _best_use_case(breakdown)
+        projecttype, reason, use_case_score = _best_use_case(breakdown)
+        # Card shows the use-case-specific score so the number matches its type
+        # label (and the map's type lens); fall back to the general potentie.
+        shown_potentie = use_case_score if use_case_score is not None else potentie_score
         kansen.append(
             Kans(
                 parcel_id=parcel_id,
                 parcel_cache_id=str(pc_uuid),
                 address=address,
                 wijk=wijk,
-                potentie_score=round(potentie_score, 1) if potentie_score is not None else None,
+                potentie_score=round(shown_potentie, 1) if shown_potentie is not None else None,
                 risico_score=round(risico_score, 1) if risico_score is not None else None,
                 projecttype=projecttype,
                 reason=reason,
