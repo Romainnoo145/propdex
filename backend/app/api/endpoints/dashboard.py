@@ -82,6 +82,7 @@ async def get_pijplijn(
 
 class Kans(BaseModel):
     parcel_id: str
+    parcel_cache_id: str  # ParcelCache UUID — for scan-data lookups (parcel_id is the kadaster code)
     address: str | None
     wijk: str | None
     potentie_score: float | None
@@ -142,6 +143,7 @@ async def get_kansen(
     result = await db.execute(
         select(
             ParcelCache.parcel_id,
+            ParcelCache.id.label("pc_uuid"),
             ParcelCache.address,
             ranked.c.wijk,
             ranked.c.potentie,
@@ -161,11 +163,12 @@ async def get_kansen(
     )
 
     kansen = []
-    for parcel_id, address, wijk, potentie_score, risico_score, breakdown in result.all():
+    for parcel_id, pc_uuid, address, wijk, potentie_score, risico_score, breakdown in result.all():
         projecttype, reason = _best_use_case(breakdown)
         kansen.append(
             Kans(
                 parcel_id=parcel_id,
+                parcel_cache_id=str(pc_uuid),
                 address=address,
                 wijk=wijk,
                 potentie_score=round(potentie_score, 1) if potentie_score is not None else None,

@@ -21,7 +21,7 @@ export function ScoreAnalysePanel({
   onClose: () => void
   onOpenMap: () => void
 }) {
-  const scanData = useParcelScanData(kans.parcel_id)
+  const scanData = useParcelScanData(kans.parcel_cache_id)
   const { scores, potentieFactors, risicoFactors } = analyseFromScanItem(scanData.data)
 
   return (

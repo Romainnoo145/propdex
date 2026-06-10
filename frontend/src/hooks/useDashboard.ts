@@ -21,6 +21,7 @@ export interface PijplijnResponse {
 
 export interface Kans {
   parcel_id: string
+  parcel_cache_id: string
   address: string | null
   wijk: string | null
   potentie_score: number | null
