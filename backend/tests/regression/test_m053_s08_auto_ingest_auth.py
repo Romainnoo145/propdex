@@ -16,6 +16,8 @@ from unittest.mock import patch
 import pytest
 from httpx import AsyncClient
 
+from app.core.config import settings
+
 
 @pytest.mark.asyncio
 async def test_auto_ingest_blocked_for_non_superuser(
@@ -28,8 +30,6 @@ async def test_auto_ingest_blocked_for_non_superuser(
     ensuring the 403 comes from the superuser dependency check — not the
     vendor-org guard.
     """
-    from app.core.config import settings
-
     with patch.object(settings, "VENDOR_ORG_ID", None):
         resp = await async_client.post(
             "/api/policy-documents/auto-ingest",
@@ -37,3 +37,4 @@ async def test_auto_ingest_blocked_for_non_superuser(
             json={"gemeente_code": "GM0983", "gemeente_naam": "Venlo"},
         )
     assert resp.status_code == 403
+    assert "superuser" in resp.json()["detail"].lower()
