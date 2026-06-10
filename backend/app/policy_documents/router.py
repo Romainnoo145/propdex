@@ -267,7 +267,7 @@ async def delete_policy_document(
 async def auto_ingest_policies(
     payload: AutoIngestRequest,
     request: Request,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ) -> AutoIngestResponse:
     """Vendor-only endpoint: auto-ingest CVDR policy documents for a gemeente.
