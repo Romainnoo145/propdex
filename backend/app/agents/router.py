@@ -255,7 +255,7 @@ async def create_bulk_request(
 
 
 # ---------------------------------------------------------------------------
-# GET /bulk-requests — admin list of pending requests
+# GET /bulk-requests — caller's own bulk requests
 # ---------------------------------------------------------------------------
 
 
