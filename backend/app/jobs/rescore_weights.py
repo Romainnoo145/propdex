@@ -15,7 +15,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
+from app.models.area_scan import AreaScan
 from app.models.organization import Organization
+from app.models.project import Project
 from app.models.scan_result import ScanResult
 from app.services.score_v3 import CASCADE_GATED_FACTORS, DEFAULT_WEIGHTS
 
@@ -197,10 +199,20 @@ async def rescore_weights_job(ctx: dict, *, organization_id: str) -> dict:
             # Stream scan_results in batches
             offset = 0
             while True:
+                # Org-scope (audit CRIT-1): only rescore rows whose owning scan
+                # belongs to THIS org's projects. scan_results is shared reference
+                # data with no organization_id; ownership is resolved via
+                # scan_id -> area_scans.project_id -> projects.organization_id.
+                # Rows from scans without an org project are intentionally skipped
+                # — they are not this org's data and must not be overwritten with
+                # this org's custom weights.
                 stmt = (
                     select(ScanResult)
+                    .join(AreaScan, AreaScan.id == ScanResult.scan_id)
+                    .join(Project, Project.id == AreaScan.project_id)
                     .where(
                         ScanResult.flags.isnot(None),
+                        Project.organization_id == org_uuid,
                     )
                     .order_by(ScanResult.id)
                     .offset(offset)
