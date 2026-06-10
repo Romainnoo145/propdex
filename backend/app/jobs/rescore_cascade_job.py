@@ -19,7 +19,6 @@ parcel_cache is shared (no org filter) — tenant isolation is at the document
 level. Each org's document has its own extraction cache entries.
 """
 
-import asyncio
 import json
 import logging
 import time
@@ -43,7 +42,6 @@ from app.services.cascade_enrichment_service import (
 
 logger = logging.getLogger(__name__)
 
-RESCORE_CONCURRENCY = 5
 _EVENT_LOG_PATH = "/tmp/rescore_events.jsonl"
 
 CASCADE_RESCORE_SOURCE_KEYS: frozenset[str] = frozenset({"woonvisie"})
@@ -62,7 +60,6 @@ async def _process_parcel(
     db: AsyncSession,
     parcel_id_str: str,
     doc: PolicyDocument,
-    sem: asyncio.Semaphore,
 ) -> bool:
     """Process a single parcel for cascade rescoring.
 
@@ -80,51 +77,53 @@ async def _process_parcel(
     re-scans compute the factor from fresh cache. We mark flags with
     cascade_rescored_at to signal freshness to downstream consumers.
     """
-    async with sem:
-        cascade_payloads = await get_cascade_payloads(
-            db,
-            parcel_id=parcel_id_str,
-            gemeente_code=doc.entity_code,
-            organization_id=doc.organization_id,
-        )
+    # NOTE (M053/S09): parcels are processed serially because all calls share one
+    # AsyncSession (concurrent use of a single session is unsafe). Real parallelism
+    # requires a session-per-task refactor — deferred to a later slice.
+    cascade_payloads = await get_cascade_payloads(
+        db,
+        parcel_id=parcel_id_str,
+        gemeente_code=doc.entity_code,
+        organization_id=doc.organization_id,
+    )
 
-        if not cascade_payloads:
-            return False
+    if not cascade_payloads:
+        return False
 
-        # Look up ScanResult via JOIN on ParcelCache
-        stmt = (
-            select(ScanResult)
-            .join(ParcelCache, ParcelCache.id == ScanResult.parcel_id)
-            .where(ParcelCache.parcel_id == parcel_id_str)
-        )
-        result = await db.execute(stmt)
-        sr = result.scalar_one_or_none()
+    # Look up ScanResult via JOIN on ParcelCache
+    stmt = (
+        select(ScanResult)
+        .join(ParcelCache, ParcelCache.id == ScanResult.parcel_id)
+        .where(ParcelCache.parcel_id == parcel_id_str)
+    )
+    result = await db.execute(stmt)
+    sr = result.scalar_one_or_none()
 
-        if sr is None or sr.flags is None:
-            return False
+    if sr is None or sr.flags is None:
+        return False
 
-        flags = sr.flags
-        if flags.get("score_model_version") != "score-v3.0":
-            return False
+    flags = sr.flags
+    if flags.get("score_model_version") != "score-v3.0":
+        return False
 
-        # Mark cascade payload refresh in flags
-        updated_flags = dict(flags)
-        updated_flags["cascade_rescored_at"] = datetime.utcnow().isoformat()
-        updated_flags["woonvisie_cascade_payload"] = dict.fromkeys(cascade_payloads, True)
+    # Mark cascade payload refresh in flags
+    updated_flags = dict(flags)
+    updated_flags["cascade_rescored_at"] = datetime.utcnow().isoformat()
+    updated_flags["woonvisie_cascade_payload"] = dict.fromkeys(cascade_payloads, True)
 
-        # Recompute scores from existing breakdown (reflects current weights)
-        scores = _rescore_from_breakdown(updated_flags, custom_weights={}, balance=0.7)
-        if scores is not None:
-            pot_score, ris_score, new_overall = scores
-            updated_flags["scores"] = {
-                "potentie_score": pot_score,
-                "risico_score": ris_score,
-                "overall": new_overall,
-            }
-            sr.score = new_overall
+    # Recompute scores from existing breakdown (reflects current weights)
+    scores = _rescore_from_breakdown(updated_flags, custom_weights={}, balance=0.7)
+    if scores is not None:
+        pot_score, ris_score, new_overall = scores
+        updated_flags["scores"] = {
+            "potentie_score": pot_score,
+            "risico_score": ris_score,
+            "overall": new_overall,
+        }
+        sr.score = new_overall
 
-        sr.flags = updated_flags
-        return True
+    sr.flags = updated_flags
+    return True
 
 
 async def rescore_parcels_for_document(ctx: dict[str, Any], *, document_id: str) -> dict[str, Any]:
@@ -192,12 +191,11 @@ async def rescore_parcels_for_document(ctx: dict[str, Any], *, document_id: str)
                 len(parcel_ids), document_id, doc.entity_code,
             )
 
-            sem = asyncio.Semaphore(RESCORE_CONCURRENCY)
             flush_counter = 0
 
             for parcel_id_str in parcel_ids:
                 try:
-                    updated = await _process_parcel(session, parcel_id_str, doc, sem)
+                    updated = await _process_parcel(session, parcel_id_str, doc)
                     if updated:
                         processed_count += 1
                         flush_counter += 1
@@ -223,7 +221,7 @@ async def rescore_parcels_for_document(ctx: dict[str, Any], *, document_id: str)
 
     event_entry = {
         "doc_id": document_id,
-        "affected_parcel_count": len(parcel_ids) if "parcel_ids" in dir() else 0,
+        "affected_parcel_count": len(parcel_ids) if "parcel_ids" in locals() else 0,
         "duration_ms": duration_ms,
         "error_count": error_count,
         "timestamp": datetime.utcnow().isoformat(),
