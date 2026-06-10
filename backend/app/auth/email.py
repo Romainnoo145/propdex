@@ -38,10 +38,11 @@ async def send_verification_email(email: str, token: str) -> None:
     """
     verification_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
 
-    # Always log URL for dev testing (no mail server needed)
-    print(f"\n[EMAIL VERIFICATION] URL for {email}:")
-    print(f"  {verification_url}\n")
-    logger.info(f"[EMAIL VERIFICATION] URL for {email}: {verification_url}")
+    # Log the full token URL only in dev/test — never in production logs.
+    if settings.ENVIRONMENT.lower() in ("development", "test", "testing"):
+        print(f"\n[EMAIL VERIFICATION] URL for {email}:")
+        print(f"  {verification_url}\n")
+        logger.info(f"[EMAIL VERIFICATION] URL for {email}: {verification_url}")
 
     # Try to send email, but don't crash if it fails
     if not settings.MAIL_USERNAME:
@@ -113,10 +114,11 @@ async def send_password_reset_email(email: str, token: str) -> None:
     """
     reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
 
-    # Always log URL for dev testing (no mail server needed)
-    print(f"\n[PASSWORD RESET] URL for {email}:")
-    print(f"  {reset_url}\n")
-    logger.info(f"[PASSWORD RESET] URL for {email}: {reset_url}")
+    # Log the full token URL only in dev/test — never in production logs.
+    if settings.ENVIRONMENT.lower() in ("development", "test", "testing"):
+        print(f"\n[PASSWORD RESET] URL for {email}:")
+        print(f"  {reset_url}\n")
+        logger.info(f"[PASSWORD RESET] URL for {email}: {reset_url}")
 
     # Try to send email, but don't crash if it fails
     if not settings.MAIL_USERNAME:

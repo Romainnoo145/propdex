@@ -170,9 +170,8 @@ async def pdf_parsing_job(
             # Patch all saved reports that reference this plan_idn
             # so they immediately show the AI analysis without manual refresh.
             try:
+
                 from app.models.report import SavedReport
-                from sqlalchemy import update
-                from sqlalchemy.dialects.postgresql import JSONB
 
                 ai_section = {
                     "status": "complete",
@@ -186,7 +185,18 @@ async def pdf_parsing_job(
                 # plan_id in reports may be truncated (missing version suffix),
                 # so use startswith matching in both directions.
                 plan_idn_base = plan_idn.rsplit("-", 1)[0]  # e.g. NL.IMRO.0983.BP201901CAPWONEN
-                report_stmt = select(SavedReport)
+                # NOTE (M053/S08): SavedReport has no organization_id (user-scoped
+                # via RLS, not enforced in the worker session). This patch updates
+                # ANY user's report that references this plan. That is acceptable
+                # only because the AI parse is plan-global, not tenant-specific.
+                # Bounded to the most recent reports to avoid a full-table scan.
+                # TODO: thread requesting user_id through enqueue -> job and filter
+                # SavedReport.user_id to make this strictly per-tenant.
+                report_stmt = (
+                    select(SavedReport)
+                    .order_by(SavedReport.created_at.desc())
+                    .limit(500)
+                )
                 report_result = await session.execute(report_stmt)
                 for report in report_result.scalars().all():
                     plans = (report.report_data or {}).get("zoning", {}).get("plans", [])

@@ -13,7 +13,6 @@ from app.core.database import get_db
 from app.middleware.rate_limit import limiter
 from app.models.scan_result import ScanResult
 from app.models.user import User
-from app.schemas.common import MessageResponse
 from app.scans import service
 from app.scans.schemas import (
     ScanCreateRequest,
@@ -21,6 +20,7 @@ from app.scans.schemas import (
     ScanResponse,
     ScanStatusResponse,
 )
+from app.schemas.common import MessageResponse
 
 logger = logging.getLogger(__name__)
 
@@ -135,12 +135,19 @@ async def cancel_scan(
     request: Request,
     scan_id: uuid.UUID,
     current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Cancel a running scan."""
+    """Cancel a running scan owned by the caller's organization."""
     scan = await service.get_scan_by_id(scan_id, db)
     if not scan:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
+
+    owner_org_id = await service.get_scan_org_id(scan_id, db)
+    if owner_org_id != organization_id:
+        # Do not reveal existence of another org's scan.
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
+
     if scan.status != "running":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -43,17 +43,17 @@ async def enqueue_parsing_job(
     )
     session.add(job)
     await session.flush()  # Get the id
+    await session.commit()  # Persist BEFORE enqueue so the worker can see it
 
-    # Enqueue ARQ job
+    # Enqueue ARQ job only after the row is durably committed
     arq_job = await arq_pool.enqueue_job(
         "pdf_parsing_job",
         plan_idn=plan_idn,
     )
 
-    # Update ParsingJob with ARQ job_id
+    # Record the ARQ job_id on the now-committed row
     job.job_id = arq_job.job_id
     session.add(job)
-    await session.flush()
     await session.commit()
 
     logger.info(

@@ -162,7 +162,9 @@ async def get_me(
 
 
 @router.post("/verify-email", response_model=MessageResponse)
+@limiter.limit("20/hour")
 async def verify_email_endpoint(
+    request: Request,
     verify_data: EmailVerifyRequest,
     db: AsyncSession = Depends(get_db),
 ) -> MessageResponse:
@@ -200,7 +202,9 @@ async def request_password_reset_endpoint(
 
 
 @router.post("/password-reset/confirm", response_model=MessageResponse)
+@limiter.limit("10/hour")
 async def confirm_password_reset_endpoint(
+    request: Request,
     reset_confirm: PasswordResetConfirm,
     db: AsyncSession = Depends(get_db),
 ) -> MessageResponse:

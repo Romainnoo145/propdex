@@ -255,7 +255,7 @@ async def create_bulk_request(
 
 
 # ---------------------------------------------------------------------------
-# GET /bulk-requests — admin list of pending requests
+# GET /bulk-requests — caller's own bulk requests
 # ---------------------------------------------------------------------------
 
 
@@ -269,9 +269,13 @@ async def list_bulk_requests(
     user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> BulkRequestListResponse:
-    """List manual bulk requests. Currently visible to all authenticated users — admin restriction deferred to S04."""
-    base = select(BulkRequest)
-    count_q = select(func.count()).select_from(BulkRequest)
+    """List the calling user's manual bulk requests."""
+    base = select(BulkRequest).where(BulkRequest.user_id == user.id)
+    count_q = (
+        select(func.count())
+        .select_from(BulkRequest)
+        .where(BulkRequest.user_id == user.id)
+    )
 
     if status:
         base = base.where(BulkRequest.status == status)
