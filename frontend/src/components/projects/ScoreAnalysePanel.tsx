@@ -1,34 +1,47 @@
 /**
- * ScoreAnalysePanel — right-side slide-in showing the full Potentie/Risico/
- * Overall analyse for an off-market parcel (same overview as the report's
- * "Analyse" tab). Replaces the thin KansScoresModal.
+ * ScoreAnalysePanel — centered pop-up showing the Potentie/Overall/Risico
+ * analyse for an off-market parcel.
  *
- * Fetches the parcel's scan-data on open and renders the shared
- * ScoreAnalyseOverview. The parcel's stored data is read-only.
+ * Potentie ring uses the card's use-case score (kans.potentie_score) so the
+ * number matches the card + the map's type lens; overall/risico from scan-data.
+ * Summary view (rings + top drivers) with a "toon alle factoren" expander.
  */
-import { Drawer } from '@/components/ui/Drawer'
+import { useEffect } from 'react'
 import { useParcelScanData } from '@/hooks/useScans'
 import { ScoreAnalyseOverview } from '@/components/reports/sections/ScoreAnalyseOverview'
 import { analyseFromScanItem } from '@/components/reports/sections/scoreAnalyse'
 import type { Kans } from '@/hooks/useDashboard'
 
-export function ScoreAnalysePanel({
-  kans,
-  onClose,
-  onOpenMap,
-}: {
-  kans: Kans
-  onClose: () => void
-  onOpenMap: () => void
-}) {
+export function ScoreAnalysePanel({ kans, onClose }: { kans: Kans; onClose: () => void }) {
   const scanData = useParcelScanData(kans.parcel_cache_id)
   const { scores, potentieFactors, risicoFactors } = analyseFromScanItem(scanData.data)
 
+  // Headline potentie = the card's use-case score, so pop-up ↔ card ↔ map agree.
+  const panelScores = scores
+    ? { ...scores, potentie: kans.potentie_score ?? scores.potentie }
+    : kans.potentie_score != null
+      ? { potentie: kans.potentie_score, overall: undefined, risico: undefined }
+      : null
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
   return (
-    <Drawer isOpen onClose={onClose} width="md" title={`Scores — ${kans.address ?? 'Ontwikkelkavel'}`}>
-      <div className="flex min-h-full flex-col">
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-[24px] border border-white/60 bg-white shadow-[0_12px_48px_rgba(14,17,17,0.18)]"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-[#EAEFEF] bg-white/80 px-6 py-4 backdrop-blur-[24px]">
+        <div className="flex items-start justify-between gap-3 px-6 pb-4 pt-6">
           <div className="min-w-0">
             <div className="truncate text-[16px] font-bold text-aura-ink">
               {kans.address ?? 'Ontwikkelkavel'}
@@ -49,7 +62,7 @@ export function ScoreAnalysePanel({
         </div>
 
         {/* Body */}
-        <div className="flex-1 px-6 py-5">
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
           {scanData.isLoading && (
             <div className="py-16 text-center text-[13px] text-slate-400">Scores ophalen…</div>
           )}
@@ -64,24 +77,15 @@ export function ScoreAnalysePanel({
                 </div>
               )}
               <ScoreAnalyseOverview
-                scores={scores}
+                variant="summary"
+                scores={panelScores}
                 potentieFactors={potentieFactors}
                 risicoFactors={risicoFactors}
               />
             </>
           )}
         </div>
-
-        {/* Footer action */}
-        <div className="sticky bottom-0 border-t border-[#EAEFEF] bg-white/80 px-6 py-4 backdrop-blur-[24px]">
-          <button
-            onClick={onOpenMap}
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[12px] bg-aura-obsidian text-[13px] font-semibold text-aura-amber hover:bg-aura-obsidian/90"
-          >
-            Bekijk op kaart
-          </button>
-        </div>
       </div>
-    </Drawer>
+    </div>
   )
 }

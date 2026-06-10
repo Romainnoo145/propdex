@@ -164,38 +164,78 @@ export function FactorsTable({ factors, title }: { factors: FactorResult[]; titl
   )
 }
 
+function ScoreRings({ scores }: { scores: ScoresV3 | null }) {
+  return (
+    <section className="rounded-[24px] border border-[#EAEFEF] bg-white p-6">
+      <div className="flex items-center justify-center gap-8 py-2">
+        <ScoreRing value={scores?.potentie} color="#22c55e" label="Potentie"
+          labelClass="text-[11px] font-semibold text-emerald-600" size={80} delay={0} />
+        <ScoreRing value={scores?.overall} color="#F9A826" label="Overall"
+          labelClass="text-[12px] font-bold text-aura-amber-dark" size={96} delay={0.15} />
+        <ScoreRing value={scores?.risico} color="#ef4444" label="Risico"
+          labelClass="text-[11px] font-semibold text-red-500" size={80} delay={0.3} />
+      </div>
+    </section>
+  )
+}
+
+/** Compact "top drivers" list — only factors that actually contribute. */
+function TopFactorList({ kicker, factors, accent }: { kicker: string; factors: FactorResult[]; accent: string }) {
+  const top = factors.filter((f) => (f.bijdrage ?? 0) > 0).slice(0, 4)
+  if (top.length === 0) return null
+  return (
+    <div>
+      <p className="mb-2 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">{kicker}</p>
+      <ul className="space-y-1.5">
+        {top.map((f, i) => (
+          <li key={i} className="flex items-center justify-between gap-3 text-[13px]">
+            <span className="truncate text-aura-ink/80">{f.naam}</span>
+            <span className="flex-none font-semibold tabular-nums" style={{ color: accent }}>
+              +{(f.bijdrage ?? 0).toFixed(1)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 /**
- * Score rings + potentie/risico factor tables. Notes/uploads stay with the
- * report section (S5) and are intentionally not part of this shared overview.
+ * Score rings + per-factor breakdown. `full` (report) shows the complete
+ * tables; `summary` (off-market panel) shows the top drivers with a
+ * "toon alle factoren" expander. Notes/uploads stay with the report section.
  */
 export function ScoreAnalyseOverview({
   scores,
   potentieFactors,
   risicoFactors,
+  variant = 'full',
 }: {
   scores: ScoresV3 | null
   potentieFactors: FactorResult[]
   risicoFactors: FactorResult[]
+  variant?: 'full' | 'summary'
 }) {
+  if (variant === 'summary') {
+    return (
+      <div className="space-y-6">
+        <ScoreRings scores={scores} />
+        <div className="space-y-5">
+          <TopFactorList kicker="Sterkste potentie" factors={potentieFactors} accent="#16a34a" />
+          <TopFactorList kicker="Grootste risico" factors={risicoFactors} accent="#ef4444" />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
-      <section className="rounded-[24px] border border-[#EAEFEF] bg-white p-6">
-        <div className="flex items-center justify-center gap-8 py-2">
-          <ScoreRing value={scores?.potentie} color="#22c55e" label="Potentie"
-            labelClass="text-[11px] font-semibold text-emerald-600" size={80} delay={0} />
-          <ScoreRing value={scores?.overall} color="#F9A826" label="Overall"
-            labelClass="text-[12px] font-bold text-aura-amber-dark" size={96} delay={0.15} />
-          <ScoreRing value={scores?.risico} color="#ef4444" label="Risico"
-            labelClass="text-[11px] font-semibold text-red-500" size={80} delay={0.3} />
-        </div>
-      </section>
-
+      <ScoreRings scores={scores} />
       {potentieFactors.length > 0 && (
         <SectionInsightCard kicker="Potentie" title="Potentiefactoren" Icon={TrendingUp}>
           <FactorsTable factors={potentieFactors} title="Potentiefactoren" />
         </SectionInsightCard>
       )}
-
       {risicoFactors.length > 0 && (
         <SectionInsightCard kicker="Risico" title="Risicofactoren" Icon={ShieldAlert}>
           <FactorsTable factors={risicoFactors} title="Risicofactoren" />

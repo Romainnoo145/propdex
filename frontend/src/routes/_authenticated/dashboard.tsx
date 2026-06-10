@@ -8,13 +8,21 @@ import {
   useDismissKans,
   useGemeenteSignalen,
   useOffMarketKansen,
-  usePijplijn,
   usePipelineParcels,
   type Kans,
 } from '@/hooks/useDashboard'
 
 // Demo: Hauzer werkt in Venlo. De gemeente-scope switcher impliceert multi-gemeente.
 const GEMEENTE = 'Venlo'
+
+// Read-state for gemeentesignalen lives client-side (localStorage). A signal is
+// "nieuw" until the user clicks it or marks all read. Move to a per-user backend
+// table (cf. DismissedKans) if cross-device read-state is needed.
+const READ_SIGNALEN_KEY = 'propdex:read-signalen'
+
+// Cap how many signalen render at once — the full feed (often 100) is an
+// unbearable scroll. "Toon alle" expands on demand.
+const SIGNALEN_CAP = 12
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
   component: DashboardPage,
@@ -164,12 +172,40 @@ function DashboardPage() {
   const banner = useDashboardBanner(GEMEENTE)
   const signalen = useGemeenteSignalen(GEMEENTE)
   const kansen = useOffMarketKansen(GEMEENTE)
-  const pijplijn = usePijplijn()
   const pipelineParcels = usePipelineParcels()
   const pipelineSet = new Set(pipelineParcels.data ?? [])
   const dismissKans = useDismissKans()
   const [dismissed, setDismissed] = useState<Set<string>>(() => new Set())
   const [scoresKans, setScoresKans] = useState<Kans | null>(null)
+  const [readSignalen, setReadSignalen] = useState<Set<string>>(() => {
+    try {
+      return new Set<string>(JSON.parse(localStorage.getItem(READ_SIGNALEN_KEY) ?? '[]'))
+    } catch {
+      return new Set<string>()
+    }
+  })
+
+  const persistRead = (next: Set<string>) => {
+    setReadSignalen(next)
+    try {
+      localStorage.setItem(READ_SIGNALEN_KEY, JSON.stringify([...next]))
+    } catch {
+      /* localStorage unavailable — read-state just won't persist */
+    }
+  }
+  const markSignaalRead = (id: string) => {
+    if (readSignalen.has(id)) return
+    persistRead(new Set(readSignalen).add(id))
+  }
+  const markAllSignalenRead = () => {
+    const next = new Set(readSignalen)
+    for (const s of signalen.data ?? []) next.add(s.id)
+    persistRead(next)
+  }
+  const unreadSignalen = (signalen.data ?? []).filter((s) => !readSignalen.has(s.id)).length
+  const [showAllSignalen, setShowAllSignalen] = useState(false)
+  const allSignalen = signalen.data ?? []
+  const shownSignalen = showAllSignalen ? allSignalen : allSignalen.slice(0, SIGNALEN_CAP)
 
   const visibleKansen = (kansen.data?.kansen ?? []).filter((k) => !dismissed.has(k.parcel_id))
 
@@ -228,39 +264,82 @@ function DashboardPage() {
         <div className="grid grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] items-start gap-[18px] max-lg:grid-cols-1">
           {/* LINKS — gemeentesignalen */}
           <div>
-            <SectionHead>Gemeentesignalen</SectionHead>
+            <div className="mb-3 flex items-center gap-2">
+              <h2 className="text-[13px] font-bold uppercase tracking-[0.06em] text-aura-ink">
+                Gemeentesignalen
+              </h2>
+              {unreadSignalen > 0 && (
+                <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-aura-amber px-1.5 text-[11px] font-bold text-aura-obsidian">
+                  {unreadSignalen}
+                </span>
+              )}
+              {unreadSignalen > 0 && (
+                <button
+                  type="button"
+                  onClick={markAllSignalenRead}
+                  className="ml-auto text-[11px] font-semibold text-aura-amber-hover hover:text-aura-amber"
+                >
+                  Markeer alles als gelezen
+                </button>
+              )}
+            </div>
             <div className="h-[calc(100vh-320px)] min-h-[360px] overflow-y-auto rounded-2xl border border-white/60 bg-white/55">
               {signalen.isLoading && <Empty>Laden…</Empty>}
               {signalen.isSuccess && signalen.data.length === 0 && (
                 <Empty>Nog geen bekendmakingen voor {GEMEENTE}.</Empty>
               )}
-              {signalen.data?.map((s, i) => {
+              {shownSignalen.map((s, i) => {
                 const inPipeline = !!s.matched_parcel_id && pipelineSet.has(s.matched_parcel_id)
+                const isRead = readSignalen.has(s.id)
                 return (
                   <div
                     key={s.id}
-                    onClick={() => openOnMap(s.matched_parcel_id)}
-                    className={`flex cursor-pointer items-center gap-3 px-[18px] py-3.5 transition-colors hover:bg-white/60 ${i > 0 ? 'border-t border-aura-ink/[0.04]' : ''}`}
+                    onClick={() => markSignaalRead(s.id)}
+                    className={`group flex cursor-pointer items-start gap-3.5 px-[18px] py-3.5 transition-colors hover:bg-white/60 ${i > 0 ? 'border-t border-aura-ink/[0.04]' : ''}`}
                   >
-                    {/* Quiet pipeline cue — single amber dot, transparent placeholder keeps rows aligned */}
+                    {/* New = bold black title + amber date; reading it (row click) calms
+                        it to muted. Title wraps to 2 lines so it's fully readable. */}
                     <span
-                      title={inPipeline ? 'In je pijplijn' : undefined}
-                      className={`flex-none h-1.5 w-1.5 rounded-full ${inPipeline ? 'bg-aura-amber' : 'bg-transparent'}`}
-                    />
-                    <span className="w-11 flex-none text-[11px] tabular-nums text-neutral-400">
+                      className={`mt-px w-11 flex-none text-[11px] tabular-nums ${isRead ? 'text-neutral-400' : 'font-semibold text-aura-amber-hover'}`}
+                    >
                       {fmtDate(s.change_date)}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-[13.5px] font-semibold text-aura-ink">
+                      <div
+                        className={`line-clamp-2 text-[13px] leading-snug ${isRead ? 'font-medium text-aura-ink/60' : 'font-semibold text-aura-ink'}`}
+                      >
                         {s.title}
                       </div>
-                      <div className="truncate text-xs text-neutral-400">
+                      <div className="mt-0.5 truncate text-[11px] text-neutral-400">
                         {s.address ?? s.gemeente_naam}
                       </div>
                     </div>
+                    <button
+                      type="button"
+                      title="Op kaart"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        markSignaalRead(s.id)
+                        openOnMap(s.matched_parcel_id)
+                      }}
+                      className={`mt-px flex-none ${inPipeline ? 'text-aura-amber-hover' : 'text-neutral-300 group-hover:text-aura-amber-hover'}`}
+                    >
+                      <IconMap />
+                    </button>
                   </div>
                 )
               })}
+              {allSignalen.length > SIGNALEN_CAP && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllSignalen((v) => !v)}
+                  className="w-full border-t border-aura-ink/[0.04] px-[18px] py-3 text-left text-[12px] font-semibold text-aura-amber-hover hover:bg-white/60 hover:text-aura-amber"
+                >
+                  {showAllSignalen
+                    ? 'Toon minder'
+                    : `Toon alle ${allSignalen.length} bekendmakingen`}
+                </button>
+              )}
             </div>
           </div>
 
@@ -285,37 +364,10 @@ function DashboardPage() {
             </div>
           </div>
         </div>
-
-        {/* pijplijn strip */}
-        <div className="mt-[18px] flex flex-wrap items-center gap-2 rounded-2xl border border-white/60 bg-white/50 px-[18px] py-3.5">
-          <span className="mr-1.5 text-[13px] font-bold text-aura-ink">
-            Pijplijn · {pijplijn.data?.total ?? 0}
-          </span>
-          {(pijplijn.data?.stages ?? []).map((s) => (
-            <span key={s.stage} className="inline-flex items-center gap-1.5 text-xs text-neutral-500">
-              <span className="h-1.5 w-1.5 rounded-full bg-neutral-300" />
-              {s.stage} <b className="font-bold text-aura-ink">{s.count}</b>
-            </span>
-          ))}
-          <button
-            onClick={() => navigate({ to: '/opgeslagen' })}
-            className="ml-auto inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-aura-amber-hover hover:text-aura-amber"
-          >
-            Open pijplijn <IconArrow />
-          </button>
-        </div>
       </div>
 
       {scoresKans && (
-        <ScoreAnalysePanel
-          kans={scoresKans}
-          onClose={() => setScoresKans(null)}
-          onOpenMap={() => {
-            const parcelId = scoresKans.parcel_id
-            setScoresKans(null)
-            openOnMap(parcelId)
-          }}
-        />
+        <ScoreAnalysePanel kans={scoresKans} onClose={() => setScoresKans(null)} />
       )}
     </ResultsShell>
   )
