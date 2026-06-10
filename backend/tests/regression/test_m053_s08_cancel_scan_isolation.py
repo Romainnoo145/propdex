@@ -51,4 +51,4 @@ async def test_cannot_cancel_other_orgs_scan(
     await test_db.commit()
 
     resp = await async_client.post(f"/api/scans/{scan.id}/cancel", headers=auth_headers)
-    assert resp.status_code in (403, 404)
+    assert resp.status_code == 404

@@ -306,6 +306,11 @@ async def get_scan_org_id(
 
     AreaScan itself is shared reference data; ownership is defined by the
     project the scan belongs to (Project is org-scoped).
+
+    Returns None when the scan has no project, or the project has no
+    organization (both columns are nullable). The caller treats a None
+    owner as unauthorized — a scan with no resolvable owner cannot be
+    cancelled by anyone, which is the safe failure mode.
     """
     query = (
         select(Project.organization_id)
