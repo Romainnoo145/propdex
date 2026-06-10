@@ -1,5 +1,6 @@
 """Authentication service layer — user registration, login, token management, and OAuth logic."""
 
+import logging
 import uuid
 from datetime import datetime, timedelta
 from typing import Any, Callable
@@ -25,6 +26,8 @@ from app.core.security import audit_logger
 from app.models.organization import Organization
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
 
 
 async def _create_token_pair(
@@ -478,9 +481,10 @@ async def google_callback(
         token = await google_oauth_client.get_access_token(code, redirect_uri)
         access_token_str = token["access_token"]
     except Exception as e:
+        logger.exception("Google OAuth token exchange failed")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to exchange authorization code: {e!s}",
+            detail="Google authentication failed",
         ) from e
 
     # Fetch user info from Google
@@ -498,9 +502,10 @@ async def google_callback(
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception("Google OAuth user-info fetch failed")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to fetch user info from Google: {e!s}",
+            detail="Google authentication failed",
         ) from e
 
     # Check if user exists by email
