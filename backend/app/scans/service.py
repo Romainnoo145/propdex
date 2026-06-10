@@ -298,6 +298,24 @@ async def get_scan_by_id(
     return result.scalar_one_or_none()
 
 
+async def get_scan_org_id(
+    scan_id: uuid.UUID,
+    session: AsyncSession,
+) -> uuid.UUID | None:
+    """Return the organization_id that owns a scan via its project, or None.
+
+    AreaScan itself is shared reference data; ownership is defined by the
+    project the scan belongs to (Project is org-scoped).
+    """
+    query = (
+        select(Project.organization_id)
+        .join(AreaScan, AreaScan.project_id == Project.id)
+        .where(AreaScan.id == scan_id)
+    )
+    result = await session.execute(query)
+    return result.scalar_one_or_none()
+
+
 async def list_scan_results_by_ids(
     scan_id: uuid.UUID,
     parcel_ids: list[uuid.UUID],
