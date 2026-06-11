@@ -1,10 +1,11 @@
 """E2E tests for GET /api/policy-documents/admin/overview — M045/S05 T06.
 
-Verifies the vendor-only admin overview endpoint via httpx ASGITransport:
+Verifies the superadmin-only admin overview endpoint via httpx ASGITransport:
 - No Authorization → 401
 - Non-superuser → 403 (blocked at get_current_superuser dependency)
-- Superuser from non-vendor org → 403 (blocked at _assert_vendor_org)
-- Vendor superuser → 200 with grouped cascade levels, latest-version picking,
+- Superuser from ANY org → 200 (org membership is irrelevant; superadmin is the
+  only gate since M053/S08b removed the _assert_vendor_org layer)
+- Superuser → 200 with grouped cascade levels, latest-version picking,
   version_count, display-name resolution, auto_ingest prefix detection, totals.
 """
 
@@ -106,33 +107,33 @@ async def test_overview_rejects_non_superuser(
     assert response.status_code == 403
 
 
-async def test_overview_rejects_superuser_from_non_vendor_org(
+async def test_overview_allows_superadmin_from_any_org(
     async_client: AsyncClient,
     test_db: AsyncSession,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Superuser from a customer org still gets 403 via vendor guard.
+    """Superadmin in a non-vendor org must still get 200.
 
-    Covers the defence-in-depth layer: get_current_superuser allows the
-    request through, but _assert_vendor_org rejects based on org.
+    Since M053/S08b the _assert_vendor_org layer is gone.  The only gate
+    is get_current_superuser: is_superuser=True is sufficient regardless
+    of which organization the user belongs to.
     """
-    _vendor, vendor_org = await _make_user(
-        test_db, email="vendor-bystander@overview.example", org_name="Vendor Org"
-    )
-    rogue_user, rogue_org = await _make_user(
+    superadmin_user, superadmin_org = await _make_user(
         test_db,
-        email="rogue-super@overview.example",
-        org_name="Customer Org With Superuser",
+        email="superadmin-any-org@overview.example",
+        org_name="Some Non-Vendor Org",
         is_superuser=True,
     )
-    monkeypatch.setattr(settings, "VENDOR_ORG_ID", vendor_org.id)
     await test_db.commit()
 
     response = await async_client.get(
         "/api/policy-documents/admin/overview",
-        headers=_auth_headers(rogue_user, rogue_org),
+        headers=_auth_headers(superadmin_user, superadmin_org),
     )
-    assert response.status_code == 403
+    assert response.status_code == 200, response.text
+    body = response.json()
+    # Overview payload is returned — all level buckets must be present.
+    for key in ("landelijk", "provinciaal", "gemeentelijk", "totals"):
+        assert key in body, f"overview payload missing key '{key}'"
 
 
 async def test_overview_returns_grouped_latest_versions(
