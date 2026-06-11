@@ -17,6 +17,7 @@ Cache layer lives in factor_extraction_service (T05). This module exposes the
 live-call path; T05 wraps it with cache-check-then-call-then-write logic.
 """
 
+import asyncio
 import base64
 import logging
 import time
@@ -117,7 +118,11 @@ async def extract_factor_live(
     else:
         # Oversized PDF → extract its text layer (Anthropic's 32 MB document cap);
         # plain-text docs already land here. The stored file_data stays untouched.
-        text = _pdf_to_text(file_data) if is_pdf else file_data.decode("utf-8", errors="replace")
+        text = (
+            await asyncio.to_thread(_pdf_to_text, file_data)
+            if is_pdf
+            else file_data.decode("utf-8", errors="replace")
+        )
         doc_block = {
             "type": "text",
             "text": f'<beleidsdocument filename="{policy_document.filename}">\n{text}\n</beleidsdocument>',

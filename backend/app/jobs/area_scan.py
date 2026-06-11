@@ -905,18 +905,27 @@ async def area_scan_job(
                 v3_batch_size = 500
                 for batch_start in range(0, len(all_scan_results), v3_batch_size):
                     batch = all_scan_results[batch_start:batch_start + v3_batch_size]
+
+                    # Bulk-prefetch ParcelCache + ST_Perimeter for the whole batch
+                    # in ONE query instead of one query per parcel (was an N+1:
+                    # ~2000 queries/wijk scan). Keyed by ParcelCache.id == sr.parcel_id.
+                    batch_parcel_ids = [sr.parcel_id for sr in batch]
+                    pc_prefetch_stmt = select(
+                        ParcelCache,
+                        func.ST_Perimeter(ParcelCache.geometry).label("perimeter_m"),
+                    ).where(ParcelCache.id.in_(batch_parcel_ids))
+                    pc_prefetch_result = await session.execute(pc_prefetch_stmt)
+                    pc_by_id = {row[0].id: row for row in pc_prefetch_result.all()}
+
                     for sr in batch:
                         flags = dict(sr.flags) if sr.flags else {}
 
                         # Build parcel_data from accumulated flags + parcel_cache.
                         # M046/S02: also fetch ST_Perimeter so score_vrije_grond
                         # can detect road-strip shapes (perimeter/sqrt(area) > 10).
-                        pc_stmt = select(
-                            ParcelCache,
-                            func.ST_Perimeter(ParcelCache.geometry).label("perimeter_m"),
-                        ).where(ParcelCache.id == sr.parcel_id)
-                        pc_result = await session.execute(pc_stmt)
-                        pc_row = pc_result.one_or_none()
+                        # M053/S09: data now comes from bulk-prefetched pc_by_id dict
+                        # (one query per batch instead of one per parcel).
+                        pc_row = pc_by_id.get(sr.parcel_id)
                         pc = pc_row[0] if pc_row else None
                         perimeter_m = pc_row[1] if pc_row else None
 
