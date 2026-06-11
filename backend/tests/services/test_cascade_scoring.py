@@ -65,6 +65,65 @@ async def test_load_payloads_returns_woonvisie_when_cached(
 
 
 @pytest.mark.asyncio
+async def test_load_payloads_excludes_stale_schema_version(
+    create_test_user,
+    test_db: AsyncSession,
+):
+    """A cache row at SCHEMA_VERSION - 1 must NOT be returned.
+
+    This preserves the invariant originally tested in
+    test_backfill_cascade_scores.py: after a schema bump, stale extractions
+    are silently skipped so the caller re-runs the extraction rather than
+    feeding an outdated payload into compute_score_v3.
+    """
+    import uuid as _uuid
+
+    from app.ai.factors.woonvisie_match import WoonvisiePayload
+
+    user, org = await create_test_user(
+        email=f"stale-{_uuid.uuid4()}@example.com", org_name=f"StaleOrg-{_uuid.uuid4()}"
+    )
+
+    doc = PolicyDocument(
+        organization_id=org.id,
+        entity_type="gemeente",
+        entity_code="GM0983",
+        source_key="woonvisie",
+        filename="venlo-woonvisie-stale.pdf",
+        content_type="application/pdf",
+        file_data=b"%PDF-1.4\n%fake\n%%EOF",
+        file_size=22,
+        uploaded_by_user_id=user.id,
+    )
+    test_db.add(doc)
+    await test_db.flush()
+
+    stale_payload = WoonvisiePayload(
+        periode_start=2025,
+        periode_einde=2030,
+        confidence=0.9,
+    )
+    test_db.add(
+        FactorExtractionCache(
+            policy_document_id=doc.id,
+            parcel_id=DOCUMENT_SENTINEL,
+            factor_id="woonvisie_match",
+            schema_version=SCHEMA_VERSION - 1,  # deliberately OLD version
+            extracted_payload=stale_payload.model_dump(),
+        )
+    )
+    await test_db.commit()
+
+    payloads = await load_gemeente_cascade_payloads(
+        test_db, gemeente_code="GM0983", organization_id=org.id
+    )
+    assert "woonvisie_match" not in payloads, (
+        f"Stale schema_version={SCHEMA_VERSION - 1} row must be excluded; "
+        f"current SCHEMA_VERSION={SCHEMA_VERSION}"
+    )
+
+
+@pytest.mark.asyncio
 async def test_load_payloads_empty_when_no_document(
     create_test_user,
     test_db: AsyncSession,
