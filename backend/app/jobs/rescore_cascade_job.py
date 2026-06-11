@@ -96,6 +96,7 @@ async def rescore_parcels_for_document(ctx: dict[str, Any], *, document_id: str)
 
     processed_count = 0
     error_count = 0
+    parcel_ids: list[str] = []
 
     try:
         async with session_factory() as session:
@@ -133,6 +134,7 @@ async def rescore_parcels_for_document(ctx: dict[str, Any], *, document_id: str)
 
             # 1) Refresh the extraction cache ONCE for this gemeente (cache-aware:
             #    no Claude call if already cached at SCHEMA_VERSION).
+            # Cache miss is survivable — recompute_gemeente_cascade reads payloads from the extraction-cache table directly.
             try:
                 await get_cascade_payloads(
                     session,
@@ -147,19 +149,20 @@ async def rescore_parcels_for_document(ctx: dict[str, Any], *, document_id: str)
                 )
 
             # 2) Recompute cascade scores for the whole gemeente via shared service.
+            #    Only commit on success; roll back on failure to prevent partial writes
+            #    (recompute_gemeente_cascade flushes internally per batch).
             try:
                 _processed, updated = await recompute_gemeente_cascade(
                     session, gemeente_code=gemeente_code, organization_id=org_id
                 )
                 processed_count = updated
+                await session.commit()
             except Exception:
                 logger.exception(
-                    "rescore_parcels_for_document: recompute_gemeente_cascade failed "
-                    "gemeente=%s", gemeente_code,
+                    "rescore_parcels_for_document: recompute failed gemeente=%s", gemeente_code
                 )
+                await session.rollback()
                 error_count += 1
-
-            await session.commit()
 
     finally:
         await engine.dispose()
@@ -168,7 +171,7 @@ async def rescore_parcels_for_document(ctx: dict[str, Any], *, document_id: str)
 
     event_entry = {
         "doc_id": document_id,
-        "affected_parcel_count": len(parcel_ids) if "parcel_ids" in locals() else 0,
+        "affected_parcel_count": len(parcel_ids),
         "duration_ms": duration_ms,
         "error_count": error_count,
         "timestamp": datetime.utcnow().isoformat(),
