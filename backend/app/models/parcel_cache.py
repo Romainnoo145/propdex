@@ -62,6 +62,14 @@ class ParcelCache(Base, TimestampMixin):
     # Municipality code (CBS gemeentecode, e.g., "0363" for Amsterdam)
     gemeente_code: Mapped[str | None] = mapped_column(String(10), nullable=True, index=True)
 
+    # CBS buurtcode (e.g., "BU09831401") — filled via backfill_buurt_codes
+    buurt_code: Mapped[str | None] = mapped_column(
+        String(12),
+        nullable=True,
+        index=True,
+        comment="CBS buurtcode (BU + 8 cijfers), gevuld via backfill_buurt_codes",
+    )
+
     # Parcel area in square meters
     area_m2: Mapped[float | None] = mapped_column(nullable=True)
 
