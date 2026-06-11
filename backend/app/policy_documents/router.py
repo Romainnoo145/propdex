@@ -255,8 +255,8 @@ async def delete_policy_document(
     current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Delete a policy document. Superuser only."""
-    if not await svc.delete_document(document_id, current_user.organization_id, db):
+    """Delete a policy document. Superadmin only (org-agnostic — docs are global)."""
+    if not await svc.delete_document(document_id, db):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
 
 
@@ -267,11 +267,11 @@ async def auto_ingest_policies(
     current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ) -> AutoIngestResponse:
-    """Vendor-only endpoint: auto-ingest CVDR policy documents for a gemeente.
+    """Superadmin-only endpoint: auto-ingest CVDR policy documents for a gemeente.
 
     Looks up `omgevingsvisie` and `huisvestingsverordening` (and any other
     configured types) via KOOP SRU CVDR, downloads the PDFs, and writes them
-    as policy_documents rows with is_global=true via the same vendor-guarded
+    as policy_documents rows with is_global=true via the same superadmin-gated
     store_document codepath as manual admin uploads.
 
     Idempotent: returns None for source_keys whose latest CVDR identifier

@@ -2,7 +2,7 @@
 
 This module fetches known policy document types (omgevingsvisie,
 huisvestingsverordening) from KOOP SRU CVDR per gemeente, downloads the PDFs,
-and writes them as `policy_documents` rows via the existing vendor-guarded
+and writes them as `policy_documents` rows via the existing superadmin-gated
 store_document codepath. Same is_global=true + version_number semantics as
 manual admin uploads — every read path written in S02-S05 picks them up
 without modification because policy_documents is the canonical store.

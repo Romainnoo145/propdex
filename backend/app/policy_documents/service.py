@@ -261,14 +261,17 @@ async def get_document_for_download(
 
 async def delete_document(
     document_id: uuid.UUID,
-    organization_id: uuid.UUID,
     db: AsyncSession,
 ) -> bool:
-    """Delete a policy document. Returns True if found and deleted.
+    """Delete a policy document by id. Returns True if found and deleted.
 
     Superadmin-only — enforced at the router level via get_current_superuser.
+    Policy documents are global (is_global=true), so the lookup is org-agnostic:
+    any superadmin may delete a global doc regardless of their own organization.
     """
-    doc = await get_document_for_download(document_id, organization_id, db)
+    stmt = select(PolicyDocument).where(PolicyDocument.id == document_id)
+    result = await db.execute(stmt)
+    doc = result.scalar_one_or_none()
     if doc is None:
         return False
     await db.delete(doc)
