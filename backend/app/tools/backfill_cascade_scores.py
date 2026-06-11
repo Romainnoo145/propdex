@@ -1,11 +1,16 @@
 """Recompute scan_results score_breakdown with cascade factors (woonvisie_match, beleidsalignement).
 
-Zero-cost approach: reads the cascade payloads once from factor_extraction_cache
-(gemeente-level documents produce identical payloads for every parcel), then
-applies them directly to all scan_results without any Claude API calls.
+Delegates the per-gemeente recompute loop to the shared
+``app.services.cascade_scoring.recompute_gemeente_cascade`` service so
+the manual backfill and the automatic paths (scan, rescore job) can
+never drift.
 
-At least one of woonvisie or omgevingsvisie must be present; both are optional
-individually so the tool works for organisations that only have one type.
+NOTE: Only recomputes score-v3.0 rows.  Pre-v3.0 rows are skipped by
+``recompute_gemeente_cascade`` — use ``backfill_scan_scores_v3`` to
+upgrade those first, then re-run this tool.
+
+At least one of woonvisie or omgevingsvisie must be present in the
+extraction cache; both are optional individually.
 
 Usage:
     python -m app.tools.backfill_cascade_scores --gemeente GM0983
@@ -18,26 +23,13 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
-import time
 import uuid
-from dataclasses import asdict
 
-from sqlalchemy import func, select, text
+from sqlalchemy import select, text
 
-from app.ai.factor_extraction_schemas import SCHEMA_VERSION
-from app.ai.factors.beleidsalignement import OmgevingsvisiePayload
-from app.ai.factors.woonvisie_match import WoonvisiePayload
 from app.core.database import async_session_factory
-from app.models.area_scan import AreaScan
-from app.models.factor_extraction_cache import FactorExtractionCache
 from app.models.organization import Organization
-from app.models.parcel_cache import ParcelCache
-from app.models.scan_result import ScanResult
-from app.services.cascade_enrichment_service import (
-    get_omgevingsvisie_document,
-    get_woonvisie_document,
-)
-from app.services.score_v3 import compute_score_v3
+from app.services.cascade_scoring import recompute_gemeente_cascade
 
 logger = logging.getLogger(__name__)
 
@@ -66,229 +58,31 @@ async def _resolve_org_id(target_org_id: uuid.UUID | None) -> uuid.UUID | None:
         return None
 
 
-async def _load_woonvisie_payload(
-    gemeente_code: str,
-    org_id: uuid.UUID,
-) -> WoonvisiePayload | None:
-    """Fetch the woonvisie payload from cache (one entry is enough — all are identical).
-
-    The woonvisie document is gemeente-level; the extracted payload doesn't
-    depend on the specific parcel. We reuse one cached extraction for all parcels.
-    """
-    async with async_session_factory() as session:
-        doc = await get_woonvisie_document(
-            session, gemeente_code=gemeente_code, organization_id=org_id
-        )
-        if doc is None:
-            logger.error("No woonvisie document found for gemeente=%s org=%s", gemeente_code, org_id)
-            return None
-
-        cache_stmt = (
-            select(FactorExtractionCache)
-            .where(
-                FactorExtractionCache.policy_document_id == doc.id,
-                FactorExtractionCache.factor_id == "woonvisie_match",
-                FactorExtractionCache.schema_version == SCHEMA_VERSION,
-            )
-            .limit(1)
-        )
-        cached = (await session.execute(cache_stmt)).scalar_one_or_none()
-        if cached is None:
-            logger.error(
-                "No cached woonvisie_match extraction at SCHEMA_VERSION=%s for doc=%s "
-                "— run rescore_cascade_job first to refresh the cache",
-                SCHEMA_VERSION,
-                doc.id,
-            )
-            return None
-
-        try:
-            payload = WoonvisiePayload.model_validate(cached.extracted_payload)
-            logger.info(
-                "Loaded woonvisie payload from cache: doc=%s parcel=%s extracted_at=%s",
-                doc.id, cached.parcel_id, cached.extracted_at,
-            )
-            return payload
-        except Exception:
-            logger.exception("Failed to parse cached woonvisie payload from doc=%s", doc.id)
-            return None
-
-
-async def _load_omgevingsvisie_payload(
-    gemeente_code: str,
-    org_id: uuid.UUID,
-) -> OmgevingsvisiePayload | None:
-    """Fetch the omgevingsvisie payload from cache (one entry is enough — all are identical).
-
-    The omgevingsvisie document is gemeente-level; the extracted payload doesn't
-    depend on the specific parcel. We reuse one cached extraction for all parcels.
-    """
-    async with async_session_factory() as session:
-        doc = await get_omgevingsvisie_document(
-            session, gemeente_code=gemeente_code, organization_id=org_id
-        )
-        if doc is None:
-            logger.info("No omgevingsvisie document found for gemeente=%s org=%s", gemeente_code, org_id)
-            return None
-
-        cache_stmt = (
-            select(FactorExtractionCache)
-            .where(
-                FactorExtractionCache.policy_document_id == doc.id,
-                FactorExtractionCache.factor_id == "beleidsalignement",
-                FactorExtractionCache.schema_version == SCHEMA_VERSION,
-            )
-            .limit(1)
-        )
-        cached = (await session.execute(cache_stmt)).scalar_one_or_none()
-        if cached is None:
-            logger.info(
-                "No cached beleidsalignement extraction at SCHEMA_VERSION=%s for doc=%s "
-                "— run rescore_cascade_job first to refresh the cache",
-                SCHEMA_VERSION,
-                doc.id,
-            )
-            return None
-
-        try:
-            payload = OmgevingsvisiePayload.model_validate(cached.extracted_payload)
-            logger.info(
-                "Loaded omgevingsvisie payload from cache: doc=%s parcel=%s extracted_at=%s",
-                doc.id, cached.parcel_id, cached.extracted_at,
-            )
-            return payload
-        except Exception:
-            logger.exception("Failed to parse cached omgevingsvisie payload from doc=%s", doc.id)
-            return None
-
-
 async def _backfill_gemeente(
     gemeente_code: str,
     org_id: uuid.UUID,
     *,
-    woonvisie_payload: WoonvisiePayload | None,
-    omgevingsvisie_payload: OmgevingsvisiePayload | None,
     batch_size: int,
     dry_run: bool,
 ) -> tuple[int, int]:
-    """Backfill scan_results for a gemeente. Returns (processed, updated)."""
-    processed = 0
-    updated = 0
+    """Backfill scan_results for a gemeente via the shared cascade service.
 
-    cascade_payloads: dict[str, object] = {}
-    if woonvisie_payload is not None:
-        cascade_payloads["woonvisie_match"] = woonvisie_payload
-    if omgevingsvisie_payload is not None:
-        cascade_payloads["beleidsalignement"] = omgevingsvisie_payload
+    Only recomputes score-v3.0 rows (pre-v3.0 rows are skipped —
+    use backfill_scan_scores_v3 to upgrade those first).
 
+    Returns (processed, updated).
+    """
     async with async_session_factory() as session:
         await session.execute(text(f"SET app.current_tenant_id = '{org_id}'"))
-
-        last_id: uuid.UUID | None = None
-        batch_num = 0
-
-        while True:
-            batch_start = time.monotonic()
-            batch_num += 1
-
-            stmt = (
-                select(
-                    ScanResult,
-                    ParcelCache,
-                    AreaScan.wijk_naam,
-                    func.ST_Perimeter(ParcelCache.geometry).label("perimeter_m"),
-                )
-                .join(ParcelCache, ParcelCache.id == ScanResult.parcel_id)
-                .join(AreaScan, AreaScan.id == ScanResult.scan_id)
-                .where(ParcelCache.gemeente_code == gemeente_code)
-                .order_by(ScanResult.id)
-                .limit(batch_size)
-            )
-            if last_id is not None:
-                stmt = stmt.where(ScanResult.id > last_id)
-
-            rows = (await session.execute(stmt)).all()
-            if not rows:
-                break
-
-            # Load neighborhood_metrics for unique scan_ids in batch
-            unique_scan_ids = {sr.scan_id for sr, _pc, _wn, _pm in rows}
-            nbhd_rows = (await session.execute(
-                select(AreaScan.id, AreaScan.neighborhood_metrics)
-                .where(AreaScan.id.in_(unique_scan_ids))
-            )).all()
-            nbhd_map = {row[0]: row[1] for row in nbhd_rows if row[1] is not None}
-
-            batch_updated = 0
-            for sr, pc, wijk_naam, perimeter_m in rows:
-                processed += 1
-                flags = dict(sr.flags) if sr.flags else {}
-
-                parcel_data: dict = {
-                    "parcel_id": str(pc.parcel_id),
-                    "area_m2": pc.area_m2,
-                    "perimeter_m": float(perimeter_m) if perimeter_m is not None else None,
-                    "has_pand": pc.has_pand,
-                    "bouwjaar": pc.bouwjaar,
-                    "pand_status": pc.pand_status,
-                    "bestemmingen": pc.bestemmingen,
-                    "wijk_naam": wijk_naam,
-                    "vacancy_signal": flags.get("vacancy_signal"),
-                    "building_metrics": flags.get("building_metrics", {}),
-                    "market_signals": flags.get("market_signals"),
-                    "bodem": flags.get("bodem"),
-                    "bodemtype": flags.get("bodemtype"),
-                    "funderingsrisico": flags.get("funderingsrisico"),
-                    "energielabel": flags.get("energielabel"),
-                    "vergunningen": flags.get("vergunningen"),
-                    "natura2000": flags.get("natura2000"),
-                    "overstromingsrisico": flags.get("overstromingsrisico"),
-                    "geluid": flags.get("geluid"),
-                    "luchtkwaliteit": flags.get("luchtkwaliteit"),
-                    "woz": flags.get("woz"),
-                    "rijksmonument": flags.get("rijksmonument"),
-                }
-
-                v3_result = compute_score_v3(
-                    parcel_data,
-                    nbhd_map.get(sr.scan_id),
-                    project_type="onbepaald",
-                    cascade_payloads=cascade_payloads,
-                )
-
-                overall_clamped = max(0.0, min(100.0, v3_result.overall))
-
-                flags["scores"] = {
-                    "potentie": v3_result.potentie_score,
-                    "risico": v3_result.risico_score,
-                    "overall": v3_result.overall,
-                }
-                flags["score_breakdown"] = {
-                    name: asdict(factor)
-                    for name, factor in v3_result.score_breakdown.items()
-                }
-                flags["score_model_version"] = "score-v3.0"
-                flags["category"] = v3_result.category
-
-                if not dry_run:
-                    sr.score = overall_clamped
-                    sr.flags = flags
-                    session.add(sr)
-
-                batch_updated += 1
-                updated += 1
-
-            if not dry_run and batch_updated > 0:
-                await session.flush()
-                await session.commit()
-
-            elapsed = time.monotonic() - batch_start
-            last_id = rows[-1][0].id
-            logger.info(
-                "Batch %d: %d rows processed, %d updated, %.1fs",
-                batch_num, len(rows), batch_updated, elapsed,
-            )
-
+        processed, updated = await recompute_gemeente_cascade(
+            session,
+            gemeente_code=gemeente_code,
+            organization_id=org_id,
+            batch_size=batch_size,
+            dry_run=dry_run,
+        )
+        if not dry_run:
+            await session.commit()
     return processed, updated
 
 
@@ -303,16 +97,6 @@ async def _run(
     if org_id is None:
         return 1
 
-    woonvisie_payload = await _load_woonvisie_payload(gemeente_code, org_id)
-    omgevingsvisie_payload = await _load_omgevingsvisie_payload(gemeente_code, org_id)
-    if woonvisie_payload is None and omgevingsvisie_payload is None:
-        logger.error("No cascade payloads (woonvisie or omgevingsvisie) for gemeente=%s org=%s", gemeente_code, org_id)
-        return 1
-    logger.info(
-        "Cascade payloads present: woonvisie=%s omgevingsvisie=%s",
-        woonvisie_payload is not None, omgevingsvisie_payload is not None,
-    )
-
     mode = "DRY RUN" if dry_run else "LIVE"
     logger.info(
         "Starting cascade score backfill (%s): gemeente=%s org=%s batch_size=%d — 0 Claude calls",
@@ -322,8 +106,6 @@ async def _run(
     processed, updated = await _backfill_gemeente(
         gemeente_code,
         org_id,
-        woonvisie_payload=woonvisie_payload,
-        omgevingsvisie_payload=omgevingsvisie_payload,
         batch_size=batch_size,
         dry_run=dry_run,
     )
