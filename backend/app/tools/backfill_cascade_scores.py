@@ -29,7 +29,7 @@ from sqlalchemy import select, text
 
 from app.core.database import async_session_factory
 from app.models.organization import Organization
-from app.services.cascade_scoring import recompute_gemeente_cascade
+from app.services.cascade_scoring import load_gemeente_cascade_payloads, recompute_gemeente_cascade
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +74,23 @@ async def _backfill_gemeente(
     """
     async with async_session_factory() as session:
         await session.execute(text(f"SET app.current_tenant_id = '{org_id}'"))
+
+        # Guard: never strip existing cascade scores when no cascade documents
+        # exist for this gemeente. Recomputing with empty payloads would overwrite
+        # woonvisie_match/beleidsalignement with missing placeholders. The scan and
+        # rescore paths legitimately run with empty payloads; the backfill (a manual
+        # repair tool) must refuse.
+        payloads = await load_gemeente_cascade_payloads(
+            session, gemeente_code=gemeente_code, organization_id=org_id
+        )
+        if not payloads:
+            logger.warning(
+                "cascade backfill: no cascade payloads for gemeente=%s org=%s — "
+                "skipping to avoid stripping existing scores",
+                gemeente_code, org_id,
+            )
+            return 0, 0
+
         processed, updated = await recompute_gemeente_cascade(
             session,
             gemeente_code=gemeente_code,
