@@ -15,13 +15,16 @@ import uuid
 from dataclasses import asdict
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.factor_extraction_schemas import SCHEMA_VERSION
 from app.ai.factors.beleidsalignement import OmgevingsvisiePayload
 from app.ai.factors.woonvisie_match import WoonvisiePayload
+from app.models.area_scan import AreaScan
 from app.models.factor_extraction_cache import FactorExtractionCache
+from app.models.parcel_cache import ParcelCache
+from app.models.scan_result import ScanResult
 from app.services.cascade_enrichment_service import (
     get_omgevingsvisie_document,
     get_woonvisie_document,
@@ -217,3 +220,101 @@ def apply_cascade_score(
     scan_result.flags = flags
     scan_result.score = max(0.0, min(100.0, result.overall))
     return True
+
+
+# ---------------------------------------------------------------------------
+# Task 3 — gemeente-level recompute (M053/S10)
+# ---------------------------------------------------------------------------
+
+
+async def recompute_gemeente_cascade(
+    session: AsyncSession,
+    *,
+    gemeente_code: str,
+    organization_id: uuid.UUID,
+    batch_size: int = 500,
+    dry_run: bool = False,
+    custom_weights: dict[str, Any] | None = None,
+) -> tuple[int, int]:
+    """Recompute cascade scores for all v3.0 scan_results in a gemeente.
+
+    Loads cascade payloads once from the extraction cache, then keyset-paginates
+    scan_results JOINed to ParcelCache + AreaScan, applying ``apply_cascade_score``
+    per v3.0 parcel.
+
+    The JOIN structure mirrors ``backfill_cascade_scores._backfill_gemeente`` exactly:
+    - ScanResult → ParcelCache via ``ParcelCache.id == ScanResult.parcel_id``
+    - ScanResult → AreaScan via ``AreaScan.id == ScanResult.scan_id``
+    - Filter on ``ParcelCache.gemeente_code``
+    - Keyset pagination by ``ScanResult.id``
+
+    The CALLER owns the transaction. This function flushes per batch but does
+    NOT commit — call ``await session.commit()`` after this returns.
+
+    Args:
+        session: active async SQLAlchemy session.
+        gemeente_code: CBS gemeente code, e.g. ``"GM0983"``.
+        organization_id: UUID of the organisation owning the policy documents.
+        batch_size: rows per keyset page (default 500).
+        dry_run: if True, compute but do not write back to the DB.
+        custom_weights: optional weight overrides forwarded to compute_score_v3.
+
+    Returns:
+        ``(processed, updated)`` — processed counts all v3.0-eligible rows seen;
+        updated counts rows where the score was written (or would have been in
+        dry-run mode).
+    """
+    cascade_payloads = await load_gemeente_cascade_payloads(
+        session, gemeente_code=gemeente_code, organization_id=organization_id
+    )
+
+    processed = 0
+    updated = 0
+    last_id: uuid.UUID | None = None
+
+    while True:
+        stmt = (
+            select(
+                ScanResult,
+                ParcelCache,
+                AreaScan.wijk_naam,
+                func.ST_Perimeter(ParcelCache.geometry).label("perimeter_m"),
+                AreaScan.neighborhood_metrics,
+            )
+            .join(ParcelCache, ParcelCache.id == ScanResult.parcel_id)
+            .join(AreaScan, AreaScan.id == ScanResult.scan_id)
+            .where(ParcelCache.gemeente_code == gemeente_code)
+            .order_by(ScanResult.id)
+            .limit(batch_size)
+        )
+        if last_id is not None:
+            stmt = stmt.where(ScanResult.id > last_id)
+
+        rows = (await session.execute(stmt)).all()
+        if not rows:
+            break
+
+        for sr, pc, wijk_naam, perimeter_m, nbhd in rows:
+            processed += 1
+            flags = sr.flags or {}
+            if flags.get("score_model_version") != "score-v3.0":
+                continue
+            parcel_data = build_parcel_data(
+                pc, flags, perimeter_m=perimeter_m, wijk_naam=wijk_naam
+            )
+            if not dry_run:
+                apply_cascade_score(
+                    sr,
+                    parcel_data=parcel_data,
+                    nbhd_metrics=nbhd,
+                    cascade_payloads=cascade_payloads,
+                    custom_weights=custom_weights,
+                )
+                session.add(sr)
+            updated += 1
+
+        last_id = rows[-1][0].id
+        if not dry_run:
+            await session.flush()
+
+    return processed, updated
