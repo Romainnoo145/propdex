@@ -26,7 +26,7 @@ from app.policy_documents.schemas import (
     PolicyDocumentResponse,
     PolicySummariesResponse,
 )
-from app.policy_documents.service import _assert_vendor_org, _resolve_ancestor_chain_by_gemeente
+from app.policy_documents.service import _resolve_ancestor_chain_by_gemeente
 from app.policy_documents.upload_enqueue import enqueue_post_upload_jobs
 
 logger = logging.getLogger(__name__)
@@ -44,8 +44,7 @@ async def get_admin_overview(
     current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ) -> AdminPolicyOverviewResponse:
-    """Vendor-only admin overview of cascade docs. Grouped by level, latest version per slot."""
-    _assert_vendor_org(current_user.organization_id)
+    """Superadmin-only overview of cascade docs. Grouped by level, latest version per slot."""
     return await svc.fetch_admin_overview(db)
 
 
@@ -60,8 +59,7 @@ async def get_admin_versions(
     current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ) -> AdminPolicyVersionsResponse:
-    """Vendor-only full version history for one (entity_type, entity_code, source_key) slot."""
-    _assert_vendor_org(current_user.organization_id)
+    """Superadmin-only full version history for one (entity_type, entity_code, source_key) slot."""
     return await svc.fetch_admin_versions(entity_type, entity_code, source_key, db)
 
 
@@ -73,8 +71,7 @@ async def get_admin_gemeenten(
     current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ) -> list[AdminGemeenteEntry]:
-    """Vendor-only dropdown source for the upload modal — all 342 gemeenten."""
-    _assert_vendor_org(current_user.organization_id)
+    """Superadmin-only dropdown source for the upload modal — all 342 gemeenten."""
     return await svc.fetch_admin_gemeenten(db)
 
 
@@ -258,8 +255,8 @@ async def delete_policy_document(
     current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Delete a policy document. Superuser only."""
-    if not await svc.delete_document(document_id, current_user.organization_id, db):
+    """Delete a policy document. Superadmin only (org-agnostic — docs are global)."""
+    if not await svc.delete_document(document_id, db):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
 
 
@@ -270,17 +267,16 @@ async def auto_ingest_policies(
     current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ) -> AutoIngestResponse:
-    """Vendor-only endpoint: auto-ingest CVDR policy documents for a gemeente.
+    """Superadmin-only endpoint: auto-ingest CVDR policy documents for a gemeente.
 
     Looks up `omgevingsvisie` and `huisvestingsverordening` (and any other
     configured types) via KOOP SRU CVDR, downloads the PDFs, and writes them
-    as policy_documents rows with is_global=true via the same vendor-guarded
+    as policy_documents rows with is_global=true via the same superadmin-gated
     store_document codepath as manual admin uploads.
 
     Idempotent: returns None for source_keys whose latest CVDR identifier
     matches an existing row's filename prefix.
     """
-    _assert_vendor_org(current_user.organization_id)
     arq_pool = getattr(request.app.state, "arq_pool", None)
     summary = await ingest_gemeente_policies(
         gemeente_code=payload.gemeente_code,
@@ -288,6 +284,10 @@ async def auto_ingest_policies(
         db=db,
         arq_pool=arq_pool,
     )
+    # stored_document_ids is internal bookkeeping (list[str]); it does not belong
+    # in `summary` (typed dict[str, int | None]). Drop it before building the
+    # response so AutoIngestResponse validates.
+    summary.pop("stored_document_ids", None)
     return AutoIngestResponse(
         gemeente_code=payload.gemeente_code,
         gemeente_naam=payload.gemeente_naam,

@@ -1,21 +1,25 @@
-"""Regression test — M045/S01 T08: policy_documents vendor-org guard + versioning.
+"""Regression tests — M045/S01 T08: policy_documents auth guard + versioning.
 
-Iron rule: only the Propdex vendor organization can upload policy_documents.
-Customer orgs must get HTTP 403. Re-uploads of the same (entity_type,
-entity_code, source_key) triple must increment version_number.
+Since M053/S08b the old service-layer _assert_vendor_org guard has been removed.
+Auth is now enforced exclusively at the router via get_current_superuser.
+The non-superadmin 403 is covered at the endpoint layer by:
+  - tests/integration/test_m045_auto_ingest_endpoint.py::test_endpoint_non_superadmin_returns_403
+  - test_upload_endpoint_rejects_non_superadmin (below)
 
-These three tests are the security + correctness regression guards for
-M045/S01 T07. If a future change accidentally drops the vendor-org check
-or breaks the version increment logic, these tests fail immediately.
+The two remaining tests here are the correctness regression guards for
+the versioning helper (_next_version_number) and the is_global flag that
+the service sets unconditionally on every write.
 """
 
 
-import pytest
-from fastapi import HTTPException
-from sqlalchemy import select
+import io
 
+import pytest
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth.jwt import create_access_token
 from app.models.organization import Organization
-from app.models.policy_document import PolicyDocument
 from app.models.user import User
 from app.policy_documents import service as policy_service
 
@@ -41,6 +45,7 @@ async def vendor_and_customer_users(test_db, monkeypatch):
         email_verified=True,
         auth_provider="email",
         is_active=True,
+        is_superuser=True,
     )
     customer_user = User(
         email="customer@test.example",
@@ -50,6 +55,7 @@ async def vendor_and_customer_users(test_db, monkeypatch):
         email_verified=True,
         auth_provider="email",
         is_active=True,
+        is_superuser=False,
     )
     test_db.add_all([vendor_user, customer_user])
     await test_db.commit()
@@ -60,36 +66,42 @@ async def vendor_and_customer_users(test_db, monkeypatch):
     return vendor_user, vendor_org, customer_user, customer_org
 
 
-async def test_customer_org_upload_rejected_with_403(test_db, vendor_and_customer_users):
-    """A customer-org user calling store_document must get HTTPException 403.
+async def test_upload_endpoint_rejects_non_superadmin(
+    async_client: AsyncClient,
+    test_db: AsyncSession,
+) -> None:
+    """Non-superadmin must get 403 from the upload endpoint.
 
-    This is the iron-rule security regression test. If a future change
-    drops the _assert_vendor_org call from store_document, customers
-    could write global policy documents visible to all other customers,
-    creating a cross-tenant data leak.
+    This is the router-layer auth regression test that replaced the old
+    service-layer _assert_vendor_org check (removed in M053/S08b).
+    The guard is get_current_superuser — org membership is irrelevant.
     """
-    _vendor, _vendor_org, customer_user, customer_org = vendor_and_customer_users
+    customer_org = Organization(name="Customer Org Upload Guard (test)")
+    test_db.add(customer_org)
+    await test_db.flush()
+    customer_user = User(
+        email="customer-upload-guard@test.example",
+        hashed_password="hashed",
+        full_name="Customer User",
+        organization_id=customer_org.id,
+        email_verified=True,
+        auth_provider="email",
+        is_active=True,
+        is_superuser=False,
+    )
+    test_db.add(customer_user)
+    await test_db.commit()
 
-    with pytest.raises(HTTPException) as exc_info:
-        await policy_service.store_document(
-            entity_type="gemeente",
-            entity_code="GM0983",
-            source_key="welstandsnota",
-            filename="customer_tries_to_upload.pdf",
-            content_type="application/pdf",
-            file_bytes=b"customer content",
-            user_id=customer_user.id,
-            organization_id=customer_org.id,
-            db=test_db,
-        )
+    token = create_access_token(str(customer_user.id), str(customer_org.id))
+    headers = {"Authorization": f"Bearer {token}"}
 
-    assert exc_info.value.status_code == 403
-    assert "vendor admins" in exc_info.value.detail.lower()
-
-    # Verify no row was created
-    result = await test_db.execute(select(PolicyDocument))
-    rows = result.scalars().all()
-    assert len(rows) == 0, "customer upload must not create any policy_documents row"
+    response = await async_client.post(
+        "/api/policy-documents/gemeente/GM0983",
+        params={"source_key": "welstandsnota"},
+        files={"file": ("customer.pdf", io.BytesIO(b"%PDF-1.4 fake"), "application/pdf")},
+        headers=headers,
+    )
+    assert response.status_code == 403, response.text
 
 
 async def test_vendor_org_upload_succeeds_with_is_global_and_version(

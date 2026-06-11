@@ -47,6 +47,7 @@ async def _make_user(
     *,
     email: str,
     org_name: str,
+    is_superuser: bool = False,
 ) -> tuple[User, Organization]:
     org = Organization(name=org_name)
     db.add(org)
@@ -60,6 +61,7 @@ async def _make_user(
         email_verified=True,
         auth_provider="email",
         is_active=True,
+        is_superuser=is_superuser,
     )
     db.add(user)
     await db.flush()
@@ -128,7 +130,7 @@ async def test_endpoint_vendor_user_succeeds_with_summary(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     vendor_user, vendor_org = await _make_user(
-        test_db, email="vendor1@e2e.example", org_name="Vendor Org"
+        test_db, email="vendor1@e2e.example", org_name="Vendor Org", is_superuser=True
     )
     monkeypatch.setattr(settings, "VENDOR_ORG_ID", vendor_org.id)
     await test_db.commit()
@@ -158,20 +160,15 @@ async def test_endpoint_vendor_user_succeeds_with_summary(
 # ---------------------------------------------------------------------------
 
 
-async def test_endpoint_customer_user_returns_403(
+async def test_endpoint_non_superadmin_returns_403(
     async_client: AsyncClient,
     test_db: AsyncSession,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Seed a vendor org so settings.VENDOR_ORG_ID is set, but the calling user
-    # is in a different org → should get 403.
-    _vu, vendor_org = await _make_user(
-        test_db, email="vendor2@e2e.example", org_name="Vendor Org Two"
-    )
+    # A non-superadmin user must get 403 from get_current_superuser —
+    # no VENDOR_ORG_ID check involved.
     customer_user, customer_org = await _make_user(
-        test_db, email="customer@e2e.example", org_name="Customer Org"
+        test_db, email="customer@e2e.example", org_name="Customer Org", is_superuser=False
     )
-    monkeypatch.setattr(settings, "VENDOR_ORG_ID", vendor_org.id)
     await test_db.commit()
 
     response = await async_client.post(
@@ -181,6 +178,7 @@ async def test_endpoint_customer_user_returns_403(
     )
 
     assert response.status_code == 403, response.text
+    assert "superuser" in response.json()["detail"].lower()
     # No rows should have been created (guard fires before any DB writes)
     assert await _count_policy_docs_for(test_db, entity_code="GM0983") == 0
 
@@ -212,7 +210,7 @@ async def test_endpoint_idempotent_second_call_returns_nones(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     vendor_user, vendor_org = await _make_user(
-        test_db, email="vendor3@e2e.example", org_name="Vendor Org Three"
+        test_db, email="vendor3@e2e.example", org_name="Vendor Org Three", is_superuser=True
     )
     monkeypatch.setattr(settings, "VENDOR_ORG_ID", vendor_org.id)
     await test_db.commit()
@@ -268,7 +266,7 @@ async def test_endpoint_ingested_doc_appears_in_cascade_bundle(
     without any code coupling — both share policy_documents as canonical store.
     """
     vendor_user, vendor_org = await _make_user(
-        test_db, email="vendor4@e2e.example", org_name="Vendor Org Four"
+        test_db, email="vendor4@e2e.example", org_name="Vendor Org Four", is_superuser=True
     )
     monkeypatch.setattr(settings, "VENDOR_ORG_ID", vendor_org.id)
 

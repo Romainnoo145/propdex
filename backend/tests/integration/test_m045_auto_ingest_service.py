@@ -147,7 +147,9 @@ async def test_ingest_creates_policy_documents_for_both_types(
             db=test_db,
         )
 
-    assert summary == {"omgevingsvisie": 1, "huisvestingsverordening": 1}
+    assert summary.get("omgevingsvisie") == 1
+    assert summary.get("huisvestingsverordening") == 1
+    assert len(summary.get("stored_document_ids", [])) == 2
 
     # Verify rows in DB
     stmt = select(PolicyDocument).where(
@@ -196,7 +198,9 @@ async def test_ingest_is_idempotent_skips_already_ingested(
     # First run
     with patches[0], patches[1]:
         first = await ingest_gemeente_policies("GM0983", "Venlo", test_db)
-    assert first == {"omgevingsvisie": 1, "huisvestingsverordening": 1}
+    assert first.get("omgevingsvisie") == 1
+    assert first.get("huisvestingsverordening") == 1
+    assert len(first.get("stored_document_ids", [])) == 2
 
     # Second run — fresh patches because the AsyncMock side_effects can be reused
     patches2 = _patch_external_dependencies(
@@ -205,7 +209,9 @@ async def test_ingest_is_idempotent_skips_already_ingested(
     with patches2[0], patches2[1]:
         second = await ingest_gemeente_policies("GM0983", "Venlo", test_db)
 
-    assert second == {"omgevingsvisie": None, "huisvestingsverordening": None}
+    assert second.get("omgevingsvisie") is None
+    assert second.get("huisvestingsverordening") is None
+    assert second.get("stored_document_ids") == []
 
     # DB still only has the original 2 rows
     count = await _count_policy_docs(test_db, entity_code="GM0983")
@@ -230,7 +236,9 @@ async def test_ingest_skips_when_search_returns_none(
     with patches[0], patches[1]:
         summary = await ingest_gemeente_policies("GM0983", "Venlo", test_db)
 
-    assert summary == {"omgevingsvisie": None, "huisvestingsverordening": None}
+    assert summary.get("omgevingsvisie") is None
+    assert summary.get("huisvestingsverordening") is None
+    assert summary.get("stored_document_ids") == []
     assert await _count_policy_docs(test_db, entity_code="GM0983") == 0
 
 
@@ -256,7 +264,9 @@ async def test_ingest_skips_when_pdf_download_fails(
     with patches[0], patches[1]:
         summary = await ingest_gemeente_policies("GM0983", "Venlo", test_db)
 
-    assert summary == {"omgevingsvisie": None, "huisvestingsverordening": None}
+    assert summary.get("omgevingsvisie") is None
+    assert summary.get("huisvestingsverordening") is None
+    assert summary.get("stored_document_ids") == []
     assert await _count_policy_docs(test_db, entity_code="GM0983") == 0
 
 
@@ -281,7 +291,9 @@ async def test_ingest_increments_version_when_identifier_changes(
     )
     with patches_a[0], patches_a[1]:
         first = await ingest_gemeente_policies("GM0983", "Venlo", test_db)
-    assert first == {"omgevingsvisie": 1, "huisvestingsverordening": 1}
+    assert first.get("omgevingsvisie") == 1
+    assert first.get("huisvestingsverordening") == 1
+    assert len(first.get("stored_document_ids", [])) == 2
 
     # Second run: NEW identifiers B (CVDR republished)
     patches_b = _patch_external_dependencies(
@@ -295,7 +307,9 @@ async def test_ingest_increments_version_when_identifier_changes(
         second = await ingest_gemeente_policies("GM0983", "Venlo", test_db)
 
     # version_number should increment to 2 for both source_keys
-    assert second == {"omgevingsvisie": 2, "huisvestingsverordening": 2}
+    assert second.get("omgevingsvisie") == 2
+    assert second.get("huisvestingsverordening") == 2
+    assert len(second.get("stored_document_ids", [])) == 2
 
     # DB now has 4 rows total — 2 source_keys × 2 versions
     assert await _count_policy_docs(test_db, entity_code="GM0983") == 4
@@ -341,7 +355,9 @@ async def test_ingest_enqueues_summary_job_per_stored_doc(
             arq_pool=mock_pool,
         )
 
-    assert summary == {"omgevingsvisie": 1, "huisvestingsverordening": 1}
+    assert summary.get("omgevingsvisie") == 1
+    assert summary.get("huisvestingsverordening") == 1
+    assert len(summary.get("stored_document_ids", [])) == 2
     assert mock_pool.enqueue_job.call_count == 2
 
     # Both calls must use "document_summary_job" as the job name and a str doc id
@@ -379,7 +395,9 @@ async def test_ingest_skips_enqueue_on_failed_download(
             arq_pool=mock_pool,
         )
 
-    assert summary == {"omgevingsvisie": None, "huisvestingsverordening": None}
+    assert summary.get("omgevingsvisie") is None
+    assert summary.get("huisvestingsverordening") is None
+    assert summary.get("stored_document_ids") == []
     assert mock_pool.enqueue_job.call_count == 0
 
 
@@ -411,7 +429,9 @@ async def test_ingest_skips_enqueue_gracefully_when_arq_pool_is_none(
         )
 
     # Docs were written
-    assert summary == {"omgevingsvisie": 1, "huisvestingsverordening": 1}
+    assert summary.get("omgevingsvisie") == 1
+    assert summary.get("huisvestingsverordening") == 1
+    assert len(summary.get("stored_document_ids", [])) == 2
 
     # Verify at least 1 row was inserted with is_global=True
     stmt = select(PolicyDocument).where(

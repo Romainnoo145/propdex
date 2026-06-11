@@ -4,12 +4,9 @@ import logging
 import uuid
 from datetime import datetime
 
-from fastapi import HTTPException, status
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
-from app.models.area_scan import AreaScan
 from app.models.gemeente_provincie_map import GemeenteProvincieMap
 from app.models.policy_document import PolicyDocument
 from app.models.user import User
@@ -61,23 +58,6 @@ def validate_upload(
     return None
 
 
-def _assert_vendor_org(organization_id: uuid.UUID) -> None:
-    """Enforce that only the Propdex vendor organization can write policy_documents.
-
-    M045/S01 T07 introduces cross-org visibility for policy_documents via
-    is_global=true. Only the vendor org (Klarifai) can upload — customer
-    orgs get HTTP 403. In development/test environments where
-    VENDOR_ORG_ID is None, this guard is a no-op.
-    """
-    if settings.VENDOR_ORG_ID is None:
-        # Dev/test: no vendor org configured, skip the guard
-        return
-    if organization_id != settings.VENDOR_ORG_ID:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only vendor admins can upload policy documents",
-        )
-
 
 async def _next_version_number(
     entity_type: str,
@@ -116,12 +96,9 @@ async def store_document(
 ) -> PolicyDocument:
     """Store a policy document in the database.
 
-    M045/S01 T07: enforces vendor-org-only writes and auto-increments
-    version_number for re-uploads. Sets is_global=True unconditionally
-    since only the vendor org reaches this point.
+    M045/S01 T07: auto-increments version_number for re-uploads.
+    Sets is_global=True unconditionally since only superadmins reach this point.
     """
-    _assert_vendor_org(organization_id)
-
     version_number = await _next_version_number(
         entity_type=entity_type,
         entity_code=entity_code,
@@ -284,16 +261,17 @@ async def get_document_for_download(
 
 async def delete_document(
     document_id: uuid.UUID,
-    organization_id: uuid.UUID,
     db: AsyncSession,
 ) -> bool:
-    """Delete a policy document. Returns True if found and deleted.
+    """Delete a policy document by id. Returns True if found and deleted.
 
-    M045/S01 T07: only the vendor org can delete policy_documents.
-    Customer orgs get HTTP 403 before the lookup even runs.
+    Superadmin-only — enforced at the router level via get_current_superuser.
+    Policy documents are global (is_global=true), so the lookup is org-agnostic:
+    any superadmin may delete a global doc regardless of their own organization.
     """
-    _assert_vendor_org(organization_id)
-    doc = await get_document_for_download(document_id, organization_id, db)
+    stmt = select(PolicyDocument).where(PolicyDocument.id == document_id)
+    result = await db.execute(stmt)
+    doc = result.scalar_one_or_none()
     if doc is None:
         return False
     await db.delete(doc)
