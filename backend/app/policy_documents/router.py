@@ -284,6 +284,10 @@ async def auto_ingest_policies(
         db=db,
         arq_pool=arq_pool,
     )
+    # stored_document_ids is internal bookkeeping (list[str]); it does not belong
+    # in `summary` (typed dict[str, int | None]). Drop it before building the
+    # response so AutoIngestResponse validates.
+    summary.pop("stored_document_ids", None)
     return AutoIngestResponse(
         gemeente_code=payload.gemeente_code,
         gemeente_naam=payload.gemeente_naam,
