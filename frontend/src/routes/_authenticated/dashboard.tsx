@@ -220,7 +220,7 @@ function DashboardPage() {
 
   return (
     <ResultsShell fullWidth>
-      <div className="mx-auto max-w-[1180px] px-8 py-8">
+      <div className="mx-auto flex h-full max-w-[1180px] flex-col px-8 py-8">
         {/* header */}
         <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -261,9 +261,9 @@ function DashboardPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] items-start gap-[18px] max-lg:grid-cols-1">
+        <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] gap-[18px] max-lg:grid-cols-1">
           {/* LINKS — gemeentesignalen */}
-          <div>
+          <div className="flex min-h-0 flex-col">
             <div className="mb-3 flex items-center gap-2">
               <h2 className="text-[13px] font-bold uppercase tracking-[0.06em] text-aura-ink">
                 Gemeentesignalen
@@ -278,7 +278,7 @@ function DashboardPage() {
                 </button>
               )}
             </div>
-            <div className="h-[calc(100vh-320px)] min-h-[360px] overflow-y-auto rounded-2xl border border-white/60 bg-white/55">
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/60 bg-white/55">
               {signalen.isLoading && <Empty>Laden…</Empty>}
               {signalen.isSuccess && signalen.data.length === 0 && (
                 <Empty>Nog geen bekendmakingen voor {GEMEENTE}.</Empty>
@@ -339,9 +339,9 @@ function DashboardPage() {
           </div>
 
           {/* RECHTS — off-market kansen */}
-          <div>
+          <div className="flex min-h-0 flex-col">
             <SectionHead>Off-market kansen</SectionHead>
-            <div className="h-[calc(100vh-320px)] min-h-[360px] overflow-y-auto rounded-[20px] border border-white/60 bg-white/55 p-4">
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-[20px] border border-white/60 bg-white/55 p-4">
               <p className="mb-3.5 text-xs text-neutral-500">
                 Ontwikkelpotentie in je gemeenten · nog niet benaderd
               </p>
