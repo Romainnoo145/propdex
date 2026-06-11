@@ -11,6 +11,7 @@ the per-parcel work is pure compute_score_v3 — no Claude call per parcel.
 from __future__ import annotations
 
 import logging
+import uuid
 from typing import Any
 
 from sqlalchemy import select
@@ -37,7 +38,7 @@ async def load_gemeente_cascade_payloads(
     session: AsyncSession,
     *,
     gemeente_code: str | None,
-    organization_id: Any,
+    organization_id: uuid.UUID | None,
 ) -> dict[str, Any]:
     """Load woonvisie + omgevingsvisie payloads for a gemeente from the
     extraction cache. Returns {factor_id: payload_model_instance}; absent
@@ -55,7 +56,7 @@ async def load_gemeente_cascade_payloads(
         Dict keyed by factor_id with validated Pydantic payload objects.
     """
     payloads: dict[str, Any] = {}
-    if not gemeente_code:
+    if not gemeente_code or organization_id is None:
         return payloads
 
     for factor_id, get_doc, model_cls in _CASCADE_SOURCES:
