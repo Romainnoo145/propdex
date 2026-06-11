@@ -269,11 +269,6 @@ function DashboardPage() {
                 Gemeentesignalen
               </h2>
               {unreadSignalen > 0 && (
-                <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-aura-amber px-1.5 text-[11px] font-bold text-aura-obsidian">
-                  {unreadSignalen}
-                </span>
-              )}
-              {unreadSignalen > 0 && (
                 <button
                   type="button"
                   onClick={markAllSignalenRead}
@@ -295,12 +290,12 @@ function DashboardPage() {
                   <div
                     key={s.id}
                     onClick={() => markSignaalRead(s.id)}
-                    className={`group flex cursor-pointer items-start gap-3.5 px-[18px] py-3.5 transition-colors hover:bg-white/60 ${i > 0 ? 'border-t border-aura-ink/[0.04]' : ''}`}
+                    className={`group flex cursor-pointer items-center gap-3.5 px-[18px] py-3.5 transition-colors hover:bg-white/60 ${i > 0 ? 'border-t border-aura-ink/[0.04]' : ''}`}
                   >
                     {/* New = bold black title + amber date; reading it (row click) calms
                         it to muted. Title wraps to 2 lines so it's fully readable. */}
                     <span
-                      className={`mt-px w-11 flex-none text-[11px] tabular-nums ${isRead ? 'text-neutral-400' : 'font-semibold text-aura-amber-hover'}`}
+                      className={`w-11 flex-none text-[11px] tabular-nums ${isRead ? 'text-neutral-400' : 'font-semibold text-aura-amber-hover'}`}
                     >
                       {fmtDate(s.change_date)}
                     </span>
@@ -322,7 +317,7 @@ function DashboardPage() {
                         markSignaalRead(s.id)
                         openOnMap(s.matched_parcel_id)
                       }}
-                      className={`mt-px flex-none ${inPipeline ? 'text-aura-amber-hover' : 'text-neutral-300 group-hover:text-aura-amber-hover'}`}
+                      className={`flex-none ${inPipeline ? 'text-aura-amber-hover' : 'text-neutral-300 group-hover:text-aura-amber-hover'}`}
                     >
                       <IconMap />
                     </button>
