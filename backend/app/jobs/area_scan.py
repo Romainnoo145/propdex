@@ -29,7 +29,7 @@ from app.models.parcel_cache import ParcelCache
 from app.models.project import Project
 from app.models.scan_result import ScanResult
 from app.services.bekendmaking_matcher import retro_match_changes_for_gemeente
-from app.services.cascade_enrichment_service import get_cascade_payloads
+from app.services.cascade_scoring import load_gemeente_cascade_payloads
 from app.services.funda_listing_ingestion import build_funda_listing_signal_map
 from app.services.parcel_addressing import (
     MIN_BUILDING_OVERLAP_M2,
@@ -902,6 +902,16 @@ async def area_scan_job(
                 )
 
                 nbhd_metrics = scan.neighborhood_metrics or {}
+
+                # M053/S10: load cascade payloads ONCE for the whole gemeente,
+                # not dead per-parcel (parcel_id was never set in parcel_data so
+                # the old guard never passed and all scans produced zero cascade scores).
+                cascade_payloads = await load_gemeente_cascade_payloads(
+                    session,
+                    gemeente_code=scan.gemeente_code,
+                    organization_id=org_id,
+                )
+
                 v3_batch_size = 500
                 for batch_start in range(0, len(all_scan_results), v3_batch_size):
                     batch = all_scan_results[batch_start:batch_start + v3_batch_size]
@@ -954,24 +964,6 @@ async def area_scan_job(
                         parcel_data["rijksmonument"] = flags.get("rijksmonument")
                         parcel_data["woz"] = flags.get("woz")
                         parcel_data["wijk_naam"] = scan.wijk_naam
-
-                        # Cascade enrichment: LLM-extracted factors (M047/S06 POC)
-                        # Pre-fetches extracted payloads from cache (or Claude on first call).
-                        # Error-tolerant: failures logged, factors marked missing in score_breakdown.
-                        cascade_payloads: dict = {}
-                        _parcel_id_str = str(parcel_data.get("parcel_id") or "")
-                        if org_id is not None and _parcel_id_str:
-                            try:
-                                cascade_payloads = await get_cascade_payloads(
-                                    session,
-                                    parcel_id=_parcel_id_str,
-                                    gemeente_code=scan.gemeente_code,
-                                    organization_id=org_id,
-                                )
-                            except Exception:
-                                logger.exception(
-                                    "cascade_enrich failed for parcel %s — skipping", _parcel_id_str
-                                )
 
                         v3_result = compute_score_v3(
                             parcel_data,
