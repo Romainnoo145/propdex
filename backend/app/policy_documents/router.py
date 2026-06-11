@@ -26,7 +26,7 @@ from app.policy_documents.schemas import (
     PolicyDocumentResponse,
     PolicySummariesResponse,
 )
-from app.policy_documents.service import _assert_vendor_org, _resolve_ancestor_chain_by_gemeente
+from app.policy_documents.service import _resolve_ancestor_chain_by_gemeente
 from app.policy_documents.upload_enqueue import enqueue_post_upload_jobs
 
 logger = logging.getLogger(__name__)
@@ -44,8 +44,7 @@ async def get_admin_overview(
     current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ) -> AdminPolicyOverviewResponse:
-    """Vendor-only admin overview of cascade docs. Grouped by level, latest version per slot."""
-    _assert_vendor_org(current_user.organization_id)
+    """Superadmin-only overview of cascade docs. Grouped by level, latest version per slot."""
     return await svc.fetch_admin_overview(db)
 
 
@@ -60,8 +59,7 @@ async def get_admin_versions(
     current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ) -> AdminPolicyVersionsResponse:
-    """Vendor-only full version history for one (entity_type, entity_code, source_key) slot."""
-    _assert_vendor_org(current_user.organization_id)
+    """Superadmin-only full version history for one (entity_type, entity_code, source_key) slot."""
     return await svc.fetch_admin_versions(entity_type, entity_code, source_key, db)
 
 
@@ -73,8 +71,7 @@ async def get_admin_gemeenten(
     current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ) -> list[AdminGemeenteEntry]:
-    """Vendor-only dropdown source for the upload modal — all 342 gemeenten."""
-    _assert_vendor_org(current_user.organization_id)
+    """Superadmin-only dropdown source for the upload modal — all 342 gemeenten."""
     return await svc.fetch_admin_gemeenten(db)
 
 
@@ -280,7 +277,6 @@ async def auto_ingest_policies(
     Idempotent: returns None for source_keys whose latest CVDR identifier
     matches an existing row's filename prefix.
     """
-    _assert_vendor_org(current_user.organization_id)
     arq_pool = getattr(request.app.state, "arq_pool", None)
     summary = await ingest_gemeente_policies(
         gemeente_code=payload.gemeente_code,
