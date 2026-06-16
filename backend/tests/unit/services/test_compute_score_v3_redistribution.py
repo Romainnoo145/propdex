@@ -17,22 +17,20 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from app.services.score_v3 import (
+    _RISICO_REDISTRIBUTION_TARGET,
     _SPARSE_REDISTRIBUTABLE_RISICO,
     FACTOR_REGISTRY,
     compute_score_v3,
 )
 
-# M053/S12: splitsingsrisico is REGISTERED (counts toward _RISICO_MAX=100) but its
-# cascade-blok is only wired into compute_score_v3 in Task 7. Until then it is absent
-# from score_breakdown, so the missing-data + D3 rescale targets (100 - its weight).
-# Deriving the target from the registry makes these guards self-correct once Task 7
-# appends splitsingsrisico to the breakdown (it will then either score or sit at
-# weight 0, returning the non-missing risico target to 100).
-_RISICO_REDISTRIBUTION_TARGET: float = 100.0 - sum(
-    FACTOR_REGISTRY[k].default_weight
-    for k in ("splitsingsrisico",)
-    if k in FACTOR_REGISTRY
-)
+# M053/S12: splitsingsrisico is a verdict-gated RISICO cascade factor whose weight (7)
+# is reserved from the risico-100 pool and appended AFTER redistribution. So the
+# in-breakdown risico factors that D3/missing-redistribution operate on sum to
+# _RISICO_REDISTRIBUTION_TARGET (== 93). We import the production constant so the test
+# and prod can never drift. With no cascade payload (compute_score_v3({})),
+# splitsingsrisico is missing → it does not enter the non-missing risico sum, so the
+# rescale target stays 93.
+assert _RISICO_REDISTRIBUTION_TARGET == 93
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -249,13 +247,15 @@ def test_redistribution_bijdrage_proportional_to_normalized_score_times_new_gewi
         )
 
 
-def test_breakdown_size_26_with_brk_factors_present() -> None:
-    """breakdown grows to 26 entries (8 potentie + 16 risico + woonvisie_match + beleidsalignement)."""
+def test_breakdown_size_27_with_brk_factors_present() -> None:
+    """breakdown grows to 27 entries (8 potentie + 16 risico + woonvisie_match +
+    beleidsalignement + splitsingsrisico)."""
     result = compute_score_v3({})
-    assert len(result.score_breakdown) == 26
+    assert len(result.score_breakdown) == 27
     keys = set(result.score_breakdown.keys())
     assert "hypotheek_risico" in keys
     assert "eigendoms_complexiteit" in keys
     assert "koopwaarde_trend" in keys
     assert "woonvisie_match" in keys
     assert "beleidsalignement" in keys
+    assert "splitsingsrisico" in keys

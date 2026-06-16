@@ -462,9 +462,22 @@ DEFAULT_WEIGHTS: dict[str, Any] = {
 
 # Cascade beleidsfactoren whose weight is decided by compute_score_v3's verdict logic
 # (woonvisie_match = always context-only/0; beleidsalignement = weight only when
-# verdict 'kansrijk'). No weight path — custom-weight overrides (_apply_custom_weights)
-# nor the rescore_weights recompute — may override the verdict gate for these.
-CASCADE_GATED_FACTORS: frozenset[str] = frozenset({"woonvisie_match", "beleidsalignement"})
+# verdict 'kansrijk'; splitsingsrisico = weight only when the regeling actually touches
+# this parcel — van_toepassing / mogelijk_van_toepassing / vergunningstelsel_voorraad).
+# No weight path — custom-weight overrides (_apply_custom_weights) nor the rescore_weights
+# recompute — may override the verdict gate for these.
+CASCADE_GATED_FACTORS: frozenset[str] = frozenset(
+    {"woonvisie_match", "beleidsalignement", "splitsingsrisico"}
+)
+
+# Risico cascade factors are appended AFTER redistribution (verdict-gated), so their
+# default_weight is reserved from the risico-100 pool. The in-breakdown risico factors
+# (the ones D3/missing-redistribution actually operate on) therefore sum to this target.
+_CASCADE_GATED_RISICO_WEIGHT: int = sum(
+    e.default_weight for k, e in FACTOR_REGISTRY.items()
+    if e.category == "risico" and k in CASCADE_GATED_FACTORS
+)
+_RISICO_REDISTRIBUTION_TARGET: int = _RISICO_MAX - _CASCADE_GATED_RISICO_WEIGHT  # == 93
 
 
 def compute_score_v3(
@@ -520,6 +533,7 @@ def compute_score_v3(
         score_optoppotentie,
         score_overstromingsrisico,
         score_perceelgrootte,
+        score_splitsingsrisico,
         score_vergunning_succeskans,
         score_vrije_grond,
         score_woonvisie_match,
@@ -605,9 +619,11 @@ def compute_score_v3(
         missing_weight = sum(
             FACTOR_REGISTRY[k].default_weight for k in missing_brk_keys
         )
-        active_weight = 100 - missing_weight
+        # Redistribution target is 93, not 100: splitsingsrisico's weight (7) is
+        # verdict-gated and appended AFTER this block, so it's reserved from the pool.
+        active_weight = _RISICO_REDISTRIBUTION_TARGET - missing_weight
         if active_weight > 0:
-            scale = 100.0 / active_weight
+            scale = float(_RISICO_REDISTRIBUTION_TARGET) / active_weight
             for k, factor in breakdown.items():
                 if (
                     factor.categorie == "risico"
@@ -667,6 +683,34 @@ def compute_score_v3(
         _ba_result.bijdrage = round(_ba_result.genormaliseerde_score * _ba_weight, 4)
         _ba_result.percentage_of_category = round(_ba_weight / 100.0, 4)
     breakdown["beleidsalignement"] = _ba_result
+
+    # Cascade factor: splitsingsrisico (Huisvestingsverordening — M053/S12). Risico
+    # cascade, same sparse/appended-after-redistribution treatment as beleidsalignement.
+    # Its weight (7) is held in reserve from the risico-100 pool (the 16 core risico
+    # factors sum to 93); it is only applied when the regeling actually touches this
+    # parcel (van_toepassing / mogelijk_van_toepassing / vergunningstelsel_voorraad),
+    # so "geen regeling / buiten gebied / boven WOZ-grens" stay context-only (weight 0)
+    # and don't colour the map.
+    _sr_woz = parcel_data.get("woz")
+    _sr_result = score_splitsingsrisico(
+        _cascade.get("splitsingsrisico"),
+        buurt_code=parcel_data.get("buurt_code"),
+        woz_waarde=_sr_woz.get("meest_recente_waarde") if isinstance(_sr_woz, dict) else None,
+        has_pand=parcel_data.get("has_pand"),
+    )
+    _sr_waarde = _sr_result.waarde if isinstance(_sr_result.waarde, dict) else {}
+    _sr_actief = _sr_waarde.get("verdict") in {
+        "van_toepassing", "mogelijk_van_toepassing", "vergunningstelsel_voorraad",
+    }
+    if not _sr_result.missing and _sr_actief:
+        _sr_entry = FACTOR_REGISTRY["splitsingsrisico"]
+        _sr_weight = float(
+            (_sr_entry.weight_by_projecttype or {}).get(project_type, _sr_entry.default_weight)
+        )
+        _sr_result.gewicht = _sr_weight
+        _sr_result.bijdrage = round(_sr_result.genormaliseerde_score * _sr_weight, 4)
+        _sr_result.percentage_of_category = round(_sr_weight / 100.0, 4)
+    breakdown["splitsingsrisico"] = _sr_result
 
     # Apply custom weights if provided
     if custom_weights:
