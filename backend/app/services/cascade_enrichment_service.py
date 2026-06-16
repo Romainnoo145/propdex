@@ -87,6 +87,41 @@ async def get_omgevingsvisie_document(
     return result.scalar_one_or_none()
 
 
+async def get_huisvestingsverordening_document(
+    db: AsyncSession,
+    *,
+    gemeente_code: str,
+    organization_id: uuid.UUID,
+) -> PolicyDocument | None:
+    """Zoek de meest recente actieve huisvestingsverordening op voor een gemeente (M053/S12).
+
+    source_key="huisvestingsverordening" matcht AUTO_INGESTIBLE_DOCUMENTS in
+    app/policy_documents/auto_ingest.py, zodat toekomstige CVDR-versies
+    automatisch in dezelfde cascade landen.
+    """
+    stmt = (
+        select(PolicyDocument)
+        .where(
+            PolicyDocument.entity_type == "gemeente",
+            PolicyDocument.entity_code == gemeente_code,
+            PolicyDocument.source_key == "huisvestingsverordening",
+            or_(
+                PolicyDocument.is_global.is_(True),
+                PolicyDocument.organization_id == organization_id,
+            ),
+            PolicyDocument.file_data.isnot(None),
+        )
+        .order_by(
+            PolicyDocument.is_global.asc(),
+            PolicyDocument.version_number.desc(),
+            PolicyDocument.created_at.desc(),
+        )
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def get_cascade_payloads(
     db: AsyncSession,
     *,

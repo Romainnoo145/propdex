@@ -20,12 +20,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.factor_extraction_schemas import SCHEMA_VERSION
 from app.ai.factors.beleidsalignement import OmgevingsvisiePayload
+from app.ai.factors.splitsingsrisico import HuisvestingsverordeningPayload
 from app.ai.factors.woonvisie_match import WoonvisiePayload
 from app.models.area_scan import AreaScan
 from app.models.factor_extraction_cache import FactorExtractionCache
 from app.models.parcel_cache import ParcelCache
 from app.models.scan_result import ScanResult
 from app.services.cascade_enrichment_service import (
+    get_huisvestingsverordening_document,
     get_omgevingsvisie_document,
     get_woonvisie_document,
 )
@@ -36,6 +38,7 @@ logger = logging.getLogger(__name__)
 _CASCADE_SOURCES: tuple[tuple[str, Any, type[Any]], ...] = (
     ("woonvisie_match", get_woonvisie_document, WoonvisiePayload),
     ("beleidsalignement", get_omgevingsvisie_document, OmgevingsvisiePayload),
+    ("splitsingsrisico", get_huisvestingsverordening_document, HuisvestingsverordeningPayload),
 )
 
 
@@ -163,6 +166,7 @@ def build_parcel_data(
         "bouwjaar": parcel_cache.bouwjaar,
         "pand_status": parcel_cache.pand_status,
         "bestemmingen": parcel_cache.bestemmingen,
+        "buurt_code": parcel_cache.buurt_code,
         "wijk_naam": wijk_naam,
         "building_metrics": flags.get("building_metrics", {}),
     }
