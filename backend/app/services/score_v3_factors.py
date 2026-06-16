@@ -14,6 +14,7 @@ from app.services.score_v3 import FactorResult
 
 if TYPE_CHECKING:
     from app.ai.factors.beleidsalignement import GebiedPolicy, OmgevingsvisiePayload
+    from app.ai.factors.splitsingsrisico import HuisvestingsverordeningPayload
     from app.ai.factors.woonvisie_match import WijkPolicy, WoonvisiePayload
 
 # ---------------------------------------------------------------------------
@@ -1842,4 +1843,192 @@ def score_beleidsalignement(
         toelichting_lang=uitleg_lang,
         data_bronnen=["Gemeentelijke omgevingsvisie (LLM-extracted)"],
         missing=False,
+    )
+
+
+_SPLITSINGSRISICO_BRON = ["Gemeentelijke huisvestingsverordening"]
+
+
+def score_splitsingsrisico(
+    payload: HuisvestingsverordeningPayload | None,
+    *,
+    buurt_code: str | None,
+    woz_waarde: float | None,
+    has_pand: bool | None,
+) -> FactorResult:
+    """M053/S12: splitsings-/opkooprisico uit de gemeentelijke huisvestingsverordening.
+
+    Risico-factor (hoger = meer risico). Matcht het perceel-buurt tegen de buurten
+    waarop de opkoopbescherming geldt (CBS-buurtcode primair, buurtnaam als fallback),
+    en weegt mee of de WOZ-waarde onder de opkoop-grens valt. Bij afwezige opkoop maar
+    wel een voorraad-vergunningstelsel geldt een procesrisico. Cloned style from
+    score_beleidsalignement: weight applied later in compute_score_v3.
+    """
+    # 1. Geen document → factor niet meegewogen.
+    if payload is None:
+        return FactorResult(
+            waarde=None,
+            genormaliseerde_score=0.0,
+            gewicht=0,
+            bijdrage=0.0,
+            categorie="risico",
+            toelichting_kort="Geen huisvestingsverordening beschikbaar voor deze gemeente (factor niet meegewogen).",
+            toelichting_lang=(
+                "Geen gemeentelijke huisvestingsverordening beschikbaar. De factor wordt niet meegewogen."
+            ),
+            data_bronnen=[],
+            missing=True,
+        )
+
+    randvoorwaarden = [r.model_dump(mode="json") for r in payload.randvoorwaarden]
+    vergunningplichten = list(payload.voorraad_vergunningplichten)
+    opkoop = payload.opkoopbescherming
+    grens = opkoop.woz_grens_eur if opkoop is not None else None
+    duur = opkoop.duur_jaren if opkoop is not None else None
+
+    def _result(
+        *,
+        verdict: str,
+        score: float,
+        kort: str,
+        lang: str,
+        buurt_naam: str | None = None,
+        missing: bool = False,
+    ) -> FactorResult:
+        return FactorResult(
+            waarde={
+                "verdict": verdict,
+                "buurt_naam": buurt_naam,
+                "woz_grens_eur": grens,
+                "duur_jaren": duur,
+                "vergunningplichten": vergunningplichten,
+                "randvoorwaarden": randvoorwaarden,
+            },
+            genormaliseerde_score=round(score, 4),
+            gewicht=0,
+            bijdrage=0.0,
+            categorie="risico",
+            toelichting_kort=kort,
+            toelichting_lang=lang + f" (confidence {payload.confidence:.0%})",
+            data_bronnen=list(_SPLITSINGSRISICO_BRON),
+            missing=missing,
+        )
+
+    # 2. Onbebouwd perceel → opkoopbescherming geldt voor bestaande woonruimte.
+    if has_pand is not True:
+        return _result(
+            verdict="niet_van_toepassing",
+            score=0.0,
+            kort="Onbebouwd perceel — opkoopbescherming niet van toepassing.",
+            lang=(
+                "Onbebouwd perceel — opkoopbescherming geldt voor bestaande woonruimte; "
+                "nieuwbouw is de eerste drie maanden na oplevering uitgezonderd."
+            ),
+        )
+
+    # 3. Actieve opkoopbescherming met aangewezen buurten.
+    if opkoop is not None and opkoop.van_kracht and opkoop.buurten:
+        # Buurt onbekend → eerlijk: niet te bepalen.
+        if buurt_code is None:
+            return _result(
+                verdict="geen_regeling",
+                score=0.0,
+                kort="Buurt-gegevens ontbreken — opkooprisico onbepaald.",
+                lang="Buurt-gegevens ontbreken voor dit perceel — risico onbepaald.",
+                missing=True,
+            )
+
+        codes = {b.cbs_buurt_code for b in opkoop.buurten if b.cbs_buurt_code}
+        matched_buurt = next(
+            (b for b in opkoop.buurten if b.cbs_buurt_code and b.cbs_buurt_code == buurt_code),
+            None,
+        )
+        # Naam-fallback: buurt zonder CBS-code → best-effort match op genormaliseerde naam.
+        if matched_buurt is None and buurt_code not in codes:
+            parcel_norm = _normalize_wijk(buurt_code)
+            matched_buurt = next(
+                (
+                    b
+                    for b in opkoop.buurten
+                    if not b.cbs_buurt_code and _normalize_wijk(b.buurt_naam) == parcel_norm
+                ),
+                None,
+            )
+
+        if matched_buurt is None:
+            return _result(
+                verdict="buiten_beschermd_gebied",
+                score=0.0,
+                kort="Perceel ligt buiten de buurten met opkoopbescherming.",
+                lang=(
+                    "Dit perceel valt buiten de buurten waarop de opkoopbescherming van toepassing is."
+                ),
+            )
+
+        buurt_naam = matched_buurt.buurt_naam
+        grens_label = f"€{grens:,.0f}".replace(",", ".") if grens is not None else "€306.000"
+        duur_label = f"{duur} jaar" if duur is not None else "de zelfbewoningsperiode"
+
+        # WOZ bekend en grens bekend → vergelijken.
+        if woz_waarde is not None and grens is not None:
+            if woz_waarde <= grens:
+                return _result(
+                    verdict="van_toepassing",
+                    score=0.85,
+                    buurt_naam=buurt_naam,
+                    kort=f"Opkoopbescherming geldt in '{buurt_naam}' (WOZ onder grens).",
+                    lang=(
+                        f"Opkoopbescherming van toepassing in buurt '{buurt_naam}': WOZ-waarde "
+                        f"€{woz_waarde:,.0f}".replace(",", ".")
+                        + f" ligt onder de grens van {grens_label}. Zelfbewoningsplicht "
+                        f"gedurende {duur_label} — verhuur alleen met verhuurvergunning."
+                    ),
+                )
+            return _result(
+                verdict="boven_woz_grens",
+                score=0.1,
+                buurt_naam=buurt_naam,
+                kort=f"WOZ boven de opkoop-grens in '{buurt_naam}'.",
+                lang=(
+                    f"Buurt '{buurt_naam}' kent opkoopbescherming, maar de WOZ-waarde "
+                    f"€{woz_waarde:,.0f}".replace(",", ".")
+                    + f" ligt boven de grens van {grens_label}; de zelfbewoningsplicht geldt niet."
+                ),
+            )
+
+        # WOZ onbekend (of grens onbekend) → mogelijk van toepassing.
+        return _result(
+            verdict="mogelijk_van_toepassing",
+            score=0.5,
+            buurt_naam=buurt_naam,
+            kort=f"Opkoopbescherming mogelijk in '{buurt_naam}' (WOZ onbekend).",
+            lang=(
+                f"WOZ-waarde onbekend; binnen beschermde buurt — verhuurvergunning "
+                f"waarschijnlijk vereist bij aankoop ≤ {grens_label}."
+            ),
+        )
+
+    # 4. Geen actieve opkoop maar wel een voorraad-vergunningstelsel → procesrisico.
+    if vergunningplichten:
+        plicht_label = "/".join(vergunningplichten)
+        return _result(
+            verdict="vergunningstelsel_voorraad",
+            score=0.5,
+            kort=f"Vergunningplicht woonruimtevoorraad ({plicht_label}).",
+            lang=(
+                f"De huisvestingsverordening kent een vergunningstelsel voor de "
+                f"woonruimtevoorraad ({plicht_label}). Splitsen/omzetten/onttrekken vergt een "
+                "vergunning: procesrisico en doorlooptijd, geen absoluut verbod."
+            ),
+        )
+
+    # 5. Geen relevante regeling.
+    return _result(
+        verdict="geen_regeling",
+        score=0.0,
+        kort="Geen splitsings- of opkoopregeling van toepassing.",
+        lang=(
+            "De huisvestingsverordening kent geen opkoopbescherming of voorraad-vergunningstelsel "
+            "dat dit perceel raakt."
+        ),
     )
