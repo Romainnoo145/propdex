@@ -18,7 +18,20 @@ from datetime import UTC, datetime
 
 from app.services.score_v3 import (
     _SPARSE_REDISTRIBUTABLE_RISICO,
+    FACTOR_REGISTRY,
     compute_score_v3,
+)
+
+# M053/S12: splitsingsrisico is REGISTERED (counts toward _RISICO_MAX=100) but its
+# cascade-blok is only wired into compute_score_v3 in Task 7. Until then it is absent
+# from score_breakdown, so the missing-data + D3 rescale targets (100 - its weight).
+# Deriving the target from the registry makes these guards self-correct once Task 7
+# appends splitsingsrisico to the breakdown (it will then either score or sit at
+# weight 0, returning the non-missing risico target to 100).
+_RISICO_REDISTRIBUTION_TARGET: float = 100.0 - sum(
+    FACTOR_REGISTRY[k].default_weight
+    for k in ("splitsingsrisico",)
+    if k in FACTOR_REGISTRY
 )
 
 # ---------------------------------------------------------------------------
@@ -91,11 +104,14 @@ def test_no_brk_factor_missing_no_rescale() -> None:
     assert risico["eigendoms_complexiteit"].missing is False
     assert risico["koopwaarde_trend"].missing is False
 
-    # Sum of non-missing risico gewicht stays at 100 (no D3 amplification on top
-    # of _apply_missing_data_strategy's redistribution).
+    # Sum of non-missing risico gewicht stays at the redistribution target (no D3
+    # amplification on top of _apply_missing_data_strategy's redistribution).
+    # Target = 100 minus any registered-but-unwired cascade factor (splitsingsrisico
+    # until Task 7) — see _RISICO_REDISTRIBUTION_TARGET.
     non_missing_gewicht = sum(f.gewicht for f in risico.values() if not f.missing)
-    assert abs(non_missing_gewicht - 100.0) <= 1.0, (
-        f"non-missing risico gewicht {non_missing_gewicht} not ≈100 — "
+    assert abs(non_missing_gewicht - _RISICO_REDISTRIBUTION_TARGET) <= 1.0, (
+        f"non-missing risico gewicht {non_missing_gewicht} not ≈"
+        f"{_RISICO_REDISTRIBUTION_TARGET} — "
         "D3 may have fired despite no BRK factor missing"
     )
 
@@ -112,9 +128,11 @@ def test_redistribution_when_all_3_brk_missing() -> None:
     non_missing_gewicht = sum(
         f.gewicht for k, f in risico.items() if not f.missing
     )
-    # Tolerance for largest-remainder rounding errors
-    assert abs(non_missing_gewicht - 100.0) <= 1.0, (
-        f"non-missing risico gewicht sum {non_missing_gewicht} not ≈100 after D3 rescale"
+    # Tolerance for largest-remainder rounding errors. Target excludes the
+    # registered-but-unwired splitsingsrisico weight (until Task 7).
+    assert abs(non_missing_gewicht - _RISICO_REDISTRIBUTION_TARGET) <= 1.0, (
+        f"non-missing risico gewicht sum {non_missing_gewicht} not ≈"
+        f"{_RISICO_REDISTRIBUTION_TARGET} after D3 rescale"
     )
 
 
@@ -141,9 +159,10 @@ def test_redistribution_when_only_koopwaarde_trend_missing() -> None:
     # (D3 leaves missing factors at gewicht 0 / unchanged from _apply_missing_data_strategy).
     assert risico["koopwaarde_trend"].bijdrage == 0
 
-    # Non-missing risico gewicht sum stays ≈100 (D3 rescale-to-100 invariant).
+    # Non-missing risico gewicht sum stays at the redistribution target (rescale
+    # invariant); target excludes the unwired splitsingsrisico weight until Task 7.
     non_missing_gewicht = sum(f.gewicht for f in risico.values() if not f.missing)
-    assert abs(non_missing_gewicht - 100.0) <= 1.0
+    assert abs(non_missing_gewicht - _RISICO_REDISTRIBUTION_TARGET) <= 1.0
 
 
 def test_d3_rescale_math_in_isolation() -> None:
@@ -169,9 +188,9 @@ def test_d3_rescale_math_in_isolation() -> None:
     # hypotheek + eigendoms remain non-missing
     assert risico["hypotheek_risico"].missing is False
     assert risico["eigendoms_complexiteit"].missing is False
-    # Rescale invariant
+    # Rescale invariant (target excludes unwired splitsingsrisico weight until Task 7)
     non_missing = sum(f.gewicht for f in risico.values() if not f.missing)
-    assert abs(non_missing - 100.0) <= 1.0
+    assert abs(non_missing - _RISICO_REDISTRIBUTION_TARGET) <= 1.0
 
 
 def test_redistribution_preserves_potentie_gewicht_unchanged() -> None:
@@ -209,8 +228,9 @@ def test_redistribution_when_all_3_brk_missing_plus_existing_risico_missing_F8()
         assert all(f.missing for f in risico.values())
         return
     non_missing_gewicht = sum(f.gewicht for f in non_missing.values())
-    assert abs(non_missing_gewicht - 100.0) <= 1.0, (
-        f"F8: non-missing risico gewicht {non_missing_gewicht} not ≈100"
+    assert abs(non_missing_gewicht - _RISICO_REDISTRIBUTION_TARGET) <= 1.0, (
+        f"F8: non-missing risico gewicht {non_missing_gewicht} not ≈"
+        f"{_RISICO_REDISTRIBUTION_TARGET}"
     )
 
 

@@ -237,13 +237,15 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         data_source="Gemeentelijke omgevingsvisie (LLM-extracted)",
         bron="gemeente_beleid",
     ),
-    # --- RISICO (16 factors, sum default_weight = 100) ---
+    # --- RISICO (17 factors, sum default_weight = 100) ---
     # M050/S03 D2: 13 existing factors rebalanced via _rebalance_risico_weights
     # (largest-remainder, target_sum=80) freeing 20 weight-units for 3 new BRK factors.
+    # M053/S12: 16 existing factors re-rebalanced (target_sum=93) freeing 7 units
+    # for splitsingsrisico (gemeente_beleid). Pre-M050 sub-sum=75, BRK sub-sum=18.
     "funderingsrisico": FactorRegistryEntry(
         id="funderingsrisico",
         category="risico",
-        default_weight=13,  # was 16, rebalanced by M050/S03 D2
+        default_weight=12,  # was 16 (M050/S03), 13->12 rebalanced by M053/S12
         weight_by_projecttype=None,
         data_source="PDOK Funderingsrisicogebieden + BAG",
         bron="fysiek",
@@ -275,7 +277,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "bestemmingswijziging": FactorRegistryEntry(
         id="bestemmingswijziging",
         category="risico",
-        default_weight=7,  # was 9, rebalanced by M050/S03 D2
+        default_weight=6,  # was 9 (M050/S03), 7->6 rebalanced by M053/S12
         weight_by_projecttype=None,
         data_source="Bestemmingsplan / Ruimtelijkeplannen.nl",
         bron="planologisch",
@@ -283,7 +285,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "constructieve_staat": FactorRegistryEntry(
         id="constructieve_staat",
         category="risico",
-        default_weight=6,  # was 8, rebalanced by M050/S03 D2
+        default_weight=5,  # was 8 (M050/S03), 6->5 rebalanced by M053/S12
         weight_by_projecttype=None,
         data_source="BAG + EP-Online",
         bron="fysiek",
@@ -291,7 +293,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "juridisch_klimaat": FactorRegistryEntry(
         id="juridisch_klimaat",
         category="risico",
-        default_weight=7,  # was 9, rebalanced by M050/S03 D2
+        default_weight=6,  # was 9 (M050/S03), 7->6 rebalanced by M053/S12
         weight_by_projecttype=None,
         data_source="Rechtspraak.nl",
         bron="juridisch",
@@ -299,7 +301,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "criminaliteit": FactorRegistryEntry(
         id="criminaliteit",
         category="risico",
-        default_weight=6,  # was 7, rebalanced by M050/S03 D2
+        default_weight=5,  # was 7 (M050/S03), 6->5 rebalanced by M053/S12
         weight_by_projecttype=None,
         data_source="CBS dataderden",
         bron="markt",  # closest fit — sociaal would require expanding enum
@@ -348,7 +350,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "hypotheek_risico": FactorRegistryEntry(
         id="hypotheek_risico",
         category="risico",
-        default_weight=10,
+        default_weight=9,  # was 10, 10->9 rebalanced by M053/S12
         weight_by_projecttype=None,
         data_source="BRK Eigendom (Kadaster)",
         bron="brk",
@@ -356,7 +358,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "eigendoms_complexiteit": FactorRegistryEntry(
         id="eigendoms_complexiteit",
         category="risico",
-        default_weight=6,
+        default_weight=5,  # was 6, 6->5 rebalanced by M053/S12
         weight_by_projecttype=None,
         data_source="BRK Eigendom (Kadaster)",
         bron="brk",
@@ -368,6 +370,15 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         weight_by_projecttype=None,
         data_source="BRK Eigendom (Kadaster)",
         bron="brk",
+    ),
+    # --- M053/S12 splitsingsrisico (risico cascade — Huisvestingsverordening) ---
+    "splitsingsrisico": FactorRegistryEntry(
+        id="splitsingsrisico",
+        category="risico",
+        default_weight=7,
+        weight_by_projecttype=None,
+        data_source="Gemeentelijke huisvestingsverordening (LLM-extracted)",
+        bron="gemeente_beleid",
     ),
 }
 
