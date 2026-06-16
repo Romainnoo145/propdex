@@ -152,6 +152,7 @@ def test_build_parcel_data_includes_parcel_id_and_flag_overlay():
         bouwjaar = 1975
         pand_status = "in_gebruik"
         bestemmingen = None
+        buurt_code = "BU09830001"
 
     flags = {"vacancy_signal": "leeg", "building_metrics": {"x": 1}}
     pd = build_parcel_data(_PC(), flags, perimeter_m=90.0, wijk_naam="Centrum")
@@ -161,6 +162,35 @@ def test_build_parcel_data_includes_parcel_id_and_flag_overlay():
     assert pd["wijk_naam"] == "Centrum"
     assert pd["vacancy_signal"] == "leeg"
     assert pd["building_metrics"] == {"x": 1}
+
+
+def test_build_parcel_data_includes_buurt_code_and_splitsingsrisico_keys():
+    """M053/S12: build_parcel_data must expose every key score_splitsingsrisico reads.
+
+    The splitsingsrisico scorer needs buurt_code, has_pand and woz. buurt_code
+    comes from ParcelCache; woz arrives via the _FLAG_OVERLAY_KEYS overlay.
+    """
+    from app.services.cascade_scoring import _FLAG_OVERLAY_KEYS
+
+    class _PC:
+        parcel_id = "kad-456"
+        area_m2 = 320.0
+        has_pand = True
+        bouwjaar = 1968
+        pand_status = "in_gebruik"
+        bestemmingen = None
+        buurt_code = "BU09830101"
+
+    flags = {"woz": {"woz_waarde": 250000}, "building_metrics": {}}
+    pd = build_parcel_data(_PC(), flags, perimeter_m=72.0, wijk_naam="Blerick")
+
+    # buurt_code (ParcelCache-sourced) must be present and forwarded verbatim
+    assert pd["buurt_code"] == "BU09830101"
+    # has_pand (ParcelCache-sourced) — splitsingsrisico onbebouwd-guard
+    assert pd["has_pand"] is True
+    # woz arrives through the flag overlay
+    assert "woz" in _FLAG_OVERLAY_KEYS
+    assert pd["woz"] == {"woz_waarde": 250000}
 
 
 def test_apply_cascade_score_writes_breakdown_and_score():

@@ -9,6 +9,8 @@ import { FactorCard, GhostCard } from '../FactorCard'
 import { useFactorPins } from '@/hooks/useFactorPins'
 import { FACTOR_BRON, buildPages } from '@/lib/factor-groups'
 import type { PageCard } from '@/lib/factor-groups'
+import { HuisvestingsverordeningPopup } from '../HuisvestingsverordeningPopup'
+import type { Randvoorwaarde } from '../OmgevingsvisiePopup'
 
 /* ── Verdict derivation ───────────────────────────────────── */
 
@@ -71,6 +73,8 @@ export const FACTOR_LABELS: Record<string, string> = {
   hypotheek_risico: 'HYPOTHEEK',
   eigendoms_complexiteit: 'EIGENDOMSCOMPL.',
   koopwaarde_trend: 'KOOPWAARDE',
+  // M053/S12 splitsingsrisico — opkoopbescherming / woonruimtevoorraad
+  splitsingsrisico: 'OPKOOP',
 }
 
 function riskLevel(score: number): string {
@@ -201,6 +205,29 @@ export function formatFactorValue(name: string, factor: ScoreFactorV3): { value:
         return { value: jaar, sub: sum }
       }
       return { value: String(factor.waarde ?? '—'), sub: 'koopjaar' }
+    }
+    // M053/S12 splitsingsrisico — opkoopbescherming verdict
+    case 'splitsingsrisico': {
+      if (factor.missing) return { value: '—', sub: 'Geen regeling' }
+      const d = typeof w === 'object' && w !== null ? (w as Record<string, unknown>) : {}
+      const verdict = String(d.verdict ?? '')
+      const buurt = typeof d.buurt_naam === 'string' ? d.buurt_naam : null
+      switch (verdict) {
+        case 'van_toepassing':
+          return { value: 'JA', sub: buurt || 'Beschermde buurt' }
+        case 'mogelijk_van_toepassing':
+          return { value: 'MOGELIJK', sub: buurt || 'Beschermde buurt' }
+        case 'vergunningstelsel_voorraad':
+          return { value: 'VERGUNNING', sub: 'Voorraadstelsel' }
+        case 'boven_woz_grens':
+          return { value: 'NEE', sub: 'Boven WOZ-grens' }
+        case 'buiten_beschermd_gebied':
+          return { value: 'NEE', sub: 'Buiten gebied' }
+        case 'niet_van_toepassing':
+          return { value: 'N.V.T.', sub: 'Onbebouwd' }
+        default:
+          return { value: '—', sub: 'Geen regeling' }
+      }
     }
     default:
       return { value: '—', sub: '' }
@@ -343,7 +370,24 @@ const RISICO_KEYS = [
   'funderingsrisico', 'asbest', 'bodemverontreiniging',
   'monument', 'bestemmingswijziging', 'constructieve_staat',
   'juridisch_klimaat', 'criminaliteit', 'max_hoogte_bereikt',
+  'splitsingsrisico',
 ] as const
+
+/** splitsingsrisico factor.waarde shape (M053/S12). */
+interface SplitsingsrisicoWaarde {
+  verdict: string
+  buurt_naam?: string | null
+  woz_grens_eur?: number | null
+  duur_jaren?: number | null
+  vergunningplichten?: string[]
+  randvoorwaarden?: Randvoorwaarde[]
+}
+
+/** Verdicts that carry popup content (clickable). */
+const SPLITS_ACTIVE_VERDICTS = new Set([
+  'van_toepassing', 'mogelijk_van_toepassing', 'vergunningstelsel_voorraad',
+  'boven_woz_grens', 'buiten_beschermd_gebied',
+])
 
 interface RisicoLayerProps {
   parcel: ScanResultItem
@@ -351,13 +395,21 @@ interface RisicoLayerProps {
 
 export function RisicoLayer({ parcel }: RisicoLayerProps) {
   const [page, setPage] = useState(0)
+  const [splitsOpen, setSplitsOpen] = useState(false)
+
+  // M053/S12 splitsingsrisico — opkoopbescherming popup data
+  const splitsFactor = (parcel.score_breakdown as ScoreBreakdownV3 | null)?.['splitsingsrisico']
+  const splitsWaarde = splitsFactor?.waarde as SplitsingsrisicoWaarde | null
+  const hasSplitsData =
+    splitsWaarde != null && SPLITS_ACTIVE_VERDICTS.has(splitsWaarde.verdict)
+
   const risicoScore = parcel.risico_score != null ? Math.round(parcel.risico_score) : null
   const isV3 = isScoreV3(parcel.score_breakdown)
   const verdict = deriveVerdict(risicoScore)
   const enrichmentQuery = useParcelEnrichment(parcel.parcel_id)
   const { pins, toggle, isPinned } = useFactorPins('risico')
 
-  // Build score cards (9 risk factors from registry)
+  // Build score cards (10 risk factors from registry)
   const scoreCards: PageCard[] = (() => {
     if (isV3 && parcel.score_breakdown) {
       const breakdown = parcel.score_breakdown as ScoreBreakdownV3
@@ -469,6 +521,11 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
                   isPinned={pinned}
                   isMissing={!!card.missing}
                   onStarClick={() => toggle(card.factor_key)}
+                  onCardClick={
+                    card.factor_key === 'splitsingsrisico' && hasSplitsData
+                      ? () => setSplitsOpen(true)
+                      : undefined
+                  }
                 />
               )
             })}
@@ -476,6 +533,18 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
         </AnimatePresence>
       </div>
 
+      {hasSplitsData && (
+        <HuisvestingsverordeningPopup
+          isOpen={splitsOpen}
+          onClose={() => setSplitsOpen(false)}
+          verdict={splitsWaarde!.verdict}
+          buurt_naam={splitsWaarde!.buurt_naam}
+          woz_grens_eur={splitsWaarde!.woz_grens_eur}
+          duur_jaren={splitsWaarde!.duur_jaren}
+          vergunningplichten={splitsWaarde!.vergunningplichten}
+          randvoorwaarden={splitsWaarde!.randvoorwaarden}
+        />
+      )}
     </div>
   )
 }

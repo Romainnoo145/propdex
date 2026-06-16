@@ -947,6 +947,7 @@ async def area_scan_job(
                             parcel_data["bouwjaar"] = pc.bouwjaar
                             parcel_data["pand_status"] = pc.pand_status
                             parcel_data["bestemmingen"] = pc.bestemmingen
+                            parcel_data["buurt_code"] = pc.buurt_code
 
                         # Overlay enrichment flags from scan_results
                         parcel_data["vacancy_signal"] = flags.get("vacancy_signal")
