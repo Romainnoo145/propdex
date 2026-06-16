@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.factor_extraction_schemas import DOCUMENT_SENTINEL, FactorExtractionError
 from app.ai.factors.beleidsalignement import OMGEVINGSVISIE_FACTOR_DEF
+from app.ai.factors.splitsingsrisico import HUISVESTINGSVERORDENING_FACTOR_DEF
 from app.ai.factors.woonvisie_match import WOONVISIE_MATCH_FACTOR_DEF
 from app.models.policy_document import PolicyDocument
 from app.services.factor_extraction_service import extract_factor
@@ -179,6 +180,25 @@ async def get_cascade_payloads(
     except FactorExtractionError as exc:
         logger.warning(
             "cascade_enrich beleidsalignement failed parcel=%s gemeente=%s: %s",
+            parcel_id, gemeente_code, exc,
+        )
+
+    # splitsingsrisico (huisvestingsverordening) — M053/S12
+    try:
+        hv_doc = await get_huisvestingsverordening_document(
+            db, gemeente_code=gemeente_code, organization_id=organization_id
+        )
+        if hv_doc is not None:
+            hv_extracted = await extract_factor(
+                db,
+                factor_def=HUISVESTINGSVERORDENING_FACTOR_DEF,
+                parcel_id=DOCUMENT_SENTINEL,
+                policy_document=hv_doc,
+            )
+            payloads["splitsingsrisico"] = hv_extracted.payload
+    except FactorExtractionError as exc:
+        logger.warning(
+            "cascade_enrich splitsingsrisico failed parcel=%s gemeente=%s: %s",
             parcel_id, gemeente_code, exc,
         )
 
