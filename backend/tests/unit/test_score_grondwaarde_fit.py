@@ -30,6 +30,7 @@ def _wonen() -> list[dict]:
 def test_no_payload_is_missing():
     r = score_grondwaarde_fit(None, bestemmingen=_wonen(), area_m2=500)
     assert r.missing is True
+    assert r.waarde["verdict"] == "geen_grondbeleid"
     assert r.categorie == "potentie"
     assert r.bijdrage == 0.0
     assert r.gewicht == 0
@@ -57,6 +58,31 @@ def test_faciliterende_gemeente_is_context_only():
     assert r.waarde["verdict"] == "context"
     # context is shown but not weight-bearing — score < passend
     assert r.genormaliseerde_score < 0.7
+
+
+def test_residueel_match_onbekend_grondbeleid_is_context_only():
+    p = _payload(grondbeleidstype=None)
+    r = score_grondwaarde_fit(p, bestemmingen=_wonen(), area_m2=500)
+    assert r.waarde["verdict"] == "context"
+    assert r.gewicht == 0
+    assert r.bijdrage == 0.0
+
+
+def test_residueel_actief_zonder_prijs_is_context_only():
+    p = _payload(prijsbanden=[
+        {
+            "grondproduct": "bouwkavel wonen vrije sector",
+            "functiecategorie": "vrij",
+            "bestemming_trefwoorden": ["wonen"],
+            "prijsgrondslag": "residueel",
+        },
+    ])
+    r = score_grondwaarde_fit(p, bestemmingen=_wonen(), area_m2=500)
+    assert r.waarde["verdict"] == "context"
+    assert r.waarde["prijs_per_m2_min"] is None
+    assert r.waarde["prijs_per_m2_max"] is None
+    assert r.gewicht == 0
+    assert r.bijdrage == 0.0
 
 
 def test_vaste_prijs_band_is_context_only():

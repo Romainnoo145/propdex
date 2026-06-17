@@ -45,7 +45,7 @@ def normalize_binary(condition: bool) -> float:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _get(d: dict | None, *keys: str, default: Any = None) -> Any:
+def _get(d: dict[str, Any] | None, *keys: str, default: Any = None) -> Any:
     """Safely traverse nested dicts."""
     obj = d
     for k in keys:
@@ -55,7 +55,7 @@ def _get(d: dict | None, *keys: str, default: Any = None) -> Any:
     return obj
 
 
-def _best_bestemming_type(parcel_data: dict) -> str:
+def _best_bestemming_type(parcel_data: dict[str, Any]) -> str:
     """Return primary bestemming type via count-voting + priority tie-breaker.
 
     M046/S04 BUG-1: previously "meest gunstige keyword-match" — any wonen-
@@ -118,7 +118,7 @@ def _best_bestemming_type(parcel_data: dict) -> str:
 # POTENTIE FACTORS (8)
 # ---------------------------------------------------------------------------
 
-def score_vrije_grond(parcel_data: dict) -> FactorResult:
+def score_vrije_grond(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor P1: Vrije grond / onderbenutting. Gewicht=12."""
     area = parcel_data.get("area_m2") or 0
     bm = parcel_data.get("building_metrics") or {}
@@ -189,7 +189,7 @@ def score_vrije_grond(parcel_data: dict) -> FactorResult:
     )
 
 
-def score_optoppotentie(parcel_data: dict) -> FactorResult:
+def score_optoppotentie(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor P2: Optoppotentie (lagen/hoogte headroom). Gewicht=10."""
     bm = parcel_data.get("building_metrics") or {}
     max_hoogte = bm.get("max_bouwhoogte")
@@ -252,7 +252,7 @@ def score_optoppotentie(parcel_data: dict) -> FactorResult:
     )
 
 
-def score_bestemming(parcel_data: dict) -> FactorResult:
+def score_bestemming(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor P3: Bestemming compatibiliteit. Gewicht=12."""
     btype = _best_bestemming_type(parcel_data)
 
@@ -293,7 +293,7 @@ def score_bestemming(parcel_data: dict) -> FactorResult:
     )
 
 
-def score_leegstand(parcel_data: dict) -> FactorResult:
+def score_leegstand(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor P4: Leegstand (acquisitiekans). Gewicht=8."""
     signal = parcel_data.get("vacancy_signal") or "onbekend"
 
@@ -324,7 +324,7 @@ def score_leegstand(parcel_data: dict) -> FactorResult:
     )
 
 
-def score_funda_frictie(parcel_data: dict) -> FactorResult:
+def score_funda_frictie(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor P5: Funda-frictie / gemotiveerde verkoper. Gewicht=5.
 
     M046/S03: Funda-integratie is nog niet productief — `funda_snapshot.py`
@@ -386,7 +386,7 @@ def score_funda_frictie(parcel_data: dict) -> FactorResult:
     )
 
 
-def score_perceelgrootte(parcel_data: dict) -> FactorResult:
+def score_perceelgrootte(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor P6: Perceelgrootte (schaal). Gewicht=12."""
     area = parcel_data.get("area_m2") or 0
     score = normalize_log(area, 10000)
@@ -418,7 +418,7 @@ def score_perceelgrootte(parcel_data: dict) -> FactorResult:
     )
 
 
-def score_demografie(neighborhood_metrics: dict | None) -> FactorResult:
+def score_demografie(neighborhood_metrics: dict[str, Any] | None) -> FactorResult:
     """Factor P7: Demografie (CBS). Gewicht=8."""
     data = _get(neighborhood_metrics, "data")
     if not data:
@@ -466,7 +466,7 @@ def score_demografie(neighborhood_metrics: dict | None) -> FactorResult:
     )
 
 
-def score_vergunning_succeskans(neighborhood_metrics: dict | None) -> FactorResult:
+def score_vergunning_succeskans(neighborhood_metrics: dict[str, Any] | None) -> FactorResult:
     """Factor P8: Vergunnings-succeskans (juridisch klimaat). Gewicht=13."""
     # Juridisch klimaat data is currently sparse (268/286 rulings unanalyzed)
     # Score neutral when unavailable
@@ -548,7 +548,7 @@ def score_vergunning_succeskans(neighborhood_metrics: dict | None) -> FactorResu
 # RISICO FACTORS (9)
 # ---------------------------------------------------------------------------
 
-def score_funderingsrisico(parcel_data: dict) -> FactorResult:
+def score_funderingsrisico(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor R1: Funderingsrisico. Gewicht=15. Critical."""
     fr = parcel_data.get("funderingsrisico")
     bodemtype = parcel_data.get("bodemtype")
@@ -610,7 +610,7 @@ def score_funderingsrisico(parcel_data: dict) -> FactorResult:
     )
 
 
-def score_asbest(parcel_data: dict) -> FactorResult:
+def score_asbest(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor R2: Asbest-risico. Gewicht=6."""
     bouwjaar = parcel_data.get("bouwjaar")
 
@@ -665,7 +665,7 @@ def score_asbest(parcel_data: dict) -> FactorResult:
     )
 
 
-def score_bodemverontreiniging(parcel_data: dict) -> FactorResult:
+def score_bodemverontreiniging(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor R3: Bodemverontreiniging. Gewicht=7. Critical."""
     bodem = parcel_data.get("bodem")
     if not bodem or not isinstance(bodem, dict):
@@ -717,7 +717,7 @@ def score_bodemverontreiniging(parcel_data: dict) -> FactorResult:
     )
 
 
-def score_monument(parcel_data: dict) -> FactorResult:
+def score_monument(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor R4: Monument-/erfgoedstatus. Gewicht=5.
 
     M046/S05 BUG-3: RCE API structured data primair, bestemmingsplan keyword-match
@@ -806,7 +806,7 @@ def score_monument(parcel_data: dict) -> FactorResult:
     )
 
 
-def score_bestemmingswijziging(parcel_data: dict) -> FactorResult:
+def score_bestemmingswijziging(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor R5: Bestemmingswijziging nodig. Gewicht=8."""
     btype = _best_bestemming_type(parcel_data)
 
@@ -839,7 +839,7 @@ def score_bestemmingswijziging(parcel_data: dict) -> FactorResult:
     )
 
 
-def score_constructieve_staat(parcel_data: dict) -> FactorResult:
+def score_constructieve_staat(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor R6: Constructieve staat (bouwjaar + energie). Gewicht=7."""
     bouwjaar = parcel_data.get("bouwjaar")
     el = parcel_data.get("energielabel")
@@ -899,7 +899,7 @@ def score_constructieve_staat(parcel_data: dict) -> FactorResult:
     )
 
 
-def score_juridisch_klimaat(neighborhood_metrics: dict | None) -> FactorResult:
+def score_juridisch_klimaat(neighborhood_metrics: dict[str, Any] | None) -> FactorResult:
     """Factor R7: Juridisch klimaat ongunstig. Gewicht=8."""
     jk = _get(neighborhood_metrics, "juridisch_klimaat")
     if not jk or not isinstance(jk, dict):
@@ -971,7 +971,7 @@ def score_juridisch_klimaat(neighborhood_metrics: dict | None) -> FactorResult:
     )
 
 
-def score_criminaliteit(neighborhood_metrics: dict | None) -> FactorResult:
+def score_criminaliteit(neighborhood_metrics: dict[str, Any] | None) -> FactorResult:
     """Factor R8: Criminaliteit in de wijk. Gewicht=6."""
     crim = _get(neighborhood_metrics, "criminaliteit")
     if not crim or not isinstance(crim, dict):
@@ -1011,7 +1011,7 @@ def score_criminaliteit(neighborhood_metrics: dict | None) -> FactorResult:
     )
 
 
-def score_max_hoogte_bereikt(parcel_data: dict) -> FactorResult:
+def score_max_hoogte_bereikt(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor R9: Maximale bouwhoogte bereikt. Gewicht=5."""
     bm = parcel_data.get("building_metrics") or {}
     max_hoogte = bm.get("max_bouwhoogte")
@@ -1063,7 +1063,7 @@ def score_max_hoogte_bereikt(parcel_data: dict) -> FactorResult:
 # Pre-cached in scan_results.flags since Phase 99
 # ---------------------------------------------------------------------------
 
-def score_natura2000(parcel_data: dict) -> FactorResult:
+def score_natura2000(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor R10: Natura2000 proximity risk. Gewicht=5."""
     n2k = parcel_data.get("natura2000")
     if not n2k or not isinstance(n2k, dict):
@@ -1108,7 +1108,7 @@ def score_natura2000(parcel_data: dict) -> FactorResult:
     )
 
 
-def score_overstromingsrisico(parcel_data: dict) -> FactorResult:
+def score_overstromingsrisico(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor R11: Overstromingsrisico. Gewicht=6."""
     ostr = parcel_data.get("overstromingsrisico")
     if not ostr or not isinstance(ostr, dict):
@@ -1153,7 +1153,7 @@ def score_overstromingsrisico(parcel_data: dict) -> FactorResult:
     )
 
 
-def score_geluid(parcel_data: dict) -> FactorResult:
+def score_geluid(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor R12: Geluidbelasting Lden. Gewicht=5."""
     geluid = parcel_data.get("geluid")
     if not geluid or not isinstance(geluid, dict):
@@ -1391,7 +1391,7 @@ def score_woonvisie_match(
     )
 
 
-def score_luchtkwaliteit(parcel_data: dict) -> FactorResult:
+def score_luchtkwaliteit(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor R13: Luchtkwaliteit NO2/PM10. Gewicht=4."""
     lk = parcel_data.get("luchtkwaliteit")
     if not lk or not isinstance(lk, dict):
@@ -1486,7 +1486,7 @@ def _missing_brk(reason: str, weight: int) -> FactorResult:
 # ---------------------------------------------------------------------------
 
 
-def score_hypotheek_risico(parcel_data: dict) -> FactorResult:
+def score_hypotheek_risico(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor R14: Hypotheek-risico. Default gewicht=10 (M050/S03 D2 + D4).
 
     D3: empty BRK records → _missing_brk (runtime redistribution kicks in).
@@ -1523,7 +1523,7 @@ def score_hypotheek_risico(parcel_data: dict) -> FactorResult:
     )
 
 
-def score_eigendoms_complexiteit(parcel_data: dict) -> FactorResult:
+def score_eigendoms_complexiteit(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor R15: Eigendoms-complexiteit. Default gewicht=6 (M050/S03 D2 + D5).
 
     D5 (user-locked): count distinct (eigenaar_naam, kvk_nummer). Ignores
@@ -1566,7 +1566,7 @@ def score_eigendoms_complexiteit(parcel_data: dict) -> FactorResult:
     )
 
 
-def score_koopwaarde_trend(parcel_data: dict) -> FactorResult:
+def score_koopwaarde_trend(parcel_data: dict[str, Any]) -> FactorResult:
     """Factor R16: Koopsom-actualiteit (NOT 'tren'+'d' — M050/S03 D6 narrative honesty).
 
     Default gewicht=4 (D2). koopjaar-age proxy from most-recent record (fetched_at DESC).
@@ -2066,9 +2066,25 @@ def score_grondwaarde_fit(
     style from score_beleidsalignement: weight applied later in compute_score_v3
     (verdict-gated op 'passend'). Sparse factor P5: weight 0 wanneer geen brief.
     """
+    parcel_best = _best_bestemming_type({"bestemmingen": bestemmingen or []})
+
     if payload is None:
         return FactorResult(
-            waarde=None,
+            waarde={
+                "verdict": "geen_grondbeleid",
+                "peiljaar": None,
+                "grondbeleidstype": None,
+                "matched_bestemming": parcel_best,
+                "grondproduct": None,
+                "functiecategorie": None,
+                "prijs_per_m2_min": None,
+                "prijs_per_m2_max": None,
+                "prijsgrondslag": None,
+                "erfpacht_mogelijk": None,
+                "matched_band": None,
+                "algemeen_citaat": "",
+                "randvoorwaarden": [],
+            },
             genormaliseerde_score=0.0,
             gewicht=0,
             bijdrage=0.0,
@@ -2082,7 +2098,6 @@ def score_grondwaarde_fit(
         )
 
     randvoorwaarden = [r.model_dump(mode="json") for r in payload.randvoorwaarden]
-    parcel_best = _best_bestemming_type({"bestemmingen": bestemmingen or []})
 
     def _result(
         *,
@@ -2126,6 +2141,16 @@ def score_grondwaarde_fit(
                 return True
         return False
 
+    def _has_price(band: Any) -> bool:
+        return band.prijs_per_m2_min is not None or band.prijs_per_m2_max is not None
+
+    def _is_passend_band(band: Any) -> bool:
+        return (
+            payload.grondbeleidstype == "actief"
+            and band.prijsgrondslag == "residueel"
+            and _has_price(band)
+        )
+
     matching = [b for b in payload.prijsbanden if _matches(b)]
 
     # 1. Geen band sluit aan op de bestemming → context, niet meegewogen.
@@ -2141,11 +2166,20 @@ def score_grondwaarde_fit(
             ),
         )
 
-    # 2. Kies de meest developer-gunstige band (residueel > comparatief > vaste prijs).
-    band = min(matching, key=lambda b: _PRIJSGRONDSLAG_PREF.get(b.prijsgrondslag, 3))
-    facilitair = payload.grondbeleidstype in ("faciliterend", "passief")
+    # 2. Kies de meest developer-gunstige band; alleen residual + actief + prijs
+    # mag gewicht dragen. Residual zonder prijs blijft context.
+    band = min(
+        matching,
+        key=lambda b: (
+            0 if _is_passend_band(b) else 1,
+            _PRIJSGRONDSLAG_PREF.get(b.prijsgrondslag, 3),
+            0 if _has_price(b) else 1,
+        ),
+    )
+    actief = payload.grondbeleidstype == "actief"
     residueel = band.prijsgrondslag == "residueel"
-    is_passend = residueel and not facilitair
+    has_price = _has_price(band)
+    is_passend = actief and residueel and has_price
 
     raw = _PRIJSGRONDSLAG_BASE.get(band.prijsgrondslag, 0.4)
     if area_m2 is not None:
@@ -2181,7 +2215,18 @@ def score_grondwaarde_fit(
             ),
         )
 
-    reden = "faciliterend/passief grondbeleid" if facilitair else f"{band.prijsgrondslag}-prijs (geen residu-ruimte)"
+    if not actief:
+        reden = (
+            "faciliterend/passief grondbeleid"
+            if payload.grondbeleidstype in ("faciliterend", "passief")
+            else "onbekend grondbeleidstype"
+        )
+    elif not residueel:
+        reden = f"{band.prijsgrondslag}-prijs (geen residu-ruimte)"
+    elif not has_price:
+        reden = "residuele prijsgrondslag zonder prijs"
+    else:
+        reden = "context"
     return _result(
         verdict="context",
         score=pulled,
