@@ -19,7 +19,6 @@ from datetime import UTC, datetime
 from app.services.score_v3 import (
     _RISICO_REDISTRIBUTION_TARGET,
     _SPARSE_REDISTRIBUTABLE_RISICO,
-    FACTOR_REGISTRY,
     compute_score_v3,
 )
 
