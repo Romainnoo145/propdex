@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.factor_extraction_schemas import DOCUMENT_SENTINEL, FactorExtractionError
 from app.ai.factors.beleidsalignement import OMGEVINGSVISIE_FACTOR_DEF
+from app.ai.factors.grondwaarde_fit import GRONDPRIJS_FACTOR_DEF
 from app.ai.factors.splitsingsrisico import HUISVESTINGSVERORDENING_FACTOR_DEF
 from app.ai.factors.woonvisie_match import WOONVISIE_MATCH_FACTOR_DEF
 from app.models.policy_document import PolicyDocument
@@ -123,6 +124,40 @@ async def get_huisvestingsverordening_document(
     return result.scalar_one_or_none()
 
 
+async def get_grondprijs_document(
+    db: AsyncSession,
+    *,
+    gemeente_code: str,
+    organization_id: uuid.UUID,
+) -> PolicyDocument | None:
+    """Zoek de meest recente actieve grondprijzenbrief op voor een gemeente (M054/S01).
+
+    source_key="grondprijsbeleid" matcht data_source_keys.py (voedt_factor=
+    grondwaarde_fit), zodat toekomstige jaarversies in dezelfde cascade landen.
+    """
+    stmt = (
+        select(PolicyDocument)
+        .where(
+            PolicyDocument.entity_type == "gemeente",
+            PolicyDocument.entity_code == gemeente_code,
+            PolicyDocument.source_key == "grondprijsbeleid",
+            or_(
+                PolicyDocument.is_global.is_(True),
+                PolicyDocument.organization_id == organization_id,
+            ),
+            PolicyDocument.file_data.isnot(None),
+        )
+        .order_by(
+            PolicyDocument.is_global.asc(),
+            PolicyDocument.version_number.desc(),
+            PolicyDocument.created_at.desc(),
+        )
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def get_cascade_payloads(
     db: AsyncSession,
     *,
@@ -199,6 +234,25 @@ async def get_cascade_payloads(
     except FactorExtractionError as exc:
         logger.warning(
             "cascade_enrich splitsingsrisico failed parcel=%s gemeente=%s: %s",
+            parcel_id, gemeente_code, exc,
+        )
+
+    # grondwaarde_fit (grondprijzenbrief) — M054/S01
+    try:
+        gp_doc = await get_grondprijs_document(
+            db, gemeente_code=gemeente_code, organization_id=organization_id
+        )
+        if gp_doc is not None:
+            gp_extracted = await extract_factor(
+                db,
+                factor_def=GRONDPRIJS_FACTOR_DEF,
+                parcel_id=DOCUMENT_SENTINEL,
+                policy_document=gp_doc,
+            )
+            payloads["grondwaarde_fit"] = gp_extracted.payload
+    except FactorExtractionError as exc:
+        logger.warning(
+            "cascade_enrich grondwaarde_fit failed parcel=%s gemeente=%s: %s",
             parcel_id, gemeente_code, exc,
         )
 
