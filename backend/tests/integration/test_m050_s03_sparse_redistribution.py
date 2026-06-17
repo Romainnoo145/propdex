@@ -19,16 +19,17 @@ from shapely.geometry import MultiPolygon, Polygon
 from sqlalchemy import select
 
 from app.core.config import settings
-# M053/S12 reserves splitsingsrisico's weight (7) from the risico-100 pool, so the
-# in-breakdown risico factors rescale to 93, not 100. The sibling unit test
-# (test_compute_score_v3_redistribution.py) was updated to this constant in S12;
-# this integration test was missed and is corrected here (M054/S01).
-from app.services.score_v3 import _RISICO_REDISTRIBUTION_TARGET
 from app.models.area_scan import AreaScan
 from app.models.brk_ownership_record import BrkOwnershipRecord
 from app.models.organization import Organization
 from app.models.parcel_cache import ParcelCache
 from app.models.scan_result import ScanResult
+
+# M053/S12 reserves splitsingsrisico's weight (7) from the risico-100 pool, so the
+# in-breakdown risico factors rescale to 93, not 100. The sibling unit test
+# (test_compute_score_v3_redistribution.py) was updated to this constant in S12;
+# this integration test was missed and is corrected here (M054/S01).
+from app.services.score_v3 import _RISICO_REDISTRIBUTION_TARGET
 
 PARCEL_ID = "NL.IMKAD.TEST.0002"
 
