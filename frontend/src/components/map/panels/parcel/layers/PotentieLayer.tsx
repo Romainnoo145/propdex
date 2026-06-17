@@ -6,6 +6,7 @@ import type { ScanResultItem, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/type
 import { isScoreV3 } from '@/lib/score'
 import { WoonvisiePopup, type WijkPolicy } from '../WoonvisiePopup'
 import { OmgevingsvisiePopup, type GebiedPolicy, type BeleidsVerdict, type Randvoorwaarde } from '../OmgevingsvisiePopup'
+import { GrondprijsPopup } from '../GrondprijsPopup'
 import { FactorCard, GhostCard } from '../FactorCard'
 import { useParcelProjectType } from '@/hooks/useParcelProjectType'
 import { useFactorPins } from '@/hooks/useFactorPins'
@@ -60,7 +61,7 @@ function deriveVerdict(potentieScore: number | null): Verdict {
 /* ── Factor display mapping ───────────────────────────────── */
 
 /** Map from factor key → human-readable card display */
-const FACTOR_LABELS: Record<string, string> = {
+export const FACTOR_LABELS: Record<string, string> = {
   vrije_grond: 'ONDERBENUTTING',
   optoppotentie: 'HEADROOM',
   bestemming: 'BESTEMMING',
@@ -72,9 +73,11 @@ const FACTOR_LABELS: Record<string, string> = {
   capaciteit: 'CAPACITEIT',
   woonvisie_match: 'WOONVISIE',
   beleidsalignement: 'OMGEVINGSVISIE',
+  // M054/S01 grondwaarde_fit — grondprijzenbrief fit
+  grondwaarde_fit: 'GRONDWAARDE',
 }
 
-function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResultItem): { value: string; sub: string } {
+export function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResultItem): { value: string; sub: string } {
   const w = factor.waarde
 
   switch (name) {
@@ -182,6 +185,31 @@ function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResu
       }
       return { value: ba.matched_gebied, sub: verdictLabel[ba.verdict ?? ''] ?? 'Past bij visie' }
     }
+    case 'grondwaarde_fit': {
+      const gf = factor.waarde as {
+        verdict?: string
+        functiecategorie?: string | null
+        prijs_per_m2_min?: number | null
+        prijs_per_m2_max?: number | null
+      } | null
+      if (factor.missing || !gf) return { value: 'GRONDWAARDE', sub: 'Geen grondprijzenbrief' }
+      const min = gf.prijs_per_m2_min
+      const max = gf.prijs_per_m2_max
+      const prijs =
+        min != null
+          ? max != null && max !== min
+            ? `€${Math.round(min)}–${Math.round(max)}/m²`
+            : `€${Math.round(min)}/m²`
+          : null
+      const VERDICT_VALUE: Record<string, string> = {
+        passend: 'PASSEND',
+        context: 'CONTEXT',
+        geen_match: 'GEEN MATCH',
+      }
+      const value = VERDICT_VALUE[gf.verdict ?? ''] ?? 'GRONDWAARDE'
+      const sub = prijs ?? (gf.functiecategorie ? gf.functiecategorie : 'Grondprijsbeleid')
+      return { value, sub }
+    }
     default:
       return { value: '—', sub: '' }
   }
@@ -284,13 +312,31 @@ interface PotentieLayerProps {
 const POTENTIE_KEYS = [
   'vrije_grond', 'optoppotentie', 'bestemming', 'leegstand',
   'funda_frictie', 'perceelgrootte', 'demografie', 'vergunning_succeskans',
-  'capaciteit', 'woonvisie_match', 'beleidsalignement',
+  'capaciteit', 'woonvisie_match', 'beleidsalignement', 'grondwaarde_fit',
 ] as const
+
+/** grondwaarde_fit factor.waarde shape (M054/S01). */
+interface GrondwaardeFitWaarde {
+  verdict: string
+  peiljaar?: number | null
+  grondbeleidstype?: string | null
+  grondproduct?: string | null
+  functiecategorie?: string | null
+  prijs_per_m2_min?: number | null
+  prijs_per_m2_max?: number | null
+  prijsgrondslag?: string | null
+  erfpacht_mogelijk?: boolean | null
+  randvoorwaarden?: Randvoorwaarde[]
+}
+
+/** Verdicts that carry popup content (clickable). */
+const GRONDPRIJS_ACTIVE_VERDICTS = new Set(['passend', 'context'])
 
 export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie, onOpenWoonvisie }: PotentieLayerProps) {
   const [page, setPage] = useState(0)
   const [woonvisieOpen, setWoonvisieOpen] = useState(false)
   const [omgevingsvisieOpen, setOmgevingsvisieOpen] = useState(false)
+  const [grondprijsOpen, setGrondprijsOpen] = useState(false)
   const { data: projectTypeData } = useParcelProjectType(parcel.parcel_id)
   const projectType = projectTypeData?.project_type ?? 'onbepaald'
   const { pins, toggle, isPinned } = useFactorPins('potentie')
@@ -319,6 +365,11 @@ export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie, onOp
     randvoorwaarden?: Randvoorwaarde[]
   } | null
   const hasOmgevingsvisieData = omgevingsvisieWaarde !== null && omgevingsvisieWaarde !== undefined
+
+  const grondprijsFactor = (parcel.score_breakdown as ScoreBreakdownV3 | null)?.['grondwaarde_fit']
+  const grondprijsWaarde = grondprijsFactor?.waarde as GrondwaardeFitWaarde | null
+  const hasGrondprijsData =
+    grondprijsWaarde != null && GRONDPRIJS_ACTIVE_VERDICTS.has(grondprijsWaarde.verdict)
 
   const isV3 = isScoreV3(parcel.score_breakdown)
   const potentieScore = parcel.potentie_score != null
@@ -441,7 +492,9 @@ export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie, onOp
                       ? onOpenWoonvisie ?? (() => setWoonvisieOpen(true))
                       : card.factor_key === 'beleidsalignement' && hasOmgevingsvisieData
                         ? onOpenOmgevingsvisie ?? (() => setOmgevingsvisieOpen(true))
-                        : undefined
+                        : card.factor_key === 'grondwaarde_fit' && hasGrondprijsData
+                          ? () => setGrondprijsOpen(true)
+                          : undefined
                   }
                 />
               )
@@ -475,6 +528,24 @@ export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie, onOp
           project_type={projectType}
           verdict={omgevingsvisieWaarde!.verdict as BeleidsVerdict | undefined}
           randvoorwaarden={omgevingsvisieWaarde?.randvoorwaarden}
+        />
+      )}
+
+      {hasGrondprijsData && (
+        <GrondprijsPopup
+          isOpen={grondprijsOpen}
+          onClose={() => setGrondprijsOpen(false)}
+          gemeente={gemeenteNaam}
+          verdict={grondprijsWaarde!.verdict}
+          grondproduct={grondprijsWaarde!.grondproduct}
+          functiecategorie={grondprijsWaarde!.functiecategorie}
+          prijs_per_m2_min={grondprijsWaarde!.prijs_per_m2_min}
+          prijs_per_m2_max={grondprijsWaarde!.prijs_per_m2_max}
+          prijsgrondslag={grondprijsWaarde!.prijsgrondslag}
+          peiljaar={grondprijsWaarde!.peiljaar}
+          grondbeleidstype={grondprijsWaarde!.grondbeleidstype}
+          erfpacht_mogelijk={grondprijsWaarde!.erfpacht_mogelijk}
+          randvoorwaarden={grondprijsWaarde!.randvoorwaarden}
         />
       )}
     </div>

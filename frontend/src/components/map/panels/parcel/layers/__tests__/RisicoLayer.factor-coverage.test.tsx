@@ -1,21 +1,25 @@
 /**
  * REGRESSION-CRITICAL: pins frontend factor-label coverage for risico factors.
- * Source: backend/app/services/score_v3.py FACTOR_REGISTRY (2026-06-16, post-M053/S12).
- * Parallel backend test: backend/tests/regression/test_score_v3_registry_27_factors.py
+ * Source: backend/app/services/score_v3.py FACTOR_REGISTRY (2026-06-17, post-M054/S01).
+ * Parallel backend test: backend/tests/regression/test_score_v3_registry_28_factors.py
  * (drift-detector — fails FIRST on backend rename, before this test silently rots).
+ * grondwaarde_fit (M054/S01) is a potentie factor — its render path is covered by
+ * the sibling PotentieLayer.factor-coverage.test.tsx; here it only shifts the
+ * potentie slice boundary from 10 to 11.
  * Project convention: pure-logic tests here; React rendering tests via Storybook.
  */
 import { describe, expect, it } from 'vitest'
 import { FACTOR_LABELS, formatFactorValue } from '../RisicoLayer'
 import type { ScoreFactorV3 } from '@/lib/types/scan'
 
-// 27 backend factors:
-//   potentie (10): 8 pre-M047 + woonvisie_match (M047) + beleidsalignement (M053/S01)
+// 28 backend factors:
+//   potentie (11): 8 pre-M047 + woonvisie_match (M047) + beleidsalignement (M053/S01)
+//                  + grondwaarde_fit (M054/S01)
 //   risico (17): 9 pre-M050 risico + 4 env + 3 M050/S03 BRK + splitsingsrisico (M053/S12)
-const KNOWN_27_FACTOR_KEYS = [
+const KNOWN_28_FACTOR_KEYS = [
   'vrije_grond', 'optoppotentie', 'bestemming', 'leegstand', 'funda_frictie',
   'perceelgrootte', 'demografie', 'vergunning_succeskans', 'woonvisie_match',
-  'beleidsalignement',
+  'beleidsalignement', 'grondwaarde_fit',
   'funderingsrisico', 'asbest', 'bodemverontreiniging', 'monument',
   'bestemmingswijziging', 'constructieve_staat', 'juridisch_klimaat',
   'criminaliteit', 'max_hoogte_bereikt', 'natura2000', 'overstromingsrisico',
@@ -35,8 +39,8 @@ const FACTOR_LABELS_RISICO_KEYS = [
   'splitsingsrisico',
 ] as const
 const ENV_PATH_RISICO_KEYS = ['natura2000', 'overstromingsrisico', 'geluid', 'luchtkwaliteit'] as const
-// Potentie is now 10 keys (beleidsalignement added), so risico slice starts at index 10.
-const ALL_RISICO_KEYS = KNOWN_27_FACTOR_KEYS.slice(10)
+// Potentie is now 11 keys (grondwaarde_fit added), so risico slice starts at index 11.
+const ALL_RISICO_KEYS = KNOWN_28_FACTOR_KEYS.slice(11)
 
 const fac = (waarde: unknown, missing = false): ScoreFactorV3 => ({
   waarde, genormaliseerde_score: 0.5, gewicht: 5, bijdrage: 2.5,
@@ -44,8 +48,8 @@ const fac = (waarde: unknown, missing = false): ScoreFactorV3 => ({
 })
 
 describe('RisicoLayer factor-coverage (REGRESSION-CRITICAL)', () => {
-  it('known factor count is 27', () => {
-    expect(KNOWN_27_FACTOR_KEYS.length).toBe(27)
+  it('known factor count is 28', () => {
+    expect(KNOWN_28_FACTOR_KEYS.length).toBe(28)
   })
 
   it('FACTOR_LABELS covers 13 score-card risico keys', () => {
