@@ -2055,7 +2055,7 @@ _GRONDWAARDE_CONTEXT_DAMPING = 0.5
 def score_grondwaarde_fit(
     payload: GrondprijzenPayload | None,
     *,
-    bestemmingen: list | None,
+    bestemmingen: list[Any] | None,
     area_m2: float | None,
 ) -> FactorResult:
     """M054/S01: grondwaarde-fit uit de gemeentelijke grondprijzenbrief.
