@@ -14,6 +14,7 @@ from app.services.score_v3 import FactorResult
 
 if TYPE_CHECKING:
     from app.ai.factors.beleidsalignement import GebiedPolicy, OmgevingsvisiePayload
+    from app.ai.factors.grondwaarde_fit import GrondprijzenPayload
     from app.ai.factors.splitsingsrisico import HuisvestingsverordeningPayload
     from app.ai.factors.woonvisie_match import WijkPolicy, WoonvisiePayload
 
@@ -2030,5 +2031,164 @@ def score_splitsingsrisico(
         lang=(
             "De huisvestingsverordening kent geen opkoopbescherming of voorraad-vergunningstelsel "
             "dat dit perceel raakt."
+        ),
+    )
+
+
+_GRONDWAARDE_BRON = ["Gemeentelijke grondprijzenbrief"]
+
+# Score-base per prijsgrondslag: residueel pricing tracks the development
+# programme (developer captures the upside) → strongest fit; comparatief volgt de
+# markt; vaste prijs laat geen residu-ruimte. M054/S01.
+_PRIJSGRONDSLAG_BASE: dict[str, float] = {
+    "residueel": 0.85,
+    "comparatief": 0.55,
+    "vaste_prijs": 0.40,
+}
+# Preference order when multiple bands match one bestemming: a residual band wins
+# so the verdict reflects the developer-friendly grondslag.
+_PRIJSGRONDSLAG_PREF: dict[str, int] = {"residueel": 0, "comparatief": 1, "vaste_prijs": 2}
+# Context (non-passend) bands are shown but not weight-bearing — dampen the score.
+_GRONDWAARDE_CONTEXT_DAMPING = 0.5
+
+
+def score_grondwaarde_fit(
+    payload: GrondprijzenPayload | None,
+    *,
+    bestemmingen: list | None,
+    area_m2: float | None,
+) -> FactorResult:
+    """M054/S01: grondwaarde-fit uit de gemeentelijke grondprijzenbrief.
+
+    Potentie-factor. Matcht de bestemming van het perceel tegen de prijsbanden
+    (bestemming_trefwoorden) en weegt of de band een residueel-aantrekkelijke
+    grondwaarde toelaat (residuele prijsgrondslag + actief grondbeleid). Cloned
+    style from score_beleidsalignement: weight applied later in compute_score_v3
+    (verdict-gated op 'passend'). Sparse factor P5: weight 0 wanneer geen brief.
+    """
+    if payload is None:
+        return FactorResult(
+            waarde=None,
+            genormaliseerde_score=0.0,
+            gewicht=0,
+            bijdrage=0.0,
+            categorie="potentie",
+            toelichting_kort="Geen grondprijzenbrief beschikbaar voor deze gemeente (factor niet meegewogen).",
+            toelichting_lang=(
+                "Geen gemeentelijke grondprijzenbrief beschikbaar. De factor wordt niet meegewogen."
+            ),
+            data_bronnen=[],
+            missing=True,
+        )
+
+    randvoorwaarden = [r.model_dump(mode="json") for r in payload.randvoorwaarden]
+    parcel_best = _best_bestemming_type({"bestemmingen": bestemmingen or []})
+
+    def _result(
+        *,
+        verdict: str,
+        score: float,
+        band: Any,
+        kort: str,
+        lang: str,
+        missing: bool = False,
+    ) -> FactorResult:
+        return FactorResult(
+            waarde={
+                "verdict": verdict,
+                "peiljaar": payload.peiljaar,
+                "grondbeleidstype": payload.grondbeleidstype,
+                "matched_bestemming": parcel_best,
+                "grondproduct": band.grondproduct if band is not None else None,
+                "functiecategorie": band.functiecategorie if band is not None else None,
+                "prijs_per_m2_min": band.prijs_per_m2_min if band is not None else None,
+                "prijs_per_m2_max": band.prijs_per_m2_max if band is not None else None,
+                "prijsgrondslag": band.prijsgrondslag if band is not None else None,
+                "erfpacht_mogelijk": band.erfpacht_mogelijk if band is not None else None,
+                "matched_band": band.model_dump(mode="json") if band is not None else None,
+                "algemeen_citaat": payload.algemeen_citaat or "",
+                "randvoorwaarden": randvoorwaarden,
+            },
+            genormaliseerde_score=round(score, 4),
+            gewicht=0,
+            bijdrage=0.0,
+            categorie="potentie",
+            toelichting_kort=kort,
+            toelichting_lang=lang + f" (confidence {payload.confidence:.0%})",
+            data_bronnen=list(_GRONDWAARDE_BRON),
+            missing=missing,
+        )
+
+    def _matches(band: Any) -> bool:
+        for tw in band.bestemming_trefwoorden:
+            t = str(tw).strip().lower()
+            if t and (t in parcel_best or parcel_best in t):
+                return True
+        return False
+
+    matching = [b for b in payload.prijsbanden if _matches(b)]
+
+    # 1. Geen band sluit aan op de bestemming → context, niet meegewogen.
+    if not matching:
+        return _result(
+            verdict="geen_match",
+            score=0.0,
+            band=None,
+            kort=f"Geen grondprijsband voor bestemming '{parcel_best}'.",
+            lang=(
+                "Geen grondprijsband in de grondprijzenbrief sluit aan op de bestemming "
+                f"'{parcel_best}' van dit perceel."
+            ),
+        )
+
+    # 2. Kies de meest developer-gunstige band (residueel > comparatief > vaste prijs).
+    band = min(matching, key=lambda b: _PRIJSGRONDSLAG_PREF.get(b.prijsgrondslag, 3))
+    facilitair = payload.grondbeleidstype in ("faciliterend", "passief")
+    residueel = band.prijsgrondslag == "residueel"
+    is_passend = residueel and not facilitair
+
+    raw = _PRIJSGRONDSLAG_BASE.get(band.prijsgrondslag, 0.4)
+    if area_m2 is not None:
+        if area_m2 >= 400:
+            raw += 0.1
+        elif area_m2 < 150:
+            raw -= 0.15
+    raw = max(0.0, min(1.0, raw))
+    if not is_passend:
+        raw *= _GRONDWAARDE_CONTEXT_DAMPING
+    pulled = raw * payload.confidence + 0.5 * (1 - payload.confidence)
+    pulled = max(0.0, min(1.0, pulled))
+
+    product = band.grondproduct
+    jaar = f" {payload.peiljaar}" if payload.peiljaar else ""
+    prijs = ""
+    if band.prijs_per_m2_min is not None:
+        if band.prijs_per_m2_max is not None and band.prijs_per_m2_max != band.prijs_per_m2_min:
+            prijs = f" €{band.prijs_per_m2_min:,.0f}-{band.prijs_per_m2_max:,.0f}/m²".replace(",", ".")
+        else:
+            prijs = f" €{band.prijs_per_m2_min:,.0f}/m²".replace(",", ".")
+
+    if is_passend:
+        return _result(
+            verdict="passend",
+            score=pulled,
+            band=band,
+            kort=f"Residuele grondprijs voor '{product}'{jaar}.",
+            lang=(
+                f"De gemeente prijst grond voor '{product}'{prijs} residueel{jaar}: de "
+                "grondwaarde volgt het ontwikkelprogramma, dus een reële residuele grondwaarde "
+                "is haalbaar bij deze bestemming."
+            ),
+        )
+
+    reden = "faciliterend/passief grondbeleid" if facilitair else f"{band.prijsgrondslag}-prijs (geen residu-ruimte)"
+    return _result(
+        verdict="context",
+        score=pulled,
+        band=band,
+        kort=f"Grondprijsband '{product}' — context ({reden}).",
+        lang=(
+            f"Grondprijsband '{product}'{prijs} sluit aan op de bestemming, maar telt als "
+            f"context: {reden}."
         ),
     )
