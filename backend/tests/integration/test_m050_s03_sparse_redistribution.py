@@ -19,6 +19,11 @@ from shapely.geometry import MultiPolygon, Polygon
 from sqlalchemy import select
 
 from app.core.config import settings
+# M053/S12 reserves splitsingsrisico's weight (7) from the risico-100 pool, so the
+# in-breakdown risico factors rescale to 93, not 100. The sibling unit test
+# (test_compute_score_v3_redistribution.py) was updated to this constant in S12;
+# this integration test was missed and is corrected here (M054/S01).
+from app.services.score_v3 import _RISICO_REDISTRIBUTION_TARGET
 from app.models.area_scan import AreaScan
 from app.models.brk_ownership_record import BrkOwnershipRecord
 from app.models.organization import Organization
@@ -126,8 +131,8 @@ async def test_all_3_brk_missing_rescales_13_existing(
         for v in breakdown.values()
         if v["categorie"] == "risico" and not v["missing"]
     )
-    assert abs(non_missing_risico - 100.0) <= 1.0, (
-        f"non-missing risico gewicht {non_missing_risico} not ≈100"
+    assert abs(non_missing_risico - _RISICO_REDISTRIBUTION_TARGET) <= 1.0, (
+        f"non-missing risico gewicht {non_missing_risico} not ≈{_RISICO_REDISTRIBUTION_TARGET}"
     )
 
 
@@ -167,7 +172,7 @@ async def test_mixed_sparse_brk_plus_funderingsrisico_missing(
     )
     # Either ≈100 (if any non-missing risico survives the missing-data strategy)
     # or 0 (degenerate all-missing case — F8 falls back to no rescale).
-    assert non_missing_risico == 0 or abs(non_missing_risico - 100.0) <= 1.0
+    assert non_missing_risico == 0 or abs(non_missing_risico - _RISICO_REDISTRIBUTION_TARGET) <= 1.0
 
 
 @pytest.mark.asyncio
@@ -213,10 +218,10 @@ async def test_brk_present_no_redistribution_existing_weights_unchanged(
     assert breakdown["eigendoms_complexiteit"]["missing"] is False
     assert breakdown["koopwaarde_trend"]["missing"] is False
 
-    # Sum of non-missing risico gewicht ≈ 100 (no D3 over-amplification).
+    # Sum of non-missing risico gewicht ≈ 93 (splitsingsrisico reserved; no D3 over-amplification).
     non_missing_risico = sum(
         v["gewicht"]
         for v in breakdown.values()
         if v["categorie"] == "risico" and not v["missing"]
     )
-    assert abs(non_missing_risico - 100.0) <= 1.0
+    assert abs(non_missing_risico - _RISICO_REDISTRIBUTION_TARGET) <= 1.0
