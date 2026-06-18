@@ -182,7 +182,7 @@ async def test_parkeerdruk_extracted_when_doc_exists(
         organization_id=org.id,
         entity_type="gemeente",
         entity_code="0983",
-        source_key="parkeernormen",
+        source_key="parkeerbeleid",
         filename="venlo-nota-parkeernormen-2026.pdf",
         content_type="application/pdf",
         file_data=b"%PDF-1.4\n%fake\n%%EOF",

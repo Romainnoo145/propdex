@@ -132,15 +132,16 @@ async def get_parkeernormen_document(
 ) -> PolicyDocument | None:
     """Zoek de meest recente actieve Nota parkeernormen op voor een gemeente (M054/S02).
 
-    source_key="parkeernormen" matcht data_source_keys.py (voedt_factor=parkeerdruk),
-    zodat toekomstige jaarversies in dezelfde cascade landen.
+    source_key="parkeerbeleid" matcht de bestaande catalogus-key (data_source_keys.py
+    voedt_factor=parkeerdruk), zodat toekomstige jaarversies in dezelfde cascade landen.
+    De canonieke key is parkeerbeleid; er is geen aparte 'parkeernormen'-key.
     """
     stmt = (
         select(PolicyDocument)
         .where(
             PolicyDocument.entity_type == "gemeente",
             PolicyDocument.entity_code == gemeente_code,
-            PolicyDocument.source_key == "parkeernormen",
+            PolicyDocument.source_key == "parkeerbeleid",
             or_(
                 PolicyDocument.is_global.is_(True),
                 PolicyDocument.organization_id == organization_id,

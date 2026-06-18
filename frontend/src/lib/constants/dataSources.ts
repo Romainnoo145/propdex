@@ -80,14 +80,6 @@ export const GEMEENTE_DATA_SOURCES: DataSourceEntry[] = [
     description: "Parkeernormen per woningtype en stedelijkheidszone.",
   },
   {
-    key: "parkeernormen",
-    label: "Nota parkeernormen",
-    category: "ruimtelijk",
-    status: "live",
-    description:
-      "Gemeentelijke parkeernorm-systematiek: auto-/fietsnormen per functie en gebied.",
-  },
-  {
     key: "huisvestingsverordening",
     label: "Huisvestingsverordening",
     category: "ruimtelijk",

@@ -3,6 +3,8 @@
 import pytest
 
 from app.services.score_v3 import (
+    CASCADE_GATED_FACTORS,
+    FACTOR_REGISTRY,
     compute_score_v3,
 )
 from app.services.score_v3_factors import (
@@ -26,6 +28,16 @@ from app.services.score_v3_factors import (
     score_perceelgrootte,
     score_vergunning_succeskans,
     score_vrije_grond,
+)
+
+# In-breakdown potentie total: the potentie cascade factors (woonvisie_match +
+# beleidsalignement) are appended AFTER redistribution as weight-0 missing factors,
+# so a redistributed potentie breakdown must sum EXACTLY to the non-cascade potentie
+# default-weight total — derived from the registry so a wrong sum still fails the gate.
+_POTENTIE_INBREAKDOWN_TOTAL = sum(
+    e.default_weight
+    for k, e in FACTOR_REGISTRY.items()
+    if e.category == "potentie" and k not in CASCADE_GATED_FACTORS
 )
 
 # ---------------------------------------------------------------------------
@@ -677,12 +689,14 @@ def test_total_weights_preserved_after_redistribution():
     missing_count = sum(1 for v in potentie_factors.values() if v.missing)
 
     if missing_count / len(potentie_factors) > 0.2:
-        # Present potentie factors absorb the redistributed missing weight up to the
-        # in-breakdown core total. Since M053/S01 the potentie cascade factors
-        # (woonvisie_match + beleidsalignement) are reserved from the 100-pool and
-        # appended as missing here, so the redistributed core never inflates past 100.
+        # Redistribution must PRESERVE the in-breakdown potentie total exactly. The
+        # potentie cascade factors (woonvisie_match + beleidsalignement) are reserved
+        # from the 100-pool and appended after redistribution as weight-0 missing
+        # factors, so the preserved total is the non-cascade potentie sum (not 100).
+        # Strict equality (abs=1 only for largest-remainder rounding) so a wrong sum
+        # is caught by the gate.
         total_weight = sum(v.gewicht for v in potentie_factors.values())
-        assert 0 < total_weight <= 100 + 1e-6
+        assert total_weight == pytest.approx(_POTENTIE_INBREAKDOWN_TOTAL, abs=1)
 
 
 # ---------------------------------------------------------------------------

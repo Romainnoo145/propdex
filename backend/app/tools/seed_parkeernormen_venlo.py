@@ -6,8 +6,9 @@ existing Venlo woonvisie / huisvestingsverordening / grondprijzen docs). The sha
 extractor handles PDFs natively. Stored on the Hauzer demo org (info@hauzer.nl) as a
 vendor-global doc so cascade enrichment can extract parkeerdruk for Venlo parcels.
 
-The source_key matches data_source_keys.py (parkeernormen → voedt_factor parkeerdruk)
-so future jaarversies flow into the same cascade.
+The source_key is the canonical "parkeerbeleid" (data_source_keys.py → voedt_factor
+parkeerdruk) so future jaarversies flow into the same cascade. There is no separate
+"parkeernormen" source-key — the Nota parkeernormen is ingested under parkeerbeleid.
 
 Usage:
     cd backend
@@ -31,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 VENLO_GM = "GM0983"
 HAUZER_EMAIL = "info@hauzer.nl"
-SOURCE_KEY = "parkeernormen"
+SOURCE_KEY = "parkeerbeleid"
 DEFAULT_PDF = (
     "/home/klarifai/Documents/Propdex/Nota parkeernormen Venlo 2026.pdf"
 )
