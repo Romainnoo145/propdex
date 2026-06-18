@@ -10,6 +10,7 @@ import { useFactorPins } from '@/hooks/useFactorPins'
 import { FACTOR_BRON, buildPages } from '@/lib/factor-groups'
 import type { PageCard } from '@/lib/factor-groups'
 import { HuisvestingsverordeningPopup } from '../HuisvestingsverordeningPopup'
+import { ParkeernormenPopup, type Correctie } from '../ParkeernormenPopup'
 import type { Randvoorwaarde } from '../OmgevingsvisiePopup'
 
 /* ── Verdict derivation ───────────────────────────────────── */
@@ -75,6 +76,8 @@ export const FACTOR_LABELS: Record<string, string> = {
   koopwaarde_trend: 'KOOPWAARDE',
   // M053/S12 splitsingsrisico — opkoopbescherming / woonruimtevoorraad
   splitsingsrisico: 'OPKOOP',
+  // M054/S02 parkeerdruk — gemeentelijke Nota parkeernormen
+  parkeerdruk: 'PARKEERDRUK',
 }
 
 function riskLevel(score: number): string {
@@ -229,6 +232,31 @@ export function formatFactorValue(name: string, factor: ScoreFactorV3): { value:
           return { value: '—', sub: 'Geen regeling' }
       }
     }
+    // M054/S02 parkeerdruk — Nota parkeernormen verdict
+    case 'parkeerdruk': {
+      if (factor.missing) return { value: '—', sub: 'Geen parkeernorm' }
+      const d = typeof w === 'object' && w !== null ? (w as Record<string, unknown>) : {}
+      const verdict = String(d.verdict ?? '')
+      const gebied = typeof d.gebied === 'string' ? d.gebied : null
+      const gebiedSub = gebied
+        ? ({
+            centrum: 'Centrum',
+            schil_centrum: 'Centrumschil',
+            rest_bebouwde_kom: 'Bebouwde kom',
+            buitengebied: 'Buitengebied',
+          }[gebied] ?? gebied)
+        : null
+      switch (verdict) {
+        case 'verhoogd':
+          return { value: 'VERHOOGD', sub: gebiedSub || 'Zware parkeereis' }
+        case 'laag':
+          return { value: 'LAAG', sub: gebiedSub || 'Beheersbaar' }
+        case 'geen_match':
+          return { value: 'N.V.T.', sub: 'Geen normband' }
+        default:
+          return { value: '—', sub: 'Geen parkeernorm' }
+      }
+    }
     default:
       return { value: '—', sub: '' }
   }
@@ -370,7 +398,7 @@ const RISICO_KEYS = [
   'funderingsrisico', 'asbest', 'bodemverontreiniging',
   'monument', 'bestemmingswijziging', 'constructieve_staat',
   'juridisch_klimaat', 'criminaliteit', 'max_hoogte_bereikt',
-  'splitsingsrisico',
+  'splitsingsrisico', 'parkeerdruk',
 ] as const
 
 /** splitsingsrisico factor.waarde shape (M053/S12). */
@@ -389,6 +417,28 @@ const SPLITS_ACTIVE_VERDICTS = new Set([
   'boven_woz_grens', 'buiten_beschermd_gebied',
 ])
 
+/** parkeerdruk factor.waarde shape (M054/S02). */
+interface ParkeerdrukWaarde {
+  verdict: string
+  peiljaar?: number | null
+  functie?: string | null
+  functiecategorie?: string | null
+  gebied?: string | null
+  auto_norm_per_eenheid?: number | null
+  eenheid?: string | null
+  fiets_norm_per_eenheid?: number | null
+  parkeerregulering_van_toepassing?: boolean | null
+  openbare_ruimte_drempel_pct?: number | null
+  centrum_uitgesloten?: boolean | null
+  fietsnorm_harde_eis?: boolean | null
+  nul_norm_sociale_huur_mogelijk?: boolean | null
+  mobiliteitscorrecties?: Correctie[]
+  randvoorwaarden?: Randvoorwaarde[]
+}
+
+/** Verdicts that carry popup content (clickable). */
+const PARKEER_ACTIVE_VERDICTS = new Set(['verhoogd', 'laag'])
+
 interface RisicoLayerProps {
   parcel: ScanResultItem
 }
@@ -396,12 +446,19 @@ interface RisicoLayerProps {
 export function RisicoLayer({ parcel }: RisicoLayerProps) {
   const [page, setPage] = useState(0)
   const [splitsOpen, setSplitsOpen] = useState(false)
+  const [parkeerOpen, setParkeerOpen] = useState(false)
 
   // M053/S12 splitsingsrisico — opkoopbescherming popup data
   const splitsFactor = (parcel.score_breakdown as ScoreBreakdownV3 | null)?.['splitsingsrisico']
   const splitsWaarde = splitsFactor?.waarde as SplitsingsrisicoWaarde | null
   const hasSplitsData =
     splitsWaarde != null && SPLITS_ACTIVE_VERDICTS.has(splitsWaarde.verdict)
+
+  // M054/S02 parkeerdruk — Nota parkeernormen popup data
+  const parkeerFactor = (parcel.score_breakdown as ScoreBreakdownV3 | null)?.['parkeerdruk']
+  const parkeerWaarde = parkeerFactor?.waarde as ParkeerdrukWaarde | null
+  const hasParkeerData =
+    parkeerWaarde != null && PARKEER_ACTIVE_VERDICTS.has(parkeerWaarde.verdict)
 
   const risicoScore = parcel.risico_score != null ? Math.round(parcel.risico_score) : null
   const isV3 = isScoreV3(parcel.score_breakdown)
@@ -524,7 +581,9 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
                   onCardClick={
                     card.factor_key === 'splitsingsrisico' && hasSplitsData
                       ? () => setSplitsOpen(true)
-                      : undefined
+                      : card.factor_key === 'parkeerdruk' && hasParkeerData
+                        ? () => setParkeerOpen(true)
+                        : undefined
                   }
                 />
               )
@@ -543,6 +602,28 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
           duur_jaren={splitsWaarde!.duur_jaren}
           vergunningplichten={splitsWaarde!.vergunningplichten}
           randvoorwaarden={splitsWaarde!.randvoorwaarden}
+        />
+      )}
+
+      {hasParkeerData && (
+        <ParkeernormenPopup
+          isOpen={parkeerOpen}
+          onClose={() => setParkeerOpen(false)}
+          verdict={parkeerWaarde!.verdict}
+          peiljaar={parkeerWaarde!.peiljaar}
+          functie={parkeerWaarde!.functie}
+          functiecategorie={parkeerWaarde!.functiecategorie}
+          gebied={parkeerWaarde!.gebied}
+          auto_norm_per_eenheid={parkeerWaarde!.auto_norm_per_eenheid}
+          eenheid={parkeerWaarde!.eenheid}
+          fiets_norm_per_eenheid={parkeerWaarde!.fiets_norm_per_eenheid}
+          parkeerregulering_van_toepassing={parkeerWaarde!.parkeerregulering_van_toepassing}
+          openbare_ruimte_drempel_pct={parkeerWaarde!.openbare_ruimte_drempel_pct}
+          centrum_uitgesloten={parkeerWaarde!.centrum_uitgesloten}
+          fietsnorm_harde_eis={parkeerWaarde!.fietsnorm_harde_eis}
+          nul_norm_sociale_huur_mogelijk={parkeerWaarde!.nul_norm_sociale_huur_mogelijk}
+          mobiliteitscorrecties={parkeerWaarde!.mobiliteitscorrecties}
+          randvoorwaarden={parkeerWaarde!.randvoorwaarden}
         />
       )}
     </div>

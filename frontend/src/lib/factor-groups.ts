@@ -69,6 +69,7 @@ export const FACTOR_BRON: Record<string, Bron> = {
   criminaliteit: 'markt', // Open Question 4 resolution — avoids expanding enum to 'sociaal'
   max_hoogte_bereikt: 'fysiek',
   splitsingsrisico: 'gemeente_beleid', // M053/S12 opkoopbescherming (huisvestingsverordening)
+  parkeerdruk: 'gemeente_beleid', // M054/S02 parkeerdruk (Nota parkeernormen)
   natura2000: 'klimaat',
   overstromingsrisico: 'klimaat',
   geluid: 'klimaat',

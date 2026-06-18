@@ -1,16 +1,17 @@
-"""REGRESSION-CRITICAL: pins backend FACTOR_REGISTRY shape (27 factors post-M053/S12).
+"""REGRESSION-CRITICAL: pins backend FACTOR_REGISTRY shape (28 factors post-M054/S02).
 
 Drift-detector — if a future slice renames or removes a factor, this test fails
 BEFORE the parallel frontend test
 (``frontend/src/components/map/panels/parcel/layers/__tests__/RisicoLayer.factor-coverage.test.tsx``)
 silently rots. Backend test is the canary: any rename here breaks CI immediately,
-forcing the frontend KNOWN_25_FACTOR_KEYS list + FACTOR_LABELS to be updated
+forcing the frontend KNOWN_28_FACTOR_KEYS list + FACTOR_LABELS to be updated
 in lockstep before merge.
 
 Source of truth: ``backend/app/services/score_v3.py`` FACTOR_REGISTRY
-(10 potentie + 13 pre-M050 risico + 3 M050/S03 BRK risico + 1 M053/S12 risico).
+(10 potentie + 13 pre-M050 risico + 3 M050/S03 BRK risico + 2 cascade risico).
 beleidsalignement added in M053/S01 (potentie cascade — Omgevingsvisie).
 splitsingsrisico added in M053/S12 (risico cascade — Huisvestingsverordening).
+parkeerdruk added in M054/S02 (risico cascade — Nota parkeernormen).
 
 Iron-rule pattern (per MEMORY.md ``feedback_iron_rule_regression_pattern``):
 encode 'X must not change' as a regression test, never as a comment.
@@ -21,7 +22,7 @@ from app.services.score_v3 import FACTOR_REGISTRY
 
 # Source of truth — keep in sync with the parallel frontend list:
 #   frontend/src/components/map/panels/parcel/layers/__tests__/RisicoLayer.factor-coverage.test.tsx
-KNOWN_27_FACTOR_KEYS: frozenset[str] = frozenset({
+KNOWN_28_FACTOR_KEYS: frozenset[str] = frozenset({
     # Potentie (10)
     "vrije_grond", "optoppotentie", "bestemming", "leegstand", "funda_frictie",
     "perceelgrootte", "demografie", "vergunning_succeskans", "woonvisie_match",
@@ -35,6 +36,8 @@ KNOWN_27_FACTOR_KEYS: frozenset[str] = frozenset({
     "hypotheek_risico", "eigendoms_complexiteit", "koopwaarde_trend",
     # Risico — M053/S12 (1)
     "splitsingsrisico",
+    # Risico — M054/S02 (1)
+    "parkeerdruk",
 })
 
 BRK_FACTOR_KEYS: frozenset[str] = frozenset({
@@ -42,24 +45,24 @@ BRK_FACTOR_KEYS: frozenset[str] = frozenset({
 })
 
 
-def test_registry_count_is_27() -> None:
-    """FACTOR_REGISTRY must contain exactly 27 factors."""
-    assert len(FACTOR_REGISTRY) == 27, (
-        f"Expected 27 factors in FACTOR_REGISTRY, got {len(FACTOR_REGISTRY)}. "
-        "If you added/removed a factor, update KNOWN_27_FACTOR_KEYS in both "
+def test_registry_count_is_28() -> None:
+    """FACTOR_REGISTRY must contain exactly 28 factors."""
+    assert len(FACTOR_REGISTRY) == 28, (
+        f"Expected 28 factors in FACTOR_REGISTRY, got {len(FACTOR_REGISTRY)}. "
+        "If you added/removed a factor, update KNOWN_28_FACTOR_KEYS in both "
         "this file AND the parallel frontend test."
     )
 
 
 def test_registry_keys_match_known_set() -> None:
-    """FACTOR_REGISTRY keys must equal KNOWN_27_FACTOR_KEYS exactly."""
+    """FACTOR_REGISTRY keys must equal KNOWN_28_FACTOR_KEYS exactly."""
     actual = set(FACTOR_REGISTRY.keys())
-    expected = set(KNOWN_27_FACTOR_KEYS)
+    expected = set(KNOWN_28_FACTOR_KEYS)
     missing = expected - actual
     extra = actual - expected
     assert actual == expected, (
         f"FACTOR_REGISTRY key drift detected. Missing: {missing}; "
-        f"Extra (renamed?): {extra}. Update KNOWN_27_FACTOR_KEYS in both "
+        f"Extra (renamed?): {extra}. Update KNOWN_28_FACTOR_KEYS in both "
         "this file AND the parallel frontend test."
     )
 
@@ -85,6 +88,12 @@ def test_brk_factors_present() -> None:
         assert FACTOR_REGISTRY[key].category == "risico", (
             f"BRK factor {key!r} must be category 'risico'"
         )
+
+
+def test_parkeerdruk_present_as_risico() -> None:
+    """Drift-canary: M054/S02 parkeerdruk must be present as a risico factor."""
+    assert "parkeerdruk" in FACTOR_REGISTRY, "parkeerdruk missing from FACTOR_REGISTRY"
+    assert FACTOR_REGISTRY["parkeerdruk"].category == "risico"
 
 
 def test_potentie_weights_sum_100() -> None:

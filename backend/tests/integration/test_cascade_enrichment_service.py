@@ -164,6 +164,80 @@ async def test_splitsingsrisico_extracted_when_doc_exists(
 
 
 @pytest.mark.asyncio
+async def test_parkeerdruk_extracted_when_doc_exists(
+    test_db, create_test_user, monkeypatch
+):
+    """get_cascade_payloads MOET de Nota parkeernormen extraheren en onder key
+    'parkeerdruk' teruggeven, met DOCUMENT_SENTINEL als parcel_id (M054/S02).
+    """
+    from app.ai.factors.parkeerdruk import ParkeernormenPayload
+    from app.models.policy_document import PolicyDocument
+
+    user, org = await create_test_user(
+        email="pk-user@example.com", org_name="PK Org"
+    )
+
+    doc = PolicyDocument(
+        id=uuid.uuid4(),
+        organization_id=org.id,
+        entity_type="gemeente",
+        entity_code="0983",
+        source_key="parkeerbeleid",
+        filename="venlo-nota-parkeernormen-2026.pdf",
+        content_type="application/pdf",
+        file_data=b"%PDF-1.4\n%fake\n%%EOF",
+        file_size=22,
+        uploaded_by_user_id=user.id,
+    )
+    test_db.add(doc)
+    await test_db.commit()
+    await test_db.refresh(doc)
+
+    captured: dict = {}
+
+    async def fake_extract_factor(db, *, factor_def, parcel_id, policy_document, **kwargs):
+        captured[factor_def.factor_id] = {
+            "parcel_id": parcel_id,
+            "policy_document_id": policy_document.id,
+        }
+        if factor_def.factor_id == "parkeerdruk":
+            payload: object = ParkeernormenPayload(
+                peiljaar=2026,
+                fietsnorm_harde_eis=True,
+                confidence=0.8,
+            )
+        else:
+            payload = ParkeernormenPayload(confidence=0.0)
+        return ExtractedFactor(
+            factor_id=factor_def.factor_id,
+            parcel_id=parcel_id,
+            policy_document_id=str(policy_document.id),
+            payload=payload,
+            extracted_at=datetime.utcnow(),
+            from_cache=False,
+            schema_version=6,
+        )
+
+    monkeypatch.setattr(cascade_enrichment_service, "extract_factor", fake_extract_factor)
+
+    real_parcel_id = "NL.IMBAG.Pand.0983100000000091"
+    payloads = await cascade_enrichment_service.get_cascade_payloads(
+        test_db,
+        parcel_id=real_parcel_id,
+        gemeente_code="0983",
+        organization_id=org.id,
+    )
+
+    assert "parkeerdruk" in payloads
+    assert isinstance(payloads["parkeerdruk"], ParkeernormenPayload)
+    assert payloads["parkeerdruk"].peiljaar == 2026
+    assert payloads["parkeerdruk"].fietsnorm_harde_eis is True
+    # extract_factor kreeg de sentinel, niet het echte parcel_id
+    assert captured["parkeerdruk"]["parcel_id"] == DOCUMENT_SENTINEL
+    assert captured["parkeerdruk"]["policy_document_id"] == doc.id
+
+
+@pytest.mark.asyncio
 async def test_get_woonvisie_document_finds_global_doc_from_other_org(
     test_db, create_test_user
 ):
