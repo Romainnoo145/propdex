@@ -190,13 +190,16 @@ factors). Every projecttype potentie sum stays 100.
   100 + sum-guard all projecttypes.
 - Update `test_registry_beleidsalignement_rebalance.py::test_rebalanced_weights_exact`
   to the new pinned values, with justification.
-- Rename + update `tests/regression/test_score_v3_registry_27_factors.py` →
-  `..._28_factors.py` (repo rename convention) and the redistribution
-  breakdown-size test (27 → 28).
+- Rename + update `tests/regression/test_score_v3_registry_28_factors.py` →
+  `..._29_factors.py` (repo rename convention) and the redistribution
+  breakdown-size test (28 → 29). NB: dit landt boven op de reeds-gemergede
+  parkeerdruk-factor (M054/S02), die main al van 27 → 28 bracht; grondwaarde_fit
+  brengt de telling vervolgens 28 → 29.
 - `test_cascade_enrichment_service.py` — `grondwaarde_fit` extraction case
   (mirror `test_splitsingsrisico_extracted_when_doc_exists`).
 - Frontend: `PotentieLayer.factor-coverage.test.tsx` + `GrondprijsPopup.test.tsx`;
-  update `RisicoLayer.factor-coverage.test.tsx` 27 → 28 (potentie slice 10 → 11).
+  update `RisicoLayer.factor-coverage.test.tsx` 28 → 29 (`KNOWN_29` / `toBe(29)`,
+  potentie slice 10 → 11).
 
 `test_woonvisie_unchanged.py` keeps passing untouched — the rebalance does not
 change vrije_grond / optoppotentie / woonvisie_match.
