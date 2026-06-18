@@ -44,9 +44,12 @@ reference for the seed-PDF + popup plumbing.
   target — NO hand-edited weight table; pin the resulting numbers in tests.
 - `get_parkeernormen_document` + `parkeerdruk` block in `get_cascade_payloads`
   (cascade_enrichment_service) + the `_CASCADE_SOURCES` row in `cascade_scoring.py`.
-- `data_source_keys.py` / `source_keys.py`: add `source_key="parkeernormen"`
-  → `voedt_factor=("parkeerdruk",)` if not already present.
-- `seed_parkeernormen_venlo.py` (source_key=`parkeernormen`, entity_code `GM0983`,
+- Source-key: parkeerdruk runs via the **existing, canonical `parkeerbeleid`**
+  source-key (`data_source_keys.py` / `source_keys.py` already map
+  `parkeerbeleid` → `voedt_factor=("parkeerdruk",)`). NO separate `parkeernormen`
+  source-key is added — the Nota parkeernormen is ingested under `parkeerbeleid`.
+  (Tech-lead override of the original spec draft, 2026-06-18.)
+- `seed_parkeernormen_venlo.py` (source_key=`parkeerbeleid`, entity_code `GM0983`,
   Hauzer org, vendor-global, stores raw PDF bytes), cloned from
   `seed_grondprijzen_venlo.py`. Default PDF path:
   `/home/klarifai/Documents/Propdex/Nota parkeernormen Venlo 2026.pdf`.
@@ -164,11 +167,12 @@ de rebalance-test** (zoals splitsingsrisico deed) — niet zelf een tabel verzin
 ## Cascade wiring
 
 `get_parkeernormen_document` (clone of `get_grondprijs_document`,
-`source_key="parkeernormen"`); een `parkeerdruk` try-block in
+`source_key="parkeerbeleid"`); een `parkeerdruk` try-block in
 `get_cascade_payloads`; en een `("parkeerdruk", get_parkeernormen_document,
-ParkeernormenPayload)` rij in `cascade_scoring._CASCADE_SOURCES`. Voeg de
-`parkeernormen → voedt_factor=("parkeerdruk",)` declaratie + source-key toe als die
-nog niet bestaan.
+ParkeernormenPayload)` rij in `cascade_scoring._CASCADE_SOURCES`. De
+`parkeerbeleid → voedt_factor=("parkeerdruk",)` declaratie bestaat al in
+`data_source_keys.py` / `source_keys.py` (canonieke key); er wordt geen nieuwe
+`parkeernormen`-source-key toegevoegd.
 
 ## Frontend
 
