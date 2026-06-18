@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.factor_extraction_schemas import SCHEMA_VERSION
 from app.ai.factors.beleidsalignement import OmgevingsvisiePayload
+from app.ai.factors.parkeerdruk import ParkeernormenPayload
 from app.ai.factors.splitsingsrisico import HuisvestingsverordeningPayload
 from app.ai.factors.woonvisie_match import WoonvisiePayload
 from app.models.area_scan import AreaScan
@@ -29,6 +30,7 @@ from app.models.scan_result import ScanResult
 from app.services.cascade_enrichment_service import (
     get_huisvestingsverordening_document,
     get_omgevingsvisie_document,
+    get_parkeernormen_document,
     get_woonvisie_document,
 )
 from app.services.score_v3 import compute_score_v3
@@ -39,6 +41,7 @@ _CASCADE_SOURCES: tuple[tuple[str, Any, type[Any]], ...] = (
     ("woonvisie_match", get_woonvisie_document, WoonvisiePayload),
     ("beleidsalignement", get_omgevingsvisie_document, OmgevingsvisiePayload),
     ("splitsingsrisico", get_huisvestingsverordening_document, HuisvestingsverordeningPayload),
+    ("parkeerdruk", get_parkeernormen_document, ParkeernormenPayload),
 )
 
 

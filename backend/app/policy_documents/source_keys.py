@@ -143,6 +143,7 @@ GEMEENTE_DATA_SOURCES: list[SourceKeyEntry] = [
     SourceKeyEntry("welstandsnota", "Welstandsnota", "ruimtelijk", "roadmap"),
     SourceKeyEntry("woonvisie", "Woonvisie", "ruimtelijk", "roadmap"),
     SourceKeyEntry("parkeerbeleid", "Parkeerbeleid", "ruimtelijk", "roadmap"),
+    SourceKeyEntry("parkeernormen", "Nota parkeernormen", "ruimtelijk", "live"),
     SourceKeyEntry(
         "huisvestingsverordening",
         "Huisvestingsverordening",

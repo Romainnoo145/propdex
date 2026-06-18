@@ -81,6 +81,13 @@ _TYPE_A_ENTRIES: list[DataSourceKeyEntry] = [
         voedt_factor=("parkeerdruk",),
     ),
     DataSourceKeyEntry(
+        key="parkeernormen",
+        label_nl="Nota parkeernormen",
+        source_type="A",
+        description="Gemeentelijke parkeernorm-systematiek: auto-/fietsnormen per functie en gebied.",
+        voedt_factor=("parkeerdruk",),
+    ),
+    DataSourceKeyEntry(
         key="duurzaamheidsbeleid",
         label_nl="Duurzaamheidsbeleid",
         source_type="A",
