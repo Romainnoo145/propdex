@@ -251,15 +251,19 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         data_source="Gemeentelijke grondprijzenbrief (LLM-extracted)",
         bron="gemeente_beleid",
     ),
-    # --- RISICO (17 factors, sum default_weight = 100) ---
+    # --- RISICO (18 factors, sum default_weight = 100) ---
     # M050/S03 D2: 13 existing factors rebalanced via _rebalance_risico_weights
     # (largest-remainder, target_sum=80) freeing 20 weight-units for 3 new BRK factors.
     # M053/S12: 16 existing factors re-rebalanced (target_sum=93) freeing 7 units
     # for splitsingsrisico (gemeente_beleid). Pre-M050 sub-sum=75, BRK sub-sum=18.
+    # M054/S02: 16 core factors re-rebalanced (largest-remainder, target_sum=86)
+    # freeing 7 more units for parkeerdruk (gemeente_beleid). Both cascade-gated
+    # risico factors (splitsingsrisico 7 + parkeerdruk 7 = 14) are reserved from
+    # the risico-100 pool, so the in-breakdown core sums to 86.
     "funderingsrisico": FactorRegistryEntry(
         id="funderingsrisico",
         category="risico",
-        default_weight=12,  # was 16 (M050/S03), 13->12 rebalanced by M053/S12
+        default_weight=11,  # 16 (M050/S03) -> 12 (M053/S12) -> 11 (M054/S02)
         weight_by_projecttype=None,
         data_source="PDOK Funderingsrisicogebieden + BAG",
         bron="fysiek",
@@ -267,7 +271,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "asbest": FactorRegistryEntry(
         id="asbest",
         category="risico",
-        default_weight=6,  # was 7, rebalanced by M050/S03 D2
+        default_weight=5,  # 7 (M050/S03) -> 6 -> 5 (M054/S02)
         weight_by_projecttype=None,
         data_source="BAG",
         bron="fysiek",
@@ -275,7 +279,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "bodemverontreiniging": FactorRegistryEntry(
         id="bodemverontreiniging",
         category="risico",
-        default_weight=6,  # was 8, rebalanced by M050/S03 D2
+        default_weight=5,  # 8 (M050/S03) -> 6 -> 5 (M054/S02)
         weight_by_projecttype=None,
         data_source="Bodemloket",
         bron="fysiek",
@@ -291,7 +295,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "bestemmingswijziging": FactorRegistryEntry(
         id="bestemmingswijziging",
         category="risico",
-        default_weight=6,  # was 9 (M050/S03), 7->6 rebalanced by M053/S12
+        default_weight=5,  # 9 (M050/S03) -> 6 (M053/S12) -> 5 (M054/S02)
         weight_by_projecttype=None,
         data_source="Bestemmingsplan / Ruimtelijkeplannen.nl",
         bron="planologisch",
@@ -307,7 +311,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "juridisch_klimaat": FactorRegistryEntry(
         id="juridisch_klimaat",
         category="risico",
-        default_weight=6,  # was 9 (M050/S03), 7->6 rebalanced by M053/S12
+        default_weight=5,  # 9 (M050/S03) -> 6 (M053/S12) -> 5 (M054/S02)
         weight_by_projecttype=None,
         data_source="Rechtspraak.nl",
         bron="juridisch",
@@ -339,7 +343,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "overstromingsrisico": FactorRegistryEntry(
         id="overstromingsrisico",
         category="risico",
-        default_weight=5,  # was 7, rebalanced by M050/S03 D2
+        default_weight=4,  # 7 (M050/S03) -> 5 -> 4 (M054/S02)
         weight_by_projecttype=None,
         data_source="Rijkswaterstaat Overstromingen WMS",
         bron="klimaat",
@@ -364,7 +368,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "hypotheek_risico": FactorRegistryEntry(
         id="hypotheek_risico",
         category="risico",
-        default_weight=9,  # was 10, 10->9 rebalanced by M053/S12
+        default_weight=8,  # 10 -> 9 (M053/S12) -> 8 (M054/S02)
         weight_by_projecttype=None,
         data_source="BRK Eigendom (Kadaster)",
         bron="brk",
@@ -392,6 +396,15 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=7,
         weight_by_projecttype=None,
         data_source="Gemeentelijke huisvestingsverordening (LLM-extracted)",
+        bron="gemeente_beleid",
+    ),
+    # --- M054/S02 parkeerdruk (risico cascade — Nota parkeernormen) ---
+    "parkeerdruk": FactorRegistryEntry(
+        id="parkeerdruk",
+        category="risico",
+        default_weight=7,
+        weight_by_projecttype=None,  # constant — projecttype-fit lives in the score, not the weight
+        data_source="Gemeentelijke Nota parkeernormen (LLM-extracted)",
         bron="gemeente_beleid",
     ),
 }
@@ -479,20 +492,29 @@ DEFAULT_WEIGHTS: dict[str, Any] = {
 # verdict 'kansrijk'; splitsingsrisico = weight only when the regeling actually touches
 # this parcel — van_toepassing / mogelijk_van_toepassing / vergunningstelsel_voorraad;
 # grondwaarde_fit = weight only when verdict 'passend' — residueel grondbeleid dat aansluit
-# op de bestemming). No weight path — custom-weight overrides (_apply_custom_weights) nor
-# the rescore_weights recompute — may override the verdict gate for these.
+# op de bestemming; parkeerdruk = weight only when verdict 'verhoogd' — een reëel
+# parkeer-ontwikkelrisico). No weight path — custom-weight overrides (_apply_custom_weights)
+# nor the rescore_weights recompute — may override the verdict gate for these.
 CASCADE_GATED_FACTORS: frozenset[str] = frozenset(
-    {"woonvisie_match", "beleidsalignement", "splitsingsrisico", "grondwaarde_fit"}
+    {
+        "woonvisie_match",
+        "beleidsalignement",
+        "splitsingsrisico",
+        "grondwaarde_fit",
+        "parkeerdruk",
+    }
 )
 
 # Risico cascade factors are appended AFTER redistribution (verdict-gated), so their
 # default_weight is reserved from the risico-100 pool. The in-breakdown risico factors
 # (the ones D3/missing-redistribution actually operate on) therefore sum to this target.
+# M054/S02: both splitsingsrisico (7) + parkeerdruk (7) are reserved, so the target
+# moved 93 -> 86 automatically (no hand-edited table — derived from the registry).
 _CASCADE_GATED_RISICO_WEIGHT: int = sum(
     e.default_weight for k, e in FACTOR_REGISTRY.items()
     if e.category == "risico" and k in CASCADE_GATED_FACTORS
 )
-_RISICO_REDISTRIBUTION_TARGET: int = _RISICO_MAX - _CASCADE_GATED_RISICO_WEIGHT  # == 93
+_RISICO_REDISTRIBUTION_TARGET: int = _RISICO_MAX - _CASCADE_GATED_RISICO_WEIGHT  # == 86
 
 
 def compute_score_v3(
@@ -548,6 +570,7 @@ def compute_score_v3(
         score_natura2000,
         score_optoppotentie,
         score_overstromingsrisico,
+        score_parkeerdruk,  # M054/S02
         score_perceelgrootte,
         score_splitsingsrisico,
         score_vergunning_succeskans,
@@ -726,10 +749,10 @@ def compute_score_v3(
     # Cascade factor: splitsingsrisico (Huisvestingsverordening — M053/S12). Risico
     # cascade, same sparse/appended-after-redistribution treatment as beleidsalignement.
     # Its weight (7) is held in reserve from the risico-100 pool (the 16 core risico
-    # factors sum to 93); it is only applied when the regeling actually touches this
-    # parcel (van_toepassing / mogelijk_van_toepassing / vergunningstelsel_voorraad),
-    # so "geen regeling / buiten gebied / boven WOZ-grens" stay context-only (weight 0)
-    # and don't colour the map.
+    # factors sum to 86 since M054/S02); it is only applied when the regeling actually
+    # touches this parcel (van_toepassing / mogelijk_van_toepassing /
+    # vergunningstelsel_voorraad), so "geen regeling / buiten gebied / boven WOZ-grens"
+    # stay context-only (weight 0) and don't colour the map.
     _sr_woz = parcel_data.get("woz")
     _sr_result = score_splitsingsrisico(
         _cascade.get("splitsingsrisico"),
@@ -750,6 +773,29 @@ def compute_score_v3(
         _sr_result.bijdrage = round(_sr_result.genormaliseerde_score * _sr_weight, 4)
         _sr_result.percentage_of_category = round(_sr_weight / 100.0, 4)
     breakdown["splitsingsrisico"] = _sr_result
+
+    # Cascade factor: parkeerdruk (Nota parkeernormen — M054/S02). Risico cascade,
+    # same sparse/appended-after-redistribution treatment as splitsingsrisico. Its
+    # weight (7) is held in reserve from the risico-100 pool; it is only applied when
+    # the parkeereis is a reëel ontwikkelrisico (verdict 'verhoogd'), so "geen nota /
+    # geen match / laag" stay context-only (weight 0) and don't colour the map.
+    _pk_result = score_parkeerdruk(
+        _cascade.get("parkeerdruk"),
+        bestemmingen=parcel_data.get("bestemmingen"),
+        area_m2=parcel_data.get("area_m2"),
+        projecttype=project_type,
+    )
+    _pk_waarde = _pk_result.waarde if isinstance(_pk_result.waarde, dict) else {}
+    _pk_verhoogd = _pk_waarde.get("verdict") == "verhoogd"
+    if not _pk_result.missing and _pk_verhoogd:
+        _pk_entry = FACTOR_REGISTRY["parkeerdruk"]
+        _pk_weight = float(
+            (_pk_entry.weight_by_projecttype or {}).get(project_type, _pk_entry.default_weight)
+        )
+        _pk_result.gewicht = _pk_weight
+        _pk_result.bijdrage = round(_pk_result.genormaliseerde_score * _pk_weight, 4)
+        _pk_result.percentage_of_category = round(_pk_weight / 100.0, 4)
+    breakdown["parkeerdruk"] = _pk_result
 
     # Apply custom weights if provided
     if custom_weights:

@@ -22,14 +22,14 @@ from app.services.score_v3 import (
     compute_score_v3,
 )
 
-# M053/S12: splitsingsrisico is a verdict-gated RISICO cascade factor whose weight (7)
-# is reserved from the risico-100 pool and appended AFTER redistribution. So the
-# in-breakdown risico factors that D3/missing-redistribution operate on sum to
-# _RISICO_REDISTRIBUTION_TARGET (== 93). We import the production constant so the test
-# and prod can never drift. With no cascade payload (compute_score_v3({})),
-# splitsingsrisico is missing → it does not enter the non-missing risico sum, so the
-# rescale target stays 93.
-assert _RISICO_REDISTRIBUTION_TARGET == 93
+# M053/S12 + M054/S02: splitsingsrisico AND parkeerdruk are verdict-gated RISICO
+# cascade factors whose weights (7 + 7 = 14) are reserved from the risico-100 pool and
+# appended AFTER redistribution. So the in-breakdown risico factors that
+# D3/missing-redistribution operate on sum to _RISICO_REDISTRIBUTION_TARGET (== 86 since
+# M054/S02). We import the production constant so the test and prod can never drift. With
+# no cascade payload (compute_score_v3({})), both cascade factors are missing → they do
+# not enter the non-missing risico sum, so the rescale target stays 86.
+assert _RISICO_REDISTRIBUTION_TARGET == 86
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -246,11 +246,11 @@ def test_redistribution_bijdrage_proportional_to_normalized_score_times_new_gewi
         )
 
 
-def test_breakdown_size_28_with_brk_factors_present() -> None:
-    """breakdown grows to 28 entries (8 core potentie + 16 risico + woonvisie_match +
-    beleidsalignement + grondwaarde_fit + splitsingsrisico)."""
+def test_breakdown_size_29_with_brk_factors_present() -> None:
+    """breakdown grows to 29 entries (8 core potentie + 16 risico + woonvisie_match +
+    beleidsalignement + grondwaarde_fit + splitsingsrisico + parkeerdruk)."""
     result = compute_score_v3({})
-    assert len(result.score_breakdown) == 28
+    assert len(result.score_breakdown) == 29
     keys = set(result.score_breakdown.keys())
     assert "hypotheek_risico" in keys
     assert "eigendoms_complexiteit" in keys
@@ -259,3 +259,4 @@ def test_breakdown_size_28_with_brk_factors_present() -> None:
     assert "beleidsalignement" in keys
     assert "grondwaarde_fit" in keys
     assert "splitsingsrisico" in keys
+    assert "parkeerdruk" in keys

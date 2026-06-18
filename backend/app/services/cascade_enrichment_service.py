@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.factor_extraction_schemas import DOCUMENT_SENTINEL, FactorExtractionError
 from app.ai.factors.beleidsalignement import OMGEVINGSVISIE_FACTOR_DEF
 from app.ai.factors.grondwaarde_fit import GRONDPRIJS_FACTOR_DEF
+from app.ai.factors.parkeerdruk import PARKEERNORMEN_FACTOR_DEF
 from app.ai.factors.splitsingsrisico import HUISVESTINGSVERORDENING_FACTOR_DEF
 from app.ai.factors.woonvisie_match import WOONVISIE_MATCH_FACTOR_DEF
 from app.models.policy_document import PolicyDocument
@@ -158,6 +159,41 @@ async def get_grondprijs_document(
     return result.scalar_one_or_none()
 
 
+async def get_parkeernormen_document(
+    db: AsyncSession,
+    *,
+    gemeente_code: str,
+    organization_id: uuid.UUID,
+) -> PolicyDocument | None:
+    """Zoek de meest recente actieve Nota parkeernormen op voor een gemeente (M054/S02).
+
+    source_key="parkeerbeleid" matcht de bestaande catalogus-key (data_source_keys.py
+    voedt_factor=parkeerdruk), zodat toekomstige jaarversies in dezelfde cascade landen.
+    De canonieke key is parkeerbeleid; er is geen aparte 'parkeernormen'-key.
+    """
+    stmt = (
+        select(PolicyDocument)
+        .where(
+            PolicyDocument.entity_type == "gemeente",
+            PolicyDocument.entity_code == gemeente_code,
+            PolicyDocument.source_key == "parkeerbeleid",
+            or_(
+                PolicyDocument.is_global.is_(True),
+                PolicyDocument.organization_id == organization_id,
+            ),
+            PolicyDocument.file_data.isnot(None),
+        )
+        .order_by(
+            PolicyDocument.is_global.asc(),
+            PolicyDocument.version_number.desc(),
+            PolicyDocument.created_at.desc(),
+        )
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def get_cascade_payloads(
     db: AsyncSession,
     *,
@@ -253,6 +289,25 @@ async def get_cascade_payloads(
     except FactorExtractionError as exc:
         logger.warning(
             "cascade_enrich grondwaarde_fit failed parcel=%s gemeente=%s: %s",
+            parcel_id, gemeente_code, exc,
+        )
+
+    # parkeerdruk (Nota parkeernormen) — M054/S02
+    try:
+        pk_doc = await get_parkeernormen_document(
+            db, gemeente_code=gemeente_code, organization_id=organization_id
+        )
+        if pk_doc is not None:
+            pk_extracted = await extract_factor(
+                db,
+                factor_def=PARKEERNORMEN_FACTOR_DEF,
+                parcel_id=DOCUMENT_SENTINEL,
+                policy_document=pk_doc,
+            )
+            payloads["parkeerdruk"] = pk_extracted.payload
+    except FactorExtractionError as exc:
+        logger.warning(
+            "cascade_enrich parkeerdruk failed parcel=%s gemeente=%s: %s",
             parcel_id, gemeente_code, exc,
         )
 

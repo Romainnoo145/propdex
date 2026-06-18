@@ -1,7 +1,7 @@
 /**
  * REGRESSION-CRITICAL: pins frontend factor-label coverage for risico factors.
- * Source: backend/app/services/score_v3.py FACTOR_REGISTRY (2026-06-17, post-M054/S01).
- * Parallel backend test: backend/tests/regression/test_score_v3_registry_28_factors.py
+ * Source: backend/app/services/score_v3.py FACTOR_REGISTRY (2026-06-18, post-M054/S01+S02).
+ * Parallel backend test: backend/tests/regression/test_score_v3_registry_29_factors.py
  * (drift-detector — fails FIRST on backend rename, before this test silently rots).
  * grondwaarde_fit (M054/S01) is a potentie factor — its render path is covered by
  * the sibling PotentieLayer.factor-coverage.test.tsx; here it only shifts the
@@ -12,11 +12,12 @@ import { describe, expect, it } from 'vitest'
 import { FACTOR_LABELS, formatFactorValue } from '../RisicoLayer'
 import type { ScoreFactorV3 } from '@/lib/types/scan'
 
-// 28 backend factors:
+// 29 backend factors:
 //   potentie (11): 8 pre-M047 + woonvisie_match (M047) + beleidsalignement (M053/S01)
 //                  + grondwaarde_fit (M054/S01)
-//   risico (17): 9 pre-M050 risico + 4 env + 3 M050/S03 BRK + splitsingsrisico (M053/S12)
-const KNOWN_28_FACTOR_KEYS = [
+//   risico (18): 9 pre-M050 risico + 4 env + 3 M050/S03 BRK + splitsingsrisico (M053/S12)
+//                + parkeerdruk (M054/S02)
+const KNOWN_29_FACTOR_KEYS = [
   'vrije_grond', 'optoppotentie', 'bestemming', 'leegstand', 'funda_frictie',
   'perceelgrootte', 'demografie', 'vergunning_succeskans', 'woonvisie_match',
   'beleidsalignement', 'grondwaarde_fit',
@@ -25,22 +26,23 @@ const KNOWN_28_FACTOR_KEYS = [
   'criminaliteit', 'max_hoogte_bereikt', 'natura2000', 'overstromingsrisico',
   'geluid', 'luchtkwaliteit',
   'hypotheek_risico', 'eigendoms_complexiteit', 'koopwaarde_trend',
-  'splitsingsrisico',
+  'splitsingsrisico', 'parkeerdruk',
 ] as const
 
 // Risico keys flow through TWO render paths (see RisicoLayer.tsx):
-//   1. FACTOR_LABELS score-card path (13 keys: 9 pre-M050 + 3 BRK + splitsingsrisico)
+//   1. FACTOR_LABELS score-card path (14 keys: 9 pre-M050 + 3 BRK + splitsingsrisico
+//      + parkeerdruk)
 //   2. deriveEnvCards inline-strings path (4 env keys)
 const FACTOR_LABELS_RISICO_KEYS = [
   'funderingsrisico', 'asbest', 'bodemverontreiniging', 'monument',
   'bestemmingswijziging', 'constructieve_staat', 'juridisch_klimaat',
   'criminaliteit', 'max_hoogte_bereikt',
   'hypotheek_risico', 'eigendoms_complexiteit', 'koopwaarde_trend',
-  'splitsingsrisico',
+  'splitsingsrisico', 'parkeerdruk',
 ] as const
 const ENV_PATH_RISICO_KEYS = ['natura2000', 'overstromingsrisico', 'geluid', 'luchtkwaliteit'] as const
 // Potentie is now 11 keys (grondwaarde_fit added), so risico slice starts at index 11.
-const ALL_RISICO_KEYS = KNOWN_28_FACTOR_KEYS.slice(11)
+const ALL_RISICO_KEYS = KNOWN_29_FACTOR_KEYS.slice(11)
 
 const fac = (waarde: unknown, missing = false): ScoreFactorV3 => ({
   waarde, genormaliseerde_score: 0.5, gewicht: 5, bijdrage: 2.5,
@@ -48,22 +50,22 @@ const fac = (waarde: unknown, missing = false): ScoreFactorV3 => ({
 })
 
 describe('RisicoLayer factor-coverage (REGRESSION-CRITICAL)', () => {
-  it('known factor count is 28', () => {
-    expect(KNOWN_28_FACTOR_KEYS.length).toBe(28)
+  it('known factor count is 29', () => {
+    expect(KNOWN_29_FACTOR_KEYS.length).toBe(29)
   })
 
-  it('FACTOR_LABELS covers 13 score-card risico keys', () => {
+  it('FACTOR_LABELS covers 14 score-card risico keys', () => {
     for (const k of FACTOR_LABELS_RISICO_KEYS) {
       expect(FACTOR_LABELS[k], `missing FACTOR_LABELS['${k}']`).toBeDefined()
     }
   })
 
-  it('FACTOR_LABELS + env path together cover all 17 risico keys', () => {
+  it('FACTOR_LABELS + env path together cover all 18 risico keys', () => {
     const covered = new Set<string>([...FACTOR_LABELS_RISICO_KEYS, ...ENV_PATH_RISICO_KEYS])
     for (const k of ALL_RISICO_KEYS) {
       expect(covered.has(k), `risico key '${k}' uncovered`).toBe(true)
     }
-    expect(covered.size).toBe(17)
+    expect(covered.size).toBe(18)
   })
 
   it('M050/S03 BRK keys are in FACTOR_LABELS (drift canary)', () => {
@@ -74,6 +76,10 @@ describe('RisicoLayer factor-coverage (REGRESSION-CRITICAL)', () => {
 
   it('M053/S12 splitsingsrisico key is in FACTOR_LABELS (drift canary)', () => {
     expect(FACTOR_LABELS['splitsingsrisico']).toBe('OPKOOP')
+  })
+
+  it('M054/S02 parkeerdruk key is in FACTOR_LABELS (drift canary)', () => {
+    expect(FACTOR_LABELS['parkeerdruk']).toBe('PARKEERDRUK')
   })
 
   it('hypotheek_risico Ja when n_with_hypotheek > 0', () => {
@@ -141,6 +147,30 @@ describe('RisicoLayer factor-coverage (REGRESSION-CRITICAL)', () => {
     const r = formatFactorValue('splitsingsrisico', fac({ verdict: 'geen_regeling' }, true))
     expect(r.value).toBe('—')
     expect(r.sub).toBe('Geen regeling')
+  })
+
+  it('parkeerdruk verhoogd → VERHOOGD + gebied label', () => {
+    const r = formatFactorValue('parkeerdruk', fac({ verdict: 'verhoogd', gebied: 'centrum' }))
+    expect(r.value).toBe('VERHOOGD')
+    expect(r.sub).toBe('Centrum')
+  })
+
+  it('parkeerdruk laag → LAAG + gebied label', () => {
+    const r = formatFactorValue('parkeerdruk', fac({ verdict: 'laag', gebied: 'rest_bebouwde_kom' }))
+    expect(r.value).toBe('LAAG')
+    expect(r.sub).toBe('Bebouwde kom')
+  })
+
+  it('parkeerdruk geen_match → N.V.T.', () => {
+    const r = formatFactorValue('parkeerdruk', fac({ verdict: 'geen_match' }))
+    expect(r.value).toBe('N.V.T.')
+    expect(r.sub).toBe('Geen normband')
+  })
+
+  it('parkeerdruk missing → em-dash, geen parkeernorm', () => {
+    const r = formatFactorValue('parkeerdruk', fac({ verdict: 'geen_parkeerbeleid' }, true))
+    expect(r.value).toBe('—')
+    expect(r.sub).toBe('Geen parkeernorm')
   })
 
   it('unknown factor key → default em-dash fallback (no crash)', () => {

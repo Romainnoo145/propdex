@@ -25,10 +25,10 @@ from app.models.organization import Organization
 from app.models.parcel_cache import ParcelCache
 from app.models.scan_result import ScanResult
 
-# M053/S12 reserves splitsingsrisico's weight (7) from the risico-100 pool, so the
-# in-breakdown risico factors rescale to 93, not 100. The sibling unit test
-# (test_compute_score_v3_redistribution.py) was updated to this constant in S12;
-# this integration test was missed and is corrected here (M054/S01).
+# M053/S12 reserves splitsingsrisico's weight (7) and M054/S02 reserves parkeerdruk's
+# weight (7) from the risico-100 pool, so the in-breakdown risico factors rescale to
+# 86, not 100. Imported from score_v3 so this test tracks the constant instead of
+# hard-coding it.
 from app.services.score_v3 import _RISICO_REDISTRIBUTION_TARGET
 
 PARCEL_ID = "NL.IMKAD.TEST.0002"
@@ -105,8 +105,10 @@ async def test_all_3_brk_missing_rescales_13_existing(
     """No BRK rows + flags={} → 3 BRK + ~all existing risico missing.
 
     `_apply_missing_data_strategy` redistributes the non-missing risico set to
-    sum ≈ 100. D3 short-circuits (BRK weights already zeroed by missing-strategy).
-    Invariant: sum of non-missing risico gewicht ≈ 100.
+    sum ≈ the in-breakdown target. D3 short-circuits (BRK weights already zeroed by
+    missing-strategy). Invariant: sum of non-missing risico gewicht ≈
+    _RISICO_REDISTRIBUTION_TARGET (86 since M054/S02 — the two cascade-gated risico
+    factors splitsingsrisico + parkeerdruk are reserved and absent in this fixture).
     """
     monkeypatch.setattr(settings, "M050_S03_FACTORS_ENABLED", True)
     monkeypatch.setattr(
@@ -171,7 +173,7 @@ async def test_mixed_sparse_brk_plus_funderingsrisico_missing(
         for v in breakdown.values()
         if v["categorie"] == "risico" and not v["missing"]
     )
-    # Either ≈100 (if any non-missing risico survives the missing-data strategy)
+    # Either ≈target (if any non-missing risico survives the missing-data strategy)
     # or 0 (degenerate all-missing case — F8 falls back to no rescale).
     assert non_missing_risico == 0 or abs(non_missing_risico - _RISICO_REDISTRIBUTION_TARGET) <= 1.0
 
@@ -219,7 +221,8 @@ async def test_brk_present_no_redistribution_existing_weights_unchanged(
     assert breakdown["eigendoms_complexiteit"]["missing"] is False
     assert breakdown["koopwaarde_trend"]["missing"] is False
 
-    # Sum of non-missing risico gewicht ≈ 93 (splitsingsrisico reserved; no D3 over-amplification).
+    # Sum of non-missing risico gewicht ≈ target (no D3 over-amplification). Cascade
+    # risico factors (splitsingsrisico + parkeerdruk) are reserved and absent here.
     non_missing_risico = sum(
         v["gewicht"]
         for v in breakdown.values()

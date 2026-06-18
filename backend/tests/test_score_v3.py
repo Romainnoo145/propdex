@@ -3,6 +3,8 @@
 import pytest
 
 from app.services.score_v3 import (
+    CASCADE_GATED_FACTORS,
+    FACTOR_REGISTRY,
     compute_score_v3,
 )
 from app.services.score_v3_factors import (
@@ -26,6 +28,16 @@ from app.services.score_v3_factors import (
     score_perceelgrootte,
     score_vergunning_succeskans,
     score_vrije_grond,
+)
+
+# In-breakdown potentie total: the potentie cascade factors (woonvisie_match +
+# beleidsalignement) are appended AFTER redistribution as weight-0 missing factors,
+# so a redistributed potentie breakdown must sum EXACTLY to the non-cascade potentie
+# default-weight total — derived from the registry so a wrong sum still fails the gate.
+_POTENTIE_INBREAKDOWN_TOTAL = sum(
+    e.default_weight
+    for k, e in FACTOR_REGISTRY.items()
+    if e.category == "potentie" and k not in CASCADE_GATED_FACTORS
 )
 
 # ---------------------------------------------------------------------------
@@ -677,10 +689,14 @@ def test_total_weights_preserved_after_redistribution():
     missing_count = sum(1 for v in potentie_factors.values() if v.missing)
 
     if missing_count / len(potentie_factors) > 0.2:
-        # Total weight of present factors should approximate original total
-        # Updated for M047/S03 weight normalization (old: 80, new: 100)
+        # Redistribution must PRESERVE the in-breakdown potentie total exactly. The
+        # potentie cascade factors (woonvisie_match + beleidsalignement) are reserved
+        # from the 100-pool and appended after redistribution as weight-0 missing
+        # factors, so the preserved total is the non-cascade potentie sum (not 100).
+        # Strict equality (abs=1 only for largest-remainder rounding) so a wrong sum
+        # is caught by the gate.
         total_weight = sum(v.gewicht for v in potentie_factors.values())
-        assert total_weight == pytest.approx(100, abs=1)
+        assert total_weight == pytest.approx(_POTENTIE_INBREAKDOWN_TOTAL, abs=1)
 
 
 # ---------------------------------------------------------------------------
@@ -796,6 +812,10 @@ def test_toelichting_lang_not_empty(full_parcel_data, full_neighborhood_metrics)
 def test_data_bronnen_not_empty(full_parcel_data, full_neighborhood_metrics):
     result = compute_score_v3(full_parcel_data, full_neighborhood_metrics)
     for name, factor in result.score_breakdown.items():
+        # Missing cascade factors (no gemeente policy doc in this fixture) legitimately
+        # carry empty data_bronnen — they are not meegewogen. Only assert for present ones.
+        if factor.missing:
+            continue
         assert factor.data_bronnen, f"{name} has empty data_bronnen"
         assert len(factor.data_bronnen) >= 1
 
@@ -833,21 +853,23 @@ def test_model_version_is_v3(full_parcel_data):
 # ---------------------------------------------------------------------------
 
 def test_score_breakdown_has_expected_keys(full_parcel_data, full_neighborhood_metrics):
-    """All 21 factor names present in breakdown."""
+    """All 29 factor names present in breakdown (post-M054/S01+S02)."""
     result = compute_score_v3(full_parcel_data, full_neighborhood_metrics)
     expected_keys = {
-        # Potentie
+        # Potentie (11)
         "vrije_grond", "optoppotentie", "bestemming", "leegstand",
         "funda_frictie", "perceelgrootte", "demografie", "vergunning_succeskans",
-        # Risico
+        "woonvisie_match", "beleidsalignement", "grondwaarde_fit",
+        # Risico (18)
         "funderingsrisico", "asbest", "bodemverontreiniging", "monument",
         "bestemmingswijziging", "constructieve_staat", "juridisch_klimaat",
         "criminaliteit", "max_hoogte_bereikt",
-        # New factors
         "luchtkwaliteit", "overstromingsrisico", "natura2000", "geluid",
+        "hypotheek_risico", "eigendoms_complexiteit", "koopwaarde_trend",
+        "splitsingsrisico", "parkeerdruk",
     }
     assert set(result.score_breakdown.keys()) == expected_keys
-    assert len(result.score_breakdown) == 21
+    assert len(result.score_breakdown) == 29
 
 
 def test_all_potentie_factors_have_correct_categorie(full_parcel_data, full_neighborhood_metrics):

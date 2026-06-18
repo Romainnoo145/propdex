@@ -1,7 +1,7 @@
 /**
  * REGRESSION-CRITICAL: pins frontend factor-label coverage for potentie factors.
  * Source: backend/app/services/score_v3.py FACTOR_REGISTRY (2026-06-17, post-M054/S01).
- * Parallel backend test: backend/tests/regression/test_score_v3_registry_28_factors.py
+ * Parallel backend test: backend/tests/regression/test_score_v3_registry_29_factors.py
  * (drift-detector — fails FIRST on backend rename, before this test silently rots).
  * Project convention: pure-logic tests here; React rendering tests via Storybook.
  */
