@@ -677,10 +677,12 @@ def test_total_weights_preserved_after_redistribution():
     missing_count = sum(1 for v in potentie_factors.values() if v.missing)
 
     if missing_count / len(potentie_factors) > 0.2:
-        # Total weight of present factors should approximate original total
-        # Updated for M047/S03 weight normalization (old: 80, new: 100)
+        # Present potentie factors absorb the redistributed missing weight up to the
+        # in-breakdown core total. Since M053/S01 the potentie cascade factors
+        # (woonvisie_match + beleidsalignement) are reserved from the 100-pool and
+        # appended as missing here, so the redistributed core never inflates past 100.
         total_weight = sum(v.gewicht for v in potentie_factors.values())
-        assert total_weight == pytest.approx(100, abs=1)
+        assert 0 < total_weight <= 100 + 1e-6
 
 
 # ---------------------------------------------------------------------------
@@ -796,6 +798,10 @@ def test_toelichting_lang_not_empty(full_parcel_data, full_neighborhood_metrics)
 def test_data_bronnen_not_empty(full_parcel_data, full_neighborhood_metrics):
     result = compute_score_v3(full_parcel_data, full_neighborhood_metrics)
     for name, factor in result.score_breakdown.items():
+        # Missing cascade factors (no gemeente policy doc in this fixture) legitimately
+        # carry empty data_bronnen — they are not meegewogen. Only assert for present ones.
+        if factor.missing:
+            continue
         assert factor.data_bronnen, f"{name} has empty data_bronnen"
         assert len(factor.data_bronnen) >= 1
 
@@ -833,21 +839,23 @@ def test_model_version_is_v3(full_parcel_data):
 # ---------------------------------------------------------------------------
 
 def test_score_breakdown_has_expected_keys(full_parcel_data, full_neighborhood_metrics):
-    """All 21 factor names present in breakdown."""
+    """All 28 factor names present in breakdown (post-M054/S02)."""
     result = compute_score_v3(full_parcel_data, full_neighborhood_metrics)
     expected_keys = {
-        # Potentie
+        # Potentie (10)
         "vrije_grond", "optoppotentie", "bestemming", "leegstand",
         "funda_frictie", "perceelgrootte", "demografie", "vergunning_succeskans",
-        # Risico
+        "woonvisie_match", "beleidsalignement",
+        # Risico (18)
         "funderingsrisico", "asbest", "bodemverontreiniging", "monument",
         "bestemmingswijziging", "constructieve_staat", "juridisch_klimaat",
         "criminaliteit", "max_hoogte_bereikt",
-        # New factors
         "luchtkwaliteit", "overstromingsrisico", "natura2000", "geluid",
+        "hypotheek_risico", "eigendoms_complexiteit", "koopwaarde_trend",
+        "splitsingsrisico", "parkeerdruk",
     }
     assert set(result.score_breakdown.keys()) == expected_keys
-    assert len(result.score_breakdown) == 21
+    assert len(result.score_breakdown) == 28
 
 
 def test_all_potentie_factors_have_correct_categorie(full_parcel_data, full_neighborhood_metrics):
