@@ -246,16 +246,17 @@ def test_redistribution_bijdrage_proportional_to_normalized_score_times_new_gewi
         )
 
 
-def test_breakdown_size_28_with_brk_factors_present() -> None:
-    """breakdown grows to 28 entries (8 potentie + 16 risico + woonvisie_match +
-    beleidsalignement + splitsingsrisico + parkeerdruk)."""
+def test_breakdown_size_29_with_brk_factors_present() -> None:
+    """breakdown grows to 29 entries (8 core potentie + 16 risico + woonvisie_match +
+    beleidsalignement + grondwaarde_fit + splitsingsrisico + parkeerdruk)."""
     result = compute_score_v3({})
-    assert len(result.score_breakdown) == 28
+    assert len(result.score_breakdown) == 29
     keys = set(result.score_breakdown.keys())
     assert "hypotheek_risico" in keys
     assert "eigendoms_complexiteit" in keys
     assert "koopwaarde_trend" in keys
     assert "woonvisie_match" in keys
     assert "beleidsalignement" in keys
+    assert "grondwaarde_fit" in keys
     assert "splitsingsrisico" in keys
     assert "parkeerdruk" in keys

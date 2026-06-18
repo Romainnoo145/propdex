@@ -853,13 +853,13 @@ def test_model_version_is_v3(full_parcel_data):
 # ---------------------------------------------------------------------------
 
 def test_score_breakdown_has_expected_keys(full_parcel_data, full_neighborhood_metrics):
-    """All 28 factor names present in breakdown (post-M054/S02)."""
+    """All 29 factor names present in breakdown (post-M054/S01+S02)."""
     result = compute_score_v3(full_parcel_data, full_neighborhood_metrics)
     expected_keys = {
-        # Potentie (10)
+        # Potentie (11)
         "vrije_grond", "optoppotentie", "bestemming", "leegstand",
         "funda_frictie", "perceelgrootte", "demografie", "vergunning_succeskans",
-        "woonvisie_match", "beleidsalignement",
+        "woonvisie_match", "beleidsalignement", "grondwaarde_fit",
         # Risico (18)
         "funderingsrisico", "asbest", "bodemverontreiniging", "monument",
         "bestemmingswijziging", "constructieve_staat", "juridisch_klimaat",
@@ -869,7 +869,7 @@ def test_score_breakdown_has_expected_keys(full_parcel_data, full_neighborhood_m
         "splitsingsrisico", "parkeerdruk",
     }
     assert set(result.score_breakdown.keys()) == expected_keys
-    assert len(result.score_breakdown) == 28
+    assert len(result.score_breakdown) == 29
 
 
 def test_all_potentie_factors_have_correct_categorie(full_parcel_data, full_neighborhood_metrics):

@@ -24,6 +24,11 @@ from app.models.brk_ownership_record import BrkOwnershipRecord
 from app.models.organization import Organization
 from app.models.parcel_cache import ParcelCache
 from app.models.scan_result import ScanResult
+
+# M053/S12 reserves splitsingsrisico's weight (7) and M054/S02 reserves parkeerdruk's
+# weight (7) from the risico-100 pool, so the in-breakdown risico factors rescale to
+# 86, not 100. Imported from score_v3 so this test tracks the constant instead of
+# hard-coding it.
 from app.services.score_v3 import _RISICO_REDISTRIBUTION_TARGET
 
 PARCEL_ID = "NL.IMKAD.TEST.0002"
