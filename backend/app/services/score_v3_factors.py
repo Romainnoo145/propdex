@@ -14,6 +14,7 @@ from app.services.score_v3 import FactorResult
 
 if TYPE_CHECKING:
     from app.ai.factors.beleidsalignement import GebiedPolicy, OmgevingsvisiePayload
+    from app.ai.factors.parkeerdruk import NormBand, ParkeernormenPayload
     from app.ai.factors.splitsingsrisico import HuisvestingsverordeningPayload
     from app.ai.factors.woonvisie_match import WijkPolicy, WoonvisiePayload
 
@@ -2030,5 +2031,242 @@ def score_splitsingsrisico(
         lang=(
             "De huisvestingsverordening kent geen opkoopbescherming of voorraad-vergunningstelsel "
             "dat dit perceel raakt."
+        ),
+    )
+
+
+_PARKEERDRUK_BRON = ["Gemeentelijke Nota parkeernormen"]
+
+# Projecttypes whose ontwikkeling primair op wonen-normen leunt — gebruikt om bij
+# meerdere matchende banden naar de wonen-band te tie-breaken. M054/S02.
+_WONEN_PROJECTTYPES: frozenset[str] = frozenset({
+    "nieuwbouw_wonen", "transformatie_wonen", "optoppen", "splitsen",
+    "commercieel_naar_wonen",
+})
+# Autonorm-drempel waarboven de parkeereis als zwaar telt (pp per woning of per
+# 100 m² bvo). Ruwe heuristiek over functies heen — gedocumenteerd, niet exact.
+_PARKEERDRUK_HEAVY_NORM = 1.5
+# Score-weegfactoren (blend, hoger = hoger risico). Som van componenten,
+# geclampt 0-1, daarna confidence-pulled naar neutraal 0.5.
+_W_ESCAPE_CENTRUM_UITGESLOTEN = 0.35  # centrum zonder openbare-ruimte-optie
+_W_ESCAPE_CENTRUM = 0.20  # centrum mét drempel-escape
+_W_REGULERING_KNEL = 0.20  # gereguleerd zonder benutbare correctie
+_W_NORM_MAX = 0.35  # bijdrage van auto-norm-zwaarte (geclampt)
+_W_NORM_PER_PP = 0.12  # per pp autonorm
+_W_DREMPEL_KRAP = 0.10  # lage openbare-ruimte-drempel (≤70%)
+_W_FIETS_HARDE_EIS = 0.10  # fietsnorm harde eis bij wonen
+
+
+def score_parkeerdruk(
+    payload: ParkeernormenPayload | None,
+    *,
+    bestemmingen: list[Any] | None,
+    area_m2: float | None,
+    projecttype: str = "onbepaald",
+) -> FactorResult:
+    """M054/S02: parkeerdruk-risico uit de gemeentelijke Nota parkeernormen.
+
+    Risico-factor (hoger = meer risico). Matcht de bestemming van het perceel tegen
+    de norm-banden (bestemming_trefwoorden) en weegt hoe zwaar de parkeereis is en
+    hoe ingeklemd de oplos-opties zijn: centrum zonder openbare-ruimte-escape,
+    gereguleerd zonder benutbare correctie, fiets-harde-eis bij wonen, en zware
+    autonorm. Cloned style from score_splitsingsrisico: weight applied later in
+    compute_score_v3 (verdict-gated op 'verhoogd'). Sparse factor P5: weight 0
+    wanneer geen nota. ``area_m2`` is meegegeven voor interface-pariteit met de
+    andere cascade-scorers (de norm-zwaarte zelf komt uit de band, niet uit de
+    perceelgrootte).
+    """
+    parcel_best = _best_bestemming_type({"bestemmingen": bestemmingen or []})
+
+    # 1. Geen document → factor niet meegewogen.
+    if payload is None:
+        return FactorResult(
+            waarde={
+                "verdict": "geen_parkeerbeleid",
+                "peiljaar": None,
+                "matched_bestemming": parcel_best,
+                "functie": None,
+                "functiecategorie": None,
+                "gebied": None,
+                "auto_norm_per_eenheid": None,
+                "eenheid": None,
+                "fiets_norm_per_eenheid": None,
+                "parkeerregulering_van_toepassing": None,
+                "openbare_ruimte_drempel_pct": None,
+                "centrum_uitgesloten": None,
+                "fietsnorm_harde_eis": None,
+                "nul_norm_sociale_huur_mogelijk": None,
+                "mobiliteitscorrecties": [],
+                "algemeen_citaat": "",
+                "randvoorwaarden": [],
+            },
+            genormaliseerde_score=0.0,
+            gewicht=0,
+            bijdrage=0.0,
+            categorie="risico",
+            toelichting_kort="Geen Nota parkeernormen beschikbaar voor deze gemeente (factor niet meegewogen).",
+            toelichting_lang=(
+                "Geen gemeentelijke Nota parkeernormen beschikbaar. De factor wordt niet meegewogen."
+            ),
+            data_bronnen=[],
+            missing=True,
+        )
+
+    randvoorwaarden = [r.model_dump(mode="json") for r in payload.randvoorwaarden]
+    correcties = [c.model_dump(mode="json") for c in payload.mobiliteitscorrecties]
+    drempel = payload.openbare_ruimte_drempel_pct if payload.openbare_ruimte_drempel_pct is not None else 70.0
+    has_usable_correctie = bool(payload.mobiliteitscorrecties)
+
+    def _result(
+        *,
+        verdict: str,
+        score: float,
+        band: NormBand | None,
+        kort: str,
+        lang: str,
+        missing: bool = False,
+    ) -> FactorResult:
+        return FactorResult(
+            waarde={
+                "verdict": verdict,
+                "peiljaar": payload.peiljaar,
+                "matched_bestemming": parcel_best,
+                "functie": band.functie if band is not None else None,
+                "functiecategorie": band.functiecategorie if band is not None else None,
+                "gebied": band.gebied if band is not None else None,
+                "auto_norm_per_eenheid": band.auto_norm_per_eenheid if band is not None else None,
+                "eenheid": band.eenheid if band is not None else None,
+                "fiets_norm_per_eenheid": band.fiets_norm_per_eenheid if band is not None else None,
+                "parkeerregulering_van_toepassing": payload.parkeerregulering_van_toepassing,
+                "openbare_ruimte_drempel_pct": payload.openbare_ruimte_drempel_pct,
+                "centrum_uitgesloten": payload.centrum_uitgesloten,
+                "fietsnorm_harde_eis": payload.fietsnorm_harde_eis,
+                "nul_norm_sociale_huur_mogelijk": payload.nul_norm_sociale_huur_mogelijk,
+                "mobiliteitscorrecties": correcties,
+                "algemeen_citaat": payload.algemeen_citaat or "",
+                "randvoorwaarden": randvoorwaarden,
+            },
+            genormaliseerde_score=round(score, 4),
+            gewicht=0,
+            bijdrage=0.0,
+            categorie="risico",
+            toelichting_kort=kort,
+            toelichting_lang=lang + f" (confidence {payload.confidence:.0%})",
+            data_bronnen=list(_PARKEERDRUK_BRON),
+            missing=missing,
+        )
+
+    def _matches(band: NormBand) -> bool:
+        for tw in band.bestemming_trefwoorden:
+            t = str(tw).strip().lower()
+            if t and (t in parcel_best or parcel_best in t):
+                return True
+        return False
+
+    matching = [b for b in payload.normbanden if _matches(b)]
+
+    # 2. Geen band sluit aan op de bestemming → context, niet meegewogen.
+    if not matching:
+        return _result(
+            verdict="geen_match",
+            score=0.0,
+            band=None,
+            kort=f"Geen parkeernorm-band voor bestemming '{parcel_best}'.",
+            lang=(
+                "Geen parkeernorm-band in de Nota parkeernormen sluit aan op de bestemming "
+                f"'{parcel_best}' van dit perceel."
+            ),
+        )
+
+    # 3. Kies de meest risicovolle band: centrum (krapste escape) eerst, dan de
+    # zwaarste autonorm; bij gelijke stand een wonen-band voor wonen-projecttypes.
+    wonen_focus = projecttype in _WONEN_PROJECTTYPES
+
+    def _risk_key(band: NormBand) -> tuple[int, float, int]:
+        centrum = 1 if band.gebied == "centrum" else 0
+        norm = band.auto_norm_per_eenheid or 0.0
+        wonen = 1 if (wonen_focus and band.functiecategorie == "wonen") else 0
+        return (centrum, norm, wonen)
+
+    band = max(matching, key=_risk_key)
+
+    # Escape-constraint
+    raw = 0.0
+    if band.gebied == "centrum":
+        raw += _W_ESCAPE_CENTRUM_UITGESLOTEN if payload.centrum_uitgesloten else _W_ESCAPE_CENTRUM
+    centrum_knel = band.gebied == "centrum" and payload.centrum_uitgesloten
+
+    # Regulering-knel: gereguleerd zonder benutbare correctie = minder speelruimte.
+    regulering_knel = bool(payload.parkeerregulering_van_toepassing) and not has_usable_correctie
+    if regulering_knel:
+        raw += _W_REGULERING_KNEL
+
+    # Auto-norm-zwaarte (geclampt).
+    norm = band.auto_norm_per_eenheid
+    if norm is not None:
+        raw += min(_W_NORM_MAX, norm * _W_NORM_PER_PP)
+    zware_norm = norm is not None and norm >= _PARKEERDRUK_HEAVY_NORM
+
+    # Krappe openbare-ruimte-drempel.
+    if drempel <= 70:
+        raw += _W_DREMPEL_KRAP
+
+    # Fiets-harde-eis nudge (bij wonen met een fietsnorm).
+    fiets_knel = (
+        payload.fietsnorm_harde_eis
+        and band.functiecategorie == "wonen"
+        and band.fiets_norm_per_eenheid is not None
+    )
+    if fiets_knel:
+        raw += _W_FIETS_HARDE_EIS
+
+    raw = max(0.0, min(1.0, raw))
+    pulled = raw * payload.confidence + 0.5 * (1 - payload.confidence)
+    pulled = max(0.0, min(1.0, pulled))
+
+    # 4. Verdict: verhoogd wanneer een reëel ontwikkelrisico aanwezig is.
+    verhoogd = centrum_knel or regulering_knel or fiets_knel or zware_norm
+
+    gebied_label = {
+        "centrum": "het centrum",
+        "schil_centrum": "de centrumschil",
+        "rest_bebouwde_kom": "de bebouwde kom",
+        "buitengebied": "het buitengebied",
+    }.get(band.gebied, band.gebied)
+    norm_label = ""
+    if norm is not None:
+        eenheid = f" {band.eenheid}" if band.eenheid else ""
+        norm_label = f" (autonorm {norm:g}{eenheid})"
+
+    if verhoogd:
+        redenen: list[str] = []
+        if centrum_knel:
+            redenen.append("in het centrum vervalt de openbare-ruimte-optie")
+        if regulering_knel:
+            redenen.append("gereguleerd gebied zonder benutbare mobiliteitscorrectie")
+        if fiets_knel:
+            redenen.append("de fietsparkeernorm is een harde eis")
+        if zware_norm:
+            redenen.append("een zware autoparkeernorm")
+        reden = "; ".join(redenen)
+        return _result(
+            verdict="verhoogd",
+            score=pulled,
+            band=band,
+            kort=f"Verhoogd parkeerdruk-risico voor '{band.functie}' in {gebied_label}.",
+            lang=(
+                f"De parkeereis voor '{band.functie}' in {gebied_label}{norm_label} vormt een reëel "
+                f"ontwikkelrisico: {reden}. De parkeereis is lastig of duur op te lossen."
+            ),
+        )
+
+    return _result(
+        verdict="laag",
+        score=pulled,
+        band=band,
+        kort=f"Beheersbare parkeereis voor '{band.functie}' in {gebied_label}.",
+        lang=(
+            f"De parkeereis voor '{band.functie}' in {gebied_label}{norm_label} is beheersbaar: "
+            "lichte norm met ruimte om de eis op te lossen. Telt als context."
         ),
     )
