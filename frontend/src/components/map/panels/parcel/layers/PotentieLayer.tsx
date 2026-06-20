@@ -1,17 +1,16 @@
-import { useState, useEffect } from 'react'
-import { motion, useSpring, useTransform, AnimatePresence } from 'framer-motion'
+import { useEffect, useState } from 'react'
+import { motion, useSpring, useTransform } from 'framer-motion'
 import { Flame, TrendingUp, CircleHelp, type LucideIcon } from 'lucide-react'
-import { PageTitleToggle } from '@/components/map/panels/parcel/layers/PageTitleToggle'
 import type { ScanResultItem, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/types/scan'
 import { isScoreV3 } from '@/lib/score'
 import { WoonvisiePopup, type WijkPolicy } from '../WoonvisiePopup'
 import { OmgevingsvisiePopup, type GebiedPolicy, type BeleidsVerdict, type Randvoorwaarde } from '../OmgevingsvisiePopup'
 import { GrondprijsPopup } from '../GrondprijsPopup'
-import { FactorCard, GhostCard } from '../FactorCard'
+import { FactorCard } from '../FactorCard'
 import { useParcelProjectType } from '@/hooks/useParcelProjectType'
-import { useFactorPins } from '@/hooks/useFactorPins'
-import { FACTOR_BRON, buildPages } from '@/lib/factor-groups'
+import { FACTOR_BRON } from '@/lib/factor-groups'
 import type { PageCard } from '@/lib/factor-groups'
+import { sortByWeight, PLANNED_POTENTIE } from '../lib/factor-list'
 
 /* ── Verdict derivation ───────────────────────────────────── */
 
@@ -309,11 +308,64 @@ interface PotentieLayerProps {
   onOpenWoonvisie?: () => void
 }
 
-const POTENTIE_KEYS = [
+export const POTENTIE_KEYS = [
   'vrije_grond', 'optoppotentie', 'bestemming', 'leegstand',
   'funda_frictie', 'perceelgrootte', 'demografie', 'vergunning_succeskans',
   'capaciteit', 'woonvisie_match', 'beleidsalignement', 'grondwaarde_fit',
 ] as const
+
+/**
+ * Build the full potentie card list (V3 score_breakdown → typed cards, with a
+ * v2.1 fallback). Extracted so the per-tab weight-sorted scroll list reuses the
+ * SAME pipeline. Cards keep their `factor_key`, `bron` and `pts`
+ * (= weighted contribution `bijdrage`).
+ */
+export function buildPotentieCards(parcel: ScanResultItem): PageCard[] {
+  if (isScoreV3(parcel.score_breakdown) && parcel.score_breakdown) {
+    const breakdown = parcel.score_breakdown as ScoreBreakdownV3
+    return POTENTIE_KEYS.map((key) => {
+      const factor = breakdown[key]
+      const bron = FACTOR_BRON[key] ?? 'fysiek'
+      if (factor) {
+        const { value, sub } = formatFactorValue(key, factor, parcel)
+        return {
+          label: FACTOR_LABELS[key] ?? key.toUpperCase(),
+          value,
+          sub,
+          pts: Math.round(factor.bijdrage * 10) / 10,
+          factor_key: key,
+          bron,
+          missing: factor.missing,
+        }
+      }
+      if (key === 'capaciteit') {
+        return {
+          label: FACTOR_LABELS[key] ?? key.toUpperCase(),
+          value: capacityValue(parcel),
+          sub: capacitySub(parcel),
+          pts: 0,
+          factor_key: key,
+          bron,
+        }
+      }
+      return {
+        label: FACTOR_LABELS[key] ?? key.toUpperCase(),
+        value: '—',
+        sub: 'Data niet beschikbaar',
+        pts: 0,
+        factor_key: key,
+        bron,
+        missing: true,
+      }
+    })
+  }
+  // v2.1 fallback — wrap deriveV21Cards results with factor_key + bron
+  return deriveV21Cards(parcel).map((c, i) => ({
+    ...c,
+    factor_key: POTENTIE_KEYS[i] ?? `v21-${i}`,
+    bron: FACTOR_BRON[POTENTIE_KEYS[i] ?? ''] ?? 'fysiek',
+  }))
+}
 
 /** grondwaarde_fit factor.waarde shape (M054/S01). */
 interface GrondwaardeFitWaarde {
@@ -333,13 +385,11 @@ interface GrondwaardeFitWaarde {
 const GRONDPRIJS_ACTIVE_VERDICTS = new Set(['passend', 'context'])
 
 export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie, onOpenWoonvisie }: PotentieLayerProps) {
-  const [page, setPage] = useState(0)
   const [woonvisieOpen, setWoonvisieOpen] = useState(false)
   const [omgevingsvisieOpen, setOmgevingsvisieOpen] = useState(false)
   const [grondprijsOpen, setGrondprijsOpen] = useState(false)
   const { data: projectTypeData } = useParcelProjectType(parcel.parcel_id)
   const projectType = projectTypeData?.project_type ?? 'onbepaald'
-  const { pins, toggle, isPinned } = useFactorPins('potentie')
 
   // Extract woonvisie factor data for popup. Phase 6 factor.waarde shape:
   // { matched_wijk, matched_policy, prioritized_segment, algemeen_citaat } | null
@@ -371,63 +421,26 @@ export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie, onOp
   const hasGrondprijsData =
     grondprijsWaarde != null && GRONDPRIJS_ACTIVE_VERDICTS.has(grondprijsWaarde.verdict)
 
-  const isV3 = isScoreV3(parcel.score_breakdown)
   const potentieScore = parcel.potentie_score != null
     ? Math.round(parcel.potentie_score)
     : parcel.score != null ? Math.round(parcel.score) : null
   const potentieVerdict = deriveVerdict(potentieScore)
 
-  const allCards: PageCard[] = (() => {
-    if (isV3 && parcel.score_breakdown) {
-      const breakdown = parcel.score_breakdown as ScoreBreakdownV3
-      return POTENTIE_KEYS.map((key) => {
-        const factor = breakdown[key]
-        const bron = FACTOR_BRON[key] ?? 'fysiek'
-        if (factor) {
-          const { value, sub } = formatFactorValue(key, factor, parcel)
-          return {
-            label: FACTOR_LABELS[key] ?? key.toUpperCase(),
-            value,
-            sub,
-            pts: Math.round(factor.bijdrage * 10) / 10,
-            factor_key: key,
-            bron,
-            missing: factor.missing,
-          }
-        }
-        if (key === 'capaciteit') {
-          return {
-            label: FACTOR_LABELS[key] ?? key.toUpperCase(),
-            value: capacityValue(parcel),
-            sub: capacitySub(parcel),
-            pts: 0,
-            factor_key: key,
-            bron,
-          }
-        }
-        return {
-          label: FACTOR_LABELS[key] ?? key.toUpperCase(),
-          value: '—',
-          sub: 'Data niet beschikbaar',
-          pts: 0,
-          factor_key: key,
-          bron,
-          missing: true,
-        }
-      })
-    }
-    // v2.1 fallback — wrap deriveV21Cards results with factor_key + bron
-    return deriveV21Cards(parcel).map((c, i) => ({
-      ...c,
-      factor_key: POTENTIE_KEYS[i] ?? `v21-${i}`,
-      bron: FACTOR_BRON[POTENTIE_KEYS[i] ?? ''] ?? 'fysiek',
-    }))
-  })()
+  // Weight-sorted factor list (heaviest |bijdrage| first), no pagination.
+  const sortedCards: PageCard[] = sortByWeight(buildPotentieCards(parcel))
 
-  const pages = buildPages(allCards, pins.map((p) => ({ id: p.id, factor_key: p.factor_key, position: p.position })))
-  // Clamp the active page during render instead of correcting via effect.
-  const safePage = Math.min(page, Math.max(0, pages.length - 1))
-  const currentPage = pages[safePage]
+  function cardClick(card: PageCard): (() => void) | undefined {
+    if (card.factor_key === 'woonvisie_match' && hasWoonvisieData) {
+      return onOpenWoonvisie ?? (() => setWoonvisieOpen(true))
+    }
+    if (card.factor_key === 'beleidsalignement' && hasOmgevingsvisieData) {
+      return onOpenOmgevingsvisie ?? (() => setOmgevingsvisieOpen(true))
+    }
+    if (card.factor_key === 'grondwaarde_fit' && hasGrondprijsData) {
+      return () => setGrondprijsOpen(true)
+    }
+    return undefined
+  }
 
   const springVal = useSpring(0, { stiffness: 60, damping: 20 })
   useEffect(() => {
@@ -437,70 +450,59 @@ export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie, onOp
   const barWidth = useTransform(springVal, (v) => `${v}%`)
 
   return (
-    <div className="flex flex-col flex-1 pt-4 px-6 pb-4">
-      {/* ── Verdict Hero ──────────────────────────────────── */}
-      <div className="bg-slate-50/50 border-b border-slate-100 px-6 py-5 rounded-[20px]">
-        <div className="flex items-center justify-between">
-          <span className="text-7xl font-black tracking-tighter text-slate-900 tabular-nums leading-none">
-            {potentieScore ?? '—'}
-          </span>
+    <div className="flex flex-col flex-1 min-h-0 pt-4 pb-4">
+      {/* ── Verdict Hero (sticky top of tab, does not scroll) ── */}
+      <div className="shrink-0 px-6">
+        <div className="bg-slate-50/50 border border-slate-100 px-5 py-4 rounded-[20px]">
+          <div className="flex items-center justify-between">
+            <span className="text-6xl font-black tracking-tighter text-slate-900 tabular-nums leading-none">
+              {potentieScore ?? '—'}
+            </span>
 
-          <div className="flex-1 px-6 min-w-0">
-            <p className={`text-xl font-bold uppercase tracking-wide ${potentieVerdict.color}`}>
-              {potentieVerdict.label}
-            </p>
+            <div className="flex-1 px-5 min-w-0">
+              <p className={`text-lg font-bold uppercase tracking-wide ${potentieVerdict.color}`}>
+                {potentieVerdict.label}
+              </p>
+            </div>
+
+            <div className={`size-11 rounded-full flex items-center justify-center shrink-0 ${potentieVerdict.badgeColor}`}>
+              <potentieVerdict.Icon className="size-5 text-white" strokeWidth={2.5} />
+            </div>
           </div>
 
-          <div className={`size-12 rounded-full flex items-center justify-center shrink-0 ${potentieVerdict.badgeColor}`}>
-            <potentieVerdict.Icon className="size-6 text-white" strokeWidth={2.5} />
+          <div className="mt-3 h-2.5 rounded-full bg-slate-100 overflow-hidden">
+            <motion.div className={`h-full rounded-full ${potentieVerdict.barColor}`} style={{ width: barWidth }} />
           </div>
-        </div>
-
-        <div className="mt-4 h-3 rounded-full bg-slate-100 overflow-hidden">
-          <motion.div className={`h-full rounded-full ${potentieVerdict.barColor}`} style={{ width: barWidth }} />
         </div>
       </div>
 
-      {/* ── Factor Cards Grid with page transition ────────── */}
-      <div className="flex-1 mt-4 relative flex flex-col">
-        <PageTitleToggle pages={pages} activeIndex={safePage} onSelect={setPage} />
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={safePage}
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -40 }}
-            transition={{ duration: 0.2 }}
-            className="grid grid-cols-2 grid-rows-2 gap-1.5 auto-rows-fr flex-1"
-          >
-            {(currentPage?.cards ?? []).map((slot, idx) => {
-              if ('kind' in slot && slot.kind === 'ghost') {
-                return <GhostCard key={`ghost-${idx}`} />
-              }
-              const card = slot as PageCard
-              const pinned = isPinned(card.factor_key)
-              return (
-                <FactorCard
-                  key={card.factor_key}
-                  card={{ label: card.label, value: card.value, sub: card.sub, pts: card.pts }}
-                  tone="positive"
-                  isPinned={pinned}
-                  isMissing={!!card.missing}
-                  onStarClick={() => toggle(card.factor_key)}
-                  onCardClick={
-                    card.factor_key === 'woonvisie_match' && hasWoonvisieData
-                      ? onOpenWoonvisie ?? (() => setWoonvisieOpen(true))
-                      : card.factor_key === 'beleidsalignement' && hasOmgevingsvisieData
-                        ? onOpenOmgevingsvisie ?? (() => setOmgevingsvisieOpen(true))
-                        : card.factor_key === 'grondwaarde_fit' && hasGrondprijsData
-                          ? () => setGrondprijsOpen(true)
-                          : undefined
-                  }
-                />
-              )
-            })}
-          </motion.div>
-        </AnimatePresence>
+      {/* ── Factor list — one continuous, weight-sorted scroll ── */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 mt-3 flex flex-col gap-2">
+        {sortedCards.map((card) => (
+          <FactorCard
+            key={card.factor_key}
+            layout="row"
+            card={{ label: card.label, value: card.value, sub: card.sub, pts: card.pts }}
+            tone="positive"
+            isMissing={!!card.missing}
+            onCardClick={cardClick(card)}
+          />
+        ))}
+
+        {/* Geplande potentie-cascades — dashed "binnenkort" placeholders */}
+        <div className="shrink-0 mt-3 mb-1 flex items-center gap-2">
+          <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400">Binnenkort</span>
+          <span className="h-px flex-1 bg-slate-100" />
+        </div>
+        {PLANNED_POTENTIE.map((planned) => (
+          <FactorCard
+            key={planned.key}
+            layout="row"
+            comingSoon
+            tone={planned.tone}
+            card={{ label: planned.label, value: '—', sub: planned.source, pts: 0 }}
+          />
+        ))}
       </div>
 
       {hasWoonvisieData && !onOpenWoonvisie && (
