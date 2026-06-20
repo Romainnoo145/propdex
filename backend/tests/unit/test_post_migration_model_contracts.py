@@ -58,3 +58,25 @@ def test_shared_models_do_not_define_organization_id():
     for model in SHARED_MODELS:
         assert "organization_id" not in model.__table__.columns.keys(), model.__name__
 
+
+def test_scan_result_upsert_uses_existing_constraint():
+    """The area-scan score-write upserts on a constraint that exists post-detenant.
+
+    Regression: the k0 de-tenant migration dropped ``uq_scan_results_org_parcel``
+    and replaced it with ``uq_scan_results_parcel`` (parcel_id only). The upsert in
+    area_scan.py still named the dropped constraint, so every scan failed with
+    ``UndefinedObjectError: constraint "uq_scan_results_org_parcel" ... does not exist``.
+    This pins the conflict-target constant to a constraint that really exists on the model.
+    """
+    from app.jobs.area_scan import SCAN_RESULT_CONFLICT_CONSTRAINT
+
+    model_constraint_names = {
+        c.name for c in ScanResult.__table__.constraints if c.name is not None
+    }
+    assert SCAN_RESULT_CONFLICT_CONSTRAINT in model_constraint_names, (
+        f"{SCAN_RESULT_CONFLICT_CONSTRAINT!r} is not a constraint on scan_results; "
+        f"available: {sorted(model_constraint_names)}"
+    )
+    # The dropped org-scoped constraint must never reappear in active code.
+    assert SCAN_RESULT_CONFLICT_CONSTRAINT != "uq_scan_results_org_parcel"
+

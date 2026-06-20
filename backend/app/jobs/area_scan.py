@@ -61,6 +61,10 @@ REVERSE_GEOCODE_CONCURRENCY = 10
 # PostgreSQL/asyncpg hard-limits bind parameters to 32767 per statement.
 # A scan_result insert uses 5 bind params per row, so stay well below the ceiling.
 SCAN_RESULT_INSERT_BATCH_SIZE = 5000
+# Unique constraint used as the scan_results upsert conflict target. The k0 de-tenant
+# migration dropped the org-scoped uq_scan_results_org_parcel in favour of this
+# parcel-only constraint; the name must match ScanResult.__table_args__ / the schema.
+SCAN_RESULT_CONFLICT_CONSTRAINT = "uq_scan_results_parcel"
 
 locatieserver = PDOKLocatieserver()
 pdok_cadastral_client = PDOKCadastralClient()
@@ -690,7 +694,7 @@ async def area_scan_job(
                 ):
                     stmt = pg_insert(ScanResult).values(ranked_batch)
                     stmt = stmt.on_conflict_do_update(
-                        constraint="uq_scan_results_org_parcel",
+                        constraint=SCAN_RESULT_CONFLICT_CONSTRAINT,
                         set_={
                             "scan_id": stmt.excluded.scan_id,
                             "score": stmt.excluded.score,
