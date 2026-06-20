@@ -1,58 +1,26 @@
 /**
- * Single-scroll factor list (ParcelDetailPanel redesign — Optie B).
+ * Weight-sorting + planned-cascade placeholders for the per-tab factor scroll
+ * (ParcelDetailPanel redesign). The Potentie and Risico tabs each replace their
+ * 4-per-page PageTitleToggle pagination with ONE continuous, weight-sorted list
+ * of FactorCard rows. Sorting + the "binnenkort" roadmap placeholders live here
+ * so both layers share one source.
  *
- * Merges the potentie + risico card pipelines (V3 score_breakdown + v2.1
- * fallback, same source as the legacy paginated grid) into ONE globally
- * weight-sorted list. No category tabs, no pagination: heaviest weighted
- * contribution first. Each card keeps its own potentie/risico tone so colour
- * still encodes meaning.
- *
- * PLANNED_FACTORS are roadmap cascades not yet in the backend registry — they
- * render as dashed "binnenkort" placeholders so the panel previews what is
- * coming. Source: .planning/CASCADE-BUILD-INVENTARISATIE.md (2026-06-11).
+ * PLANNED_* are roadmap cascades not yet in the backend registry — dashed
+ * "binnenkort" placeholders, split per category so each lands in its own tab.
+ * Source: .planning/CASCADE-BUILD-INVENTARISATIE.md (2026-06-11).
  */
 
-import type { ScanResultItem } from '@/lib/types/scan'
-import type { PageCard, Bron } from '@/lib/factor-groups'
-import type { useParcelEnrichment } from '@/hooks/useScans'
-import { buildPotentieCards } from '../layers/PotentieLayer'
-import { buildRisicoCards } from '../layers/RisicoLayer'
+import type { Bron } from '@/lib/factor-groups'
 
 export type FactorTone = 'positive' | 'negative'
 
-/** A real (weighted) factor card plus its potentie/risico colour identity. */
-export interface FactorListItem extends PageCard {
-  tone: FactorTone
-}
-
 /**
- * Global sort: descending by |weighted contribution| (`pts` = factor.bijdrage).
- * Missing / zero-weight cards (pts 0) naturally sink to the bottom. Stable for
- * ties (V8 Array.prototype.sort is stable), so equal-weight cards keep their
- * potentie-before-risico insertion order.
+ * Sort any pts-bearing cards by descending |weighted contribution| (`pts` =
+ * factor.bijdrage). Missing / zero-weight cards (pts 0) sink to the bottom.
+ * Stable for ties (V8 Array.prototype.sort is stable). Does not mutate input.
  */
-export function sortByWeight(items: FactorListItem[]): FactorListItem[] {
+export function sortByWeight<T extends { pts: number }>(items: T[]): T[] {
   return [...items].sort((a, b) => Math.abs(b.pts) - Math.abs(a.pts))
-}
-
-/**
- * Build the merged, weight-sorted factor list for a parcel. Potentie cards are
- * tagged tone 'positive', risico (incl. environmental enrichment) tone
- * 'negative'.
- */
-export function buildFactorList(
-  parcel: ScanResultItem,
-  enrichmentData: ReturnType<typeof useParcelEnrichment>['data'],
-): FactorListItem[] {
-  const potentie: FactorListItem[] = buildPotentieCards(parcel).map((c) => ({
-    ...c,
-    tone: 'positive',
-  }))
-  const risico: FactorListItem[] = buildRisicoCards(parcel, enrichmentData).map((c) => ({
-    ...c,
-    tone: 'negative',
-  }))
-  return sortByWeight([...potentie, ...risico])
 }
 
 /* ── Planned cascades (roadmap placeholders) ──────────────────── */
@@ -72,14 +40,12 @@ export interface PlannedFactor {
 }
 
 /**
- * Planned cascade factors NOT yet in the backend FACTOR_REGISTRY / score_breakdown.
- * Purely visual placeholders — no scoring. Sourced verbatim from the build matrix
- * in .planning/CASCADE-BUILD-INVENTARISATIE.md (factor keys + documents named there).
- * Refinement-only cascades (erfgoedverordening → monument, asbest/sloop → asbest)
- * are intentionally excluded: they sharpen existing factors, they aren't new cards.
+ * Planned POTENTIE cascades — render at the bottom of the Potentie tab scroll.
+ * Verbatim factor keys + documents from the build matrix in
+ * .planning/CASCADE-BUILD-INVENTARISATIE.md. Refinement-only cascades are
+ * excluded (they sharpen existing factors, they aren't new cards).
  */
-export const PLANNED_FACTORS: PlannedFactor[] = [
-  // Wave 1 — pure S07-herhaling, verse Venlo-docs
+export const PLANNED_POTENTIE: PlannedFactor[] = [
   {
     key: 'woondeal_boost',
     label: 'WOONDEAL',
@@ -87,15 +53,6 @@ export const PLANNED_FACTORS: PlannedFactor[] = [
     bron: 'gemeente_beleid',
     source: 'Woondeal Limburg 2022-2030',
     wave: 'Wave 1',
-  },
-  // Wave 2 — S07-patroon, gedateerde/complexere bron
-  {
-    key: 'welstand_beperking',
-    label: 'WELSTAND',
-    tone: 'negative',
-    bron: 'planologisch',
-    source: 'Welstandsnota Venlo',
-    wave: 'Wave 2',
   },
   {
     key: 'beleidsalignement_provincie',
@@ -105,23 +62,6 @@ export const PLANNED_FACTORS: PlannedFactor[] = [
     source: 'POVI Limburg',
     wave: 'Wave 2',
   },
-  {
-    key: 'duurzaamheid_kosten',
-    label: 'DUURZAAMHEID',
-    tone: 'negative',
-    bron: 'gemeente_beleid',
-    source: 'Transitievisie Gebouwde Omgeving 2.0',
-    wave: 'Wave 2',
-  },
-  {
-    key: 'omgevingsverordening_limburg',
-    label: 'PROV. REGELS',
-    tone: 'negative',
-    bron: 'planologisch',
-    source: 'Omgevingsverordening Limburg',
-    wave: 'Wave 2',
-  },
-  // Wave 3 — ander bron-type, brainstorm vereist
   {
     key: 'subsidie_potentie',
     label: 'SUBSIDIE',
@@ -145,6 +85,36 @@ export const PLANNED_FACTORS: PlannedFactor[] = [
     bron: 'juridisch',
     source: 'Woningwet',
     wave: 'Wave 3',
+  },
+]
+
+/**
+ * Planned RISICO cascades — render at the bottom of the Risico tab scroll.
+ */
+export const PLANNED_RISICO: PlannedFactor[] = [
+  {
+    key: 'welstand_beperking',
+    label: 'WELSTAND',
+    tone: 'negative',
+    bron: 'planologisch',
+    source: 'Welstandsnota Venlo',
+    wave: 'Wave 2',
+  },
+  {
+    key: 'duurzaamheid_kosten',
+    label: 'DUURZAAMHEID',
+    tone: 'negative',
+    bron: 'gemeente_beleid',
+    source: 'Transitievisie Gebouwde Omgeving 2.0',
+    wave: 'Wave 2',
+  },
+  {
+    key: 'omgevingsverordening_limburg',
+    label: 'PROV. REGELS',
+    tone: 'negative',
+    bron: 'planologisch',
+    source: 'Omgevingsverordening Limburg',
+    wave: 'Wave 2',
   },
   {
     key: 'stikstof_risico',

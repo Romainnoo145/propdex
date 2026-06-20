@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react'
-import { motion, useSpring, useTransform, AnimatePresence } from 'framer-motion'
+import { motion, useSpring, useTransform } from 'framer-motion'
 import { ShieldAlert, ShieldCheck, ShieldQuestion, type LucideIcon } from 'lucide-react'
-import { PageTitleToggle } from '@/components/map/panels/parcel/layers/PageTitleToggle'
 import type { ScanResultItem, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/types/scan'
 import { isScoreV3 } from '@/lib/score'
 import { useParcelEnrichment } from '@/hooks/useScans'
-import { FactorCard, GhostCard } from '../FactorCard'
-import { useFactorPins } from '@/hooks/useFactorPins'
-import { FACTOR_BRON, buildPages } from '@/lib/factor-groups'
+import { FactorCard } from '../FactorCard'
+import { FACTOR_BRON } from '@/lib/factor-groups'
 import type { PageCard } from '@/lib/factor-groups'
+import { sortByWeight, PLANNED_RISICO } from '../lib/factor-list'
 import { HuisvestingsverordeningPopup } from '../HuisvestingsverordeningPopup'
 import { ParkeernormenPopup, type Correctie } from '../ParkeernormenPopup'
 import type { Randvoorwaarde } from '../OmgevingsvisiePopup'
@@ -403,9 +402,9 @@ export const RISICO_KEYS = [
 
 /**
  * Build the full risico card list: V3 score-card path (RISICO_KEYS) +
- * environmental enrichment cards, with a v2.1 fallback. Extracted so both the
- * paginated grid (legacy) and the single-scroll ParcelFactorList consume the
- * SAME pipeline. `pts` = weighted contribution (`bijdrage`).
+ * environmental enrichment cards, with a v2.1 fallback. Extracted so the
+ * per-tab weight-sorted scroll list reuses the SAME pipeline.
+ * `pts` = weighted contribution (`bijdrage`).
  */
 export function buildRisicoCards(
   parcel: ScanResultItem,
@@ -495,7 +494,6 @@ interface RisicoLayerProps {
 }
 
 export function RisicoLayer({ parcel }: RisicoLayerProps) {
-  const [page, setPage] = useState(0)
   const [splitsOpen, setSplitsOpen] = useState(false)
   const [parkeerOpen, setParkeerOpen] = useState(false)
 
@@ -514,14 +512,15 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
   const risicoScore = parcel.risico_score != null ? Math.round(parcel.risico_score) : null
   const verdict = deriveVerdict(risicoScore)
   const enrichmentQuery = useParcelEnrichment(parcel.parcel_id)
-  const { pins, toggle, isPinned } = useFactorPins('risico')
 
-  // All cards combined (score factors + env enrichment) for buildPages
-  const allCards: PageCard[] = buildRisicoCards(parcel, enrichmentQuery.data)
-  const pages = buildPages(allCards, pins.map((p) => ({ id: p.id, factor_key: p.factor_key, position: p.position })))
-  // Clamp the active page during render instead of correcting via effect.
-  const safePage = Math.min(page, Math.max(0, pages.length - 1))
-  const currentPage = pages[safePage]
+  // Weight-sorted factor list (score factors + env enrichment), no pagination.
+  const sortedCards: PageCard[] = sortByWeight(buildRisicoCards(parcel, enrichmentQuery.data))
+
+  function cardClick(card: PageCard): (() => void) | undefined {
+    if (card.factor_key === 'splitsingsrisico' && hasSplitsData) return () => setSplitsOpen(true)
+    if (card.factor_key === 'parkeerdruk' && hasParkeerData) return () => setParkeerOpen(true)
+    return undefined
+  }
 
   // Animated score bar
   const springVal = useSpring(0, { stiffness: 60, damping: 20 })
@@ -532,73 +531,59 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
   const barWidth = useTransform(springVal, (v) => `${v}%`)
 
   return (
-    <div className="flex flex-col flex-1 pt-4 px-6 pb-4">
-      {/* ── Verdict Hero ──────────────────────────────────── */}
-      <div className="bg-slate-50/50 border-b border-slate-100 px-6 py-5 rounded-[20px]">
-        <div className="flex items-center justify-between">
-          <span className="text-7xl font-black tracking-tighter text-slate-900 tabular-nums leading-none">
-            {risicoScore ?? '—'}
-          </span>
+    <div className="flex flex-col flex-1 min-h-0 pt-4 pb-4">
+      {/* ── Verdict Hero (sticky top of tab, does not scroll) ── */}
+      <div className="shrink-0 px-6">
+        <div className="bg-slate-50/50 border border-slate-100 px-5 py-4 rounded-[20px]">
+          <div className="flex items-center justify-between">
+            <span className="text-6xl font-black tracking-tighter text-slate-900 tabular-nums leading-none">
+              {risicoScore ?? '—'}
+            </span>
 
-          <div className="flex-1 px-6 min-w-0">
-            <p className={`text-xl font-bold uppercase tracking-wide ${verdict.color}`}>
-              {verdict.label}
-            </p>
+            <div className="flex-1 px-5 min-w-0">
+              <p className={`text-lg font-bold uppercase tracking-wide ${verdict.color}`}>
+                {verdict.label}
+              </p>
+            </div>
+
+            <div className={`size-11 rounded-full flex items-center justify-center shrink-0 ${verdict.badgeColor}`}>
+              <verdict.Icon className="size-5 text-white" strokeWidth={2.5} />
+            </div>
           </div>
 
-          <div
-            className={`size-12 rounded-full flex items-center justify-center shrink-0 ${verdict.badgeColor}`}
-          >
-            <verdict.Icon className="size-6 text-white" strokeWidth={2.5} />
+          <div className="mt-3 h-2.5 rounded-full bg-slate-100 overflow-hidden">
+            <motion.div className={`h-full rounded-full ${verdict.barColor}`} style={{ width: barWidth }} />
           </div>
-        </div>
-
-        <div className="mt-4 h-3 rounded-full bg-slate-100 overflow-hidden">
-          <motion.div
-            className={`h-full rounded-full ${verdict.barColor}`}
-            style={{ width: barWidth }}
-          />
         </div>
       </div>
 
-      {/* ── Factor Cards Grid with page transition ────────── */}
-      <div className="flex-1 mt-4 relative flex flex-col">
-        <PageTitleToggle pages={pages} activeIndex={safePage} onSelect={setPage} />
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={safePage}
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -40 }}
-            transition={{ duration: 0.2 }}
-            className="grid grid-cols-2 grid-rows-2 gap-1.5 auto-rows-fr flex-1"
-          >
-            {(currentPage?.cards ?? []).map((slot, idx) => {
-              if ('kind' in slot && slot.kind === 'ghost') {
-                return <GhostCard key={`ghost-${idx}`} />
-              }
-              const card = slot as PageCard
-              const pinned = isPinned(card.factor_key)
-              return (
-                <FactorCard
-                  key={card.factor_key}
-                  card={{ label: card.label, value: card.value, sub: card.sub, pts: card.pts }}
-                  tone="negative"
-                  isPinned={pinned}
-                  isMissing={!!card.missing}
-                  onStarClick={() => toggle(card.factor_key)}
-                  onCardClick={
-                    card.factor_key === 'splitsingsrisico' && hasSplitsData
-                      ? () => setSplitsOpen(true)
-                      : card.factor_key === 'parkeerdruk' && hasParkeerData
-                        ? () => setParkeerOpen(true)
-                        : undefined
-                  }
-                />
-              )
-            })}
-          </motion.div>
-        </AnimatePresence>
+      {/* ── Factor list — one continuous, weight-sorted scroll ── */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 mt-3 flex flex-col gap-2">
+        {sortedCards.map((card) => (
+          <FactorCard
+            key={card.factor_key}
+            layout="row"
+            card={{ label: card.label, value: card.value, sub: card.sub, pts: card.pts }}
+            tone="negative"
+            isMissing={!!card.missing}
+            onCardClick={cardClick(card)}
+          />
+        ))}
+
+        {/* Geplande risico-cascades — dashed "binnenkort" placeholders */}
+        <div className="shrink-0 mt-3 mb-1 flex items-center gap-2">
+          <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400">Binnenkort</span>
+          <span className="h-px flex-1 bg-slate-100" />
+        </div>
+        {PLANNED_RISICO.map((planned) => (
+          <FactorCard
+            key={planned.key}
+            layout="row"
+            comingSoon
+            tone={planned.tone}
+            card={{ label: planned.label, value: '—', sub: planned.source, pts: 0 }}
+          />
+        ))}
       </div>
 
       {hasSplitsData && (

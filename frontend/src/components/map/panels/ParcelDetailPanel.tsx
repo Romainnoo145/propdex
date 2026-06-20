@@ -3,38 +3,51 @@ import { useNavigate } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import { ParcelPanelShell } from './parcel/ParcelPanelShell'
-import { ParcelScoreHero } from './parcel/ParcelScoreHero'
-import { ParcelFactorList } from './parcel/ParcelFactorList'
 import { HeartButton, shouldShowProjectTypePicker } from './parcel/HeartButton'
 import { ProjectTypePickerModal } from '@/components/parcel/ProjectTypePickerModal'
+import { MissingDataBadge } from './parcel/MissingDataBadge'
 import { countMissingFactors } from './parcel/ScoreBreakdownModal'
+import {
+  ParcelBentoOverview,
+  type CategoryKey,
+} from './parcel/ParcelBentoOverview'
+import { CategoryTabs } from './parcel/CategoryTabs'
+import { PotentieLayer } from './parcel/layers/PotentieLayer'
 import { OmgevingsvisieDetailContent, type GebiedPolicy, type BeleidsVerdict, type Randvoorwaarde } from './parcel/OmgevingsvisiePopup'
 import { WoonvisieDetailContent, type WijkPolicy } from './parcel/WoonvisiePopup'
+import { RisicoLayer } from './parcel/layers/RisicoLayer'
+
 import { BronnenLayer } from './parcel/layers/BronnenLayer'
+import { useParcelEnrichment } from '@/hooks/useScans'
 import { useParcelProjectType } from '@/hooks/useParcelProjectType'
 import { useParcelFavorites, useToggleFavorite } from '@/hooks/useFavorites'
 import type { ScanResultItem } from '@/lib/types/scan'
 
-/**
- * ParcelDetailPanel — single-scroll redesign (Optie B).
- *
- * Sticky hero (address + score) · scrollable weight-sorted factor list ·
- * sticky "Bewaar perceel" CTA. No category tabs, no page toggles. Clicking a
- * factor card opens its drill-down (woonvisie / omgevingsvisie in-panel; the
- * grondprijs / opkoop / parkeer popups live in ParcelFactorList). The Dossiers
- * entry swaps the scroll body for the BronnenLayer with a back button.
- */
+/** Split "Straat 1, 1234AB Venlo" → ["Straat 1", ", 1234AB Venlo"] for clean truncation */
+function splitAddress(address: string | null): [string, string] {
+  if (!address) return ['Onbekend adres', '']
+  const m = address.match(/^(.+?)\s*(,\s*\d{4}\s?[A-Z]{2}.*)$/)
+  return m ? [m[1] ?? address, m[2] ?? ''] : [address, '']
+}
 
-type PanelView = 'list' | 'omgevingsvisie' | 'woonvisie' | 'dossiers'
+type PanelView =
+  | { kind: 'overview' }
+  | { kind: 'potentie' }
+  | { kind: 'risico' }
+  | { kind: 'dossiers' }
+  | { kind: 'omgevingsvisie' }
+  | { kind: 'woonvisie' }
 
 const prefersReducedMotion =
   typeof window !== 'undefined' &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-const VIEW_LABELS: Record<Exclude<PanelView, 'list'>, string> = {
+const VIEW_LABELS: Record<Exclude<PanelView['kind'], 'overview'>, string> = {
+  potentie: 'Potentie',
+  risico: 'Risico',
+  dossiers: 'Dossiers',
   omgevingsvisie: 'Omgevingsvisie',
   woonvisie: 'Woonvisie',
-  dossiers: 'Dossiers',
 }
 
 interface ParcelDetailPanelProps {
@@ -46,9 +59,10 @@ interface ParcelDetailPanelProps {
 
 export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: ParcelDetailPanelProps) {
   const navigate = useNavigate()
-  const [view, setView] = useState<PanelView>('list')
+  const [view, setView] = useState<PanelView>({ kind: 'overview' })
   const [showPicker, setShowPicker] = useState(false)
   const [trackedParcelId, setTrackedParcelId] = useState(parcel.parcel_id)
+  const enrichmentQuery = useParcelEnrichment(parcel.parcel_id)
   const { data: projectTypeData } = useParcelProjectType(parcel.parcel_id)
   const projectType = projectTypeData?.project_type ?? 'onbepaald'
   const favoritesQuery = useParcelFavorites()
@@ -59,13 +73,24 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
   )
   const isFavorited = !!matchedFavorite
 
-  // Reset to list when parcel changes (derived state pattern)
+  // Reset to overview when parcel changes (derived state pattern)
   if (trackedParcelId !== parcel.parcel_id) {
     setTrackedParcelId(parcel.parcel_id)
-    setView('list')
+    setView({ kind: 'overview' })
   }
 
-  const handleBack = useCallback(() => setView('list'), [])
+  const handleSelectCategory = useCallback((cat: CategoryKey) => {
+    setView({ kind: cat })
+  }, [])
+
+  const handleBack = useCallback(() => {
+    // Omgevingsvisie + woonvisie are drill-downs from within the Potentie tab → back to Potentie.
+    setView((prev) =>
+      prev.kind === 'omgevingsvisie' || prev.kind === 'woonvisie'
+        ? { kind: 'potentie' }
+        : { kind: 'overview' },
+    )
+  }, [])
 
   const hasReport = !!(matchedFavorite?.has_report && matchedFavorite?.report_id)
   const isGeneratingReport = isFavorited && !hasReport
@@ -122,43 +147,23 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
     </button>
   )
 
-  /** Back-nav row shown above an in-panel drill-down. */
-  const backHeader = (label: string) => (
-    <div className="flex items-center gap-2 px-8 pt-6">
-      <button
-        type="button"
-        onClick={handleBack}
-        className="flex items-center justify-center h-7 w-7 rounded-full bg-white/60 backdrop-blur-sm hover:bg-white/80 transition-colors shrink-0"
-        aria-label="Terug naar overzicht"
-      >
-        <ArrowLeft className="h-4 w-4 text-aura-ink" />
-      </button>
-      <p className="text-xs text-slate-400 font-medium uppercase tracking-widest truncate">
-        {label}
-      </p>
-    </div>
-  )
-
-  function renderBody() {
-    switch (view) {
-      case 'list':
+  function renderDetailLayer() {
+    switch (view.kind) {
+      case 'potentie':
         return (
-          <ParcelFactorList
+          <PotentieLayer
             parcel={parcel}
             gemeenteNaam={gemeenteNaam ?? ''}
-            onOpenWoonvisie={() => setView('woonvisie')}
-            onOpenOmgevingsvisie={() => setView('omgevingsvisie')}
-            onOpenDossiers={() => setView('dossiers')}
+            onOpenOmgevingsvisie={() => setView({ kind: 'omgevingsvisie' })}
+            onOpenWoonvisie={() => setView({ kind: 'woonvisie' })}
           />
         )
+      case 'risico':
+        return <RisicoLayer parcel={parcel} />
       case 'dossiers':
-        return (
-          <div className="flex flex-col flex-1 min-h-0">
-            {backHeader(VIEW_LABELS.dossiers)}
-            <BronnenLayer parcel={parcel} hasReport={hasReport} />
-          </div>
-        )
+        return <BronnenLayer parcel={parcel} hasReport={hasReport} />
       case 'omgevingsvisie': {
+        // Same shape PotentieLayer reads off score_breakdown['beleidsalignement'].
         const waarde = (parcel.score_breakdown as Record<string, { waarde?: unknown } | undefined> | null)
           ?.['beleidsalignement']?.waarde as {
           matched_gebied: string | null
@@ -168,29 +173,28 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
           verdict?: string
           randvoorwaarden?: Randvoorwaarde[]
         } | null | undefined
+        if (!waarde) {
+          return (
+            <div className="px-8 py-6 text-[13px] text-slate-400 italic">
+              Geen omgevingsvisie-beleid voor dit perceel.
+            </div>
+          )
+        }
         return (
-          <div className="flex flex-col">
-            {backHeader(VIEW_LABELS.omgevingsvisie)}
-            {waarde ? (
-              <div className="px-8 py-6">
-                <OmgevingsvisieDetailContent
-                  gemeente={gemeenteNaam ?? ''}
-                  tijdshorizon={waarde.tijdshorizon ?? 0}
-                  matched_policy={waarde.matched_policy}
-                  algemeen_citaat={waarde.algemeen_citaat ?? ''}
-                  verdict={waarde.verdict as BeleidsVerdict | undefined}
-                  randvoorwaarden={waarde.randvoorwaarden}
-                />
-              </div>
-            ) : (
-              <div className="px-8 py-6 text-[13px] text-slate-400 italic">
-                Geen omgevingsvisie-beleid voor dit perceel.
-              </div>
-            )}
+          <div className="px-8 py-6 overflow-y-auto">
+            <OmgevingsvisieDetailContent
+              gemeente={gemeenteNaam ?? ''}
+              tijdshorizon={waarde.tijdshorizon ?? 0}
+              matched_policy={waarde.matched_policy}
+              algemeen_citaat={waarde.algemeen_citaat ?? ''}
+              verdict={waarde.verdict as BeleidsVerdict | undefined}
+              randvoorwaarden={waarde.randvoorwaarden}
+            />
           </div>
         )
       }
       case 'woonvisie': {
+        // Same shape PotentieLayer reads off score_breakdown['woonvisie_match'].
         const waarde = (parcel.score_breakdown as Record<string, { waarde?: unknown } | undefined> | null)
           ?.['woonvisie_match']?.waarde as {
           matched_wijk: string | null
@@ -200,62 +204,133 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
           periode_einde?: number
           randvoorwaarden?: Randvoorwaarde[]
         } | null | undefined
+        if (!waarde) {
+          return (
+            <div className="px-8 py-6 text-[13px] text-slate-400 italic">
+              Geen woonvisie-beleid voor dit perceel.
+            </div>
+          )
+        }
         return (
-          <div className="flex flex-col">
-            {backHeader(VIEW_LABELS.woonvisie)}
-            {waarde ? (
-              <div className="px-8 py-6">
-                <WoonvisieDetailContent
-                  gemeente={gemeenteNaam ?? ''}
-                  periode_start={waarde.periode_start ?? 0}
-                  periode_einde={waarde.periode_einde ?? 0}
-                  matched_policy={waarde.matched_policy}
-                  algemeen_citaat={waarde.algemeen_citaat ?? ''}
-                  project_type={projectType}
-                  randvoorwaarden={waarde.randvoorwaarden}
-                />
-              </div>
-            ) : (
-              <div className="px-8 py-6 text-[13px] text-slate-400 italic">
-                Geen woonvisie-beleid voor dit perceel.
-              </div>
-            )}
+          <div className="px-8 py-6 overflow-y-auto">
+            <WoonvisieDetailContent
+              gemeente={gemeenteNaam ?? ''}
+              periode_start={waarde.periode_start ?? 0}
+              periode_einde={waarde.periode_einde ?? 0}
+              matched_policy={waarde.matched_policy}
+              algemeen_citaat={waarde.algemeen_citaat ?? ''}
+              project_type={projectType}
+              randvoorwaarden={waarde.randvoorwaarden}
+            />
           </div>
         )
       }
+      default:
+        return null
     }
   }
 
   return (
     <>
-      <ParcelPanelShell
-        onClose={onClose}
-        footer={footer}
-        headerActions={<HeartButton parcel={parcel} gemeenteNaam={gemeenteNaam} wijkNaam={wijkNaam} />}
-        hero={<ParcelScoreHero parcel={parcel} missingCount={countMissingFactors(parcel.score_breakdown)} />}
+    <ParcelPanelShell onClose={onClose} footer={footer} headerActions={<HeartButton parcel={parcel} gemeenteNaam={gemeenteNaam} wijkNaam={wijkNaam} />}>
+      {/* Cross-fade on parcel change */}
+      <motion.div
+        key={parcel.parcel_id}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
+        className="flex flex-col h-full"
       >
+        {/* Address header */}
+        <div className="px-8 pt-8">
+          <div className="flex items-center gap-2 pr-20">
+            {view.kind !== 'overview' && (
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex items-center justify-center h-7 w-7 rounded-full bg-white/60 backdrop-blur-sm hover:bg-white/80 transition-colors shrink-0"
+                aria-label="Terug"
+              >
+                <ArrowLeft className="h-4 w-4 text-aura-ink" />
+              </button>
+            )}
+            <div className="min-w-0 max-w-full">
+              <h2 className="flex text-[28px] font-bold tracking-tighter text-slate-900 leading-tight overflow-hidden whitespace-nowrap">
+                <span className="truncate">{splitAddress(parcel.address)[0]}</span>
+                <span className="shrink-0">{splitAddress(parcel.address)[1]}</span>
+              </h2>
+              <div className="flex items-center gap-2 mt-1 min-w-0">
+                <p className="text-xs text-slate-400 font-medium uppercase tracking-widest truncate">
+                  {view.kind !== 'overview'
+                    ? VIEW_LABELS[view.kind]
+                    : parcel.parcel_code || null}
+                </p>
+                {view.kind === 'overview' && (
+                  <MissingDataBadge count={countMissingFactors(parcel.score_breakdown)} />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Category tabs */}
+          <div className="mt-4">
+            <CategoryTabs
+              activeCategory={
+                view.kind === 'overview'
+                  ? null
+                  : view.kind === 'omgevingsvisie' || view.kind === 'woonvisie'
+                    ? 'potentie' // drill-downs live in the Potentie tab
+                    : view.kind
+              }
+              onSelect={handleSelectCategory}
+            />
+          </div>
+        </div>
+
         <AnimatePresence mode="wait">
-          <motion.div
-            key={`${parcel.parcel_id}-${view}`}
-            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
-            transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.2 }}
-            className="min-h-full flex flex-col"
-          >
-            {renderBody()}
-          </motion.div>
+          {view.kind === 'overview' ? (
+            <motion.div
+              key="overview"
+              initial={prefersReducedMotion ? false : { opacity: 1 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { y: -20, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="mt-3 flex-1 flex flex-col min-h-0"
+            >
+              <ParcelBentoOverview
+                parcel={parcel}
+                onSelectCategory={handleSelectCategory}
+                meldingenCount={enrichmentQuery.data?.enrichment_data?.vergunningen?.length ?? null}
+                vergunningen={enrichmentQuery.data?.enrichment_data?.vergunningen ?? []}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key={view.kind}
+              initial={prefersReducedMotion ? { opacity: 0 } : { y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { y: 40, opacity: 0 }}
+              transition={
+                prefersReducedMotion
+                  ? { duration: 0.15 }
+                  : { type: 'spring', stiffness: 400, damping: 30 }
+              }
+              className="flex-1 flex flex-col overflow-y-auto"
+            >
+              {renderDetailLayer()}
+            </motion.div>
+          )}
         </AnimatePresence>
-      </ParcelPanelShell>
-      {showPicker && parcel.parcel_code && (
-        <ProjectTypePickerModal
-          open={showPicker}
-          onClose={() => setShowPicker(false)}
-          parcelId={parcel.parcel_code}
-          currentType={null}
-          onSkip={() => setShowPicker(false)}
-        />
-      )}
+      </motion.div>
+    </ParcelPanelShell>
+    {showPicker && parcel.parcel_code && (
+      <ProjectTypePickerModal
+        open={showPicker}
+        onClose={() => setShowPicker(false)}
+        parcelId={parcel.parcel_code}
+        currentType={null}
+        onSkip={() => setShowPicker(false)}
+      />
+    )}
     </>
   )
 }

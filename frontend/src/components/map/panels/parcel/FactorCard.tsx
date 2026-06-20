@@ -72,6 +72,11 @@ export function FactorCard({
 
   const isInteractive = !comingSoon && !!onCardClick
 
+  /** Accessible name for the clickable card (the whole card is the button). */
+  const interactiveLabel = isInteractive
+    ? `${card.label}: ${card.value} — bekijk details`
+    : undefined
+
   /** Shared pts / "binnenkort" pill. */
   const pill = comingSoon ? (
     <span className="bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full text-[10px] font-black leading-none uppercase tracking-wide shrink-0">
@@ -94,6 +99,7 @@ export function FactorCard({
       <div
         role={isInteractive ? 'button' : undefined}
         tabIndex={isInteractive ? 0 : undefined}
+        aria-label={interactiveLabel}
         onClick={isInteractive ? handleCardClick : undefined}
         onKeyDown={
           isInteractive
@@ -106,7 +112,7 @@ export function FactorCard({
             : undefined
         }
         data-testid={comingSoon ? 'factor-card-coming-soon' : isMissing ? 'factor-card-missing' : 'factor-card'}
-        className={`group relative flex items-stretch gap-3 bg-white border ${borderClass} rounded-[18px] pl-0 pr-4 py-3 shadow-sm transition-shadow overflow-hidden ${
+        className={`group relative shrink-0 flex items-stretch gap-3 bg-white border ${borderClass} rounded-[18px] pl-0 pr-4 py-3 shadow-sm transition-shadow overflow-hidden ${
           isInteractive ? 'cursor-pointer text-left hover:shadow-md' : ''
         }`}
       >
@@ -166,6 +172,7 @@ export function FactorCard({
     <div
       role={isInteractive ? 'button' : undefined}
       tabIndex={isInteractive ? 0 : undefined}
+      aria-label={interactiveLabel}
       onClick={isInteractive ? handleCardClick : undefined}
       onKeyDown={
         isInteractive

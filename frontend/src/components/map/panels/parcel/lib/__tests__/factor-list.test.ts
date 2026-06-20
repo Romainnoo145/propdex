@@ -1,112 +1,82 @@
 /**
- * Unit tests for the single-scroll factor list (ParcelDetailPanel Optie B).
- * Pins the global weight-sort + planned-placeholder contract.
+ * Unit tests for the per-tab factor scroll helpers (ParcelDetailPanel redesign).
+ * Pins the weight-sort contract + the planned-placeholder split per category.
  */
 import { describe, expect, it } from 'vitest'
 import {
   sortByWeight,
-  buildFactorList,
-  PLANNED_FACTORS,
-  type FactorListItem,
+  PLANNED_POTENTIE,
+  PLANNED_RISICO,
+  type PlannedFactor,
 } from '../factor-list'
-import type { ScanResultItem } from '@/lib/types/scan'
 
-const item = (factor_key: string, pts: number, tone: 'positive' | 'negative'): FactorListItem => ({
-  label: factor_key.toUpperCase(),
-  value: '—',
-  sub: '',
-  pts,
-  factor_key,
-  bron: 'fysiek',
-  tone,
-})
+const card = (factor_key: string, pts: number) => ({ factor_key, pts })
 
 describe('sortByWeight', () => {
   it('orders by descending |pts| (weighted contribution), heaviest first', () => {
-    const sorted = sortByWeight([
-      item('a', 2, 'positive'),
-      item('b', -9, 'negative'),
-      item('c', 5, 'positive'),
-      item('d', 0, 'positive'),
-    ])
+    const sorted = sortByWeight([card('a', 2), card('b', -9), card('c', 5), card('d', 0)])
     expect(sorted.map((c) => c.factor_key)).toEqual(['b', 'c', 'a', 'd'])
   })
 
   it('uses absolute value so negative risico contributions rank by magnitude', () => {
-    const sorted = sortByWeight([item('low', 1, 'positive'), item('bigrisk', -8, 'negative')])
+    const sorted = sortByWeight([card('low', 1), card('bigrisk', -8)])
     expect(sorted[0]?.factor_key).toBe('bigrisk')
   })
 
   it('is stable for ties — keeps insertion order', () => {
-    const sorted = sortByWeight([
-      item('first', 4, 'positive'),
-      item('second', 4, 'negative'),
-    ])
+    const sorted = sortByWeight([card('first', 4), card('second', 4)])
     expect(sorted.map((c) => c.factor_key)).toEqual(['first', 'second'])
   })
 
   it('does not mutate its input', () => {
-    const input = [item('a', 1, 'positive'), item('b', 9, 'negative')]
+    const input = [card('a', 1), card('b', 9)]
     sortByWeight(input)
     expect(input.map((c) => c.factor_key)).toEqual(['a', 'b'])
   })
-})
 
-describe('buildFactorList', () => {
-  // Empty parcel → v2.1 fallback path in both builders (no score_breakdown).
-  const parcel = {} as ScanResultItem
-
-  it('merges potentie + risico cards into one list', () => {
-    const list = buildFactorList(parcel, undefined)
-    // v2.1 potentie fallback = 9 cards; risico fallback = 9 + 5 env = 14.
-    expect(list.length).toBe(23)
-  })
-
-  it('tags every card with a potentie/risico tone', () => {
-    const list = buildFactorList(parcel, undefined)
-    expect(list.every((c) => c.tone === 'positive' || c.tone === 'negative')).toBe(true)
-    expect(list.some((c) => c.tone === 'positive')).toBe(true)
-    expect(list.some((c) => c.tone === 'negative')).toBe(true)
-  })
-
-  it('returns a globally weight-sorted list', () => {
-    const list = buildFactorList(parcel, undefined)
-    for (let i = 1; i < list.length; i++) {
-      expect(Math.abs(list[i - 1]!.pts)).toBeGreaterThanOrEqual(Math.abs(list[i]!.pts))
-    }
+  it('is generic over any pts-bearing shape', () => {
+    const sorted = sortByWeight([
+      { factor_key: 'x', pts: 1, extra: 'keep' },
+      { factor_key: 'y', pts: 9, extra: 'keep' },
+    ])
+    expect(sorted[0]?.extra).toBe('keep')
   })
 })
 
-describe('PLANNED_FACTORS', () => {
+describe('PLANNED placeholders', () => {
+  const all: PlannedFactor[] = [...PLANNED_POTENTIE, ...PLANNED_RISICO]
+
+  it('potentie placeholders are all tone positive, risico all negative', () => {
+    expect(PLANNED_POTENTIE.every((p) => p.tone === 'positive')).toBe(true)
+    expect(PLANNED_RISICO.every((p) => p.tone === 'negative')).toBe(true)
+  })
+
   it('lists only roadmap cascades not yet in the live registry', () => {
     const liveKeys = new Set([
-      // potentie (built)
       'vrije_grond', 'optoppotentie', 'bestemming', 'leegstand', 'funda_frictie',
       'perceelgrootte', 'demografie', 'vergunning_succeskans', 'capaciteit',
       'woonvisie_match', 'beleidsalignement', 'grondwaarde_fit',
-      // risico (built) + env + brk
       'funderingsrisico', 'asbest', 'bodemverontreiniging', 'monument',
       'bestemmingswijziging', 'constructieve_staat', 'juridisch_klimaat',
       'criminaliteit', 'max_hoogte_bereikt', 'splitsingsrisico', 'parkeerdruk',
       'natura2000', 'overstromingsrisico', 'geluid', 'luchtkwaliteit',
       'hypotheek_risico', 'eigendoms_complexiteit', 'koopwaarde_trend',
     ])
-    for (const planned of PLANNED_FACTORS) {
+    for (const planned of all) {
       expect(liveKeys.has(planned.key), `${planned.key} is already live`).toBe(false)
     }
   })
 
-  it('every planned factor has a label, tone, source and wave', () => {
-    for (const p of PLANNED_FACTORS) {
+  it('every planned factor has a label, source and valid wave', () => {
+    for (const p of all) {
       expect(p.label.length).toBeGreaterThan(0)
       expect(p.source.length).toBeGreaterThan(0)
-      expect(['positive', 'negative']).toContain(p.tone)
       expect(['Wave 1', 'Wave 2', 'Wave 3']).toContain(p.wave)
     }
   })
 
-  it('keys are unique', () => {
-    const keys = PLANNED_FACTORS.map((p) => p.key)
+  it('keys are unique across both sets', () => {
+    const keys = all.map((p) => p.key)
     expect(new Set(keys).size).toBe(keys.length)
   })
 })
