@@ -394,12 +394,63 @@ function deriveEnvCards(enrichment: ReturnType<typeof useParcelEnrichment>['data
 
 /* ── Main component ───────────────────────────────────────── */
 
-const RISICO_KEYS = [
+export const RISICO_KEYS = [
   'funderingsrisico', 'asbest', 'bodemverontreiniging',
   'monument', 'bestemmingswijziging', 'constructieve_staat',
   'juridisch_klimaat', 'criminaliteit', 'max_hoogte_bereikt',
   'splitsingsrisico', 'parkeerdruk',
 ] as const
+
+/**
+ * Build the full risico card list: V3 score-card path (RISICO_KEYS) +
+ * environmental enrichment cards, with a v2.1 fallback. Extracted so both the
+ * paginated grid (legacy) and the single-scroll ParcelFactorList consume the
+ * SAME pipeline. `pts` = weighted contribution (`bijdrage`).
+ */
+export function buildRisicoCards(
+  parcel: ScanResultItem,
+  enrichmentData: ReturnType<typeof useParcelEnrichment>['data'],
+): PageCard[] {
+  const scoreCards: PageCard[] = (() => {
+    if (isScoreV3(parcel.score_breakdown) && parcel.score_breakdown) {
+      const breakdown = parcel.score_breakdown as ScoreBreakdownV3
+      return RISICO_KEYS.map((key) => {
+        const factor = breakdown[key]
+        const bron = FACTOR_BRON[key] ?? 'fysiek'
+        if (factor) {
+          const { value, sub } = formatFactorValue(key, factor)
+          return {
+            label: FACTOR_LABELS[key] ?? key.toUpperCase(),
+            value,
+            sub,
+            pts: Math.round(factor.bijdrage * 10) / 10,
+            factor_key: key,
+            bron,
+            missing: factor.missing,
+          }
+        }
+        return {
+          label: FACTOR_LABELS[key] ?? key.toUpperCase(),
+          value: '—',
+          sub: 'Data niet beschikbaar',
+          pts: 0,
+          factor_key: key,
+          bron,
+          missing: true,
+        }
+      })
+    }
+    // v2.1 fallback — wrap deriveV21Cards results with factor_key + bron
+    return deriveV21Cards(parcel).map((c, i) => ({
+      ...c,
+      factor_key: RISICO_KEYS[i] ?? `v21-${i}`,
+      bron: FACTOR_BRON[RISICO_KEYS[i] ?? ''] ?? 'fysiek',
+    }))
+  })()
+
+  const envCards = deriveEnvCards(enrichmentData)
+  return [...scoreCards, ...envCards]
+}
 
 /** splitsingsrisico factor.waarde shape (M053/S12). */
 interface SplitsingsrisicoWaarde {
@@ -461,54 +512,12 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
     parkeerWaarde != null && PARKEER_ACTIVE_VERDICTS.has(parkeerWaarde.verdict)
 
   const risicoScore = parcel.risico_score != null ? Math.round(parcel.risico_score) : null
-  const isV3 = isScoreV3(parcel.score_breakdown)
   const verdict = deriveVerdict(risicoScore)
   const enrichmentQuery = useParcelEnrichment(parcel.parcel_id)
   const { pins, toggle, isPinned } = useFactorPins('risico')
 
-  // Build score cards (10 risk factors from registry)
-  const scoreCards: PageCard[] = (() => {
-    if (isV3 && parcel.score_breakdown) {
-      const breakdown = parcel.score_breakdown as ScoreBreakdownV3
-      return RISICO_KEYS.map((key) => {
-        const factor = breakdown[key]
-        const bron = FACTOR_BRON[key] ?? 'fysiek'
-        if (factor) {
-          const { value, sub } = formatFactorValue(key, factor)
-          return {
-            label: FACTOR_LABELS[key] ?? key.toUpperCase(),
-            value,
-            sub,
-            pts: Math.round(factor.bijdrage * 10) / 10,
-            factor_key: key,
-            bron,
-            missing: factor.missing,
-          }
-        }
-        return {
-          label: FACTOR_LABELS[key] ?? key.toUpperCase(),
-          value: '—',
-          sub: 'Data niet beschikbaar',
-          pts: 0,
-          factor_key: key,
-          bron,
-          missing: true,
-        }
-      })
-    }
-    // v2.1 fallback — wrap deriveV21Cards results with factor_key + bron
-    return deriveV21Cards(parcel).map((c, i) => ({
-      ...c,
-      factor_key: RISICO_KEYS[i] ?? `v21-${i}`,
-      bron: FACTOR_BRON[RISICO_KEYS[i] ?? ''] ?? 'fysiek',
-    }))
-  })()
-
-  // Build env cards (5 environmental enrichment)
-  const envCards = deriveEnvCards(enrichmentQuery.data)
-
-  // All cards combined for buildPages
-  const allCards: PageCard[] = [...scoreCards, ...envCards]
+  // All cards combined (score factors + env enrichment) for buildPages
+  const allCards: PageCard[] = buildRisicoCards(parcel, enrichmentQuery.data)
   const pages = buildPages(allCards, pins.map((p) => ({ id: p.id, factor_key: p.factor_key, position: p.position })))
   // Clamp the active page during render instead of correcting via effect.
   const safePage = Math.min(page, Math.max(0, pages.length - 1))

@@ -10,6 +10,11 @@ interface ParcelPanelShellProps {
   footer?: ReactNode
   /** Optional action buttons rendered to the left of the close button */
   headerActions?: ReactNode
+  /**
+   * Optional sticky hero rendered above the scroll zone (shrink-0). When set,
+   * `children` scroll underneath it while the hero + footer stay fixed.
+   */
+  hero?: ReactNode
 }
 
 const prefersReducedMotion =
@@ -21,6 +26,7 @@ export function ParcelPanelShell({
   onClose,
   footer,
   headerActions,
+  hero,
 }: ParcelPanelShellProps) {
   const { panelPortalRef, setPanelOpen } = useMapContext()
   const [portalTarget, setPortalTarget] = useState<HTMLDivElement | null>(null)
@@ -68,6 +74,9 @@ export function ParcelPanelShell({
           <X className="h-4 w-4" />
         </button>
       </div>
+
+      {/* Sticky hero (above the scroll zone) */}
+      {hero && <div className="shrink-0">{hero}</div>}
 
       {/* Content area */}
       <div className="flex-1 overflow-y-auto">

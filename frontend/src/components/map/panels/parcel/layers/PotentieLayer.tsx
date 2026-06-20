@@ -309,11 +309,64 @@ interface PotentieLayerProps {
   onOpenWoonvisie?: () => void
 }
 
-const POTENTIE_KEYS = [
+export const POTENTIE_KEYS = [
   'vrije_grond', 'optoppotentie', 'bestemming', 'leegstand',
   'funda_frictie', 'perceelgrootte', 'demografie', 'vergunning_succeskans',
   'capaciteit', 'woonvisie_match', 'beleidsalignement', 'grondwaarde_fit',
 ] as const
+
+/**
+ * Build the full potentie card list (V3 score_breakdown → typed cards, with a
+ * v2.1 fallback). Extracted so both the paginated grid (legacy) and the
+ * single-scroll ParcelFactorList consume the SAME pipeline. Cards keep their
+ * `factor_key`, `bron` and `pts` (= weighted contribution `bijdrage`).
+ */
+export function buildPotentieCards(parcel: ScanResultItem): PageCard[] {
+  if (isScoreV3(parcel.score_breakdown) && parcel.score_breakdown) {
+    const breakdown = parcel.score_breakdown as ScoreBreakdownV3
+    return POTENTIE_KEYS.map((key) => {
+      const factor = breakdown[key]
+      const bron = FACTOR_BRON[key] ?? 'fysiek'
+      if (factor) {
+        const { value, sub } = formatFactorValue(key, factor, parcel)
+        return {
+          label: FACTOR_LABELS[key] ?? key.toUpperCase(),
+          value,
+          sub,
+          pts: Math.round(factor.bijdrage * 10) / 10,
+          factor_key: key,
+          bron,
+          missing: factor.missing,
+        }
+      }
+      if (key === 'capaciteit') {
+        return {
+          label: FACTOR_LABELS[key] ?? key.toUpperCase(),
+          value: capacityValue(parcel),
+          sub: capacitySub(parcel),
+          pts: 0,
+          factor_key: key,
+          bron,
+        }
+      }
+      return {
+        label: FACTOR_LABELS[key] ?? key.toUpperCase(),
+        value: '—',
+        sub: 'Data niet beschikbaar',
+        pts: 0,
+        factor_key: key,
+        bron,
+        missing: true,
+      }
+    })
+  }
+  // v2.1 fallback — wrap deriveV21Cards results with factor_key + bron
+  return deriveV21Cards(parcel).map((c, i) => ({
+    ...c,
+    factor_key: POTENTIE_KEYS[i] ?? `v21-${i}`,
+    bron: FACTOR_BRON[POTENTIE_KEYS[i] ?? ''] ?? 'fysiek',
+  }))
+}
 
 /** grondwaarde_fit factor.waarde shape (M054/S01). */
 interface GrondwaardeFitWaarde {
@@ -371,58 +424,12 @@ export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie, onOp
   const hasGrondprijsData =
     grondprijsWaarde != null && GRONDPRIJS_ACTIVE_VERDICTS.has(grondprijsWaarde.verdict)
 
-  const isV3 = isScoreV3(parcel.score_breakdown)
   const potentieScore = parcel.potentie_score != null
     ? Math.round(parcel.potentie_score)
     : parcel.score != null ? Math.round(parcel.score) : null
   const potentieVerdict = deriveVerdict(potentieScore)
 
-  const allCards: PageCard[] = (() => {
-    if (isV3 && parcel.score_breakdown) {
-      const breakdown = parcel.score_breakdown as ScoreBreakdownV3
-      return POTENTIE_KEYS.map((key) => {
-        const factor = breakdown[key]
-        const bron = FACTOR_BRON[key] ?? 'fysiek'
-        if (factor) {
-          const { value, sub } = formatFactorValue(key, factor, parcel)
-          return {
-            label: FACTOR_LABELS[key] ?? key.toUpperCase(),
-            value,
-            sub,
-            pts: Math.round(factor.bijdrage * 10) / 10,
-            factor_key: key,
-            bron,
-            missing: factor.missing,
-          }
-        }
-        if (key === 'capaciteit') {
-          return {
-            label: FACTOR_LABELS[key] ?? key.toUpperCase(),
-            value: capacityValue(parcel),
-            sub: capacitySub(parcel),
-            pts: 0,
-            factor_key: key,
-            bron,
-          }
-        }
-        return {
-          label: FACTOR_LABELS[key] ?? key.toUpperCase(),
-          value: '—',
-          sub: 'Data niet beschikbaar',
-          pts: 0,
-          factor_key: key,
-          bron,
-          missing: true,
-        }
-      })
-    }
-    // v2.1 fallback — wrap deriveV21Cards results with factor_key + bron
-    return deriveV21Cards(parcel).map((c, i) => ({
-      ...c,
-      factor_key: POTENTIE_KEYS[i] ?? `v21-${i}`,
-      bron: FACTOR_BRON[POTENTIE_KEYS[i] ?? ''] ?? 'fysiek',
-    }))
-  })()
+  const allCards: PageCard[] = buildPotentieCards(parcel)
 
   const pages = buildPages(allCards, pins.map((p) => ({ id: p.id, factor_key: p.factor_key, position: p.position })))
   // Clamp the active page during render instead of correcting via effect.
