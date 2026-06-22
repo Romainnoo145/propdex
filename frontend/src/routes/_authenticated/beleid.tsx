@@ -175,7 +175,6 @@ const SOURCE_ICONS: Record<string, LucideIcon> = {
   leegstandsverordening: DoorOpen,
   // Gemeente — Financieel
   "gemeentelijke-subsidies": Banknote,
-  grondprijsbeleid: FileText,
   // Gemeente — Duurzaamheid
   duurzaamheidsbeleid: Leaf,
   "beschermd-erfgoed": Landmark,

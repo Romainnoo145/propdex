@@ -4,7 +4,7 @@
  * Project convention (vite.config.ts `unit` project): pure-logic tests in node
  * env, NO jsdom and NO @testing-library/react. React rendering is covered by
  * Storybook play functions (ParkeernormenPopup.stories.tsx). Mirrors the
- * GrondprijsPopup / HuisvestingsverordeningPopup test precedent.
+ * HuisvestingsverordeningPopup test precedent.
  */
 import { describe, it, expect } from 'vitest'
 

@@ -1,9 +1,8 @@
 /**
  * ParkeernormenPopup stories — M054/S02 parkeerdruk cascade showcase.
  *
- * One story per key verdict state. Mirrors GrondprijsPopup.stories.tsx structure
- * (Meta from @storybook/react-vite, play-functions asserting minimal DOM via
- * Storybook test helpers).
+ * One story per key verdict state. Uses Meta from @storybook/react-vite,
+ * play-functions asserting minimal DOM via Storybook test helpers.
  */
 
 import type { Meta, StoryObj } from '@storybook/react-vite'

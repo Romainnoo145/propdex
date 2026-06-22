@@ -2,8 +2,8 @@
  * FactorDetailDrawer — shared right-side slide-in drawer chrome (M054/S03).
  *
  * Extracts the portal + AnimatePresence + panel chrome that was duplicated across
- * 5 cascade popups (OmgevingsvisiePopup, WoonvisiePopup, HuisvestingsverordeningPopup,
- * GrondprijsPopup, ParkeernormenPopup). Single source of truth for the drawer chrome.
+ * cascade popups (OmgevingsvisiePopup, WoonvisiePopup, HuisvestingsverordeningPopup,
+ * ParkeernormenPopup). Single source of truth for the drawer chrome.
  *
  * Adds Esc-to-close keyboard handler not present in the original per-popup chrome.
  */

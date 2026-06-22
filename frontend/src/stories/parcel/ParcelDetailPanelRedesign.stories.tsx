@@ -101,7 +101,6 @@ const PARCEL: ScanResultItem = {
     woonvisie_match: fac('potentie', { matched_policy: { prioriteit: 'groei', wijk_naam: 'Centrum' }, matched_wijk: 'Centrum' }, 12.4),
     vrije_grond: fac('potentie', 0.64, 9.1),
     bestemming: fac('potentie', null, 6.2),
-    grondwaarde_fit: fac('potentie', { verdict: 'passend', prijs_per_m2_min: 480, prijs_per_m2_max: 720, functiecategorie: 'vrij' }, 5.0),
     leegstand: fac('potentie', null, 4.4),
     beleidsalignement: fac('potentie', { matched_gebied: 'Binnenstad', verdict: 'kansrijk' }, 3.1),
     perceelgrootte: fac('potentie', null, 2.0),

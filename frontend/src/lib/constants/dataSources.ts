@@ -127,14 +127,6 @@ export const GEMEENTE_DATA_SOURCES: DataSourceEntry[] = [
     description:
       "Gemeente-specifieke subsidies voor woningbouw en verduurzaming.",
   },
-  {
-    key: "grondprijsbeleid",
-    label: "Grondprijsbeleid",
-    category: "financieel",
-    status: "roadmap",
-    description:
-      "Gemeentelijke grondprijzen per bestemming uit de grondprijzenbrief.",
-  },
   // Duurzaamheid
   {
     key: "duurzaamheidsbeleid",

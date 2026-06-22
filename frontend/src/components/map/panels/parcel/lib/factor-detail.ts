@@ -89,11 +89,10 @@ export function isWijkBreed(dataBronnen: string[] | null): boolean {
 
 /* ── Cascade classifier ──────────────────────────────────────── */
 
-/** The five factors that carry rich editorial detail content. */
+/** The four factors that carry rich editorial detail content. */
 export const CASCADE_FACTOR_KEYS: ReadonlySet<string> = new Set([
   'woonvisie_match',
   'beleidsalignement',
-  'grondwaarde_fit',
   'splitsingsrisico',
   'parkeerdruk',
 ])

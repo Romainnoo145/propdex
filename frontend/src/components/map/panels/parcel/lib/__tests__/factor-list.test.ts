@@ -55,7 +55,7 @@ describe('PLANNED placeholders', () => {
     const liveKeys = new Set([
       'vrije_grond', 'optoppotentie', 'bestemming', 'leegstand', 'funda_frictie',
       'perceelgrootte', 'demografie', 'vergunning_succeskans', 'capaciteit',
-      'woonvisie_match', 'beleidsalignement', 'grondwaarde_fit',
+      'woonvisie_match', 'beleidsalignement',
       'funderingsrisico', 'asbest', 'bodemverontreiniging', 'monument',
       'bestemmingswijziging', 'constructieve_staat', 'juridisch_klimaat',
       'criminaliteit', 'max_hoogte_bereikt', 'splitsingsrisico', 'parkeerdruk',

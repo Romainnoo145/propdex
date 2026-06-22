@@ -45,7 +45,7 @@ export const BRON_LABEL: Record<Bron, string> = {
  * FACTOR_REGISTRY but MUST appear in some group-page. Mapped to 'fysiek'.
  */
 export const FACTOR_BRON: Record<string, Bron> = {
-  // Potentie (10 backend + 1 UI-derived)
+  // Potentie (9 backend + 1 UI-derived)
   vrije_grond: 'fysiek',
   optoppotentie: 'fysiek',
   bestemming: 'gemeente_beleid',
@@ -56,7 +56,6 @@ export const FACTOR_BRON: Record<string, Bron> = {
   vergunning_succeskans: 'gemeente_beleid',
   woonvisie_match: 'gemeente_beleid',
   beleidsalignement: 'gemeente_beleid',
-  grondwaarde_fit: 'gemeente_beleid', // M054/S01 grondprijzenbrief (grondwaarde-fit)
   capaciteit: 'fysiek', // UI-only derived card — NOT in backend FACTOR_REGISTRY
 
   // Risico (13)

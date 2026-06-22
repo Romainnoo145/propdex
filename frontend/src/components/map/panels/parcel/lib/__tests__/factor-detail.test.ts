@@ -51,16 +51,16 @@ describe('isWijkBreed', () => {
 })
 
 describe('isCascadeFactor', () => {
-  it('is true for the five editorial cascade keys', () => {
-    for (const key of ['woonvisie_match', 'beleidsalignement', 'grondwaarde_fit', 'splitsingsrisico', 'parkeerdruk']) {
+  it('is true for the four editorial cascade keys', () => {
+    for (const key of ['woonvisie_match', 'beleidsalignement', 'splitsingsrisico', 'parkeerdruk']) {
       expect(isCascadeFactor(key)).toBe(true)
     }
   })
   it('is false for a plain computed factor', () => {
     expect(isCascadeFactor('vrije_grond')).toBe(false)
   })
-  it('CASCADE_FACTOR_KEYS has exactly five members', () => {
-    expect(CASCADE_FACTOR_KEYS.size).toBe(5)
+  it('CASCADE_FACTOR_KEYS has exactly four members', () => {
+    expect(CASCADE_FACTOR_KEYS.size).toBe(4)
   })
 })
 

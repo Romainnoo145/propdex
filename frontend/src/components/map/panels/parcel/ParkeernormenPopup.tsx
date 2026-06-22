@@ -1,8 +1,7 @@
 /**
  * ParkeernormenPopup — M054/S02 parkeerdruk cascade showcase.
  * Minimal Calm Intelligence: one focal point = the parkeerdruk-risico verdict.
- * 1:1 clone of the GrondprijsPopup drawer pattern; reuses RandvoorwaardenSection
- * from OmgevingsvisiePopup (single source of truth).
+ * Reuses RandvoorwaardenSection from OmgevingsvisiePopup (single source of truth).
  */
 import { FactorDetailDrawer } from './FactorDetailDrawer'
 import { RandvoorwaardenSection, type Randvoorwaarde } from './OmgevingsvisiePopup'

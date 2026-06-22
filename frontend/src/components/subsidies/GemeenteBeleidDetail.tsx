@@ -16,7 +16,6 @@ import {
   Landmark,
   Bell,
   Banknote,
-  FileText,
   Eye,
   TreePine,
   Car,
@@ -107,14 +106,6 @@ const GEMEENTE_DATA_SOURCES: GemeenteDataSource[] = [
     status: 'roadmap',
     icon: Eye,
     description: 'Welstandseisen per gebied: materiaalgebruik, kleurschema, dakvormen, bouwhoogte.',
-  },
-  {
-    key: 'grondprijsbeleid',
-    label: 'Grondprijsbeleid',
-    kicker: 'Configuratie',
-    status: 'roadmap',
-    icon: FileText,
-    description: 'Gemeentelijke grondprijzen per bestemming (wonen, bedrijf, maatschappelijk) uit de jaarlijkse grondprijzenbrief.',
   },
   {
     key: 'omgevingsvisie',

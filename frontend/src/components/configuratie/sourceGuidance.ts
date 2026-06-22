@@ -96,19 +96,6 @@ export const SOURCE_GUIDANCE: Record<string, SourceGuidance> = {
       "Zijn subsidies stapelbaar met rijks- of provinciale regelingen?",
     ],
   },
-  grondprijsbeleid: {
-    explainer:
-      "De grondprijzenbrief of het grondprijsbeleid beschrijft hoe de gemeente grondprijzen vaststelt bij uitgifte van gemeentelijke grond. Prijzen variëren per functie, locatie en marktsituatie.",
-    relevance:
-      "Bepaalt de verwervingskosten bij gemeentelijke gronduitgifte. Residuele grondwaardeberekeningen bepalen of een project financieel haalbaar is.",
-    checklist: [
-      "Hanteert de gemeente vaste grondprijzen of residuele grondwaarde?",
-      "Welke grondprijs geldt per functie (wonen, kantoor, commercieel)?",
-      "Zijn er kortingen voor sociale woningbouw of maatschappelijke functies?",
-      "Hoe vaak worden grondprijzen herzien?",
-      "Welke anti-speculatiebepalingen gelden bij gronduitgifte?",
-    ],
-  },
   duurzaamheidsbeleid: {
     explainer:
       "Het duurzaamheidsbeleid beschrijft gemeentelijke ambities voor energietransitie, klimaatadaptatie en circulair bouwen. Het kan bovenwettelijke eisen bevatten die verder gaan dan het Bouwbesluit.",
