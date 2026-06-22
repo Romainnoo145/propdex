@@ -13,13 +13,10 @@ import {
 } from './parcel/ParcelBentoOverview'
 import { CategoryTabs } from './parcel/CategoryTabs'
 import { PotentieLayer } from './parcel/layers/PotentieLayer'
-import { OmgevingsvisieDetailContent, type GebiedPolicy, type BeleidsVerdict, type Randvoorwaarde } from './parcel/OmgevingsvisiePopup'
-import { WoonvisieDetailContent, type WijkPolicy } from './parcel/WoonvisiePopup'
 import { RisicoLayer } from './parcel/layers/RisicoLayer'
 
 import { BronnenLayer } from './parcel/layers/BronnenLayer'
 import { useParcelEnrichment } from '@/hooks/useScans'
-import { useParcelProjectType } from '@/hooks/useParcelProjectType'
 import { useParcelFavorites, useToggleFavorite } from '@/hooks/useFavorites'
 import type { ScanResultItem } from '@/lib/types/scan'
 
@@ -35,8 +32,6 @@ type PanelView =
   | { kind: 'potentie' }
   | { kind: 'risico' }
   | { kind: 'dossiers' }
-  | { kind: 'omgevingsvisie' }
-  | { kind: 'woonvisie' }
 
 const prefersReducedMotion =
   typeof window !== 'undefined' &&
@@ -46,8 +41,6 @@ const VIEW_LABELS: Record<Exclude<PanelView['kind'], 'overview'>, string> = {
   potentie: 'Potentie',
   risico: 'Risico',
   dossiers: 'Dossiers',
-  omgevingsvisie: 'Omgevingsvisie',
-  woonvisie: 'Woonvisie',
 }
 
 interface ParcelDetailPanelProps {
@@ -63,8 +56,6 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
   const [showPicker, setShowPicker] = useState(false)
   const [trackedParcelId, setTrackedParcelId] = useState(parcel.parcel_id)
   const enrichmentQuery = useParcelEnrichment(parcel.parcel_id)
-  const { data: projectTypeData } = useParcelProjectType(parcel.parcel_id)
-  const projectType = projectTypeData?.project_type ?? 'onbepaald'
   const favoritesQuery = useParcelFavorites()
   const toggleFavorite = useToggleFavorite()
   const matchedFavorite = useMemo(
@@ -84,12 +75,7 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
   }, [])
 
   const handleBack = useCallback(() => {
-    // Omgevingsvisie + woonvisie are drill-downs from within the Potentie tab → back to Potentie.
-    setView((prev) =>
-      prev.kind === 'omgevingsvisie' || prev.kind === 'woonvisie'
-        ? { kind: 'potentie' }
-        : { kind: 'overview' },
-    )
+    setView({ kind: 'overview' })
   }, [])
 
   const hasReport = !!(matchedFavorite?.has_report && matchedFavorite?.report_id)
@@ -154,77 +140,12 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
           <PotentieLayer
             parcel={parcel}
             gemeenteNaam={gemeenteNaam ?? ''}
-            onOpenOmgevingsvisie={() => setView({ kind: 'omgevingsvisie' })}
-            onOpenWoonvisie={() => setView({ kind: 'woonvisie' })}
           />
         )
       case 'risico':
         return <RisicoLayer parcel={parcel} />
       case 'dossiers':
         return <BronnenLayer parcel={parcel} hasReport={hasReport} />
-      case 'omgevingsvisie': {
-        // Same shape PotentieLayer reads off score_breakdown['beleidsalignement'].
-        const waarde = (parcel.score_breakdown as Record<string, { waarde?: unknown } | undefined> | null)
-          ?.['beleidsalignement']?.waarde as {
-          matched_gebied: string | null
-          matched_policy: GebiedPolicy | null
-          algemeen_citaat: string
-          tijdshorizon: number
-          verdict?: string
-          randvoorwaarden?: Randvoorwaarde[]
-        } | null | undefined
-        if (!waarde) {
-          return (
-            <div className="px-8 py-6 text-[13px] text-slate-400 italic">
-              Geen omgevingsvisie-beleid voor dit perceel.
-            </div>
-          )
-        }
-        return (
-          <div className="px-8 py-6 overflow-y-auto">
-            <OmgevingsvisieDetailContent
-              gemeente={gemeenteNaam ?? ''}
-              tijdshorizon={waarde.tijdshorizon ?? 0}
-              matched_policy={waarde.matched_policy}
-              algemeen_citaat={waarde.algemeen_citaat ?? ''}
-              verdict={waarde.verdict as BeleidsVerdict | undefined}
-              randvoorwaarden={waarde.randvoorwaarden}
-            />
-          </div>
-        )
-      }
-      case 'woonvisie': {
-        // Same shape PotentieLayer reads off score_breakdown['woonvisie_match'].
-        const waarde = (parcel.score_breakdown as Record<string, { waarde?: unknown } | undefined> | null)
-          ?.['woonvisie_match']?.waarde as {
-          matched_wijk: string | null
-          matched_policy: WijkPolicy | null
-          algemeen_citaat: string
-          periode_start?: number
-          periode_einde?: number
-          randvoorwaarden?: Randvoorwaarde[]
-        } | null | undefined
-        if (!waarde) {
-          return (
-            <div className="px-8 py-6 text-[13px] text-slate-400 italic">
-              Geen woonvisie-beleid voor dit perceel.
-            </div>
-          )
-        }
-        return (
-          <div className="px-8 py-6 overflow-y-auto">
-            <WoonvisieDetailContent
-              gemeente={gemeenteNaam ?? ''}
-              periode_start={waarde.periode_start ?? 0}
-              periode_einde={waarde.periode_einde ?? 0}
-              matched_policy={waarde.matched_policy}
-              algemeen_citaat={waarde.algemeen_citaat ?? ''}
-              project_type={projectType}
-              randvoorwaarden={waarde.randvoorwaarden}
-            />
-          </div>
-        )
-      }
       default:
         return null
     }
@@ -275,13 +196,7 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
           {/* Category tabs */}
           <div className="mt-4">
             <CategoryTabs
-              activeCategory={
-                view.kind === 'overview'
-                  ? null
-                  : view.kind === 'omgevingsvisie' || view.kind === 'woonvisie'
-                    ? 'potentie' // drill-downs live in the Potentie tab
-                    : view.kind
-              }
+              activeCategory={view.kind === 'overview' ? null : view.kind}
               onSelect={handleSelectCategory}
             />
           </div>
