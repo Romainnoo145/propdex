@@ -581,6 +581,7 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
           <BijdrageBar
             key={card.factor_key}
             card={card}
+            tone="risico"
             maxAbs={maxAbs}
             onClick={cardClick(card)}
           />
@@ -595,6 +596,7 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
           <BijdrageBar
             key={planned.key}
             comingSoon
+            tone="risico"
             maxAbs={maxAbs}
             card={{ label: planned.label, value: '—', sub: planned.source, pts: 0, factor_key: planned.key, bron: planned.bron }}
           />
