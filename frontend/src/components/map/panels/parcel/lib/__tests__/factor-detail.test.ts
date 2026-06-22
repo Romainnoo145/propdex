@@ -6,6 +6,7 @@ import {
   isCascadeFactor,
   CASCADE_FACTOR_KEYS,
   barGeometry,
+  hasExplainContent,
 } from '../factor-detail'
 
 describe('parseFactors', () => {
@@ -78,5 +79,39 @@ describe('barGeometry', () => {
   })
   it('is safe when maxAbs is 0 (all factors zero)', () => {
     expect(barGeometry(0, 0)).toEqual({ side: 'zero', widthPct: 0 })
+  })
+})
+
+describe('hasExplainContent', () => {
+  const factor = (over = {}) => ({
+    categorie: 'potentie' as const,
+    waarde: null,
+    genormaliseerde_score: 70,
+    gewicht: 10,
+    bijdrage: 7,
+    toelichting_kort: 'kort',
+    toelichting_lang: null,
+    missing: false,
+    data_bronnen: null,
+    succeskans_missing: null,
+    succeskans_reason: null,
+    dev_type_ruling_count: null,
+    total_ruling_count: null,
+    percentage_of_category: null,
+    ...over,
+  })
+
+  it('is true when toelichting_lang is present', () => {
+    expect(hasExplainContent(factor({ toelichting_lang: 'lange uitleg' }))).toBe(
+      true,
+    )
+  })
+  it('is true when data_bronnen is non-empty', () => {
+    expect(hasExplainContent(factor({ data_bronnen: ['CBS StatLine'] }))).toBe(
+      true,
+    )
+  })
+  it('is false when only the short label exists', () => {
+    expect(hasExplainContent(factor())).toBe(false)
   })
 })

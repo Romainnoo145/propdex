@@ -103,6 +103,15 @@ export function isCascadeFactor(key: string): boolean {
   return CASCADE_FACTOR_KEYS.has(key)
 }
 
+/** True when a factor carries body content worth a drawer (lang text or sources). */
+export function hasExplainContent(factor: ScoreFactor): boolean {
+  return (
+    Boolean(factor.toelichting_lang) ||
+    (factor.data_bronnen !== null && factor.data_bronnen.length > 0) ||
+    (factor.dev_type_ruling_count !== null && factor.total_ruling_count !== null)
+  )
+}
+
 /* ── Bijdrage-bar geometry (Variant C) ───────────────────────── */
 
 export function barGeometry(
