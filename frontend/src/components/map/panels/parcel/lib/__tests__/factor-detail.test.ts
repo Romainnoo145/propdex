@@ -114,4 +114,7 @@ describe('hasExplainContent', () => {
   it('is false when only the short label exists', () => {
     expect(hasExplainContent(factor())).toBe(false)
   })
+  it('is true when both ruling counts are present', () => {
+    expect(hasExplainContent(factor({ dev_type_ruling_count: 3, total_ruling_count: 10 }))).toBe(true)
+  })
 })

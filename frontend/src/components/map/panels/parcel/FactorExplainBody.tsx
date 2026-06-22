@@ -72,12 +72,12 @@ export function FactorExplainBody({
             <span className="text-slate-600">
               Bijdrage:{' '}
               <b className="text-[#0E1111] tabular-nums">
-                {factor.bijdrage > 0 ? `+${factor.bijdrage}` : factor.bijdrage}
+                {factor.bijdrage > 0 ? `+${factor.bijdrage.toFixed(1)}` : factor.bijdrage.toFixed(1)}
               </b>
             </span>
           )}
         </div>
-        {factor.percentage_of_category !== null && (
+        {factor.percentage_of_category !== null && factor.percentage_of_category > 0 && (
           <p className="text-xs text-slate-500">
             {Math.round(factor.percentage_of_category * 100)}% van deze
             categorie.
