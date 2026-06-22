@@ -481,6 +481,7 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
           <BijdrageBar
             key={card.factor_key}
             card={card}
+            tone="potentie"
             maxAbs={maxAbs}
             onClick={cardClick(card)}
           />
@@ -495,6 +496,7 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
           <BijdrageBar
             key={planned.key}
             comingSoon
+            tone="potentie"
             maxAbs={maxAbs}
             card={{ label: planned.label, value: '—', sub: planned.source, pts: 0, factor_key: planned.key, bron: planned.bron }}
           />

@@ -16,15 +16,16 @@ const base = {
   bron: 'fysiek' as const,
 }
 
-export const Positive: Story = {
+export const Potentie: Story = {
   args: {
     card: { ...base, pts: 8.5 },
+    tone: 'potentie',
     maxAbs: 8.5,
     onClick: () => {},
   },
 }
 
-export const Negative: Story = {
+export const Risico: Story = {
   args: {
     card: {
       label: 'PARKEERDRUK',
@@ -34,6 +35,7 @@ export const Negative: Story = {
       factor_key: 'parkeerdruk',
       bron: 'planologisch',
     },
+    tone: 'risico',
     maxAbs: 8.5,
     onClick: () => {},
   },
@@ -49,6 +51,7 @@ export const ComingSoon: Story = {
       factor_key: 'woondeal_boost',
       bron: 'gemeente_beleid',
     },
+    tone: 'potentie',
     maxAbs: 8.5,
     comingSoon: true,
   },
