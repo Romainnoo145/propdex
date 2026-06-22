@@ -21,7 +21,6 @@ CASCADE_SOURCE_FACTORS: dict[str, str] = {
     "woonvisie": "woonvisie_match",
     "omgevingsvisie": "beleidsalignement",
     "huisvestingsverordening": "splitsingsrisico",
-    "grondprijsbeleid": "grondwaarde_fit",
     "parkeerbeleid": "parkeerdruk",
 }
 

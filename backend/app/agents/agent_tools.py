@@ -114,8 +114,7 @@ _QUERY_POLICY_DOCUMENTS = types.FunctionDeclaration(
                 description=(
                     "Filter op specifiek documenttype: welstandsnota, omgevingsvisie, "
                     "woonvisie, parkeerbeleid, leegstandsverordening, duurzaamheidsbeleid, "
-                    "erfgoedverordening, grondprijsbeleid, gemeentelijke-subsidies, "
-                    "nieuws-monitoring."
+                    "erfgoedverordening, gemeentelijke-subsidies, nieuws-monitoring."
                 ),
             ),
         },

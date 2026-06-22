@@ -149,10 +149,9 @@ def _rebalance_risico_weights(
 
 FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     # --- POTENTIE (10 factors, sum default_weight = 100) ---
-    # M054/S07: grondwaarde_fit removed (gemeente-uniform = noise). The 5 no-override
-    # potentie weights restored: bestemming 9->11, leegstand 6->7, perceelgrootte 9->11,
-    # demografie 7->8, vergunning_succeskans 11->13. Potentie cascade factors are now
-    # woonvisie 12 + beleidsalignement 10 = 22 reserved from the pool.
+    # M054/S07: 5 no-override potentie weights restored (bestemming 9->11, leegstand 6->7,
+    # perceelgrootte 9->11, demografie 7->8, vergunning_succeskans 11->13).
+    # Potentie cascade factors: woonvisie 12 + beleidsalignement 10 = 22 reserved.
     "vrije_grond": FactorRegistryEntry(
         id="vrije_grond",
         category="potentie",

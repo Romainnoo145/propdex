@@ -165,14 +165,6 @@ const TYPE_A_ENTRIES: DataSourceKeyEntry[] = [
     voedt_factor: ["subsidie_potentie"],
   },
   {
-    key: "grondprijsbeleid",
-    label_nl: "Grondprijsbeleid",
-    source_type: "A",
-    description:
-      "Gemeentelijke grondprijzen per bestemming (grondprijzenbrief).",
-    voedt_factor: ["grondwaarde_fit"],
-  },
-  {
     key: "omgevingsplan-bouwregels",
     label_nl: "Omgevingsplan bouwregels",
     source_type: "A",

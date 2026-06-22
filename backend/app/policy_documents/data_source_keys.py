@@ -190,13 +190,6 @@ _TYPE_A_ENTRIES: list[DataSourceKeyEntry] = [
         voedt_factor=("subsidie_potentie",),
     ),
     DataSourceKeyEntry(
-        key="grondprijsbeleid",
-        label_nl="Grondprijsbeleid",
-        source_type="A",
-        description="Gemeentelijke grondprijzen per bestemming (grondprijzenbrief).",
-        voedt_factor=("grondwaarde_fit",),
-    ),
-    DataSourceKeyEntry(
         key="omgevingsplan-bouwregels",
         label_nl="Omgevingsplan bouwregels",
         source_type="A",

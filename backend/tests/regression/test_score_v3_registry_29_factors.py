@@ -13,7 +13,6 @@ Source of truth: ``backend/app/services/score_v3.py`` FACTOR_REGISTRY
 beleidsalignement added in M053/S01 (potentie cascade — Omgevingsvisie).
 splitsingsrisico added in M053/S12 (risico cascade — Huisvestingsverordening).
 parkeerdruk added in M054/S02 (risico cascade — Nota parkeernormen).
-grondwaarde_fit removed in M054/S07 (weak/gemeente-uniform = noise).
 
 Iron-rule pattern (per MEMORY.md ``feedback_iron_rule_regression_pattern``):
 encode 'X must not change' as a regression test, never as a comment.

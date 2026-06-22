@@ -176,12 +176,6 @@ GEMEENTE_DATA_SOURCES: list[SourceKeyEntry] = [
         "financieel",
         "roadmap",
     ),
-    SourceKeyEntry(
-        "grondprijsbeleid",
-        "Grondprijsbeleid",
-        "financieel",
-        "roadmap",
-    ),
     # Duurzaamheid
     SourceKeyEntry(
         "duurzaamheidsbeleid",

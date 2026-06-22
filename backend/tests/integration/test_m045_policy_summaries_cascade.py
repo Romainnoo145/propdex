@@ -91,19 +91,13 @@ async def test_get_summaries_returns_cascade_across_levels(
     test_db: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Cascade: seed one cascade doc per level with distinct source_keys → dict has all three."""
+    """Cascade: seed one cascade doc per level with distinct source_keys → dict has all."""
     user, vendor_org = await _make_vendor_user(test_db)
     monkeypatch.setattr(settings, "VENDOR_ORG_ID", vendor_org.id)
 
     # Venlo cascade: PV31 is Limburg
     test_db.add(GemeenteProvincieMap(gemeente_code="GM0983", provincie_code="PV31"))
 
-    doc_landelijk = _make_policy_doc(
-        entity_type="landelijk", entity_code="NL",
-        source_key="grondprijsbeleid", version_number=1, is_global=True,
-        user_id=user.id, org_id=vendor_org.id,
-        ai_summary=None,
-    )
     doc_provincie = _make_policy_doc(
         entity_type="provincie", entity_code="PV31",
         source_key="parkeerbeleid", version_number=1, is_global=True,
@@ -116,15 +110,10 @@ async def test_get_summaries_returns_cascade_across_levels(
         user_id=user.id, org_id=vendor_org.id,
         ai_summary=None,
     )
-    test_db.add(doc_landelijk)
     test_db.add(doc_provincie)
     test_db.add(doc_gemeente)
     await test_db.flush()
 
-    test_db.add(_make_extraction(
-        doc_landelijk, "grondwaarde_fit",
-        [{"titel": "Grond landelijk", "samenvatting": "Landelijke grondprijzen."}],
-    ))
     test_db.add(_make_extraction(
         doc_provincie, "parkeerdruk",
         [{"titel": "Parkeer PV31", "samenvatting": "Provinciaal parkeerbeleid."}],
@@ -142,7 +131,6 @@ async def test_get_summaries_returns_cascade_across_levels(
         db=test_db,
     )
 
-    assert result["grondprijsbeleid"][0]["titel"] == "Grond landelijk"
     assert result["parkeerbeleid"][0]["titel"] == "Parkeer PV31"
     assert result["woonvisie"][0]["titel"] == "Woonvisie GM0983"
 

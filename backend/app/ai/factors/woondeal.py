@@ -10,8 +10,8 @@ gewicht). Elke NL-gemeente zit in een woondeal en het document geeft geen
 perceel-granulariteit, dus een gewicht zou de hele kaart uniform kleuren zonder
 differentiatie (zie .planning specs 2026-06-22). De waarde is informatie.
 
-Cloned van grondwaarde_fit.py (M054/S01): Pydantic-modellen -> _INPUT_SCHEMA dict
--> FactorDefinition. Randvoorwaarde wordt hergebruikt uit beleidsalignement.
+Structuur: Pydantic-modellen -> _INPUT_SCHEMA dict -> FactorDefinition.
+Randvoorwaarde wordt hergebruikt uit beleidsalignement.
 """
 
 from typing import Any
