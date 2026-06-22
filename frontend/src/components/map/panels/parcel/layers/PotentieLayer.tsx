@@ -14,6 +14,7 @@ import { useParcelProjectType } from '@/hooks/useParcelProjectType'
 import { FACTOR_BRON } from '@/lib/factor-groups'
 import type { PageCard } from '@/lib/factor-groups'
 import { sortByWeight, PLANNED_POTENTIE } from '../lib/factor-list'
+import { WoondealContextCard } from '../WoondealContextCard'
 
 /* ── Verdict derivation ───────────────────────────────────── */
 
@@ -483,6 +484,14 @@ export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
             onClick={cardClick(card)}
           />
         ))}
+
+        {/* Woondeal gemeente-context (no contribution pill) */}
+        {parcel.gemeente_code && (
+          <WoondealContextCard
+            gemeenteCode={parcel.gemeente_code}
+            gemeenteNaam={gemeenteNaam}
+          />
+        )}
 
         {/* Geplande potentie-cascades — dashed "binnenkort" placeholders */}
         <div className="shrink-0 mt-3 mb-1 flex items-center gap-2">
