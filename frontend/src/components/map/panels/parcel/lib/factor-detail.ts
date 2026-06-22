@@ -112,6 +112,15 @@ export function hasExplainContent(factor: ScoreFactor): boolean {
   )
 }
 
+/** True when a factor key resolves to a real entry in the score breakdown. */
+export function factorInBreakdown(
+  breakdown: Record<string, unknown> | null,
+  key: string,
+): boolean {
+  const { potentie, risico } = parseFactors(breakdown)
+  return potentie.some((f) => f.name === key) || risico.some((f) => f.name === key)
+}
+
 /* ── Bijdrage-bar geometry (Variant C) ───────────────────────── */
 
 export function barGeometry(

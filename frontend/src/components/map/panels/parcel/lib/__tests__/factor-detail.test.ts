@@ -7,6 +7,7 @@ import {
   CASCADE_FACTOR_KEYS,
   barGeometry,
   hasExplainContent,
+  factorInBreakdown,
 } from '../factor-detail'
 
 describe('parseFactors', () => {
@@ -79,6 +80,29 @@ describe('barGeometry', () => {
   })
   it('is safe when maxAbs is 0 (all factors zero)', () => {
     expect(barGeometry(0, 0)).toEqual({ side: 'zero', widthPct: 0 })
+  })
+})
+
+describe('factorInBreakdown', () => {
+  const breakdown = {
+    vrije_grond: { categorie: 'potentie', bijdrage: 8.5, gewicht: 10 },
+    parkeerdruk: { categorie: 'risico', bijdrage: -2.8, gewicht: 4 },
+  }
+
+  it('returns true when key is present in potentie breakdown', () => {
+    expect(factorInBreakdown(breakdown, 'vrije_grond')).toBe(true)
+  })
+
+  it('returns true when key is present in risico breakdown', () => {
+    expect(factorInBreakdown(breakdown, 'parkeerdruk')).toBe(true)
+  })
+
+  it('returns false when key is absent from breakdown', () => {
+    expect(factorInBreakdown(breakdown, 'natura2000')).toBe(false)
+  })
+
+  it('returns false when breakdown is null', () => {
+    expect(factorInBreakdown(null, 'vrije_grond')).toBe(false)
   })
 })
 

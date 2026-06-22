@@ -7,7 +7,7 @@ import { useParcelEnrichment } from '@/hooks/useScans'
 import { BijdrageBar } from '../BijdrageBar'
 import { FactorDetailDrawer } from '../FactorDetailDrawer'
 import { FactorExplainBody } from '../FactorExplainBody'
-import { parseFactors, isCascadeFactor } from '../lib/factor-detail'
+import { parseFactors, isCascadeFactor, factorInBreakdown } from '../lib/factor-detail'
 import { FACTOR_BRON } from '@/lib/factor-groups'
 import type { PageCard } from '@/lib/factor-groups'
 import { sortByWeight, PLANNED_RISICO } from '../lib/factor-list'
@@ -521,8 +521,14 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
   const maxAbs = Math.max(1, ...sortedCards.map((c) => Math.abs(c.pts)))
 
   function cardClick(card: PageCard): (() => void) | undefined {
-    if (card.factor_key === 'splitsingsrisico' && !hasSplitsData) return undefined
-    if (card.factor_key === 'parkeerdruk' && !hasParkeerData) return undefined
+    if (isCascadeFactor(card.factor_key)) {
+      // Cascade cards: only clickable when their editorial data is present.
+      if (card.factor_key === 'splitsingsrisico' && !hasSplitsData) return undefined
+      if (card.factor_key === 'parkeerdruk' && !hasParkeerData) return undefined
+      return () => setActiveFactorKey(card.factor_key)
+    }
+    // Non-cascade cards: only clickable when the key resolves in score_breakdown.
+    if (!factorInBreakdown(parcel.score_breakdown as Record<string, unknown> | null, card.factor_key)) return undefined
     return () => setActiveFactorKey(card.factor_key)
   }
 
@@ -575,7 +581,6 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
           <BijdrageBar
             key={card.factor_key}
             card={card}
-            tone="negative"
             maxAbs={maxAbs}
             onClick={cardClick(card)}
           />
@@ -590,7 +595,6 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
           <BijdrageBar
             key={planned.key}
             comingSoon
-            tone={planned.tone}
             maxAbs={maxAbs}
             card={{ label: planned.label, value: '—', sub: planned.source, pts: 0, factor_key: planned.key, bron: planned.bron }}
           />
