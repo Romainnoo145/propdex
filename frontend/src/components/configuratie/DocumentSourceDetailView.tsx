@@ -61,10 +61,12 @@ export function DocumentSourceDetailView({
   }, [isAnyParsing]);
 
   const docWithRandvoorwaarden = useMemo<PolicyDocument | null>(() => {
-    return (
-      documents.find(
-        (doc) => (doc.extraction?.randvoorwaarden?.length ?? 0) > 0,
-      ) ?? null
+    const withRv = documents.filter(
+      (doc) => (doc.extraction?.randvoorwaarden?.length ?? 0) > 0,
+    );
+    if (withRv.length === 0) return null;
+    return withRv.reduce((a, b) =>
+      b.version_number > a.version_number ? b : a,
     );
   }, [documents]);
 
