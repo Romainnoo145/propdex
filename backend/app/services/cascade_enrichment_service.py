@@ -20,6 +20,7 @@ from app.ai.factors.grondwaarde_fit import GRONDPRIJS_FACTOR_DEF
 from app.ai.factors.parkeerdruk import PARKEERNORMEN_FACTOR_DEF
 from app.ai.factors.splitsingsrisico import HUISVESTINGSVERORDENING_FACTOR_DEF
 from app.ai.factors.woonvisie_match import WOONVISIE_MATCH_FACTOR_DEF
+from app.models.gemeente_provincie_map import GemeenteProvincieMap
 from app.models.policy_document import PolicyDocument
 from app.services.factor_extraction_service import extract_factor
 
@@ -142,6 +143,48 @@ async def get_grondprijs_document(
             PolicyDocument.entity_type == "gemeente",
             PolicyDocument.entity_code == gemeente_code,
             PolicyDocument.source_key == "grondprijsbeleid",
+            or_(
+                PolicyDocument.is_global.is_(True),
+                PolicyDocument.organization_id == organization_id,
+            ),
+            PolicyDocument.file_data.isnot(None),
+        )
+        .order_by(
+            PolicyDocument.is_global.asc(),
+            PolicyDocument.version_number.desc(),
+            PolicyDocument.created_at.desc(),
+        )
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def get_woondeal_document(
+    db: AsyncSession,
+    *,
+    gemeente_code: str,
+    organization_id: uuid.UUID,
+) -> PolicyDocument | None:
+    """Zoek de regionale Woondeal op voor een gemeente (M054/S06, context-only).
+
+    De Woondeal is provincie-niveau: resolve gemeente_code -> provincie_code via
+    GemeenteProvincieMap, zoek dan het meest recente provincie-document met
+    source_key="woondeals". Geeft None als er geen provincie-mapping of document is.
+    """
+    prov_stmt = select(GemeenteProvincieMap.provincie_code).where(
+        GemeenteProvincieMap.gemeente_code == gemeente_code
+    )
+    provincie_code = (await db.execute(prov_stmt)).scalar_one_or_none()
+    if not provincie_code:
+        return None
+
+    stmt = (
+        select(PolicyDocument)
+        .where(
+            PolicyDocument.entity_type == "provincie",
+            PolicyDocument.entity_code == provincie_code,
+            PolicyDocument.source_key == "woondeals",
             or_(
                 PolicyDocument.is_global.is_(True),
                 PolicyDocument.organization_id == organization_id,
