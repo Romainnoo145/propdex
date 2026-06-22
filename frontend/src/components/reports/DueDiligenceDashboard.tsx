@@ -21,6 +21,7 @@ import { S6VergunningenPrecedenten } from './sections/S6VergunningenPrecedenten'
 import { S7Bronvermelding } from './sections/S7Bronvermelding'
 import { PolicyInsightCard } from './components/PolicyInsightCard'
 import { usePolicySummariesByWoonplaats, getSummariesForSection } from '@/hooks/usePolicySummaries'
+import type { Randvoorwaarde } from '@/components/map/panels/parcel/OmgevingsvisiePopup'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -62,7 +63,7 @@ function renderSectionContent(
   section: SectionKey,
   data: PropertyReportResponse,
   sourceParcelId: string | null | undefined,
-  policySummaries: Record<string, string> | undefined,
+  policySummaries: Record<string, Randvoorwaarde[]> | undefined,
   reportId?: string | null,
   onRefresh?: () => Promise<void>,
   isRefreshing?: boolean,
