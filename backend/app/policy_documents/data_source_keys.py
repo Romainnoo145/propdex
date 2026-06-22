@@ -119,7 +119,8 @@ _TYPE_A_ENTRIES: list[DataSourceKeyEntry] = [
         description=(
             "Regionale afspraken woningbouwaantallen + versnellingslocaties."
         ),
-        voedt_factor=("woonvisie_match",),
+        level="provincie",
+        voedt_factor=(),  # context-only: woondeal feeds no scoring factor (M054/S06)
     ),
     DataSourceKeyEntry(
         key="provinciaal-erfgoed",

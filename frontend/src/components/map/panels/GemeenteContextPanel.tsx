@@ -15,6 +15,7 @@ import { RaadsinformatieModal } from './gemeente/RaadsinformatieModal'
 import { JuridischKlimaatModal } from './gemeente/JuridischKlimaatModal'
 import { DoorlooptijdModal } from './gemeente/DoorlooptijdModal'
 import { HuisvestingsModal } from './gemeente/HuisvestingsModal'
+import { WoondealModal } from './gemeente/WoondealModal'
 import type { ScanListItem, CbsNeighborhoodMetrics } from '@/lib/types/scan'
 
 const prefersReducedMotion =
@@ -58,6 +59,7 @@ export function GemeenteContextPanel({
   const [showJurisprudentie, setShowJurisprudentie] = useState(false)
   const [showDoorlooptijd, setShowDoorlooptijd] = useState(false)
   const [showHuisvesting, setShowHuisvesting] = useState(false)
+  const [showWoondeal, setShowWoondeal] = useState(false)
 
   const handleSelectLayer = useCallback((layer: GemeenteLayer) => {
     setActiveLayer(layer)
@@ -154,6 +156,7 @@ export function GemeenteContextPanel({
                   onShowJurisprudentie={() => setShowJurisprudentie(true)}
                   onShowDoorlooptijd={() => setShowDoorlooptijd(true)}
                   onShowHuisvesting={() => setShowHuisvesting(true)}
+                  onShowWoondeal={() => setShowWoondeal(true)}
                 />
               </motion.div>
             ) : (
@@ -253,6 +256,13 @@ export function GemeenteContextPanel({
           <HuisvestingsModal
             gemeenteNaam={naam}
             onClose={() => setShowHuisvesting(false)}
+          />
+        )}
+        {showWoondeal && (
+          <WoondealModal
+            gemeenteCode={code}
+            gemeenteNaam={naam}
+            onClose={() => setShowWoondeal(false)}
           />
         )}
       </AnimatePresence>

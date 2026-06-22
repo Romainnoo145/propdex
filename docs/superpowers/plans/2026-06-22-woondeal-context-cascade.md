@@ -565,7 +565,7 @@ async def get_woondeal(
     ).scalar_one_or_none()
     if cached is None:
         return WoondealGemeenteResponse(
-            gemeente_naam=gemeente_naam, heeft_woondeal=False, document_title=doc.title
+            gemeente_naam=gemeente_naam, heeft_woondeal=False, document_title=doc.filename
         )
 
     payload = WoondealPayload.model_validate(cached.extracted_payload)
@@ -599,7 +599,7 @@ async def get_woondeal(
         betaalbaar_definitie=payload.betaalbaar_definitie,
         regelingen=payload.regelingen,
         doelgroepen=payload.doelgroepen,
-        document_title=doc.title,
+        document_title=doc.filename,
     )
 ```
 
@@ -649,7 +649,7 @@ from sqlalchemy import or_, select
 from app.ai.factor_extraction_schemas import DOCUMENT_SENTINEL
 from app.ai.factors.woondeal import WOONDEAL_FACTOR_DEF
 from app.core.config import settings
-from app.db.session import async_session_factory
+from app.core.database import async_session_factory
 from app.models.policy_document import PolicyDocument
 from app.services.factor_extraction_service import extract_factor
 

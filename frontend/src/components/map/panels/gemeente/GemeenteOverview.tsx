@@ -27,6 +27,7 @@ interface GemeenteOverviewProps {
   onShowJurisprudentie: () => void
   onShowDoorlooptijd: () => void
   onShowHuisvesting: () => void
+  onShowWoondeal: () => void
 }
 
 /* ── Animation ─────────────────────────────────────────────── */
@@ -279,6 +280,7 @@ export function GemeenteOverview({
   onShowJurisprudentie,
   onShowDoorlooptijd,
   onShowHuisvesting,
+  onShowWoondeal,
 }: GemeenteOverviewProps) {
   const { data: profile } = useGemeenteProfile(naam)
   const { data: hvv } = useHuisvestingsverordening(naam)
@@ -475,6 +477,10 @@ export function GemeenteOverview({
         <SecondaryField
           value={`${wijkCount} wijken`}
           onClick={onShowWijken}
+        />
+        <SecondaryField
+          value={'Woondeal & woningbouwafspraken'}
+          onClick={onShowWoondeal}
         />
       </motion.div>
 

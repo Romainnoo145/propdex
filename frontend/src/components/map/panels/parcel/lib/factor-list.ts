@@ -47,14 +47,6 @@ export interface PlannedFactor {
  */
 export const PLANNED_POTENTIE: PlannedFactor[] = [
   {
-    key: 'woondeal_boost',
-    label: 'WOONDEAL',
-    tone: 'positive',
-    bron: 'gemeente_beleid',
-    source: 'Woondeal Limburg 2022-2030',
-    wave: 'Wave 1',
-  },
-  {
     key: 'beleidsalignement_provincie',
     label: 'PROV. VISIE',
     tone: 'positive',
