@@ -3,9 +3,7 @@
  * Minimal Calm Intelligence: one focal point = the beleidstekst (citaat).
  * Cloned from WoonvisiePopup; deelgebied-karakter replaces wijk-prioriteit.
  */
-import { createPortal } from 'react-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { X } from 'lucide-react'
+import { FactorDetailDrawer } from './FactorDetailDrawer'
 
 export type GebiedKarakter =
   | 'centraal_stedelijk' | 'transformatie' | 'stedelijk_wonen'
@@ -314,48 +312,16 @@ export function OmgevingsvisiePopup({
 }: OmgevingsvisiePopupProps) {
   if (!isOpen) return null
 
-  return createPortal(
-    <AnimatePresence>
-      <motion.div
-        key="omgevingsvisie-backdrop"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-[60] flex items-stretch justify-end bg-black/30 backdrop-blur-md"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ x: '100%' }}
-          animate={{ x: 0 }}
-          exit={{ x: '100%' }}
-          transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-          className="relative flex h-full w-full max-w-[680px] flex-col bg-white rounded-l-[32px] shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Close — no header chrome */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute top-5 right-5 flex h-8 w-8 items-center justify-center rounded-full text-[#9CA3AF] transition-colors hover:bg-[#F2F6F3] hover:text-[#0E1111]"
-            aria-label="Sluiten"
-          >
-            <X size={14} strokeWidth={2} />
-          </button>
-
-          <div className="flex-1 min-h-0 overflow-y-auto px-12 py-12">
-            <OmgevingsvisieDetailContent
-              gemeente={gemeente}
-              tijdshorizon={tijdshorizon}
-              matched_policy={matched_policy}
-              algemeen_citaat={algemeen_citaat}
-              verdict={verdict}
-              randvoorwaarden={randvoorwaarden}
-            />
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>,
-    document.body,
+  return (
+    <FactorDetailDrawer isOpen={isOpen} onClose={onClose}>
+      <OmgevingsvisieDetailContent
+        gemeente={gemeente}
+        tijdshorizon={tijdshorizon}
+        matched_policy={matched_policy}
+        algemeen_citaat={algemeen_citaat}
+        verdict={verdict}
+        randvoorwaarden={randvoorwaarden}
+      />
+    </FactorDetailDrawer>
   )
 }
