@@ -3,14 +3,13 @@ import type { PageCard } from '@/lib/factor-groups'
 
 interface BijdrageBarProps {
   card: PageCard
-  tone: 'positive' | 'negative'
   /** Max |pts| across the current list — normalises bar width. */
   maxAbs: number
   onClick?: () => void
   comingSoon?: boolean
 }
 
-export function BijdrageBar({ card, tone: _tone, maxAbs, onClick, comingSoon = false }: BijdrageBarProps) {
+export function BijdrageBar({ card, maxAbs, onClick, comingSoon = false }: BijdrageBarProps) {
   const { side, widthPct } = barGeometry(card.pts, maxAbs)
   const isInteractive = !comingSoon && !!onClick
 

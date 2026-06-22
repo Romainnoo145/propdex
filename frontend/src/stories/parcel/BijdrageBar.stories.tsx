@@ -19,7 +19,6 @@ const base = {
 export const Positive: Story = {
   args: {
     card: { ...base, pts: 8.5 },
-    tone: 'positive',
     maxAbs: 8.5,
     onClick: () => {},
   },
@@ -35,7 +34,6 @@ export const Negative: Story = {
       factor_key: 'parkeerdruk',
       bron: 'planologisch',
     },
-    tone: 'negative',
     maxAbs: 8.5,
     onClick: () => {},
   },
@@ -51,7 +49,6 @@ export const ComingSoon: Story = {
       factor_key: 'woondeal_boost',
       bron: 'gemeente_beleid',
     },
-    tone: 'positive',
     maxAbs: 8.5,
     comingSoon: true,
   },
