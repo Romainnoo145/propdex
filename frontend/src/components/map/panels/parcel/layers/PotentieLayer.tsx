@@ -6,7 +6,10 @@ import { isScoreV3 } from '@/lib/score'
 import { WoonvisiePopup, type WijkPolicy } from '../WoonvisiePopup'
 import { OmgevingsvisiePopup, type GebiedPolicy, type BeleidsVerdict, type Randvoorwaarde } from '../OmgevingsvisiePopup'
 import { GrondprijsPopup } from '../GrondprijsPopup'
-import { FactorCard } from '../FactorCard'
+import { BijdrageBar } from '../BijdrageBar'
+import { FactorDetailDrawer } from '../FactorDetailDrawer'
+import { FactorExplainBody } from '../FactorExplainBody'
+import { parseFactors, isCascadeFactor } from '../lib/factor-detail'
 import { useParcelProjectType } from '@/hooks/useParcelProjectType'
 import { FACTOR_BRON } from '@/lib/factor-groups'
 import type { PageCard } from '@/lib/factor-groups'
@@ -294,18 +297,6 @@ function deriveV21Cards(parcel: ScanResultItem): Omit<PageCard, 'factor_key' | '
 interface PotentieLayerProps {
   parcel: ScanResultItem
   gemeenteNaam: string
-  /**
-   * When provided, the omgevingsvisie card drills down in-panel (handled by
-   * the parent ParcelDetailPanel view-stack) instead of opening the standalone
-   * OmgevingsvisiePopup drawer. Absent → old popup behavior (back-compat).
-   */
-  onOpenOmgevingsvisie?: () => void
-  /**
-   * When provided, the woonvisie card drills down in-panel (handled by the parent
-   * ParcelDetailPanel view-stack) instead of opening the standalone WoonvisiePopup
-   * drawer. Absent → old popup behavior (back-compat).
-   */
-  onOpenWoonvisie?: () => void
 }
 
 export const POTENTIE_KEYS = [
@@ -384,10 +375,8 @@ interface GrondwaardeFitWaarde {
 /** Verdicts that carry popup content (clickable). */
 const GRONDPRIJS_ACTIVE_VERDICTS = new Set(['passend', 'context'])
 
-export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie, onOpenWoonvisie }: PotentieLayerProps) {
-  const [woonvisieOpen, setWoonvisieOpen] = useState(false)
-  const [omgevingsvisieOpen, setOmgevingsvisieOpen] = useState(false)
-  const [grondprijsOpen, setGrondprijsOpen] = useState(false)
+export function PotentieLayer({ parcel, gemeenteNaam }: PotentieLayerProps) {
+  const [activeFactorKey, setActiveFactorKey] = useState<string | null>(null)
   const { data: projectTypeData } = useParcelProjectType(parcel.parcel_id)
   const projectType = projectTypeData?.project_type ?? 'onbepaald'
 
@@ -429,18 +418,23 @@ export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie, onOp
   // Weight-sorted factor list (heaviest |bijdrage| first), no pagination.
   const sortedCards: PageCard[] = sortByWeight(buildPotentieCards(parcel))
 
+  const maxAbs = Math.max(1, ...sortedCards.map((c) => Math.abs(c.pts)))
+
   function cardClick(card: PageCard): (() => void) | undefined {
-    if (card.factor_key === 'woonvisie_match' && hasWoonvisieData) {
-      return onOpenWoonvisie ?? (() => setWoonvisieOpen(true))
-    }
-    if (card.factor_key === 'beleidsalignement' && hasOmgevingsvisieData) {
-      return onOpenOmgevingsvisie ?? (() => setOmgevingsvisieOpen(true))
-    }
-    if (card.factor_key === 'grondwaarde_fit' && hasGrondprijsData) {
-      return () => setGrondprijsOpen(true)
-    }
-    return undefined
+    // Cascade cards only clickable when their data is present (verdict-gated).
+    if (card.factor_key === 'woonvisie_match' && !hasWoonvisieData) return undefined
+    if (card.factor_key === 'beleidsalignement' && !hasOmgevingsvisieData) return undefined
+    if (card.factor_key === 'grondwaarde_fit' && !hasGrondprijsData) return undefined
+    return () => setActiveFactorKey(card.factor_key)
   }
+
+  const close = () => setActiveFactorKey(null)
+
+  // Parse factors once for the generic explain drawer
+  const factors = parseFactors(parcel.score_breakdown as Record<string, unknown> | null)
+  const activeFactor = activeFactorKey
+    ? factors.potentie.find((f) => f.name === activeFactorKey)?.factor ?? null
+    : null
 
   const springVal = useSpring(0, { stiffness: 60, damping: 20 })
   useEffect(() => {
@@ -479,13 +473,12 @@ export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie, onOp
       {/* ── Factor list — one continuous, weight-sorted scroll ── */}
       <div className="flex-1 min-h-0 overflow-y-auto px-6 mt-3 flex flex-col gap-2">
         {sortedCards.map((card) => (
-          <FactorCard
+          <BijdrageBar
             key={card.factor_key}
-            layout="row"
-            card={{ label: card.label, value: card.value, sub: card.sub, pts: card.pts }}
+            card={card}
             tone="positive"
-            isMissing={!!card.missing}
-            onCardClick={cardClick(card)}
+            maxAbs={maxAbs}
+            onClick={cardClick(card)}
           />
         ))}
 
@@ -495,60 +488,48 @@ export function PotentieLayer({ parcel, gemeenteNaam, onOpenOmgevingsvisie, onOp
           <span className="h-px flex-1 bg-slate-100" />
         </div>
         {PLANNED_POTENTIE.map((planned) => (
-          <FactorCard
+          <BijdrageBar
             key={planned.key}
-            layout="row"
             comingSoon
             tone={planned.tone}
-            card={{ label: planned.label, value: '—', sub: planned.source, pts: 0 }}
+            maxAbs={maxAbs}
+            card={{ label: planned.label, value: '—', sub: planned.source, pts: 0, factor_key: planned.key, bron: planned.bron }}
           />
         ))}
       </div>
 
-      {hasWoonvisieData && !onOpenWoonvisie && (
+      {/* Cascades: their own editorial popup, opened when their key is active */}
+      {hasWoonvisieData && (
         <WoonvisiePopup
-          isOpen={woonvisieOpen}
-          onClose={() => setWoonvisieOpen(false)}
-          gemeente={gemeenteNaam}
-          periode_start={woonvisieWaarde!.periode_start ?? 0}
-          periode_einde={woonvisieWaarde!.periode_einde ?? 0}
-          matched_policy={woonvisieWaarde!.matched_policy}
-          algemeen_citaat={woonvisieWaarde!.algemeen_citaat ?? ''}
-          project_type={projectType}
+          isOpen={activeFactorKey === 'woonvisie_match'} onClose={close}
+          gemeente={gemeenteNaam} periode_start={woonvisieWaarde!.periode_start ?? 0}
+          periode_einde={woonvisieWaarde!.periode_einde ?? 0} matched_policy={woonvisieWaarde!.matched_policy}
+          algemeen_citaat={woonvisieWaarde!.algemeen_citaat ?? ''} project_type={projectType}
           randvoorwaarden={woonvisieWaarde!.randvoorwaarden}
         />
       )}
-
-      {hasOmgevingsvisieData && !onOpenOmgevingsvisie && (
+      {hasOmgevingsvisieData && (
         <OmgevingsvisiePopup
-          isOpen={omgevingsvisieOpen}
-          onClose={() => setOmgevingsvisieOpen(false)}
-          gemeente={gemeenteNaam}
-          tijdshorizon={omgevingsvisieWaarde!.tijdshorizon ?? 0}
-          matched_policy={omgevingsvisieWaarde!.matched_policy}
-          algemeen_citaat={omgevingsvisieWaarde!.algemeen_citaat ?? ''}
-          project_type={projectType}
-          verdict={omgevingsvisieWaarde!.verdict as BeleidsVerdict | undefined}
+          isOpen={activeFactorKey === 'beleidsalignement'} onClose={close}
+          gemeente={gemeenteNaam} tijdshorizon={omgevingsvisieWaarde!.tijdshorizon ?? 0}
+          matched_policy={omgevingsvisieWaarde!.matched_policy} algemeen_citaat={omgevingsvisieWaarde!.algemeen_citaat ?? ''}
+          project_type={projectType} verdict={omgevingsvisieWaarde!.verdict as BeleidsVerdict | undefined}
           randvoorwaarden={omgevingsvisieWaarde?.randvoorwaarden}
         />
       )}
-
       {hasGrondprijsData && (
-        <GrondprijsPopup
-          isOpen={grondprijsOpen}
-          onClose={() => setGrondprijsOpen(false)}
-          gemeente={gemeenteNaam}
-          verdict={grondprijsWaarde!.verdict}
-          grondproduct={grondprijsWaarde!.grondproduct}
-          functiecategorie={grondprijsWaarde!.functiecategorie}
-          prijs_per_m2_min={grondprijsWaarde!.prijs_per_m2_min}
-          prijs_per_m2_max={grondprijsWaarde!.prijs_per_m2_max}
-          prijsgrondslag={grondprijsWaarde!.prijsgrondslag}
-          peiljaar={grondprijsWaarde!.peiljaar}
-          grondbeleidstype={grondprijsWaarde!.grondbeleidstype}
-          erfpacht_mogelijk={grondprijsWaarde!.erfpacht_mogelijk}
-          randvoorwaarden={grondprijsWaarde!.randvoorwaarden}
-        />
+        <GrondprijsPopup isOpen={activeFactorKey === 'grondwaarde_fit'} onClose={close} gemeente={gemeenteNaam}
+          verdict={grondprijsWaarde!.verdict} grondproduct={grondprijsWaarde!.grondproduct}
+          functiecategorie={grondprijsWaarde!.functiecategorie} prijs_per_m2_min={grondprijsWaarde!.prijs_per_m2_min}
+          prijs_per_m2_max={grondprijsWaarde!.prijs_per_m2_max} prijsgrondslag={grondprijsWaarde!.prijsgrondslag}
+          peiljaar={grondprijsWaarde!.peiljaar} grondbeleidstype={grondprijsWaarde!.grondbeleidstype}
+          erfpacht_mogelijk={grondprijsWaarde!.erfpacht_mogelijk} randvoorwaarden={grondprijsWaarde!.randvoorwaarden} />
+      )}
+      {/* Generic factors: one shared explain-drawer */}
+      {activeFactorKey && !isCascadeFactor(activeFactorKey) && activeFactor && (
+        <FactorDetailDrawer isOpen onClose={close}>
+          <FactorExplainBody name={activeFactorKey} factor={activeFactor} />
+        </FactorDetailDrawer>
       )}
     </div>
   )
