@@ -55,7 +55,6 @@ import { useProvincieGeoJSON } from "@/hooks/useProvincieGeoJSON";
 import {
   usePolicyDocuments,
   useUploadPolicyDocument,
-  parseAiSummary,
 } from "@/hooks/usePolicyDocuments";
 import { geoJsonToSvgPath } from "@/lib/geo-utils";
 import { useAuth } from "@/lib/auth/useAuth";
@@ -418,11 +417,11 @@ function DataSourceCard({
   const docCount = docsData?.total ?? 0;
   const isComplete = isLive || docCount > 0;
 
-  // AI summary state derived from documents
+  // Extraction state derived from documents
   const firstDoc = docsData?.documents?.[0];
   const isAnyParsing =
     docsData?.documents?.some((d) => d.status === "parsing") ?? false;
-  const aiSummary = firstDoc ? parseAiSummary(firstDoc.ai_summary) : null;
+  const hasExtraction = (firstDoc?.extraction?.randvoorwaarden?.length ?? 0) > 0;
 
   // Toggle polling when parsing status changes
   useEffect(() => {
@@ -587,7 +586,7 @@ function DataSourceCard({
                 {firstDoc?.filename ??
                   `${docCount} document${docCount !== 1 ? "en" : ""}`}
               </span>
-              {aiSummary && (
+              {hasExtraction && (
                 <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 shrink-0">
                   <Sparkles size={9} />
                   AI

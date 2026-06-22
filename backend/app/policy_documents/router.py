@@ -133,7 +133,7 @@ async def get_policy_summaries(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> PolicySummariesResponse:
-    """Get AI summaries for all policy documents of an entity. Returns {source_key: ai_summary}."""
+    """Get extraction results for all policy documents of an entity. Returns {source_key: randvoorwaarden list}."""
     summaries = await svc.get_summaries(
         entity_type=entity_type,
         entity_code=entity_code,

@@ -19,8 +19,7 @@ import {
   type CascadePolicyDocRead,
   type CascadePolicyBundleResponse,
 } from '@/hooks/useGemeenteCascadeDocuments'
-import { parseAiSummary } from '@/hooks/usePolicyDocuments'
-import { AiSummaryCard } from '@/components/configuratie/AiSummaryCard'
+import { RandvoorwaardenSection } from '@/components/map/panels/parcel/OmgevingsvisiePopup'
 import { formatRelativeNL } from '@/lib/utils/datetime'
 
 interface Props {
@@ -141,28 +140,20 @@ function ExpandedRow({
   doc: CascadePolicyDocRead
   onCollapse: () => void
 }) {
-  const parsed = parseAiSummary(doc.ai_summary)
+  const hasRandvoorwaarden = (doc.extraction?.randvoorwaarden?.length ?? 0) > 0
 
-  if (!parsed) {
-    return (
+  return (
+    <div className="rounded-[8px] border-l-2 border-[#F9A826] bg-[#FAFBFA] py-3 px-3.5">
       <button
         type="button"
         onClick={onCollapse}
-        className="w-full text-left py-3 px-3.5 rounded-[8px] border-l-2 border-[#F9A826] bg-[#FAFBFA]"
+        className="w-full text-left font-bold text-[13px] text-slate-900 mb-1"
       >
-        <div className="font-bold text-[13px] text-slate-900 mb-1">
-          {capitalizeSourceKey(doc.source_key)}
-        </div>
-        <div className="text-[11px] text-slate-400 italic">
-          Samenvatting wordt gegenereerd…
-        </div>
+        {capitalizeSourceKey(doc.source_key)}
       </button>
-    )
-  }
-
-  return (
-    <div onClick={onCollapse} className="cursor-pointer">
-      <AiSummaryCard summary={parsed} documentName={capitalizeSourceKey(doc.source_key)} />
+      {hasRandvoorwaarden && (
+        <RandvoorwaardenSection randvoorwaarden={doc.extraction!.randvoorwaarden} />
+      )}
     </div>
   )
 }

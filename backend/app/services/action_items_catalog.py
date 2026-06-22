@@ -83,8 +83,8 @@ ACTION_ITEMS_CATALOG: dict[str, ActionItemEntry] = {
         title="Welstandsnota AI-parsing",
         description=(
             "Shipped in M045/S05. Welstandsnota PDFs worden via /instellingen/beleid-"
-            "beheer geüpload en automatisch door Claude samengevat (document_summary_job). "
-            "Samenvatting zichtbaar in rapport + parcel dossier."
+            "beheer geüpload en uitgelezen via cascade-extractie. "
+            "Randvoorwaarden zichtbaar in rapport + parcel dossier."
         ),
         category="roadmap",
         priority="laag",
