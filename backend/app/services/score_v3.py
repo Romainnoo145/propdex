@@ -148,12 +148,11 @@ def _rebalance_risico_weights(
 
 
 FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
-    # --- POTENTIE (11 factors, sum default_weight = 100) ---
-    # M054/S01: grondwaarde_fit (8) freed from no-override potentie factors
-    # (bestemming 11->9, perceelgrootte 11->9, vergunning_succeskans 13->11,
-    # demografie 8->7, leegstand 7->6). Only no-override factors shaved → every
-    # projecttype sum stays 100. Three potentie cascade factors (woonvisie 12 +
-    # beleidsalignement 10 + grondwaarde_fit 8 = 30) are reserved from the pool.
+    # --- POTENTIE (10 factors, sum default_weight = 100) ---
+    # M054/S07: grondwaarde_fit removed (gemeente-uniform = noise). The 5 no-override
+    # potentie weights restored: bestemming 9->11, leegstand 6->7, perceelgrootte 9->11,
+    # demografie 7->8, vergunning_succeskans 11->13. Potentie cascade factors are now
+    # woonvisie 12 + beleidsalignement 10 = 22 reserved from the pool.
     "vrije_grond": FactorRegistryEntry(
         id="vrije_grond",
         category="potentie",
@@ -178,7 +177,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "bestemming": FactorRegistryEntry(
         id="bestemming",
         category="potentie",
-        default_weight=9,  # 13 (M053/S01: 11), 11->9 rebalanced by M054/S01
+        default_weight=11,  # 13 (M053/S01: 11), 11->9 (M054/S01), 9->11 restored by M054/S07
         weight_by_projecttype=None,
         data_source="Bestemmingsplan / Ruimtelijkeplannen.nl",
         bron="gemeente_beleid",
@@ -186,7 +185,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "leegstand": FactorRegistryEntry(
         id="leegstand",
         category="potentie",
-        default_weight=6,  # 9 (M053/S01: 7), 7->6 rebalanced by M054/S01
+        default_weight=7,  # 9 (M053/S01: 7), 7->6 (M054/S01), 6->7 restored by M054/S07
         weight_by_projecttype=None,
         data_source="BAG",
         bron="fysiek",
@@ -202,7 +201,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "perceelgrootte": FactorRegistryEntry(
         id="perceelgrootte",
         category="potentie",
-        default_weight=9,  # 13 (M053/S01: 11), 11->9 rebalanced by M054/S01
+        default_weight=11,  # 13 (M053/S01: 11), 11->9 (M054/S01), 9->11 restored by M054/S07
         weight_by_projecttype=None,
         data_source="Kadaster",
         bron="fysiek",
@@ -210,7 +209,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "demografie": FactorRegistryEntry(
         id="demografie",
         category="potentie",
-        default_weight=7,  # 9 (M053/S01: 8), 8->7 rebalanced by M054/S01
+        default_weight=8,  # 9 (M053/S01: 8), 8->7 (M054/S01), 7->8 restored by M054/S07
         weight_by_projecttype=None,
         data_source="CBS StatLine",
         bron="markt",
@@ -218,7 +217,7 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
     "vergunning_succeskans": FactorRegistryEntry(
         id="vergunning_succeskans",
         category="potentie",
-        default_weight=11,  # 15 (M053/S01: 13), 13->11 rebalanced by M054/S01
+        default_weight=13,  # 15 (M053/S01: 13), 13->11 (M054/S01), 11->13 restored by M054/S07
         weight_by_projecttype=None,
         data_source="Rechtspraak.nl",
         bron="gemeente_beleid",
@@ -240,15 +239,6 @@ FACTOR_REGISTRY: dict[str, FactorRegistryEntry] = {
         default_weight=10,
         weight_by_projecttype=None,  # constant — projecttype-fit lives in the score, not the weight
         data_source="Gemeentelijke omgevingsvisie (LLM-extracted)",
-        bron="gemeente_beleid",
-    ),
-    # --- M054/S01 grondwaarde_fit (potentie cascade — Grondprijzenbrief) ---
-    "grondwaarde_fit": FactorRegistryEntry(
-        id="grondwaarde_fit",
-        category="potentie",
-        default_weight=8,
-        weight_by_projecttype=None,  # constant — projecttype-fit lives in the score, not the weight
-        data_source="Gemeentelijke grondprijzenbrief (LLM-extracted)",
         bron="gemeente_beleid",
     ),
     # --- RISICO (18 factors, sum default_weight = 100) ---
@@ -491,16 +481,14 @@ DEFAULT_WEIGHTS: dict[str, Any] = {
 # (woonvisie_match = always context-only/0; beleidsalignement = weight only when
 # verdict 'kansrijk'; splitsingsrisico = weight only when the regeling actually touches
 # this parcel — van_toepassing / mogelijk_van_toepassing / vergunningstelsel_voorraad;
-# grondwaarde_fit = weight only when verdict 'passend' — residueel grondbeleid dat aansluit
-# op de bestemming; parkeerdruk = weight only when verdict 'verhoogd' — een reëel
-# parkeer-ontwikkelrisico). No weight path — custom-weight overrides (_apply_custom_weights)
-# nor the rescore_weights recompute — may override the verdict gate for these.
+# parkeerdruk = weight only when verdict 'verhoogd' — een reëel parkeer-ontwikkelrisico).
+# No weight path — custom-weight overrides (_apply_custom_weights) nor the
+# rescore_weights recompute — may override the verdict gate for these.
 CASCADE_GATED_FACTORS: frozenset[str] = frozenset(
     {
         "woonvisie_match",
         "beleidsalignement",
         "splitsingsrisico",
-        "grondwaarde_fit",
         "parkeerdruk",
     }
 )
@@ -559,7 +547,6 @@ def compute_score_v3(
         score_funda_frictie,
         score_funderingsrisico,
         score_geluid,
-        score_grondwaarde_fit,  # M054/S01
         score_hypotheek_risico,  # M050/S03
         score_juridisch_klimaat,
         score_koopwaarde_trend,  # M050/S03
@@ -722,29 +709,6 @@ def compute_score_v3(
         _ba_result.bijdrage = round(_ba_result.genormaliseerde_score * _ba_weight, 4)
         _ba_result.percentage_of_category = round(_ba_weight / 100.0, 4)
     breakdown["beleidsalignement"] = _ba_result
-
-    # Cascade factor: grondwaarde_fit (Grondprijzenbrief — M054/S01). Potentie cascade,
-    # same sparse/appended-after-redistribution treatment as beleidsalignement. Its
-    # weight (8) is held in reserve from the potentie-100 pool (the 8 core potentie
-    # factors sum to 70); it is only applied when the gemeentelijke grondprijsband
-    # residueel aansluit op de bestemming (verdict 'passend'), so 'geen brief / geen
-    # match / faciliterend grondbeleid / vaste prijs' stay context-only (weight 0).
-    _gf_result = score_grondwaarde_fit(
-        _cascade.get("grondwaarde_fit"),
-        bestemmingen=parcel_data.get("bestemmingen"),
-        area_m2=parcel_data.get("area_m2"),
-    )
-    _gf_waarde = _gf_result.waarde if isinstance(_gf_result.waarde, dict) else {}
-    _gf_passend = _gf_waarde.get("verdict") == "passend"
-    if not _gf_result.missing and _gf_passend:
-        _gf_entry = FACTOR_REGISTRY["grondwaarde_fit"]
-        _gf_weight = float(
-            (_gf_entry.weight_by_projecttype or {}).get(project_type, _gf_entry.default_weight)
-        )
-        _gf_result.gewicht = _gf_weight
-        _gf_result.bijdrage = round(_gf_result.genormaliseerde_score * _gf_weight, 4)
-        _gf_result.percentage_of_category = round(_gf_weight / 100.0, 4)
-    breakdown["grondwaarde_fit"] = _gf_result
 
     # Cascade factor: splitsingsrisico (Huisvestingsverordening — M053/S12). Risico
     # cascade, same sparse/appended-after-redistribution treatment as beleidsalignement.

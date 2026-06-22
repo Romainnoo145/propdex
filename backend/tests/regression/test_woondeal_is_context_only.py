@@ -10,5 +10,5 @@ def test_woondeal_not_in_registry():
     assert "woondeal_boost" not in FACTOR_REGISTRY
 
 
-def test_registry_count_still_29():
-    assert len(FACTOR_REGISTRY) == 29
+def test_registry_count_still_28():
+    assert len(FACTOR_REGISTRY) == 28
