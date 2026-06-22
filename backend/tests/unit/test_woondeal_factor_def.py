@@ -1,7 +1,6 @@
 from app.ai.factors.woondeal import (
-    GemeenteOpgave,
-    WoondealPayload,
     WOONDEAL_FACTOR_DEF,
+    WoondealPayload,
 )
 
 
