@@ -1,12 +1,9 @@
 import { useState, useRef, useCallback } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { PageTitleToggle } from '@/components/map/panels/parcel/layers/PageTitleToggle'
 import {
   FileText,
   ClipboardCheck,
   MapPin,
-  MapPinned,
   ScrollText,
   Banknote,
   Sparkles,
@@ -15,7 +12,6 @@ import {
   ShieldAlert,
   Hammer,
   Landmark,
-  TreePine,
   Volume2,
   Leaf,
   Map,
@@ -25,28 +21,6 @@ import {
   Mail,
   Lightbulb,
   FolderOpen,
-  Trash2,
-  Loader2,
-  Download,
-  Upload,
-  Layers,
-  BoxSelect,
-  Columns,
-  DraftingCompass,
-  Gauge,
-  LandPlot,
-  Factory,
-  Waves,
-  Wind,
-  Gavel,
-  KeySquare,
-  Hourglass,
-  FolderArchive,
-  Send,
-  BrainCircuit,
-  Zap,
-  BookOpen,
-  type LucideIcon,
 } from 'lucide-react'
 import { useParcelEnrichment } from '@/hooks/useScans'
 import { useParcelChanges } from '@/hooks/useNotifications'
@@ -54,57 +28,10 @@ import { useParcelDocuments, useUploadDocument, useDeleteDocument } from '@/hook
 import { getDocumentDownloadUrl } from '@/lib/api'
 import { useAuth } from '@/lib/auth/useAuth'
 import type { ScanResultItem } from '@/lib/types/scan'
-import type { ParcelDocumentMeta } from '@/lib/types/document'
-import { TruncatedText } from '../TruncatedText'
 import { formatRelativeNL } from '@/lib/utils/datetime'
-
-/* ── Ghost icons per document type ────────────────────────── */
-
-const GHOST_ICONS: Record<string, LucideIcon> = {
-  // Acquisitie — the search
-  bestemmingscheck: MapPinned,
-  perceeldata: BoxSelect,
-  vergunninghistorie: ScrollText,
-  woz: Banknote,
-  quickscan: Zap,
-  // Technisch — the hardware
-  bodem: Layers,
-  fundering: Columns,
-  asbest: ShieldAlert,
-  bouwkundig: DraftingCompass,
-  energielabel: Gauge,
-  // Planologisch — the environment
-  bestemmingsplan: LandPlot,
-  milieuzones: Factory,
-  geluid: Waves,
-  stikstof: Wind,
-  // Juridisch — the papers
-  kadaster: Gavel,
-  eigendom: KeySquare,
-  erfpacht: Hourglass,
-  // Projectnotities — the context
-  documenten: FolderArchive,
-  correspondentie: Send,
-  ideeen: BrainCircuit,
-}
-
-/* ── Card model ───────────────────────────────────────────── */
-
-interface DossierCard {
-  key: string
-  label: string
-  Icon: LucideIcon
-  value: string
-  sub: string
-  filled: boolean
-  documents: ParcelDocumentMeta[]
-}
-
-interface DossierPage {
-  title: string
-  Icon: LucideIcon
-  cards: DossierCard[]
-}
+import { mergeDocuments, type DossierCard, type DossierPage } from '@/lib/cockpit/dossier-pages'
+import { DossierSlotCard } from '@/components/map/panels/parcel/DossierSlotCard'
+import { PdfViewerDrawer } from '@/components/ui/PdfViewerDrawer'
 
 /* ── Build dossier pages ──────────────────────────────────── */
 
@@ -123,6 +50,7 @@ function buildPages(
   return [
     {
       title: 'PROJECTNOTITIES',
+      tabLabel: 'Notities',
       Icon: Lightbulb,
       cards: [
         {
@@ -145,7 +73,7 @@ function buildPages(
         },
         {
           key: 'ideeen',
-          label: 'IDE\u00CBEN',
+          label: 'IDEEËEN',
           Icon: Lightbulb,
           value: 'LEEG',
           sub: 'Concepten & aantekeningen',
@@ -156,6 +84,7 @@ function buildPages(
     },
     {
       title: 'ACQUISITIE',
+      tabLabel: 'Acquisitie',
       Icon: FolderOpen,
       cards: [
         {
@@ -173,7 +102,7 @@ function buildPages(
           key: 'perceeldata',
           label: 'PERCEELDATA',
           Icon: MapPin,
-          value: parcel.area_m2 ? `${Math.round(parcel.area_m2).toLocaleString('nl-NL')} M\u00B2` : 'LEEG',
+          value: parcel.area_m2 ? `${Math.round(parcel.area_m2).toLocaleString('nl-NL')} M²` : 'LEEG',
           sub: 'Kadaster & BAG gegevens',
           filled: !!parcel.area_m2,
           documents: [],
@@ -209,6 +138,7 @@ function buildPages(
     },
     {
       title: 'TECHNISCH',
+      tabLabel: 'Technisch',
       Icon: Hammer,
       cards: [
         {
@@ -260,6 +190,7 @@ function buildPages(
     },
     {
       title: 'JURIDISCH',
+      tabLabel: 'Juridisch',
       Icon: Scale,
       cards: [
         {
@@ -293,6 +224,7 @@ function buildPages(
     },
     {
       title: 'PLANOLOGISCH',
+      tabLabel: 'Planologisch',
       Icon: Landmark,
       cards: [
         {
@@ -309,7 +241,7 @@ function buildPages(
         {
           key: 'milieuzones',
           label: 'MILIEUZONES',
-          Icon: TreePine,
+          Icon: Landmark,
           value: natura2000Naam ? 'NABIJ' : 'LEEG',
           sub: natura2000Naam ? natura2000Naam.slice(0, 28) : 'Natura 2000, beschermd gebied',
           filled: !!natura2000Naam,
@@ -338,341 +270,9 @@ function buildPages(
   ]
 }
 
-/* ── Merge user documents into card pages ────────────────── */
-
-function mergeDocuments(pages: DossierPage[], documents: ParcelDocumentMeta[]): DossierPage[] {
-  const byType: Record<string, ParcelDocumentMeta[]> = {}
-  for (const doc of documents) {
-    const existing = byType[doc.document_type] ?? []
-    existing.push(doc)
-    byType[doc.document_type] = existing
-  }
-
-  return pages.map((page) => ({
-    ...page,
-    cards: page.cards.map((card) => {
-      const docs = byType[card.key] ?? []
-      if (docs.length === 0) return card
-      return {
-        ...card,
-        filled: true,
-        value: card.value === 'LEEG' ? `${docs.length} BESTAND${docs.length > 1 ? 'EN' : ''}` : card.value,
-        documents: docs,
-      }
-    }),
-  }))
-}
-
-/* ── Truncated text with hover tooltip ─────────────────────── */
-
-
-/* ── Precision Dropzone Card ─────────────────────────────── */
+/* ── Accepted upload types ────────────────────────────────── */
 
 const ACCEPTED_TYPES = '.pdf,.jpg,.jpeg,.png,.webp,.docx,.xlsx'
-const MAX_VISIBLE_DOCS = 2
-
-interface DropzoneCardProps {
-  card: DossierCard
-  uploadingKey: string | null
-  onUploadClick: (cardKey: string) => void
-  onFileDrop: (cardKey: string, file: File) => void
-  onDelete: (documentId: string) => void
-  onDownload: (documentId: string, filename: string) => void
-}
-
-function DropzoneCard({
-  card,
-  uploadingKey,
-  onUploadClick,
-  onFileDrop,
-  onDelete,
-  onDownload,
-}: DropzoneCardProps) {
-  const [isDragOver, setIsDragOver] = useState(false)
-  const isUploading = uploadingKey === card.key
-  const hasDocuments = card.documents.length > 0
-  const hasApiData = card.filled && card.value !== 'LEEG'
-
-  const GhostIcon = GHOST_ICONS[card.key] ?? BookOpen
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragOver(true)
-  }, [])
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragOver(false)
-  }, [])
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setIsDragOver(false)
-      if (e.dataTransfer.files.length > 0) {
-        const file = e.dataTransfer.files[0]
-        if (file) {
-          onFileDrop(card.key, file)
-        }
-      }
-    },
-    [card.key, onFileDrop]
-  )
-
-  const dragProps = {
-    onDragOver: handleDragOver,
-    onDragLeave: handleDragLeave,
-    onDrop: handleDrop,
-  }
-
-  /* ── Shared: document file list ────────────────────────── */
-  const docFileList = (variant: 'light' | 'dark') => {
-    if (!hasDocuments) return null
-    const visible = card.documents.slice(0, MAX_VISIBLE_DOCS)
-    const remaining = card.documents.length - MAX_VISIBLE_DOCS
-    const isDark = variant === 'dark'
-
-    return (
-      <div className="space-y-0.5">
-        {visible.map((doc) => (
-          <div key={doc.id} className="min-w-0">
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onDownload(doc.id, doc.filename) }}
-                className={`text-[9px] font-medium truncate hover:text-amber-400 cursor-pointer flex-1 text-left transition-colors ${
-                  isDark ? 'text-white/50' : 'text-slate-500'
-                }`}
-                title={doc.filename}
-              >
-                {doc.filename}
-              </button>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onDownload(doc.id, doc.filename) }}
-                className={`shrink-0 transition-colors hover:text-amber-400 ${isDark ? 'text-white/30' : 'text-slate-300'}`}
-                title="Download"
-              >
-                <Download className="size-3" />
-              </button>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onDelete(doc.id) }}
-                className={`shrink-0 transition-colors hover:text-red-400 ${isDark ? 'text-white/30' : 'text-slate-300'}`}
-                title="Verwijderen"
-              >
-                <Trash2 className="size-3" />
-              </button>
-            </div>
-            {/* NEW: uploaded_at relative label — M045/S03 T07 */}
-            <div className="text-[10px] text-slate-400 mt-1">
-              {formatRelativeNL(doc.uploaded_at)}
-            </div>
-            {/* NEW: ai_summary preview with 2-line clamp — M045/S03 T07 */}
-            {doc.ai_summary && (
-              <p className="text-[11px] text-slate-500 mt-2 line-clamp-2 leading-snug">
-                {doc.ai_summary}
-              </p>
-            )}
-          </div>
-        ))}
-        {remaining > 0 && (
-          <span className={`text-[9px] font-medium ${isDark ? 'text-white/30' : 'text-slate-400'}`}>
-            +{remaining} meer
-          </span>
-        )}
-      </div>
-    )
-  }
-
-  /* ── Uploading indicator ───────────────────────────────── */
-  const uploadingIndicator = (
-    <div className="flex items-center gap-1 mt-1">
-      <Loader2 className="size-3 text-amber-500 animate-spin" />
-      <span className="text-[9px] font-black text-amber-500 uppercase">Uploaden...</span>
-    </div>
-  )
-
-  /* ── Add more button ───────────────────────────────────── */
-  const addButton = (variant: 'light' | 'dark') => {
-    const isDark = variant === 'dark'
-    return (
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); onUploadClick(card.key) }}
-        className={`flex items-center gap-1 text-[9px] font-bold transition-colors mt-1 ${
-          isDark ? 'text-white/40 hover:text-amber-400' : 'text-slate-300 hover:text-amber-400'
-        }`}
-      >
-        <Upload className="size-2.5" />
-        <span>{hasDocuments ? 'TOEVOEGEN' : 'UPLOAD'}</span>
-      </button>
-    )
-  }
-
-  /* ──────────────────────────────────────────────────────── */
-  /* STATE: Has user documents (obsidian) — with or without  */
-  /* API data. Data badge shown as subtle pill top-right.    */
-  /* ──────────────────────────────────────────────────────── */
-  if (hasDocuments) {
-    return (
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => onUploadClick(card.key)}
-        onKeyDown={(e) => e.key === 'Enter' && onUploadClick(card.key)}
-        {...dragProps}
-        className={`bg-amber-50 border-2 rounded-[20px] p-4 flex flex-col justify-between overflow-hidden transition-all duration-300 cursor-pointer group ${
-          isDragOver
-            ? 'border-amber-500 scale-[1.02]'
-            : 'border-amber-200 hover:border-amber-400'
-        }`}
-      >
-        {/* Top: title + data badge or green dot */}
-        <div className="flex justify-between items-start gap-1">
-          <p className="text-[10px] font-black text-amber-900/70 uppercase tracking-[0.15em] leading-tight truncate flex-1">
-            {card.label}
-          </p>
-          {hasApiData ? (
-            <span className="text-[8px] font-black text-amber-700 bg-amber-200/60 px-1.5 py-0.5 rounded-full shrink-0 uppercase tracking-wide leading-none">
-              {card.value}
-            </span>
-          ) : (
-            <span className="size-2 rounded-full bg-amber-400 shrink-0 mt-0.5" />
-          )}
-        </div>
-
-        {/* Center: icon + count */}
-        <div className="flex-1 flex flex-col justify-center py-2 gap-1">
-          <GhostIcon className="size-8 text-amber-600 opacity-40 group-hover:opacity-60 transition-opacity" strokeWidth={1.5} />
-          <p className="text-sm font-black text-amber-900 tracking-tight leading-none">
-            {card.documents.length} {card.documents.length === 1 ? 'BESTAND' : 'BESTANDEN'}
-          </p>
-        </div>
-
-        {/* Bottom: file list + add */}
-        <div>
-          {docFileList('light')}
-          {isUploading ? uploadingIndicator : addButton('light')}
-        </div>
-      </div>
-    )
-  }
-
-  /* ──────────────────────────────────────────────────────── */
-  /* STATE: API data present, no user docs yet.              */
-  /* Solid border, data value prominent, dropzone on hover.  */
-  /* ──────────────────────────────────────────────────────── */
-  if (hasApiData) {
-    return (
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => onUploadClick(card.key)}
-        onKeyDown={(e) => e.key === 'Enter' && onUploadClick(card.key)}
-        {...dragProps}
-        className={`border-2 rounded-[20px] p-4 flex flex-col justify-between overflow-hidden cursor-pointer transition-all duration-200 group ${
-          isDragOver
-            ? 'border-amber-500 bg-amber-50/50 scale-[1.02]'
-            : 'border-emerald-200/60 bg-white hover:border-amber-400'
-        }`}
-      >
-        {/* Top: title + green dot */}
-        <div className="flex justify-between items-start gap-1">
-          <p className="text-[10px] font-black text-slate-900 uppercase tracking-[0.15em] leading-tight truncate flex-1">
-            {card.label}
-          </p>
-          <span className="size-2 rounded-full bg-emerald-400 shrink-0 mt-0.5" />
-        </div>
-
-        {/* Center: data value */}
-        <div className="flex-1 flex flex-col justify-center py-2">
-          <p className="text-xl font-black tracking-tighter leading-none text-slate-900">
-            {card.value}
-          </p>
-        </div>
-
-        {/* Bottom: description + upload hint */}
-        <div>
-          <TruncatedText text={card.sub} className="text-[9px] font-medium text-slate-400 truncate" />
-          {isUploading ? (
-            uploadingIndicator
-          ) : (
-            <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Upload className="size-2.5 text-slate-300" />
-              <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.1em] group-hover:text-amber-400 transition-colors">
-                VOEG BIJLAGE TOE
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  /* ──────────────────────────────────────────────────────── */
-  /* STATE: Empty — ghost dropzone. Dashed border, ghost     */
-  /* icon, "SLEEP HIER OF KLIK" CTA.                         */
-  /* ──────────────────────────────────────────────────────── */
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => onUploadClick(card.key)}
-      onKeyDown={(e) => e.key === 'Enter' && onUploadClick(card.key)}
-      {...dragProps}
-      className={`border-2 border-dashed rounded-[20px] p-4 flex flex-col justify-between overflow-hidden cursor-pointer transition-all duration-200 group ${
-        isUploading
-          ? 'border-amber-400 bg-amber-50/30'
-          : isDragOver
-            ? 'border-amber-500 bg-amber-50/50 scale-[1.02]'
-            : 'border-slate-200 bg-slate-50/30 hover:border-amber-400 hover:bg-amber-50/20'
-      }`}
-    >
-      {/* Top: title + status dot */}
-      <div className="flex justify-between items-start gap-1">
-        <p className="text-[10px] font-black text-slate-900 uppercase tracking-[0.15em] leading-tight truncate flex-1">
-          {card.label}
-        </p>
-        <span
-          className={`size-2 rounded-full shrink-0 mt-0.5 transition-colors ${
-            isUploading ? 'bg-amber-400 animate-pulse' : 'bg-slate-300'
-          }`}
-        />
-      </div>
-
-      {/* Center: ghost icon + upload CTA — centered (empty-state UX standard) */}
-      <div className="flex-1 flex flex-col items-center justify-center py-2 gap-1.5">
-        {isUploading ? (
-          <>
-            <Loader2 className="size-10 text-amber-400 animate-spin" strokeWidth={1.5} />
-            <p className="text-[9px] font-black text-amber-500 uppercase tracking-[0.15em]">
-              UPLOADEN...
-            </p>
-          </>
-        ) : (
-          <>
-            <GhostIcon
-              className="size-10 text-slate-900 opacity-[0.05] group-hover:opacity-[0.30] group-hover:scale-110 transition-all duration-300"
-              strokeWidth={1.5}
-            />
-            <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.1em] mt-1 group-hover:text-amber-400 transition-colors">
-              SLEEP HIER OF KLIK
-            </p>
-          </>
-        )}
-      </div>
-
-      {/* Bottom: description */}
-      <div>
-        <TruncatedText text={card.sub} className="text-[9px] font-medium text-slate-400 truncate" />
-      </div>
-    </div>
-  )
-}
 
 /* ── Component ─────────────────────────────────────────────── */
 
@@ -682,8 +282,9 @@ interface BronnenLayerProps {
 }
 
 export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
-  const [page, setPage] = useState(0)
   const [uploadingKey, setUploadingKey] = useState<string | null>(null)
+  const [activeSlot, setActiveSlot] = useState<string | null>(null)
+  const [activeDocId, setActiveDocId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const activeCardKeyRef = useRef<string | null>(null)
 
@@ -705,10 +306,13 @@ export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
   const rawPages = buildPages(parcel, vergunningen.length, meldingen.length, hasReport, energielabel, wozWaarde, geluidDb, natura2000Naam)
   const userDocs = documentsQuery.data?.documents ?? []
   const pages = mergeDocuments(rawPages, userDocs)
-  // Safe: pages always has 5 entries from buildPages, page is bounded by pagination
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const current = (pages[page] ?? pages[0])!
-  const filledCount = current.cards.filter((c) => c.filled).length
+
+  const allCards = pages.flatMap((p) => p.cards)
+  const totalSlots = allCards.length
+  const filledTotal = allCards.filter((c) => c.filled).length
+  const openCard = activeSlot ? allCards.find((c) => c.key === activeSlot) ?? null : null
+  const openDocs = openCard?.documents ?? []
+  const activeDoc = openDocs.find((d) => d.id === activeDocId) ?? openDocs[0] ?? null
 
   const handleUploadClick = useCallback((cardKey: string) => {
     activeCardKeyRef.current = cardKey
@@ -799,90 +403,78 @@ export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
     [documentParcelId, accessToken]
   )
 
+  function onSlotClick(card: DossierCard) {
+    if (card.documents.length > 0) {
+      setActiveSlot(card.key)
+      setActiveDocId(card.documents[0]?.id ?? null)
+    } else {
+      handleUploadClick(card.key)
+    }
+  }
+
+  // uploadingKey is kept in state for future use by DossierSlotCard loading states
+  void uploadingKey
+
   return (
-    <div className="flex flex-col flex-1 pt-4 px-6 pb-4">
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={ACCEPTED_TYPES}
-        className="hidden"
-        onChange={handleFileChange}
-      />
+    <div className="flex flex-1 flex-col pt-4 pb-4">
+      <input ref={fileInputRef} type="file" accept={ACCEPTED_TYPES} className="hidden" onChange={handleFileChange} />
 
-      {/* ── Dossier Hero ───────────────────────────────────── */}
-      <div className="bg-slate-50/50 border-b border-slate-100 px-6 py-5 rounded-[20px]">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={page}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-7xl font-black tracking-tighter text-slate-900 tabular-nums leading-none">
-                {filledCount}
-                <span className="text-2xl text-slate-300 font-bold">/{current.cards.length}</span>
-              </span>
-
-              <div className="flex-1 px-6 min-w-0">
-                <p className="text-xl font-bold uppercase tracking-wide text-slate-700">
-                  {current.title}
-                </p>
-                <p className="text-[13px] text-slate-500 mt-0.5 truncate">
-                  {filledCount === 0
-                    ? 'Sleep documenten naar de slots'
-                    : `${filledCount} document${filledCount > 1 ? 'en' : ''} beschikbaar`}
-                </p>
-              </div>
-
-              <div className="size-12 rounded-full flex items-center justify-center shrink-0 bg-slate-200">
-                <current.Icon className="size-6 text-white" strokeWidth={2.5} />
-              </div>
-            </div>
-
-            <div className="mt-4 h-3 rounded-full bg-slate-100 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-amber-400 transition-all duration-500"
-                style={{
-                  width: `${current.cards.length > 0 ? Math.round((filledCount / current.cards.length) * 100) : 0}%`,
-                }}
-              />
-            </div>
-          </motion.div>
-        </AnimatePresence>
+      {/* Hero — total completeness */}
+      <div className="mx-6 rounded-[20px] border border-slate-100 bg-slate-50/50 px-5 py-4">
+        <div className="flex items-center justify-between">
+          <span className="text-6xl font-black leading-none tracking-tighter text-slate-900 tabular-nums">
+            {filledTotal}<span className="text-2xl font-bold text-slate-300">/{totalSlots}</span>
+          </span>
+          <div className="min-w-0 flex-1 px-5">
+            <p className="text-lg font-bold uppercase tracking-wide text-slate-700">Dossier</p>
+            <p className="mt-0.5 truncate text-[13px] text-slate-500">{filledTotal} van {totalSlots} bronnen gevuld</p>
+          </div>
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-amber-400">
+            <FolderOpen className="size-5 text-white" strokeWidth={2.5} />
+          </div>
+        </div>
+        <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-100">
+          <div className="h-full rounded-full bg-amber-400 transition-all duration-500" style={{ width: `${totalSlots ? Math.round((filledTotal / totalSlots) * 100) : 0}%` }} />
+        </div>
       </div>
 
-      {/* ── Dossier Page Toggle (above upload-card grid) ───── */}
-      <PageTitleToggle pages={pages} activeIndex={page} onSelect={setPage} className="mt-4" />
-
-      {/* ── Card Grid ──────────────────────────────────────── */}
-      <div className="flex-1 relative">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={page}
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -40 }}
-            transition={{ duration: 0.2 }}
-            className="grid grid-cols-3 gap-1.5 auto-rows-fr h-full"
-          >
-                {current.cards.map((card) => (
-                  <DropzoneCard
-                    key={card.key}
-                    card={card}
-                    uploadingKey={uploadingKey}
-                    onUploadClick={handleUploadClick}
-                    onFileDrop={handleFileDrop}
-                    onDelete={handleDelete}
-                    onDownload={handleDownload}
-                  />
-            ))}
-          </motion.div>
-        </AnimatePresence>
+      {/* One continuous scroll, grouped by category */}
+      <div className="mt-3 flex-1 overflow-y-auto px-6">
+        {pages.map((page) => (
+          <div key={page.title}>
+            <div className="mb-2 mt-4 flex items-center gap-2 first:mt-1">
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400">{page.tabLabel}</span>
+              <span className="h-px flex-1 bg-slate-100" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {page.cards.map((card) => (
+                <DossierSlotCard
+                  key={card.key}
+                  card={card}
+                  onClick={() => onSlotClick(card)}
+                  onDragFile={(file) => handleFileDrop(card.key, file)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
+      {/* Viewer drawer for a slot with documents */}
+      {openCard && activeDoc && (
+        <PdfViewerDrawer
+          url={getDocumentDownloadUrl(documentParcelId, activeDoc.id)}
+          title={activeDoc.filename}
+          eyebrow={`${openCard.label} · Dossier`}
+          files={openDocs.map((d) => ({ id: d.id, filename: d.filename, meta: formatRelativeNL(d.uploaded_at) }))}
+          activeId={activeDoc.id}
+          onSelectFile={(id) => setActiveDocId(id)}
+          onClose={() => { setActiveSlot(null); setActiveDocId(null) }}
+          onDownload={() => handleDownload(activeDoc.id, activeDoc.filename)}
+          onDelete={() => { handleDelete(activeDoc.id); setActiveSlot(null); setActiveDocId(null) }}
+          onUpload={() => handleUploadClick(openCard.key)}
+        />
+      )}
     </div>
   )
 }
