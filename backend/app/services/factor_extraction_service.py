@@ -96,11 +96,16 @@ async def extract_factor(
     policy_document: PolicyDocument,
     claude_client: AsyncAnthropic | None = None,
     force_refresh: bool = False,
+    max_pdf_doc_bytes: int | None = None,
 ) -> ExtractedFactor[PayloadT]:
     """Cache-aware extraction.
 
     force_refresh=True bypasses cache-read (still writes cache after call).
     Used in S05 when admin manually triggers re-extraction.
+
+    max_pdf_doc_bytes forwards to extract_factor_live to control the PDF-native
+    vs text-layer threshold. Pass a tiny value (e.g. 1) to FORCE the text path —
+    needed for docs where native-PDF extraction returns empty (M054/S07 parkeer).
     """
     if not force_refresh:
         cached = await _get_cache_hit(
@@ -136,11 +141,15 @@ async def extract_factor(
                     factor_def.factor_id,
                 )
 
+    live_kwargs: dict[str, int] = (
+        {} if max_pdf_doc_bytes is None else {"max_pdf_doc_bytes": max_pdf_doc_bytes}
+    )
     result = await extract_factor_live(
         factor_def=factor_def,
         parcel_id=parcel_id,
         policy_document=policy_document,
         claude_client=claude_client,
+        **live_kwargs,
     )
 
     try:
