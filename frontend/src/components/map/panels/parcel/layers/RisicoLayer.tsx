@@ -4,7 +4,10 @@ import { ShieldAlert, ShieldCheck, ShieldQuestion, type LucideIcon } from 'lucid
 import type { ScanResultItem, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/types/scan'
 import { isScoreV3 } from '@/lib/score'
 import { useParcelEnrichment } from '@/hooks/useScans'
-import { FactorCard } from '../FactorCard'
+import { BijdrageBar } from '../BijdrageBar'
+import { FactorDetailDrawer } from '../FactorDetailDrawer'
+import { FactorExplainBody } from '../FactorExplainBody'
+import { parseFactors, isCascadeFactor } from '../lib/factor-detail'
 import { FACTOR_BRON } from '@/lib/factor-groups'
 import type { PageCard } from '@/lib/factor-groups'
 import { sortByWeight, PLANNED_RISICO } from '../lib/factor-list'
@@ -494,8 +497,7 @@ interface RisicoLayerProps {
 }
 
 export function RisicoLayer({ parcel }: RisicoLayerProps) {
-  const [splitsOpen, setSplitsOpen] = useState(false)
-  const [parkeerOpen, setParkeerOpen] = useState(false)
+  const [activeFactorKey, setActiveFactorKey] = useState<string | null>(null)
 
   // M053/S12 splitsingsrisico — opkoopbescherming popup data
   const splitsFactor = (parcel.score_breakdown as ScoreBreakdownV3 | null)?.['splitsingsrisico']
@@ -516,11 +518,21 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
   // Weight-sorted factor list (score factors + env enrichment), no pagination.
   const sortedCards: PageCard[] = sortByWeight(buildRisicoCards(parcel, enrichmentQuery.data))
 
+  const maxAbs = Math.max(1, ...sortedCards.map((c) => Math.abs(c.pts)))
+
   function cardClick(card: PageCard): (() => void) | undefined {
-    if (card.factor_key === 'splitsingsrisico' && hasSplitsData) return () => setSplitsOpen(true)
-    if (card.factor_key === 'parkeerdruk' && hasParkeerData) return () => setParkeerOpen(true)
-    return undefined
+    if (card.factor_key === 'splitsingsrisico' && !hasSplitsData) return undefined
+    if (card.factor_key === 'parkeerdruk' && !hasParkeerData) return undefined
+    return () => setActiveFactorKey(card.factor_key)
   }
+
+  const close = () => setActiveFactorKey(null)
+
+  // Parse factors once for the generic explain drawer
+  const factors = parseFactors(parcel.score_breakdown as Record<string, unknown> | null)
+  const activeFactor = activeFactorKey
+    ? factors.risico.find((f) => f.name === activeFactorKey)?.factor ?? null
+    : null
 
   // Animated score bar
   const springVal = useSpring(0, { stiffness: 60, damping: 20 })
@@ -560,13 +572,12 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
       {/* ── Factor list — one continuous, weight-sorted scroll ── */}
       <div className="flex-1 min-h-0 overflow-y-auto px-6 mt-3 flex flex-col gap-2">
         {sortedCards.map((card) => (
-          <FactorCard
+          <BijdrageBar
             key={card.factor_key}
-            layout="row"
-            card={{ label: card.label, value: card.value, sub: card.sub, pts: card.pts }}
+            card={card}
             tone="negative"
-            isMissing={!!card.missing}
-            onCardClick={cardClick(card)}
+            maxAbs={maxAbs}
+            onClick={cardClick(card)}
           />
         ))}
 
@@ -576,20 +587,21 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
           <span className="h-px flex-1 bg-slate-100" />
         </div>
         {PLANNED_RISICO.map((planned) => (
-          <FactorCard
+          <BijdrageBar
             key={planned.key}
-            layout="row"
             comingSoon
             tone={planned.tone}
-            card={{ label: planned.label, value: '—', sub: planned.source, pts: 0 }}
+            maxAbs={maxAbs}
+            card={{ label: planned.label, value: '—', sub: planned.source, pts: 0, factor_key: planned.key, bron: planned.bron }}
           />
         ))}
       </div>
 
+      {/* Cascades: their own editorial popup, opened when their key is active */}
       {hasSplitsData && (
         <HuisvestingsverordeningPopup
-          isOpen={splitsOpen}
-          onClose={() => setSplitsOpen(false)}
+          isOpen={activeFactorKey === 'splitsingsrisico'}
+          onClose={close}
           verdict={splitsWaarde!.verdict}
           buurt_naam={splitsWaarde!.buurt_naam}
           woz_grens_eur={splitsWaarde!.woz_grens_eur}
@@ -601,8 +613,8 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
 
       {hasParkeerData && (
         <ParkeernormenPopup
-          isOpen={parkeerOpen}
-          onClose={() => setParkeerOpen(false)}
+          isOpen={activeFactorKey === 'parkeerdruk'}
+          onClose={close}
           verdict={parkeerWaarde!.verdict}
           peiljaar={parkeerWaarde!.peiljaar}
           functie={parkeerWaarde!.functie}
@@ -619,6 +631,13 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
           mobiliteitscorrecties={parkeerWaarde!.mobiliteitscorrecties}
           randvoorwaarden={parkeerWaarde!.randvoorwaarden}
         />
+      )}
+
+      {/* Generic factors: one shared explain-drawer */}
+      {activeFactorKey && !isCascadeFactor(activeFactorKey) && activeFactor && (
+        <FactorDetailDrawer isOpen onClose={close}>
+          <FactorExplainBody name={activeFactorKey} factor={activeFactor} />
+        </FactorDetailDrawer>
       )}
     </div>
   )
