@@ -21,6 +21,8 @@ class PolicyDocumentResponse(BaseModel):
     status: str
     version_number: int
     ai_summary: str | None = None
+    extraction_status: str = "nvt"  # parsed | pending | nvt (from cascade cache)
+    extraction: dict | None = None  # latest cascade extracted_payload, or None
     created_at: datetime
     updated_at: datetime
 

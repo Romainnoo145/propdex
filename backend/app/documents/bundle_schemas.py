@@ -21,6 +21,8 @@ class PolicyDocumentRead(BaseModel):
     uploaded_at: datetime = Field(validation_alias="created_at")
     version_number: int
     ai_summary: str | None = None
+    extraction_status: str = "nvt"
+    extraction: dict | None = None
 
 
 class ParcelDocumentRead(BaseModel):

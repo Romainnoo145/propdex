@@ -74,3 +74,29 @@ async def test_stale_schema_version_is_not_parsed(test_db: AsyncSession, create_
 
     result = await get_extraction_map(test_db, [(doc.id, "woonvisie")])
     assert result[doc.id]["status"] == "pending"  # current-schema row absent
+
+
+@pytest.mark.asyncio
+async def test_list_endpoint_includes_extraction_status(
+    async_client, test_db: AsyncSession, create_test_user
+):
+    from httpx import AsyncClient
+    from app.auth.jwt import create_access_token
+
+    user, org = await create_test_user(email="extract-api@example.com", org_name="Api")
+    headers = {"Authorization": f"Bearer {create_access_token(str(user.id), str(org.id))}"}
+    doc = _doc("woonvisie", org.id, user.id)
+    test_db.add(doc)
+    await test_db.flush()
+    test_db.add(FactorExtractionCache(
+        parcel_id=DOCUMENT_SENTINEL, policy_document_id=doc.id,
+        factor_id="woonvisie_match", schema_version=SCHEMA_VERSION,
+        extracted_payload={"randvoorwaarden": [{"titel": "T", "samenvatting": "S"}]},
+    ))
+    await test_db.commit()
+
+    resp = await async_client.get("/api/policy-documents/gemeente/GM0983", headers=headers)
+    assert resp.status_code == 200
+    doc_json = next(d for d in resp.json()["documents"] if d["source_key"] == "woonvisie")
+    assert doc_json["extraction_status"] == "parsed"
+    assert doc_json["extraction"]["randvoorwaarden"][0]["titel"] == "T"
