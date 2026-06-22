@@ -73,7 +73,7 @@ function buildPages(
         },
         {
           key: 'ideeen',
-          label: 'IDEEËEN',
+          label: 'IDEEËN',
           Icon: Lightbulb,
           value: 'LEEG',
           sub: 'Concepten & aantekeningen',
@@ -282,7 +282,6 @@ interface BronnenLayerProps {
 }
 
 export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
-  const [uploadingKey, setUploadingKey] = useState<string | null>(null)
   const [activeSlot, setActiveSlot] = useState<string | null>(null)
   const [activeDocId, setActiveDocId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -321,7 +320,6 @@ export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
 
   const doUpload = useCallback(
     async (file: File, cardKey: string) => {
-      setUploadingKey(cardKey)
       try {
         await uploadDocument.mutateAsync({
           parcelId: documentParcelId,
@@ -332,7 +330,6 @@ export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Upload mislukt')
       } finally {
-        setUploadingKey(null)
         activeCardKeyRef.current = null
         if (fileInputRef.current) fileInputRef.current.value = ''
       }
@@ -411,9 +408,6 @@ export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
       handleUploadClick(card.key)
     }
   }
-
-  // uploadingKey is kept in state for future use by DossierSlotCard loading states
-  void uploadingKey
 
   return (
     <div className="flex flex-1 flex-col pt-4 pb-4">
