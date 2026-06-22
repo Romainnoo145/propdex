@@ -10,8 +10,8 @@
  * Data flow:
  *   useGemeenteCascadeDocuments(gemeenteCode) → CascadePolicyBundleResponse
  *   → render grouped by level → click to expand
- *   → parseAiSummary(doc.ai_summary) → DocumentSummary | null
- *   → render AiSummaryCard OR skeleton ("Samenvatting wordt gegenereerd…")
+ *   → doc.extraction.randvoorwaarden (cascade extraction) → RandvoorwaardenSection
+ *   → render nothing when a doc has no extracted randvoorwaarden
  */
 import { useState } from 'react'
 import {
