@@ -11,13 +11,11 @@
  * contract components.
  */
 import { useEffect, useMemo, useState } from "react";
-import { FileText } from "lucide-react";
+import { FileText, BookOpen } from "lucide-react";
 import { useAuth } from "@/lib/auth/useAuth";
 import {
   usePolicyDocuments,
-  parseAiSummary,
   type PolicyDocument,
-  type DocumentSummary,
 } from "@/hooks/usePolicyDocuments";
 import { SectionInsightCard } from "@/components/reports/components/SectionInsightCard";
 import { PdfViewerDrawer } from "@/components/ui/PdfViewerDrawer";
@@ -25,7 +23,10 @@ import { DetailLoading, DetailEmpty, DetailError } from "./DetailStates";
 import { SourceGuidanceCard } from "./SourceGuidanceCard";
 import { DocumentUploadZone } from "./DocumentUploadZone";
 import { DocumentListItem } from "./DocumentListItem";
-import { AiSummaryCard } from "./AiSummaryCard";
+import {
+  RandvoorwaardenSection,
+  type Randvoorwaarde,
+} from "../map/panels/parcel/OmgevingsvisiePopup";
 
 interface Props {
   entityType: "gemeente" | "provincie" | "landelijk";
@@ -59,16 +60,18 @@ export function DocumentSourceDetailView({
     setPolling(isAnyParsing);
   }, [isAnyParsing]);
 
-  const firstSummary = useMemo<{
-    summary: DocumentSummary;
-    document: PolicyDocument;
-  } | null>(() => {
-    for (const doc of documents) {
-      const parsed = parseAiSummary(doc.ai_summary);
-      if (parsed) return { summary: parsed, document: doc };
-    }
-    return null;
+  const docWithRandvoorwaarden = useMemo<PolicyDocument | null>(() => {
+    const withRv = documents.filter(
+      (doc) => (doc.extraction?.randvoorwaarden?.length ?? 0) > 0,
+    );
+    if (withRv.length === 0) return null;
+    return withRv.reduce((a, b) =>
+      b.version_number > a.version_number ? b : a,
+    );
   }, [documents]);
+
+  const randvoorwaarden: Randvoorwaarde[] =
+    docWithRandvoorwaarden?.extraction?.randvoorwaarden ?? [];
 
   const viewingDoc = documents.find((d) => d.id === viewingDocId) ?? null;
   const viewingUrl = viewingDoc
@@ -93,11 +96,14 @@ export function DocumentSourceDetailView({
         />
       )}
 
-      {firstSummary && (
-        <AiSummaryCard
-          summary={firstSummary.summary}
-          documentName={firstSummary.document.filename}
-        />
+      {randvoorwaarden.length > 0 && (
+        <SectionInsightCard
+          kicker="Beleid-extractie"
+          title="Randvoorwaarden"
+          Icon={BookOpen}
+        >
+          <RandvoorwaardenSection randvoorwaarden={randvoorwaarden} />
+        </SectionInsightCard>
       )}
 
       {documents.length > 0 && (

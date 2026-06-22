@@ -18,11 +18,10 @@ async def enqueue_post_upload_jobs(
     source_key: str,
     content_type: str,
 ) -> None:
-    """Enqueue summary + (conditional) rescore jobs after a successful upload.
+    """Enqueue (conditional) rescore job after a successful upload.
 
-    - document_summary_job: PDF only, always enqueued if arq_pool available.
     - rescore_parcels_for_document: gated by source_key in CASCADE_RESCORE_SOURCE_KEYS.
-    Both enqueues are best-effort: failures are logged as warnings, never raised.
+    Enqueue is best-effort: failures are logged as warnings, never raised.
     """
     if content_type != "application/pdf":
         return
@@ -32,14 +31,6 @@ async def enqueue_post_upload_jobs(
             "ARQ pool not available — skipping post-upload jobs for document %s", document_id
         )
         return
-
-    try:
-        await arq_pool.enqueue_job("document_summary_job", str(document_id))
-        logger.info("Enqueued document_summary_job for document %s", document_id)
-    except Exception as enqueue_err:
-        logger.warning(
-            "Failed to enqueue document_summary_job for %s: %s", document_id, enqueue_err
-        )
 
     if source_key in CASCADE_RESCORE_SOURCE_KEYS:
         try:

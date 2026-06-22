@@ -21,6 +21,8 @@ class PolicyDocumentResponse(BaseModel):
     status: str
     version_number: int
     ai_summary: str | None = None
+    extraction_status: str = "nvt"  # parsed | pending | nvt (from cascade cache)
+    extraction: dict | None = None  # latest cascade extracted_payload, or None
     created_at: datetime
     updated_at: datetime
 
@@ -33,9 +35,9 @@ class PolicyDocumentListResponse(BaseModel):
 
 
 class PolicySummariesResponse(BaseModel):
-    """Map of source_key → ai_summary for an entity's policy documents."""
+    """Map of source_key → randvoorwaarden list for an entity's policy documents."""
 
-    summaries: dict[str, str]
+    summaries: dict[str, list[dict[str, object]]]
 
 
 class AutoIngestRequest(BaseModel):

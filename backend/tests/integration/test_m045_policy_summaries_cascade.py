@@ -7,7 +7,9 @@ import uuid
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.factor_extraction_schemas import DOCUMENT_SENTINEL, SCHEMA_VERSION
 from app.core.config import settings
+from app.models.factor_extraction_cache import FactorExtractionCache
 from app.models.gemeente_provincie_map import GemeenteProvincieMap
 from app.models.organization import Organization
 from app.models.policy_document import PolicyDocument
@@ -68,6 +70,20 @@ def _make_policy_doc(
     )
 
 
+def _make_extraction(
+    doc: PolicyDocument,
+    factor_id: str,
+    randvoorwaarden: list[dict],  # type: ignore[type-arg]
+) -> FactorExtractionCache:
+    return FactorExtractionCache(
+        parcel_id=DOCUMENT_SENTINEL,
+        policy_document_id=doc.id,
+        factor_id=factor_id,
+        schema_version=SCHEMA_VERSION,
+        extracted_payload={"randvoorwaarden": randvoorwaarden},
+    )
+
+
 # ---- Tests ----
 
 
@@ -75,30 +91,47 @@ async def test_get_summaries_returns_cascade_across_levels(
     test_db: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Cascade: seed one doc per level with distinct source_keys → dict has all three."""
+    """Cascade: seed one cascade doc per level with distinct source_keys → dict has all three."""
     user, vendor_org = await _make_vendor_user(test_db)
     monkeypatch.setattr(settings, "VENDOR_ORG_ID", vendor_org.id)
 
     # Venlo cascade: PV31 is Limburg
     test_db.add(GemeenteProvincieMap(gemeente_code="GM0983", provincie_code="PV31"))
 
-    test_db.add(_make_policy_doc(
+    doc_landelijk = _make_policy_doc(
         entity_type="landelijk", entity_code="NL",
-        source_key="beng", version_number=1, is_global=True,
+        source_key="grondprijsbeleid", version_number=1, is_global=True,
         user_id=user.id, org_id=vendor_org.id,
-        ai_summary="BENG landelijk summary text",
-    ))
-    test_db.add(_make_policy_doc(
+        ai_summary=None,
+    )
+    doc_provincie = _make_policy_doc(
         entity_type="provincie", entity_code="PV31",
-        source_key="povi", version_number=1, is_global=True,
+        source_key="parkeerbeleid", version_number=1, is_global=True,
         user_id=user.id, org_id=vendor_org.id,
-        ai_summary="POVI Limburg summary text",
-    ))
-    test_db.add(_make_policy_doc(
+        ai_summary=None,
+    )
+    doc_gemeente = _make_policy_doc(
         entity_type="gemeente", entity_code="GM0983",
-        source_key="welstand", version_number=1, is_global=True,
+        source_key="woonvisie", version_number=1, is_global=True,
         user_id=user.id, org_id=vendor_org.id,
-        ai_summary="Welstandsnota Venlo summary text",
+        ai_summary=None,
+    )
+    test_db.add(doc_landelijk)
+    test_db.add(doc_provincie)
+    test_db.add(doc_gemeente)
+    await test_db.flush()
+
+    test_db.add(_make_extraction(
+        doc_landelijk, "grondwaarde_fit",
+        [{"titel": "Grond landelijk", "samenvatting": "Landelijke grondprijzen."}],
+    ))
+    test_db.add(_make_extraction(
+        doc_provincie, "parkeerdruk",
+        [{"titel": "Parkeer PV31", "samenvatting": "Provinciaal parkeerbeleid."}],
+    ))
+    test_db.add(_make_extraction(
+        doc_gemeente, "woonvisie_match",
+        [{"titel": "Woonvisie GM0983", "samenvatting": "Gemeentelijke woonvisie."}],
     ))
     await test_db.commit()
 
@@ -109,11 +142,9 @@ async def test_get_summaries_returns_cascade_across_levels(
         db=test_db,
     )
 
-    assert result == {
-        "beng": "BENG landelijk summary text",
-        "povi": "POVI Limburg summary text",
-        "welstand": "Welstandsnota Venlo summary text",
-    }
+    assert result["grondprijsbeleid"][0]["titel"] == "Grond landelijk"
+    assert result["parkeerbeleid"][0]["titel"] == "Parkeer PV31"
+    assert result["woonvisie"][0]["titel"] == "Woonvisie GM0983"
 
 
 async def test_gemeente_wins_over_landelijk_on_source_key_conflict(
@@ -129,17 +160,29 @@ async def test_gemeente_wins_over_landelijk_on_source_key_conflict(
     test_db.add(GemeenteProvincieMap(gemeente_code="GM0983", provincie_code="PV31"))
 
     # Both use source_key="omgevingsvisie"
-    test_db.add(_make_policy_doc(
+    doc_landelijk = _make_policy_doc(
         entity_type="landelijk", entity_code="NL",
         source_key="omgevingsvisie", version_number=1, is_global=True,
         user_id=user.id, org_id=vendor_org.id,
-        ai_summary="LANDELIJK omgevingsvisie text",
-    ))
-    test_db.add(_make_policy_doc(
+        ai_summary=None,
+    )
+    doc_gemeente = _make_policy_doc(
         entity_type="gemeente", entity_code="GM0983",
         source_key="omgevingsvisie", version_number=1, is_global=True,
         user_id=user.id, org_id=vendor_org.id,
-        ai_summary="GEMEENTE omgevingsvisie text",
+        ai_summary=None,
+    )
+    test_db.add(doc_landelijk)
+    test_db.add(doc_gemeente)
+    await test_db.flush()
+
+    test_db.add(_make_extraction(
+        doc_landelijk, "beleidsalignement",
+        [{"titel": "LANDELIJK omgevingsvisie", "samenvatting": "Landelijk beleid."}],
+    ))
+    test_db.add(_make_extraction(
+        doc_gemeente, "beleidsalignement",
+        [{"titel": "GEMEENTE omgevingsvisie", "samenvatting": "Gemeentelijk beleid."}],
     ))
     await test_db.commit()
 
@@ -150,7 +193,7 @@ async def test_gemeente_wins_over_landelijk_on_source_key_conflict(
         db=test_db,
     )
 
-    assert result["omgevingsvisie"] == "GEMEENTE omgevingsvisie text"
+    assert result["omgevingsvisie"][0]["titel"] == "GEMEENTE omgevingsvisie"
 
 
 async def test_is_global_false_rows_excluded(
@@ -165,17 +208,30 @@ async def test_is_global_false_rows_excluded(
 
     test_db.add(GemeenteProvincieMap(gemeente_code="GM0983", provincie_code="PV31"))
 
-    test_db.add(_make_policy_doc(
+    doc_private = _make_policy_doc(
         entity_type="gemeente", entity_code="GM0983",
-        source_key="secret", version_number=1, is_global=False,
+        source_key="woonvisie", version_number=1, is_global=False,
         user_id=user.id, org_id=vendor_org.id,
-        ai_summary="This should never appear",
+        ai_summary=None,
+    )
+    doc_global = _make_policy_doc(
+        entity_type="gemeente", entity_code="GM0983",
+        source_key="omgevingsvisie", version_number=1, is_global=True,
+        user_id=user.id, org_id=vendor_org.id,
+        ai_summary=None,
+    )
+    test_db.add(doc_private)
+    test_db.add(doc_global)
+    await test_db.flush()
+
+    # Only add extraction for the private doc to confirm it's still excluded
+    test_db.add(_make_extraction(
+        doc_private, "woonvisie_match",
+        [{"titel": "Private woonvisie", "samenvatting": "Should not appear."}],
     ))
-    test_db.add(_make_policy_doc(
-        entity_type="gemeente", entity_code="GM0983",
-        source_key="welstand", version_number=1, is_global=True,
-        user_id=user.id, org_id=vendor_org.id,
-        ai_summary="Welstand visible",
+    test_db.add(_make_extraction(
+        doc_global, "beleidsalignement",
+        [{"titel": "Omgevingsvisie zichtbaar", "samenvatting": "Visible."}],
     ))
     await test_db.commit()
 
@@ -186,8 +242,8 @@ async def test_is_global_false_rows_excluded(
         db=test_db,
     )
 
-    assert "secret" not in result
-    assert result["welstand"] == "Welstand visible"
+    assert "woonvisie" not in result
+    assert result["omgevingsvisie"][0]["titel"] == "Omgevingsvisie zichtbaar"
 
 
 async def test_customer_org_gets_same_cascade_as_vendor_org(
@@ -207,11 +263,18 @@ async def test_customer_org_gets_same_cascade_as_vendor_org(
 
     test_db.add(GemeenteProvincieMap(gemeente_code="GM0983", provincie_code="PV31"))
 
-    test_db.add(_make_policy_doc(
+    doc = _make_policy_doc(
         entity_type="gemeente", entity_code="GM0983",
-        source_key="welstand", version_number=1, is_global=True,
+        source_key="woonvisie", version_number=1, is_global=True,
         user_id=vendor_user.id, org_id=vendor_org.id,
-        ai_summary="Welstand summary parity test",
+        ai_summary=None,
+    )
+    test_db.add(doc)
+    await test_db.flush()
+
+    test_db.add(_make_extraction(
+        doc, "woonvisie_match",
+        [{"titel": "Woonvisie parity", "samenvatting": "Parity test content."}],
     ))
     await test_db.commit()
 
@@ -229,7 +292,7 @@ async def test_customer_org_gets_same_cascade_as_vendor_org(
     )
 
     assert vendor_result == customer_result
-    assert "welstand" in customer_result
+    assert "woonvisie" in customer_result
 
 
 async def test_zero_docs_returns_empty_dict(
@@ -251,3 +314,27 @@ async def test_zero_docs_returns_empty_dict(
     )
 
     assert result == {}
+
+
+@pytest.mark.asyncio
+async def test_get_summaries_returns_randvoorwaarden_from_extraction(
+    test_db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Parsed extraction → randvoorwaarden list is returned per source_key."""
+    user, vendor_org = await _make_vendor_user(test_db, email="rv@summaries.example")
+    monkeypatch.setattr(settings, "VENDOR_ORG_ID", vendor_org.id)
+    doc = _make_policy_doc(
+        entity_type="gemeente", entity_code="GM0983", source_key="woonvisie",
+        version_number=1, is_global=True, user_id=user.id, org_id=vendor_org.id, ai_summary=None,
+    )
+    test_db.add(doc)
+    await test_db.flush()
+    test_db.add(FactorExtractionCache(
+        parcel_id=DOCUMENT_SENTINEL, policy_document_id=doc.id,
+        factor_id="woonvisie_match", schema_version=SCHEMA_VERSION,
+        extracted_payload={"randvoorwaarden": [{"titel": "Sociaal 30%", "samenvatting": "Min 30% sociaal."}]},
+    ))
+    await test_db.commit()
+
+    result = await get_summaries("gemeente", "GM0983", vendor_org.id, test_db)
+    assert result["woonvisie"][0]["titel"] == "Sociaal 30%"

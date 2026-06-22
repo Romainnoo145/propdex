@@ -133,7 +133,7 @@ async def get_policy_summaries(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> PolicySummariesResponse:
-    """Get AI summaries for all policy documents of an entity. Returns {source_key: ai_summary}."""
+    """Get extraction results for all policy documents of an entity. Returns {source_key: randvoorwaarden list}."""
     summaries = await svc.get_summaries(
         entity_type=entity_type,
         entity_code=entity_code,
@@ -186,9 +186,15 @@ async def get_gemeente_cascade(
     }
     rows = (await db.execute(stmt, params)).mappings().all()
 
+    from app.policy_documents.extraction_status import get_extraction_map
+
+    ext = await get_extraction_map(db, [(row["id"], row["source_key"]) for row in rows])
     grouped = CascadePolicyDocs()
     for row in rows:
         dto = PolicyDocumentRead.model_validate(dict(row))
+        info = ext[row["id"]]
+        dto.extraction_status = info["status"]
+        dto.extraction = info["extraction"]
         if row["entity_type"] == "landelijk":
             grouped.landelijk.append(dto)
         elif row["entity_type"] == "provincie":
@@ -210,6 +216,8 @@ async def list_policy_documents(
     db: AsyncSession = Depends(get_db),
 ) -> PolicyDocumentListResponse:
     """List policy documents for an entity, optionally filtered by source_key."""
+    from app.policy_documents.extraction_status import get_extraction_map
+
     documents, total = await svc.list_documents(
         entity_type=entity_type,
         entity_code=entity_code,
@@ -217,10 +225,15 @@ async def list_policy_documents(
         source_key=source_key,
         db=db,
     )
-    return PolicyDocumentListResponse(
-        documents=[PolicyDocumentResponse.model_validate(d) for d in documents],
-        total=total,
-    )
+    ext = await get_extraction_map(db, [(d.id, d.source_key) for d in documents])
+    responses: list[PolicyDocumentResponse] = []
+    for d in documents:
+        dto = PolicyDocumentResponse.model_validate(d)
+        info = ext[d.id]
+        dto.extraction_status = info["status"]
+        dto.extraction = info["extraction"]
+        responses.append(dto)
+    return PolicyDocumentListResponse(documents=responses, total=total)
 
 
 @router.get("/{entity_type}/{entity_code}/{document_id}")

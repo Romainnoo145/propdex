@@ -1,15 +1,16 @@
 /**
  * Hook to fetch AI summaries for all policy documents of a gemeente.
- * Returns a map of source_key → ai_summary text.
+ * Returns a map of source_key → randvoorwaarden list.
  */
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth/useAuth'
 import { apiFetch } from '@/lib/api'
 import { useGemeenteGeoJSON } from '@/hooks/useGemeenteGeoJSON'
+import type { Randvoorwaarde } from '@/components/map/panels/parcel/OmgevingsvisiePopup'
 
 interface PolicySummariesResponse {
-  summaries: Record<string, string>
+  summaries: Record<string, Randvoorwaarde[]>
 }
 
 /**
@@ -91,16 +92,16 @@ export const SOURCE_KEY_LABELS: Record<string, string> = {
  * Given all summaries, return only those relevant to a specific rapport section.
  */
 export function getSummariesForSection(
-  summaries: Record<string, string> | undefined,
+  summaries: Record<string, Randvoorwaarde[]> | undefined,
   sectionKey: string,
-): { sourceKey: string; label: string; summary: string }[] {
+): { sourceKey: string; label: string; randvoorwaarden: Randvoorwaarde[] }[] {
   if (!summaries) return []
   return Object.entries(SOURCE_KEY_TO_SECTION)
     .filter(([, section]) => section === sectionKey)
     .map(([sourceKey]) => ({
       sourceKey,
       label: SOURCE_KEY_LABELS[sourceKey] ?? sourceKey,
-      summary: summaries[sourceKey] ?? '',
+      randvoorwaarden: summaries[sourceKey] ?? [],
     }))
-    .filter((item) => !!item.summary)
+    .filter((item) => item.randvoorwaarden.length > 0)
 }

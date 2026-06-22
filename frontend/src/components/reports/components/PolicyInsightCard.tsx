@@ -1,24 +1,23 @@
 /**
- * PolicyInsightCard — shows an AI summary from a gemeente beleidsdocument
- * within a rapport section. Violet-50 background, collapsible.
+ * PolicyInsightCard — shows cascade randvoorwaarden from a gemeente beleidsdocument
+ * within a rapport section. Violet-50 background.
  */
-import { useState } from 'react'
-import { BookOpen, ChevronDown, ChevronUp } from 'lucide-react'
+import { BookOpen } from 'lucide-react'
+import type { Randvoorwaarde } from '@/components/map/panels/parcel/OmgevingsvisiePopup'
+import { RandvoorwaardenSection } from '@/components/map/panels/parcel/OmgevingsvisiePopup'
 
 interface PolicyInsight {
   sourceKey: string
   label: string
-  summary: string
+  randvoorwaarden: Randvoorwaarde[]
 }
 
 interface PolicyInsightCardProps {
   insights: PolicyInsight[]
 }
 
-const MAX_CHARS = 280
-
 /**
- * Renders one or more policy document AI summaries relevant to a rapport section.
+ * Renders one or more policy document randvoorwaarden relevant to a rapport section.
  * Shows nothing if insights array is empty.
  */
 export function PolicyInsightCard({ insights }: PolicyInsightCardProps) {
@@ -34,10 +33,6 @@ export function PolicyInsightCard({ insights }: PolicyInsightCardProps) {
 }
 
 function SingleInsight({ insight }: { insight: PolicyInsight }) {
-  const [expanded, setExpanded] = useState(false)
-  const isLong = insight.summary.length > MAX_CHARS
-  const displayText = expanded || !isLong ? insight.summary : insight.summary.slice(0, MAX_CHARS) + '…'
-
   return (
     <div className="rounded-[12px] border border-violet-200 bg-violet-50 p-4">
       <div className="mb-2 flex items-center gap-2">
@@ -48,25 +43,7 @@ function SingleInsight({ insight }: { insight: PolicyInsight }) {
           Gemeentelijk beleid — {insight.label}
         </span>
       </div>
-      <p className="text-[13px] leading-relaxed text-violet-800 whitespace-pre-line">
-        {displayText}
-      </p>
-      {isLong && (
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="mt-2 flex items-center gap-1 text-[12px] font-medium text-violet-600 hover:text-violet-800 transition-colors"
-        >
-          {expanded ? (
-            <>
-              Minder tonen <ChevronUp size={14} />
-            </>
-          ) : (
-            <>
-              Meer lezen <ChevronDown size={14} />
-            </>
-          )}
-        </button>
-      )}
+      <RandvoorwaardenSection randvoorwaarden={insight.randvoorwaarden} />
     </div>
   )
 }

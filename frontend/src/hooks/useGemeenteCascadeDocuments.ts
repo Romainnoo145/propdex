@@ -12,11 +12,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth/useAuth'
 import { apiFetch } from '@/lib/api'
+import type { Extraction } from '@/hooks/usePolicyDocuments'
 
 /**
  * Individual cascade policy document. Shape matches backend PolicyDocumentRead
- * from app/documents/bundle_schemas.py — ai_summary is a JSON-stringified
- * DocumentSummary (parse via parseAiSummary helper from usePolicyDocuments.ts).
+ * from app/documents/bundle_schemas.py — extraction contains randvoorwaarden
+ * produced by the cascade extraction pipeline.
  */
 export interface CascadePolicyDocRead {
   id: string
@@ -29,6 +30,8 @@ export interface CascadePolicyDocRead {
   uploaded_at: string
   version_number: number
   ai_summary: string | null
+  extraction_status: string
+  extraction: Extraction | null
 }
 
 /**

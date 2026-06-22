@@ -160,10 +160,9 @@ async def ingest_gemeente_policies(
         gemeente_naam: Display name (e.g. "Venlo") — used as the SRU
             creator= search field.
         db: Async SQLAlchemy session.
-        arq_pool: Optional ARQ Redis pool for enqueueing document_summary_job
-            after each successful store_document call. When None (default),
-            no summarization is enqueued — backwards-compatible with existing
-            callers.
+        arq_pool: Optional ARQ Redis pool (reserved for future use; kept for
+            backwards-compatible call sites). Currently not used after Task 3
+            removed the redundant document_summary_job enqueue.
 
     Returns:
         Summary dict keyed by source_key:
@@ -260,20 +259,6 @@ async def ingest_gemeente_policies(
             doc.version_number,
             result.identifier,
         )
-
-        # M045/S03: enqueue AI summary job for the auto-ingested PDF
-        if arq_pool is not None and doc.content_type == "application/pdf":
-            try:
-                await arq_pool.enqueue_job("document_summary_job", str(doc.id))
-                logger.info(
-                    "Enqueued document_summary_job for auto-ingested %s (%s)",
-                    source_key, doc.id,
-                )
-            except Exception as enqueue_err:
-                logger.warning(
-                    "Failed to enqueue document_summary_job for %s: %s",
-                    doc.id, enqueue_err,
-                )
 
         # M047/S05: track stored doc IDs so caller can enqueue rescore
         stored_document_ids.append(str(doc.id))
