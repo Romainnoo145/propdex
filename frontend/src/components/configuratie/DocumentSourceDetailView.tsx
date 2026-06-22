@@ -20,7 +20,7 @@ import {
   type DocumentSummary,
 } from "@/hooks/usePolicyDocuments";
 import { SectionInsightCard } from "@/components/reports/components/SectionInsightCard";
-import { PDFViewerModal } from "@/components/ui/PDFViewerModal";
+import { PdfViewerDrawer } from "@/components/ui/PdfViewerDrawer";
 import { DetailLoading, DetailEmpty, DetailError } from "./DetailStates";
 import { SourceGuidanceCard } from "./SourceGuidanceCard";
 import { DocumentUploadZone } from "./DocumentUploadZone";
@@ -123,7 +123,7 @@ export function DocumentSourceDetailView({
       )}
 
       {viewingDoc && viewingUrl && (
-        <PDFViewerModal
+        <PdfViewerDrawer
           url={viewingUrl}
           title={viewingDoc.filename}
           onClose={() => setViewingDocId(null)}
