@@ -127,10 +127,10 @@ function ScopeDocumentsView({
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <h1 className="text-[20px] font-semibold text-[#0E1111]">
+        <h1 className="text-[22px] font-black tracking-tight text-[#0E1111]">
           Data-bronnen · {payload.entity_naam}
         </h1>
-        <p className="text-[12px] text-slate-500">
+        <p className="text-[14px] text-slate-500">
           Vendor-managed beleidsdocumenten op{' '}
           {entityType === 'landelijk' ? 'landelijk' : 'provinciaal'} niveau.
         </p>
