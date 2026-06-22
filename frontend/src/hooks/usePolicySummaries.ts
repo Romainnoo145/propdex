@@ -86,6 +86,7 @@ export const SOURCE_KEY_LABELS: Record<string, string> = {
   leegstandsverordening: 'Leegstandsverordening',
   duurzaamheidsbeleid: 'Duurzaamheidsbeleid',
   erfgoedverordening: 'Erfgoedverordening',
+  woondeals: 'Woondeals',
 }
 
 /**
