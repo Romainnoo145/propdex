@@ -115,25 +115,7 @@ async def get_kansen(
     """
     potentie = ScanResult.flags["scores"]["potentie"].as_float()
     risico = ScanResult.flags["scores"]["risico"].as_float()
-
-    ranked = (
-        select(
-            ScanResult.parcel_id.label("pc_id"),
-            potentie.label("potentie"),
-            risico.label("risico"),
-            AreaScan.wijk_naam.label("wijk"),
-            ScanResult.flags["score_breakdown"].label("breakdown"),
-            func.row_number()
-            .over(
-                partition_by=ScanResult.parcel_id,
-                order_by=AreaScan.created_at.desc(),
-            )
-            .label("rn"),
-        )
-        .join(AreaScan, AreaScan.id == ScanResult.scan_id)
-        .where(AreaScan.gemeente_naam == gemeente)
-        .subquery()
-    )
+    breakdown_col = ScanResult.flags["score_breakdown"]
 
     favorite_ids = select(ParcelFavorite.parcel_id).where(
         ParcelFavorite.user_id == current_user.id
@@ -142,25 +124,32 @@ async def get_kansen(
         DismissedKans.user_id == current_user.id
     )
 
+    # One ScanResult per parcel is guaranteed by UNIQUE(parcel_id) on
+    # scan_results (migration k0 / uq_scan_results_parcel), so the old
+    # row_number() OVER (partition by parcel_id) dedup was a no-op that forced a
+    # full window-sort of every scan_result in the gemeente (~55k for Venlo)
+    # before the LIMIT could apply. A direct join filters + bounded top-N's
+    # instead.
     result = await db.execute(
         select(
             ParcelCache.parcel_id,
             ParcelCache.id.label("pc_uuid"),
             ParcelCache.address,
-            ranked.c.wijk,
-            ranked.c.potentie,
-            ranked.c.risico,
-            ranked.c.breakdown,
+            AreaScan.wijk_naam.label("wijk"),
+            potentie.label("potentie"),
+            risico.label("risico"),
+            breakdown_col.label("breakdown"),
         )
-        .join(ranked, ranked.c.pc_id == ParcelCache.id)
+        .join(ScanResult, ScanResult.parcel_id == ParcelCache.id)
+        .join(AreaScan, AreaScan.id == ScanResult.scan_id)
         .where(
-            ranked.c.rn == 1,
-            ranked.c.potentie.isnot(None),
-            ranked.c.potentie >= min_potentie,
+            AreaScan.gemeente_naam == gemeente,
+            potentie.isnot(None),
+            potentie >= min_potentie,
             ParcelCache.parcel_id.notin_(favorite_ids),
             ParcelCache.parcel_id.notin_(dismissed_ids),
         )
-        .order_by(ranked.c.potentie.desc())
+        .order_by(potentie.desc())
         .limit(limit)
     )
 
