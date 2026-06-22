@@ -43,7 +43,7 @@ import { useChecklistProgress, useUpdateChecklistProgress } from '@/hooks/useChe
 import { useOrgChecklistLinks } from '@/hooks/useOrgChecklistLinks'
 import { useUploadDocument } from '@/hooks/useDocuments'
 import { SectionInsightCard } from '@/components/reports/components/SectionInsightCard'
-import { PDFViewerModal } from '@/components/ui/PDFViewerModal'
+import { PdfViewerDrawer } from '@/components/ui/PdfViewerDrawer'
 import { TeamAttributionBadge } from '@/components/checklist/TeamAttributionBadge'
 
 /* ─── Public types ───────────────────────────────────────────── */
@@ -516,7 +516,7 @@ function CompactItemRow({ item, checked, docStatus, uploadedDocId, parcelId, onT
       </button>
       <TeamAttributionBadge itemLinks={itemLinks} currentUserId={currentUserId} />
       {pdfViewer && (
-        <PDFViewerModal
+        <PdfViewerDrawer
           url={pdfViewer.url}
           title={pdfViewer.title}
           onClose={() => setPdfViewer(null)}

@@ -3,7 +3,7 @@
  * Successor to FavoriteParcelWorkspaceView 2026-05-19 (Plan 08-06 split, M050/S06 cont.).
  *
  * Composes: ParcelWorkspaceHeader + AanpakCard + DossierSection + WorkspaceInsightCard
- * (timeline) + WorkspaceContactModal + PotentieModal + RisicoModal + PDFViewerModal.
+ * (timeline) + WorkspaceContactModal + PotentieModal + RisicoModal + PdfViewerDrawer.
  * Shell owns ALL state + handlers; children are presentational.
  *
  * Plan 08-07 will modify AanpakCard.tsx CTA copy; this shell stays stable.
@@ -18,7 +18,7 @@ import { getDocumentDownloadUrl } from '@/lib/api'
 import { useAuth } from '@/lib/auth/useAuth'
 import type { FavoriteResponse } from '@/lib/types/portfolio'
 import { PotentieModal, RisicoModal } from '@/components/projects/ScoreDetailModal'
-import { PDFViewerModal } from '@/components/ui/PDFViewerModal'
+import { PdfViewerDrawer } from '@/components/ui/PdfViewerDrawer'
 import { AanpakCard } from './AanpakCard'
 import { ParcelWorkspaceHeader } from './ParcelWorkspaceHeader'
 import { WorkspaceContactModal } from './WorkspaceContactModal'
@@ -269,7 +269,7 @@ export function OnderzoekPhaseView({
         parcelCacheId={favorite.parcel_cache_id}
       />
       {pdfViewer && (
-        <PDFViewerModal
+        <PdfViewerDrawer
           url={pdfViewer.url}
           title={pdfViewer.title}
           onClose={() => setPdfViewer(null)}
