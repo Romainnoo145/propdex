@@ -106,6 +106,32 @@ class ErfgoedResponse(BaseModel):
     total: int = Field(default=0)
 
 
+class WoondealOpgaveOut(BaseModel):
+    """Per-gemeente Woondeal-opgave for the gemeente-context surface."""
+
+    gemeente_naam: str
+    toevoegingen: int | None = None
+    plancapaciteit: int | None = None
+    gat: int | None = Field(default=None, description="toevoegingen - plancapaciteit")
+    sleutelprojecten_aantal: int | None = None
+    sleutelprojecten_woningen: int | None = None
+
+
+class WoondealGemeenteResponse(BaseModel):
+    """Woondeal context for a gemeente (context-only, no score)."""
+
+    gemeente_naam: str
+    heeft_woondeal: bool
+    regio_naam: str | None = None
+    periode: str | None = None
+    opgave: WoondealOpgaveOut | None = None
+    aandeel_betaalbaar: float | None = None
+    betaalbaar_definitie: str | None = None
+    regelingen: list[str] = Field(default_factory=list)
+    doelgroepen: list[str] = Field(default_factory=list)
+    document_title: str | None = None
+
+
 class ChecklistItemResponse(BaseModel):
     """A single checklist item in the response."""
 
