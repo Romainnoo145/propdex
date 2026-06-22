@@ -3,6 +3,7 @@
 import logging
 import uuid
 from datetime import datetime
+from typing import cast
 
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +19,7 @@ from app.policy_documents.admin_schemas import (
     AdminPolicyVersionRow,
     AdminPolicyVersionsResponse,
 )
+from app.policy_documents.extraction_status import get_extraction_map
 from app.policy_documents.source_keys import (
     get_source_key_label,
     is_valid_source_key,
@@ -190,14 +192,16 @@ async def get_summaries(
     entity_code: str,
     organization_id: uuid.UUID,  # noqa: ARG001 — kept for backwards compat, unused
     db: AsyncSession,
-) -> dict[str, str]:
-    """Return {source_key: ai_summary} for all cascade policy docs of a gemeente.
+) -> dict[str, list[dict[str, object]]]:
+    """Return {source_key: randvoorwaarden} for cascade policy docs of a gemeente.
 
-    M045/S03: was previously filtered by organization_id which returned empty
-    results for customer orgs (only vendor-org owns policy_documents rows).
-    Now cascade-aware with is_global filter — returns the full landelijk/
-    provincie/gemeente chain. On source_key conflict across levels, most
-    specific wins (gemeente > provincie > landelijk).
+    Reads the latest doc per (entity_type, entity_code, source_key) triple
+    via DISTINCT ON, then looks up extracted randvoorwaarden from the cascade
+    extraction cache. Only docs with status 'parsed' and a non-empty
+    randvoorwaarden list are included.
+
+    On source_key conflict across levels, most specific wins:
+    gemeente > provincie > landelijk.
 
     The entity_type parameter is retained but only 'gemeente' is meaningfully
     supported. Non-gemeente callers receive an empty dict.
@@ -209,11 +213,9 @@ async def get_summaries(
 
     cascade_stmt = text("""
         SELECT DISTINCT ON (entity_type, entity_code, source_key)
-            entity_type, source_key, ai_summary
+            id, entity_type, source_key
         FROM policy_documents
         WHERE is_global = true
-          AND ai_summary IS NOT NULL
-          AND ai_summary != ''
           AND (
             (entity_type = 'landelijk' AND entity_code = :landelijk)
             OR (entity_type = 'provincie' AND entity_code = :provincie)
@@ -228,16 +230,32 @@ async def get_summaries(
     }
     rows = (await db.execute(cascade_stmt, params)).mappings().all()
 
+    if not rows:
+        return {}
+
+    doc_pairs = [(row["id"], row["source_key"]) for row in rows]
+    extraction_map = await get_extraction_map(db, doc_pairs)
+
     # Precedence: gemeente > provincie > landelijk on same source_key conflict
     PRECEDENCE = {"gemeente": 3, "provincie": 2, "landelijk": 1}
-    out: dict[str, str] = {}
+    out: dict[str, list[dict[str, object]]] = {}
     out_priority: dict[str, int] = {}
     for row in rows:
         source_key = row["source_key"]
         level = row["entity_type"]
+        doc_id = row["id"]
         priority = PRECEDENCE[level]
+        info = extraction_map.get(doc_id)
+        if info is None or info["status"] != "parsed":
+            continue
+        extraction = info["extraction"]
+        if not extraction:
+            continue
+        randvoorwaarden = extraction.get("randvoorwaarden")
+        if not randvoorwaarden:
+            continue
         if source_key not in out or priority > out_priority[source_key]:
-            out[source_key] = row["ai_summary"]
+            out[source_key] = cast(list[dict[str, object]], randvoorwaarden)
             out_priority[source_key] = priority
     return out
 
