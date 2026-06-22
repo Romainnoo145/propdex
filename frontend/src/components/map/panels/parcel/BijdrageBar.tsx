@@ -48,16 +48,24 @@ export function BijdrageBar({ card, tone: _tone, maxAbs, onClick, comingSoon = f
       <span className="text-right text-[10px] font-extrabold uppercase tracking-wide leading-tight text-slate-500">
         {card.label}
       </span>
-      <div className="relative h-[30px]">
+      <div className="relative h-[30px] flex items-center">
         <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200" />
         <div
-          className={`absolute top-1 h-[22px] rounded-[7px] flex items-center ${fillColor} ${
-            side === 'neg' ? 'right-1/2 justify-end' : 'left-1/2'
+          className={`absolute top-1 h-[22px] rounded-[7px] overflow-hidden ${fillColor} ${
+            side === 'neg' ? 'right-1/2' : 'left-1/2'
           }`}
           style={{ width: `${widthPct / 2}%` }}
+        />
+        <span
+          className="absolute top-1/2 -translate-y-1/2 text-[11px] font-extrabold tabular-nums whitespace-nowrap text-slate-700"
+          style={{
+            ...(side === 'pos' && { left: `calc(50% + ${widthPct / 2}% + 4px)` }),
+            ...(side === 'neg' && { right: `calc(50% + ${widthPct / 2}% + 4px)` }),
+            ...(side === 'zero' && { left: '50%', transform: 'translateX(-50%) translateY(-50%)' }),
+          }}
         >
-          <span className="px-2 text-[11px] font-extrabold text-white whitespace-nowrap">{ptsLabel}</span>
-        </div>
+          {ptsLabel}
+        </span>
       </div>
     </div>
   )
