@@ -254,7 +254,9 @@ describe('OnderzoekPhaseView feature parity (REGRESSION-CRITICAL)', () => {
       expect(src).toMatch(/ParcelWorkspaceHeader/)
       expect(src).toMatch(/WorkspaceContactModal/)
       expect(src).toMatch(/DossierSection/)
-      expect(src).toMatch(/ActivityTimelineCard/)
+      // Projectnotities now live in their own card in the shell (pulled out of
+      // DossierSection); the "Laatste activiteit" timeline card was removed.
+      expect(src).toMatch(/ProjectnotitiesGrid/)
       // Cockpit helper imports
       expect(src).toMatch(/buildPages/)
       expect(src).toMatch(/deriveNextStep/)

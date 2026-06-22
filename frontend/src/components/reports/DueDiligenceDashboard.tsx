@@ -48,7 +48,7 @@ interface SectionConfig {
 }
 
 const SECTION_LIST: SectionConfig[] = [
-  { key: 'locatiegegevens', title: '1. Locatiegegevens', shortTitle: 'Locatie' },
+  { key: 'locatiegegevens', title: '1. Algemeen', shortTitle: 'Algemeen' },
   { key: 'kadaster', title: '2. Kadaster & Eigendom', shortTitle: 'Kadaster' },
   { key: 'bestemmingsplan', title: '3. Bestemmingsplan & Bouwmogelijkheden', shortTitle: 'Bestemming' },
   { key: 'risicoprofiel', title: '4. Risicoprofiel', shortTitle: 'Risico' },

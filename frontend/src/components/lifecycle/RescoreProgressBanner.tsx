@@ -73,7 +73,7 @@ export function RescoreProgressBanner(props: RescoreProgressBannerProps) {
 
   if (view.kind === 'polling') {
     return (
-      <div className="bg-white/60 backdrop-blur-[24px] border border-white/40 rounded-[24px] p-5 mb-4 flex items-center gap-3">
+      <div className="bg-white/60 backdrop-blur-[24px] border border-slate-200 rounded-[24px] p-5 mb-4 flex items-center gap-3">
         <Loader2 size={20} strokeWidth={1.5} className="text-aura-amber animate-spin" />
         <p className="text-[13px] text-aura-ink">{view.copy}</p>
       </div>
@@ -102,7 +102,7 @@ export function RescoreProgressBanner(props: RescoreProgressBannerProps) {
 
   // timeout
   return (
-    <div className="bg-white/60 backdrop-blur-[24px] border border-white/40 rounded-[24px] p-5 mb-4 flex items-center gap-3">
+    <div className="bg-white/60 backdrop-blur-[24px] border border-slate-200 rounded-[24px] p-5 mb-4 flex items-center gap-3">
       <Clock size={20} strokeWidth={1.5} className="text-slate-400" />
       <p className="text-[13px] text-slate-600">{view.copy}</p>
     </div>

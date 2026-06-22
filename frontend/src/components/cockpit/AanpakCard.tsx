@@ -46,7 +46,7 @@ function WorkspaceInsightCard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.08, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className={`rounded-[24px] border border-[#EAEFEF] bg-white p-5 ${className}`.trim()}
+      className={`rounded-[24px] border border-slate-200 bg-white/60 backdrop-blur-[24px] p-5 ${className}`.trim()}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -78,7 +78,7 @@ export function AanpakCard({
 }: AanpakCardProps) {
   return (
     <WorkspaceInsightCard kicker="Aanpak" title="Volgende stap" Icon={ClipboardCheck} index={0}>
-      <div className="rounded-[20px] border border-[#F1E1B0] bg-[#FFF8E8] px-4 py-4">
+      <div className="rounded-r-[14px] border-l-2 border-aura-amber bg-aura-amber/[0.05] pl-5 pr-4 py-3">
         <p className="text-[16px] font-bold tracking-tight text-[#0E1111]">{nextStep.title}</p>
         <p className="mt-2 text-[14px] leading-6 text-slate-600">{nextStep.detail}</p>
         {nextStep.kind === 'contact-handoff' ? (

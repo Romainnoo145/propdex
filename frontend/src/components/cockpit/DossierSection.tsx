@@ -8,14 +8,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { DossierPager } from './DossierPager'
 import { DossierCardSlot } from './DossierCardSlot'
-import { ProjectnotitiesGrid } from './ProjectnotitiesGrid'
 import type { DossierPage } from '@/lib/cockpit/dossier-pages'
-import type {
-  FavoriteNoteResponse,
-  useCreateNote,
-  useDeleteNote,
-  useUpdateNote,
-} from '@/hooks/useFavorites'
 
 interface DossierSectionProps {
   pages: DossierPage[]
@@ -29,12 +22,6 @@ interface DossierSectionProps {
   onDelete: (documentId: string) => void
   onDownload: (documentId: string, filename: string) => void
   onView: (documentId: string, filename?: string) => void
-  parcelId: string
-  notes: FavoriteNoteResponse[]
-  isLoadingNotes: boolean
-  createNote: ReturnType<typeof useCreateNote>
-  updateNote: ReturnType<typeof useUpdateNote>
-  deleteNote: ReturnType<typeof useDeleteNote>
 }
 
 export function DossierSection({
@@ -49,12 +36,6 @@ export function DossierSection({
   onDelete,
   onDownload,
   onView,
-  parcelId,
-  notes,
-  isLoadingNotes,
-  createNote,
-  updateNote,
-  deleteNote,
 }: DossierSectionProps) {
   const current = (pages[page] ?? pages[0])!
   const filledCount = current.cards.filter((card) => card.filled).length
@@ -65,8 +46,8 @@ export function DossierSection({
         <DossierPager pages={pages} activePage={page} onSelect={onPageChange} />
       </div>
 
-      <div className="mt-4 rounded-[32px] border border-neutral-200 bg-white p-4 sm:p-6">
-        <div className="rounded-[20px] border border-slate-100 bg-slate-50/50 px-6 py-5">
+      <div className="mt-4 rounded-[24px] border border-slate-200 bg-white/60 backdrop-blur-[24px] p-4 sm:p-6">
+        <div className="rounded-[16px] bg-white/40 px-6 py-5">
           <AnimatePresence mode="wait">
             <motion.div
               key={page}
@@ -110,11 +91,11 @@ export function DossierSection({
 
         <div className="relative mt-4">
           {isLoadingDocuments ? (
-            <div className="rounded-[20px] border border-slate-100 bg-slate-50/50 px-6 py-10 text-[14px] text-slate-500">
+            <div className="rounded-[16px] bg-white/40 px-6 py-10 text-[14px] text-slate-500">
               Workspace laden...
             </div>
           ) : documentsError ? (
-            <div className="rounded-[20px] border border-[#E6D1D1] bg-[#FFF5F5] px-6 py-10 text-[14px] text-[#9E3D3D]">
+            <div className="rounded-[16px] border border-[#E6D1D1] bg-[#FFF5F5] px-6 py-10 text-[14px] text-[#9E3D3D]">
               {documentsError.message}
             </div>
           ) : (
@@ -142,20 +123,6 @@ export function DossierSection({
               </motion.div>
             </AnimatePresence>
           )}
-        </div>
-
-        <div className="mt-4 border-t border-[#EAEFEF] pt-4">
-          <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.15em] text-slate-400">
-            Notities
-          </p>
-          <ProjectnotitiesGrid
-            parcelId={parcelId}
-            notes={notes}
-            isLoading={isLoadingNotes}
-            createNote={createNote}
-            updateNote={updateNote}
-            deleteNote={deleteNote}
-          />
         </div>
       </div>
     </>

@@ -5,7 +5,7 @@
  */
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Lightbulb, Loader2, Trash2 } from 'lucide-react'
+import { Plus, Loader2, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useCreateNote,
@@ -102,14 +102,6 @@ export function ProjectnotitiesGrid({
 
   return (
     <div className="space-y-2">
-      {notes.length === 0 && !addingNew && (
-        <div className="rounded-[20px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-6 text-center">
-          <p className="text-[13px] text-slate-400 italic">
-            Nog geen notities — voeg je eerste acquisitiethese toe
-          </p>
-        </div>
-      )}
-
       {notes.map((note) => {
         const isExpanded = expandedId === note.id
         const preview = note.content.length > 80 ? `${note.content.slice(0, 80)}…` : note.content
@@ -236,7 +228,7 @@ export function ProjectnotitiesGrid({
           whileTap={{ scale: 0.97 }}
           className="flex w-full items-center justify-center gap-2 rounded-[16px] border border-dashed border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-[12px] font-semibold text-slate-500 transition-colors hover:border-[#F9A826]/40 hover:bg-[#FFFDF8] hover:text-[#0E1111]"
         >
-          <Lightbulb size={14} />
+          <Plus size={16} strokeWidth={2.5} />
           Notitie toevoegen
         </motion.button>
       )}
