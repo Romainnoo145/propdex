@@ -4,7 +4,7 @@ import { ShieldAlert, ShieldCheck, ShieldQuestion, type LucideIcon } from 'lucid
 import type { ScanResultItem, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/types/scan'
 import { isScoreV3 } from '@/lib/score'
 import { useParcelEnrichment } from '@/hooks/useScans'
-import { BijdrageBar } from '../BijdrageBar'
+import { FactorKpiCard } from '../FactorKpiCard'
 import { FactorDetailDrawer } from '../FactorDetailDrawer'
 import { FactorExplainBody } from '../FactorExplainBody'
 import { parseFactors, isCascadeFactor, factorInBreakdown } from '../lib/factor-detail'
@@ -518,7 +518,6 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
   // Weight-sorted factor list (score factors + env enrichment), no pagination.
   const sortedCards: PageCard[] = sortByWeight(buildRisicoCards(parcel, enrichmentQuery.data))
 
-  const maxAbs = Math.max(1, ...sortedCards.map((c) => Math.abs(c.pts)))
 
   function cardClick(card: PageCard): (() => void) | undefined {
     if (isCascadeFactor(card.factor_key)) {
@@ -578,11 +577,10 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
       {/* ── Factor list — one continuous, weight-sorted scroll ── */}
       <div className="flex-1 min-h-0 overflow-y-auto px-6 mt-3 flex flex-col gap-2">
         {sortedCards.map((card) => (
-          <BijdrageBar
+          <FactorKpiCard
             key={card.factor_key}
             card={card}
             tone="risico"
-            maxAbs={maxAbs}
             onClick={cardClick(card)}
           />
         ))}
@@ -593,12 +591,11 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
           <span className="h-px flex-1 bg-slate-100" />
         </div>
         {PLANNED_RISICO.map((planned) => (
-          <BijdrageBar
+          <FactorKpiCard
             key={planned.key}
             comingSoon
             tone="risico"
-            maxAbs={maxAbs}
-            card={{ label: planned.label, value: '—', sub: planned.source, pts: 0, factor_key: planned.key, bron: planned.bron }}
+            card={{ label: planned.label, value: 'Binnenkort', sub: planned.source, pts: 0, factor_key: planned.key, bron: planned.bron }}
           />
         ))}
       </div>
