@@ -102,3 +102,14 @@ export const CASCADE_FACTOR_KEYS: ReadonlySet<string> = new Set([
 export function isCascadeFactor(key: string): boolean {
   return CASCADE_FACTOR_KEYS.has(key)
 }
+
+/* ── Bijdrage-bar geometry (Variant C) ───────────────────────── */
+
+export function barGeometry(
+  pts: number,
+  maxAbs: number,
+): { side: 'pos' | 'neg' | 'zero'; widthPct: number } {
+  if (pts === 0 || maxAbs <= 0) return { side: 'zero', widthPct: 0 }
+  const widthPct = Math.round((Math.abs(pts) / maxAbs) * 100)
+  return { side: pts > 0 ? 'pos' : 'neg', widthPct }
+}

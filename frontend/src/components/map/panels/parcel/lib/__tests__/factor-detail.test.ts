@@ -5,6 +5,7 @@ import {
   isWijkBreed,
   isCascadeFactor,
   CASCADE_FACTOR_KEYS,
+  barGeometry,
 } from '../factor-detail'
 
 describe('parseFactors', () => {
@@ -59,5 +60,23 @@ describe('isCascadeFactor', () => {
   })
   it('CASCADE_FACTOR_KEYS has exactly five members', () => {
     expect(CASCADE_FACTOR_KEYS.size).toBe(5)
+  })
+})
+
+describe('barGeometry', () => {
+  it('positive pts fill to the right', () => {
+    expect(barGeometry(8.5, 8.5)).toEqual({ side: 'pos', widthPct: 100 })
+  })
+  it('negative pts fill to the left', () => {
+    expect(barGeometry(-2.8, 8.5).side).toBe('neg')
+  })
+  it('width is the magnitude as a percentage of maxAbs', () => {
+    expect(barGeometry(4.25, 8.5).widthPct).toBe(50)
+  })
+  it('zero / missing pts yield a zero-width neutral bar', () => {
+    expect(barGeometry(0, 8.5)).toEqual({ side: 'zero', widthPct: 0 })
+  })
+  it('is safe when maxAbs is 0 (all factors zero)', () => {
+    expect(barGeometry(0, 0)).toEqual({ side: 'zero', widthPct: 0 })
   })
 })
