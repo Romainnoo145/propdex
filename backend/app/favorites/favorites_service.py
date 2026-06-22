@@ -324,6 +324,12 @@ async def list_favorites(
         select(User.organization_id).where(User.id == user_id)
     )
 
+    # One ScanResult per parcel is guaranteed by UNIQUE(parcel_id) on
+    # scan_results (migration k0 / uq_scan_results_parcel), so no per-parcel
+    # "latest scan" dedup is needed. The old DISTINCT ON (parcel_id) forced a
+    # sort of the entire scan_results table on every favorites load; dropping it
+    # lets Postgres drive the join from the (few) favorites via the indexed
+    # scan_results.parcel_id instead of materializing the whole table.
     scores_sq = (
         select(
             ScanResult.parcel_id.label("parcel_id"),
@@ -332,8 +338,6 @@ async def list_favorites(
         )
         .join(AreaScan, AreaScan.id == ScanResult.scan_id)
         .where(AreaScan.status == "completed")
-        .distinct(ScanResult.parcel_id)
-        .order_by(ScanResult.parcel_id, ScanResult.created_at.desc())
         .subquery()
     )
 

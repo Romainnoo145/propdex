@@ -168,7 +168,10 @@ async def test_kansen_top_scored_excluding_favorites(
     assert "VENLO-K1" in ids and "VENLO-K2" in ids
     assert ids.index("VENLO-K1") < ids.index("VENLO-K2")  # op potentie desc
     k1 = next(k for k in data["kansen"] if k["parcel_id"] == "VENLO-K1")
-    assert k1["potentie_score"] == 80.0
+    # De kaart toont de use-case-specifieke score (afgeleid uit score_breakdown),
+    # zodat het getal matcht met het type-label — NIET de algemene flags.scores
+    # potentie (80.0). Voor deze breakdown levert compute_use_case_scores 100.0.
+    assert k1["potentie_score"] == 100.0
     assert k1["address"] == "VENLO-K1 straat 1"
     assert k1["wijk"] == "Centrum"
     # projecttype afgeleid uit de beste use_case + een reden-regel
