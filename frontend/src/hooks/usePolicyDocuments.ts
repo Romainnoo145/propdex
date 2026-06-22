@@ -5,8 +5,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, apiFetch } from '@/lib/api'
 import { useAuth } from '@/lib/auth/useAuth'
+import type { Randvoorwaarde } from '@/components/map/panels/parcel/OmgevingsvisiePopup'
 
 /* ─── Types ─────────────────────────────────────────────────── */
+
+export interface Extraction {
+  randvoorwaarden?: Randvoorwaarde[]
+  algemeen_citaat?: string
+  [k: string]: unknown
+}
 
 export interface PolicyDocument {
   id: string
@@ -17,6 +24,8 @@ export interface PolicyDocument {
   content_type: string
   file_size: number
   status: string
+  extraction_status: string
+  extraction: Extraction | null
   version_number: number
   ai_summary: string | null
   created_at: string

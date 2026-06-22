@@ -34,21 +34,17 @@ function formatUploadDate(iso: string): string {
 
 function statusPill(status: string) {
   const map: Record<string, { label: string; cls: string }> = {
-    ready: {
-      label: "Verwerkt",
-      cls: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    },
     parsed: {
-      label: "Verwerkt",
+      label: "Geparsed",
       cls: "border-emerald-200 bg-emerald-50 text-emerald-700",
     },
-    parsing: {
-      label: "Verwerken…",
+    pending: {
+      label: "In wachtrij",
       cls: "border-amber-200 bg-amber-50 text-amber-700",
     },
-    error: {
-      label: "Fout",
-      cls: "border-red-200 bg-red-50 text-red-700",
+    nvt: {
+      label: "Geen extractie",
+      cls: "border-slate-200 bg-slate-50 text-slate-600",
     },
   };
   const entry = map[status] ?? {
@@ -173,7 +169,7 @@ export function DocumentListItem({ document: doc, onView, isSuperuser = false }:
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {statusPill(doc.status)}
+          {statusPill(doc.extraction_status)}
           <button
             onClick={onView}
             className="flex size-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-[#0E1111]"
