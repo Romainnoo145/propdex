@@ -120,14 +120,3 @@ export function factorInBreakdown(
   const { potentie, risico } = parseFactors(breakdown)
   return potentie.some((f) => f.name === key) || risico.some((f) => f.name === key)
 }
-
-/* ── Bijdrage-bar geometry (Variant C) ───────────────────────── */
-
-export function barGeometry(
-  pts: number,
-  maxAbs: number,
-): { side: 'pos' | 'neg' | 'zero'; widthPct: number } {
-  if (pts === 0 || maxAbs <= 0) return { side: 'zero', widthPct: 0 }
-  const widthPct = Math.round((Math.abs(pts) / maxAbs) * 100)
-  return { side: pts > 0 ? 'pos' : 'neg', widthPct }
-}

@@ -1,26 +1,24 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { BijdrageBar } from '@/components/map/panels/parcel/BijdrageBar'
+import { FactorKpiCard } from '@/components/map/panels/parcel/FactorKpiCard'
 
-const meta: Meta<typeof BijdrageBar> = {
-  title: 'Parcel/BijdrageBar',
-  component: BijdrageBar,
+const meta: Meta<typeof FactorKpiCard> = {
+  title: 'Parcel/FactorKpiCard',
+  component: FactorKpiCard,
 }
 export default meta
-type Story = StoryObj<typeof BijdrageBar>
-
-const base = {
-  label: 'ONDERBENUTTING',
-  value: '62% VRIJ',
-  sub: '± 840 m² marge',
-  factor_key: 'vrije_grond',
-  bron: 'fysiek' as const,
-}
+type Story = StoryObj<typeof FactorKpiCard>
 
 export const Potentie: Story = {
   args: {
-    card: { ...base, pts: 8.5 },
+    card: {
+      label: 'ONDERBENUTTING',
+      value: '62% VRIJ',
+      sub: '± 840 m² marge',
+      pts: 17,
+      factor_key: 'vrije_grond',
+      bron: 'fysiek',
+    },
     tone: 'potentie',
-    maxAbs: 8.5,
     onClick: () => {},
   },
 }
@@ -30,13 +28,12 @@ export const Risico: Story = {
     card: {
       label: 'PARKEERDRUK',
       value: 'HOOG',
-      sub: 'norm 1.5/woning',
+      sub: 'norm 1,5 / woning',
       pts: -2.8,
       factor_key: 'parkeerdruk',
       bron: 'planologisch',
     },
     tone: 'risico',
-    maxAbs: 8.5,
     onClick: () => {},
   },
 }
@@ -45,14 +42,13 @@ export const ComingSoon: Story = {
   args: {
     card: {
       label: 'WOONDEAL',
-      value: '—',
-      sub: 'Woondeal Limburg',
+      value: 'Binnenkort',
+      sub: 'Woondeal Limburg 2022-2030',
       pts: 0,
       factor_key: 'woondeal_boost',
       bron: 'gemeente_beleid',
     },
     tone: 'potentie',
-    maxAbs: 8.5,
     comingSoon: true,
   },
 }
