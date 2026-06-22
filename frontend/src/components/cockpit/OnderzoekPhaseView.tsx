@@ -19,14 +19,14 @@ import { useAuth } from '@/lib/auth/useAuth'
 import type { FavoriteResponse } from '@/lib/types/portfolio'
 import { PotentieModal, RisicoModal } from '@/components/projects/ScoreDetailModal'
 import { PdfViewerDrawer } from '@/components/ui/PdfViewerDrawer'
-import { AanpakCard } from './AanpakCard'
+import { PenLine } from 'lucide-react'
+import { AanpakCard, WorkspaceInsightCard } from './AanpakCard'
 import { ParcelWorkspaceHeader } from './ParcelWorkspaceHeader'
 import { WorkspaceContactModal } from './WorkspaceContactModal'
 import { DossierSection } from './DossierSection'
-import { ActivityTimelineCard } from './ActivityTimelineCard'
+import { ProjectnotitiesGrid } from './ProjectnotitiesGrid'
 import { buildPages, flattenCards, mergeDocuments } from '@/lib/cockpit/dossier-pages'
 import {
-  deriveActivityRows,
   deriveContactFollowUp,
   deriveMissingCards,
   deriveNextStep,
@@ -76,11 +76,6 @@ export function OnderzoekPhaseView({
     () => deriveContactFollowUp(favorite, allCards),
     [favorite, allCards],
   )
-  const activityRows = useMemo(
-    () => deriveActivityRows(favorite, userDocs, allCards),
-    [favorite, userDocs, allCards],
-  )
-
   const handleGenerateReport = useCallback(() => {
     if (favorite.has_report && favorite.report_id) {
       navigate({ to: '/rapport/$id', params: { id: favorite.report_id } })
@@ -235,15 +230,18 @@ export function OnderzoekPhaseView({
         onDelete={(documentId) => void handleDelete(documentId)}
         onDownload={handleDownload}
         onView={handleView}
-        parcelId={favorite.parcel_id}
-        notes={notesQuery.data ?? []}
-        isLoadingNotes={notesQuery.isLoading}
-        createNote={createNote}
-        updateNote={updateNote}
-        deleteNote={deleteNote}
       />
 
-      <ActivityTimelineCard rows={activityRows} />
+      <WorkspaceInsightCard kicker="Notities" title="Projectnotities" Icon={PenLine} className="mt-4" index={3}>
+        <ProjectnotitiesGrid
+          parcelId={favorite.parcel_id}
+          notes={notesQuery.data ?? []}
+          isLoading={notesQuery.isLoading}
+          createNote={createNote}
+          updateNote={updateNote}
+          deleteNote={deleteNote}
+        />
+      </WorkspaceInsightCard>
 
       {showContactModal && (
         <WorkspaceContactModal

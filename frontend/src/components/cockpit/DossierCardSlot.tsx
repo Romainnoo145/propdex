@@ -8,8 +8,6 @@ import { BookOpen, Download, Eye, Loader2, Trash2, Upload } from 'lucide-react'
 import { TruncatedText } from '@/components/map/panels/parcel/TruncatedText'
 import { GHOST_ICONS, type DossierCard } from '@/lib/cockpit/dossier-pages'
 
-const MAX_VISIBLE_DOCS = 2
-
 interface DossierCardSlotProps {
   card: DossierCard
   uploadingKey: string | null
@@ -66,13 +64,11 @@ export function DossierCardSlot({
 
   const docFileList = (variant: 'light' | 'dark') => {
     if (!hasDocuments) return null
-    const visible = card.documents.slice(0, MAX_VISIBLE_DOCS)
-    const remaining = card.documents.length - MAX_VISIBLE_DOCS
     const isDark = variant === 'dark'
 
     return (
       <div className="space-y-0.5">
-        {visible.map((document) => (
+        {card.documents.map((document) => (
           <div key={document.id} className="flex min-w-0 items-center gap-1">
             <button
               type="button"
@@ -122,11 +118,6 @@ export function DossierCardSlot({
             </button>
           </div>
         ))}
-        {remaining > 0 && (
-          <span className={`text-[9px] font-medium ${isDark ? 'text-white/30' : 'text-slate-400'}`}>
-            +{remaining} meer
-          </span>
-        )}
       </div>
     )
   }
@@ -173,24 +164,19 @@ export function DossierCardSlot({
           <p className="flex-1 truncate text-[10px] font-black uppercase tracking-[0.15em] text-amber-900/70">
             {card.label}
           </p>
-          {hasApiData ? (
-            <span className="shrink-0 rounded-full bg-amber-200/60 px-1.5 py-0.5 text-[8px] font-black uppercase leading-none tracking-wide text-amber-700">
-              {card.value}
-            </span>
-          ) : (
-            <span className="mt-0.5 size-2 shrink-0 rounded-full bg-amber-400" />
-          )}
+          <span className="shrink-0 rounded-full bg-amber-200/60 px-1.5 py-0.5 text-[8px] font-black uppercase leading-none tracking-wide text-amber-700">
+            {card.documents.length} {card.documents.length === 1 ? 'bestand' : 'bestanden'}
+          </span>
         </div>
 
-        <div className="flex flex-1 flex-col items-center justify-center gap-1 py-2">
-          <GhostIcon className="size-8 text-amber-600 opacity-40 transition-opacity group-hover:opacity-60" strokeWidth={1.5} />
-          <p className="text-sm font-black leading-none tracking-tight text-amber-900">
-            {card.documents.length} {card.documents.length === 1 ? 'BESTAND' : 'BESTANDEN'}
-          </p>
+        {/* Vertically-centred file list — matches the centred focal of the empty
+            / api-data cards so every card's content sits at the same height.
+            Scrollable (no 2-cap) so every uploaded document stays reachable. */}
+        <div className="flex min-h-0 flex-1 items-center justify-center py-2">
+          <div className="max-h-full w-full overflow-y-auto">{docFileList('light')}</div>
         </div>
 
-        <div>
-          {docFileList('light')}
+        <div className="shrink-0">
           {isUploading ? uploadingIndicator : addButton('light')}
         </div>
       </div>
@@ -222,17 +208,24 @@ export function DossierCardSlot({
           </p>
         </div>
 
-        <div>
-          <TruncatedText text={card.sub} className="truncate text-[9px] font-medium text-slate-400" />
+        <div className="relative">
           {isUploading ? (
             uploadingIndicator
           ) : (
-            <div className="mt-1 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-              <Upload className="size-2.5 text-slate-400" />
-              <span className="text-[9px] font-black uppercase tracking-[0.1em] text-slate-400 transition-colors group-hover:text-amber-400">
-                VOEG BIJLAGE TOE
-              </span>
-            </div>
+            <>
+              {/* card.sub and the hover hint occupy the SAME line (hint absolute),
+                  so the eyebrow doesn't sit higher than the other cards' eyebrows. */}
+              <TruncatedText
+                text={card.sub}
+                className="truncate text-[9px] font-medium text-slate-400 transition-opacity group-hover:opacity-0"
+              />
+              <div className="absolute inset-0 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <Upload className="size-2.5 text-amber-400" />
+                <span className="text-[9px] font-black uppercase tracking-[0.1em] text-amber-400">
+                  VOEG BIJLAGE TOE
+                </span>
+              </div>
+            </>
           )}
         </div>
       </div>
