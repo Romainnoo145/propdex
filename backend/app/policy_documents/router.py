@@ -195,7 +195,12 @@ async def get_gemeente_cascade(
         info = ext[row["id"]]
         dto.extraction_status = info["status"]
         dto.extraction = info["extraction"]
-        getattr(grouped, row["entity_type"]).append(dto)
+        if row["entity_type"] == "landelijk":
+            grouped.landelijk.append(dto)
+        elif row["entity_type"] == "provincie":
+            grouped.provincie.append(dto)
+        elif row["entity_type"] == "gemeente":
+            grouped.gemeente.append(dto)
     return grouped
 
 
@@ -228,7 +233,7 @@ async def list_policy_documents(
         dto.extraction_status = info["status"]
         dto.extraction = info["extraction"]
         responses.append(dto)
-    return PolicyDocumentListResponse(documents=responses, total=len(responses))
+    return PolicyDocumentListResponse(documents=responses, total=total)
 
 
 @router.get("/{entity_type}/{entity_code}/{document_id}")
