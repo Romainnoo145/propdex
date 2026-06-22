@@ -77,6 +77,90 @@ async def test_stale_schema_version_is_not_parsed(test_db: AsyncSession, create_
 
 
 @pytest.mark.asyncio
+async def test_upload_does_not_enqueue_summary_job():
+    """After Task 3: document_summary_job must NOT be enqueued on upload."""
+    import uuid
+    from unittest.mock import AsyncMock
+    from app.policy_documents.upload_enqueue import enqueue_post_upload_jobs
+    from app.jobs.rescore_cascade_job import CASCADE_RESCORE_SOURCE_KEYS
+
+    pool = AsyncMock()
+    # Use a source_key that IS in CASCADE_RESCORE_SOURCE_KEYS to verify only rescore is enqueued
+    cascade_key = next(iter(CASCADE_RESCORE_SOURCE_KEYS))
+    await enqueue_post_upload_jobs(
+        pool,
+        document_id=uuid.uuid4(),
+        source_key=cascade_key,
+        content_type="application/pdf",
+    )
+    enqueued = [c.args[0] for c in pool.enqueue_job.await_args_list]
+    assert "document_summary_job" not in enqueued
+
+
+@pytest.mark.asyncio
+async def test_auto_ingest_does_not_enqueue_summary_job(
+    test_db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+):
+    """After Task 3: ingest_gemeente_policies must NOT enqueue document_summary_job."""
+    import uuid as uuid_mod
+    from unittest.mock import AsyncMock, MagicMock, patch
+    from app.core.config import settings
+    from app.models.organization import Organization
+    from app.models.user import User
+    from app.policy_documents.auto_ingest import ingest_gemeente_policies
+    from app.services.koop_sru_client import VerordeningResult
+
+    org = Organization(name="SummaryTest Org")
+    test_db.add(org)
+    await test_db.flush()
+    user = User(
+        email="no-summary@example.com",
+        hashed_password="hashed",
+        full_name="No Summary User",
+        organization_id=org.id,
+        email_verified=True,
+        auth_provider="email",
+        is_active=True,
+    )
+    test_db.add(user)
+    await test_db.flush()
+    monkeypatch.setattr(settings, "VENDOR_ORG_ID", org.id)
+    await test_db.commit()
+
+    result = VerordeningResult(
+        title="omgevingsvisie",
+        identifier="gmb-2025-NOSUMM-OV",
+        creator="Venlo",
+        modified="2025-12-01",
+        subject="test",
+        url="https://zoek.officielebekendmakingen.nl/gmb-2025-NOSUMM-OV",
+    )
+
+    mock_pool = MagicMock()
+    mock_pool.enqueue_job = AsyncMock()
+
+    with (
+        patch(
+            "app.policy_documents.auto_ingest.search_policy_document",
+            new=AsyncMock(return_value=result),
+        ),
+        patch(
+            "app.policy_documents.auto_ingest.download_cvdr_pdf",
+            new=AsyncMock(return_value=b"%PDF fake"),
+        ),
+    ):
+        summary = await ingest_gemeente_policies(
+            gemeente_code="GM0983",
+            gemeente_naam="Venlo",
+            db=test_db,
+            arq_pool=mock_pool,
+        )
+
+    enqueued_jobs = [c.args[0] for c in mock_pool.enqueue_job.await_args_list]
+    assert "document_summary_job" not in enqueued_jobs
+
+
+@pytest.mark.asyncio
 async def test_list_endpoint_includes_extraction_status(
     async_client, test_db: AsyncSession, create_test_user
 ):

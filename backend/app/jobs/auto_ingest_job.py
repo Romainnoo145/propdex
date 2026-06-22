@@ -27,12 +27,9 @@ async def weekly_policy_auto_ingest_job(ctx: dict[str, Any]) -> dict[str, Any]:
     abort the whole batch. Per-gemeente results are aggregated into the
     returned dict for ARQ result inspection.
 
-    M045/S03: now also enqueues document_summary_job for each stored doc via
-    the ARQ Redis pool (ctx["redis"]).
-
     Args:
         ctx: ARQ context dict. ARQ passes the worker's Redis pool as
-            ctx["redis"] — used to enqueue document_summary_job per doc.
+            ctx["redis"] — passed through to ingest_gemeente_policies.
 
     Returns:
         dict with keys:

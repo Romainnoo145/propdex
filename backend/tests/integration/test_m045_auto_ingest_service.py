@@ -326,11 +326,11 @@ async def test_ingest_increments_version_when_identifier_changes(
 # ---------------------------------------------------------------------------
 
 
-async def test_ingest_enqueues_summary_job_per_stored_doc(
+async def test_ingest_does_not_enqueue_summary_job(
     test_db: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Happy path with arq_pool: 2 docs stored → 2 document_summary_job enqueues."""
+    """After Task 3: 2 docs stored → document_summary_job must NOT be enqueued."""
     _user, vendor_org = await _make_vendor_user(
         test_db, email="vendor6@auto-ingest.example"
     )
@@ -358,13 +358,10 @@ async def test_ingest_enqueues_summary_job_per_stored_doc(
     assert summary.get("omgevingsvisie") == 1
     assert summary.get("huisvestingsverordening") == 1
     assert len(summary.get("stored_document_ids", [])) == 2
-    assert mock_pool.enqueue_job.call_count == 2
 
-    # Both calls must use "document_summary_job" as the job name and a str doc id
-    for call in mock_pool.enqueue_job.call_args_list:
-        args, _kwargs = call
-        assert args[0] == "document_summary_job"
-        assert isinstance(args[1], str)
+    # document_summary_job must not be enqueued (Task 3: read doc once via cascade)
+    enqueued_jobs = [c.args[0] for c in mock_pool.enqueue_job.await_args_list]
+    assert "document_summary_job" not in enqueued_jobs
 
 
 async def test_ingest_skips_enqueue_on_failed_download(
