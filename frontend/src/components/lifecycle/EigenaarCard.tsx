@@ -83,7 +83,7 @@ export function EigenaarCard({ record, woz }: EigenaarCardProps) {
   const hypotheekLabel = record.heeft_hypotheek ? 'Ingeschreven' : 'Geen'
 
   return (
-    <div className="bg-white/60 backdrop-blur-[24px] border border-white/50 rounded-[24px] px-[26px] py-6 mb-4 shadow-[0_1px_2px_rgba(14,17,17,0.03),0_8px_24px_rgba(14,17,17,0.04)]">
+    <div className="bg-white/60 backdrop-blur-[24px] border border-slate-200 rounded-[24px] px-[26px] py-6 mb-4 shadow-[0_1px_2px_rgba(14,17,17,0.03),0_8px_24px_rgba(14,17,17,0.04)]">
       {/* cardtop */}
       <div className="flex items-baseline justify-between">
         <h2 className="text-[16px] font-bold text-aura-ink">Eigendom &amp; eigenaar</h2>

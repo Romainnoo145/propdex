@@ -112,7 +112,7 @@ export function HaalbaarheidPhaseView({ parcelId }: HaalbaarheidPhaseViewProps) 
           />
         ) : (
           /* Geen projecttype (onbepaald / niet gekozen) → prompt picker, geen checklist. */
-          <div className="mt-2 rounded-[24px] border border-white/40 bg-white/60 backdrop-blur-[24px] p-8 text-center">
+          <div className="mt-2 rounded-[24px] border border-slate-200 bg-white/60 backdrop-blur-[24px] p-8 text-center">
             <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-aura-amber/10">
               <ClipboardCheck size={22} strokeWidth={1.5} className="text-aura-amber-dark" />
             </div>

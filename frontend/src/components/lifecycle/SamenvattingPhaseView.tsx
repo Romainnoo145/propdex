@@ -364,7 +364,7 @@ export function SamenvattingPhaseView({ parcelId }: SamenvattingPhaseViewProps) 
         />
 
         {/* ── Card 1: Acquisitie-samenvatting (verdict + onderzoeksresultaten) ── */}
-        <div className="bg-white/60 backdrop-blur-[24px] border border-white/50 rounded-[24px] px-[26px] py-6 mb-4 shadow-[0_1px_2px_rgba(14,17,17,0.03),0_8px_24px_rgba(14,17,17,0.04)]">
+        <div className="bg-white/60 backdrop-blur-[24px] border border-slate-200 rounded-[24px] px-[26px] py-6 mb-4 shadow-[0_1px_2px_rgba(14,17,17,0.03),0_8px_24px_rgba(14,17,17,0.04)]">
           <div className="flex items-baseline justify-between">
             <h2 className="text-[16px] font-bold text-aura-ink">Acquisitie-samenvatting</h2>
             <span className="text-[13px] font-bold text-aura-ink">Voortraject afgerond</span>
@@ -534,7 +534,7 @@ function DossierCard({
   const count = items.length
 
   return (
-    <div className="bg-white/60 backdrop-blur-[24px] border border-white/50 rounded-[24px] px-[26px] py-6 mb-4 shadow-[0_1px_2px_rgba(14,17,17,0.03),0_8px_24px_rgba(14,17,17,0.04)]">
+    <div className="bg-white/60 backdrop-blur-[24px] border border-slate-200 rounded-[24px] px-[26px] py-6 mb-4 shadow-[0_1px_2px_rgba(14,17,17,0.03),0_8px_24px_rgba(14,17,17,0.04)]">
       <div className="flex items-baseline justify-between">
         <h2 className="text-[16px] font-bold text-aura-ink">Dossier</h2>
         <span className="text-[13px] font-bold text-aura-ink">

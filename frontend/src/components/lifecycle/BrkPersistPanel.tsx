@@ -111,7 +111,7 @@ export function BrkPersistPanel({
 
   if (state.kind === 'loading') {
     return (
-      <div className="bg-white/60 backdrop-blur-[24px] border border-white/40 rounded-[24px] p-6 mb-4">
+      <div className="bg-white/60 backdrop-blur-[24px] border border-slate-200 rounded-[24px] p-6 mb-4">
         <div className="flex items-center gap-3">
           <Loader2 size={20} strokeWidth={1.5} className="text-aura-amber animate-spin" />
           <p className="text-[14px] text-aura-ink font-medium">
@@ -127,7 +127,7 @@ export function BrkPersistPanel({
 
   if (state.kind === 'error') {
     return (
-      <div className="bg-white/60 backdrop-blur-[24px] border border-white/40 rounded-[24px] p-6 mb-4">
+      <div className="bg-white/60 backdrop-blur-[24px] border border-slate-200 rounded-[24px] p-6 mb-4">
         <div className="flex items-start gap-3">
           <AlertTriangle size={20} strokeWidth={1.5} className="text-red-500 shrink-0 mt-0.5" />
           <div className="flex-1">
@@ -154,7 +154,7 @@ export function BrkPersistPanel({
 
   if (state.kind === 'empty') {
     return (
-      <div className="bg-white/60 backdrop-blur-[24px] border border-white/40 rounded-[24px] p-6 mb-4">
+      <div className="bg-white/60 backdrop-blur-[24px] border border-slate-200 rounded-[24px] p-6 mb-4">
         <h3 className="text-[16px] font-semibold text-aura-ink mb-2">Particuliere eigenaar</h3>
         <p className="text-[13px] text-slate-600 mb-3">
           Dit perceel is in handen van een natuurlijk persoon. Per AVG worden persoonsgegevens
@@ -183,7 +183,7 @@ export function BrkPersistPanel({
 
   // IDLE — show CTA
   return (
-    <div className="bg-white/60 backdrop-blur-[24px] border border-white/40 rounded-[24px] p-6 mb-4">
+    <div className="bg-white/60 backdrop-blur-[24px] border border-slate-200 rounded-[24px] p-6 mb-4">
       <h3 className="text-[16px] font-semibold text-aura-ink mb-2">BRK eigendom</h3>
       <p className="text-[13px] text-slate-600 mb-4">
         Vraag de huidige eigendom-gegevens op bij Kadaster BRK. Resultaat wordt opgeslagen en
