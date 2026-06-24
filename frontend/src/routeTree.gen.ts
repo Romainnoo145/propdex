@@ -27,6 +27,7 @@ import { Route as AuthenticatedDocumentatieRouteImport } from './routes/_authent
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedBeleidRouteImport } from './routes/_authenticated/beleid'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedRapportV2IndexRouteImport } from './routes/_authenticated/rapport-v2.index'
 import { Route as AuthenticatedInstellingenIndexRouteImport } from './routes/_authenticated/instellingen.index'
 import { Route as AuthenticatedRapportIdRouteImport } from './routes/_authenticated/rapport.$id'
 import { Route as AuthenticatedInstellingenScoreRouteImport } from './routes/_authenticated/instellingen.score'
@@ -135,6 +136,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedRapportV2IndexRoute =
+  AuthenticatedRapportV2IndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedRapportV2Route,
+  } as any)
 const AuthenticatedInstellingenIndexRoute =
   AuthenticatedInstellingenIndexRouteImport.update({
     id: '/',
@@ -250,6 +257,7 @@ export interface FileRoutesByFullPath {
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/instellingen/': typeof AuthenticatedInstellingenIndexRoute
+  '/rapport-v2/': typeof AuthenticatedRapportV2IndexRoute
   '/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
   '/opgeslagen/perceel/$parcelId': typeof AuthenticatedOpgeslagenPerceelParcelIdRouteWithChildren
   '/rapport-v2/dakkapel/$parcelId': typeof AuthenticatedRapportV2DakkapelParcelIdRoute
@@ -270,7 +278,6 @@ export interface FileRoutesByTo {
   '/meldingen': typeof AuthenticatedMeldingenRoute
   '/opgeslagen': typeof AuthenticatedOpgeslagenRouteWithChildren
   '/projecten': typeof AuthenticatedProjectenRoute
-  '/rapport-v2': typeof AuthenticatedRapportV2RouteWithChildren
   '/rapporten': typeof AuthenticatedRapportenRoute
   '/resultaten': typeof AuthenticatedResultatenRoute
   '/verkenner': typeof AuthenticatedVerkennerRoute
@@ -282,6 +289,7 @@ export interface FileRoutesByTo {
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/instellingen': typeof AuthenticatedInstellingenIndexRoute
+  '/rapport-v2': typeof AuthenticatedRapportV2IndexRoute
   '/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
   '/rapport-v2/dakkapel/$parcelId': typeof AuthenticatedRapportV2DakkapelParcelIdRoute
   '/rapport-v2/splitsing/$parcelId': typeof AuthenticatedRapportV2SplitsingParcelIdRoute
@@ -317,6 +325,7 @@ export interface FileRoutesById {
   '/_authenticated/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/_authenticated/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/_authenticated/instellingen/': typeof AuthenticatedInstellingenIndexRoute
+  '/_authenticated/rapport-v2/': typeof AuthenticatedRapportV2IndexRoute
   '/_authenticated/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
   '/_authenticated/opgeslagen/perceel/$parcelId': typeof AuthenticatedOpgeslagenPerceelParcelIdRouteWithChildren
   '/_authenticated/rapport-v2/dakkapel/$parcelId': typeof AuthenticatedRapportV2DakkapelParcelIdRoute
@@ -353,6 +362,7 @@ export interface FileRouteTypes {
     | '/instellingen/score'
     | '/rapport/$id'
     | '/instellingen/'
+    | '/rapport-v2/'
     | '/instellingen/data-bronnen/$gemeenteCode'
     | '/opgeslagen/perceel/$parcelId'
     | '/rapport-v2/dakkapel/$parcelId'
@@ -373,7 +383,6 @@ export interface FileRouteTypes {
     | '/meldingen'
     | '/opgeslagen'
     | '/projecten'
-    | '/rapport-v2'
     | '/rapporten'
     | '/resultaten'
     | '/verkenner'
@@ -385,6 +394,7 @@ export interface FileRouteTypes {
     | '/instellingen/score'
     | '/rapport/$id'
     | '/instellingen'
+    | '/rapport-v2'
     | '/instellingen/data-bronnen/$gemeenteCode'
     | '/rapport-v2/dakkapel/$parcelId'
     | '/rapport-v2/splitsing/$parcelId'
@@ -419,6 +429,7 @@ export interface FileRouteTypes {
     | '/_authenticated/instellingen/score'
     | '/_authenticated/rapport/$id'
     | '/_authenticated/instellingen/'
+    | '/_authenticated/rapport-v2/'
     | '/_authenticated/instellingen/data-bronnen/$gemeenteCode'
     | '/_authenticated/opgeslagen/perceel/$parcelId'
     | '/_authenticated/rapport-v2/dakkapel/$parcelId'
@@ -563,6 +574,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/rapport-v2/': {
+      id: '/_authenticated/rapport-v2/'
+      path: '/'
+      fullPath: '/rapport-v2/'
+      preLoaderRoute: typeof AuthenticatedRapportV2IndexRouteImport
+      parentRoute: typeof AuthenticatedRapportV2Route
     }
     '/_authenticated/instellingen/': {
       id: '/_authenticated/instellingen/'
@@ -751,12 +769,14 @@ const AuthenticatedOpgeslagenRouteWithChildren =
   )
 
 interface AuthenticatedRapportV2RouteChildren {
+  AuthenticatedRapportV2IndexRoute: typeof AuthenticatedRapportV2IndexRoute
   AuthenticatedRapportV2DakkapelParcelIdRoute: typeof AuthenticatedRapportV2DakkapelParcelIdRoute
   AuthenticatedRapportV2SplitsingParcelIdRoute: typeof AuthenticatedRapportV2SplitsingParcelIdRoute
 }
 
 const AuthenticatedRapportV2RouteChildren: AuthenticatedRapportV2RouteChildren =
   {
+    AuthenticatedRapportV2IndexRoute: AuthenticatedRapportV2IndexRoute,
     AuthenticatedRapportV2DakkapelParcelIdRoute:
       AuthenticatedRapportV2DakkapelParcelIdRoute,
     AuthenticatedRapportV2SplitsingParcelIdRoute:
