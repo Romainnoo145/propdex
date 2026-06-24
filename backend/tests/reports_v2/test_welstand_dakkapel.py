@@ -10,6 +10,14 @@ def test_venlo_geeft_gecureerde_welstand():
     assert 0.0 <= blok.confidence <= 1.0
 
 
+def test_venlo_met_gm_prefix_matcht():
+    # parcel_cache slaat de code op als "GM0983" (CBS GM-prefix); moet ook matchen.
+    blok = welstand_dakkapel("GM0983")
+    assert blok is not None
+    assert blok.samenvatting
+
+
 def test_onbekende_gemeente_geeft_none():
     assert welstand_dakkapel("9999") is None
+    assert welstand_dakkapel("GM9999") is None
     assert welstand_dakkapel(None) is None

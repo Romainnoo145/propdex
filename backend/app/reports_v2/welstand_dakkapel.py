@@ -52,7 +52,9 @@ def welstand_dakkapel(gemeente_code: str | None) -> WelstandBlok | None:
     """Geef de gecureerde welstand-laag voor een gemeente, of None.
 
     Args:
-        gemeente_code: CBS-gemeentecode zonder GM-prefix (bijv. "0983" voor Venlo).
+        gemeente_code: CBS-gemeentecode, met of zonder GM-prefix. ParcelCache slaat
+                       de code op MÉT prefix ("GM0983"); de cureerlaag is op de kale
+                       code ("0983") gekeyd. Beide vormen worden genormaliseerd.
                        None of onbekende code geeft None terug.
 
     Returns:
@@ -60,4 +62,5 @@ def welstand_dakkapel(gemeente_code: str | None) -> WelstandBlok | None:
     """
     if not gemeente_code:
         return None
-    return _WELSTAND.get(gemeente_code)
+    # CBS GM-prefix-quirk: parcel_cache.gemeente_code = "GM0983", dict-key = "0983".
+    return _WELSTAND.get(gemeente_code.removeprefix("GM"))
