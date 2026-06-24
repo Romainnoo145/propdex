@@ -26,7 +26,7 @@ async def test_build_report_for_parcel_with_vergunningplicht(
     assert report.beleid is not None
     assert "splitsing" in report.beleid.vergunningplichten
     assert len(report.jurisprudentie) >= 1
-    assert any("Omgevingsloket" in d or "vraag" in d.lower() for d in [report.aanvraag_url])
+    assert "omgevingswet.overheid.nl" in report.aanvraag_url
     assert report.disclaimers  # niet leeg
 
 

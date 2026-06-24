@@ -12,9 +12,11 @@ from typing import Any
 
 import pytest
 from geoalchemy2 import WKTElement
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.factor_extraction_schemas import DOCUMENT_SENTINEL, SCHEMA_VERSION
+from app.auth.password import hash_password
 from app.models.factor_extraction_cache import FactorExtractionCache
 from app.models.organization import Organization
 from app.models.parcel_cache import ParcelCache
@@ -115,7 +117,6 @@ def seed_huisvestingsverordening(
         # Gebruik een stabiele org-UUID zodat hergebruik in dezelfde test
         # geen dubbele rijen aanmaakt.
         org = Organization(id=org_id, name="Test Org")
-        from sqlalchemy import text
 
         exists = (
             await db_session.execute(
@@ -129,7 +130,6 @@ def seed_huisvestingsverordening(
 
         # Minimale user (voor uploaded_by_user_id FK)
         user_id = uuid.uuid4()
-        from app.auth.password import hash_password
 
         user = User(
             id=user_id,

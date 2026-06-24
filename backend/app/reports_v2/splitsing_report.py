@@ -18,7 +18,7 @@ from app.models.parcel_cache import ParcelCache
 from app.reports_v2.beleid_reader import derive_themas, read_huisvestingsverordening
 from app.reports_v2.schemas import BeleidBlok, PerceelFeiten, SplitsingReport
 
-_OMGEVINGSLOKET = "https://omgevingswet.overheid.nl/aanvraag"
+_OMGEVINGSLOKET = "https://omgevingswet.overheid.nl/aanvragen"
 _DISCLAIMER = (
     "Indicatief. Gebaseerd op de gepubliceerde huisvestingsverordening en "
     "openbare jurisprudentie, geen juridisch advies. Toetsing per geval door "
