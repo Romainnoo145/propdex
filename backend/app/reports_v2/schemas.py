@@ -31,3 +31,29 @@ class SplitsingReport(BaseModel):
     aandachtspunten: list[str]
     aanvraag_url: str
     disclaimers: list[str]
+
+
+class VergunningOordeel(BaseModel):
+    achterdakvlak: str  # conditioneel: "meestal vergunningvrij mits ..."
+    voor_zijdakvlak: str  # "vergunningplichtig + welstandstoets"
+    bepalende_factoren: list[str]  # Bbl-criteria als checklist
+
+
+class WelstandBlok(BaseModel):
+    samenvatting: str  # gecureerd, mensentaal
+    beschermd_gezicht: bool
+    bron_geldig_van: str | None
+    bron_geldig_tot: str | None
+    confidence: float
+
+
+class DakkapelReport(BaseModel):
+    perceel: PerceelFeiten
+    oordeel: VergunningOordeel
+    welstand: WelstandBlok | None
+    jurisprudentie: list[JurisprudentieCase]
+    onzekerheden: list[str]
+    bronnen: list[str]
+    geldigheidsdatum: str  # ISO yyyy-mm-dd
+    aanvraag_url: str
+    disclaimers: list[str]
