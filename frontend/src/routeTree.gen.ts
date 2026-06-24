@@ -36,6 +36,7 @@ import { Route as AuthenticatedInstellingenActionItemsRouteImport } from './rout
 import { Route as AuthenticatedChecklistIdRouteImport } from './routes/_authenticated/checklist.$id'
 import { Route as AuthenticatedInstellingenDataBronnenIndexRouteImport } from './routes/_authenticated/instellingen.data-bronnen.index'
 import { Route as AuthenticatedRapportV2SplitsingParcelIdRouteImport } from './routes/_authenticated/rapport-v2.splitsing.$parcelId'
+import { Route as AuthenticatedRapportV2DakkapelParcelIdRouteImport } from './routes/_authenticated/rapport-v2.dakkapel.$parcelId'
 import { Route as AuthenticatedOpgeslagenPerceelParcelIdRouteImport } from './routes/_authenticated/opgeslagen.perceel.$parcelId'
 import { Route as AuthenticatedInstellingenDataBronnenGemeenteCodeRouteImport } from './routes/_authenticated/instellingen.data-bronnen.$gemeenteCode'
 import { Route as AuthenticatedOpgeslagenPerceelParcelIdIndexRouteImport } from './routes/_authenticated/opgeslagen.perceel.$parcelId.index'
@@ -187,6 +188,12 @@ const AuthenticatedRapportV2SplitsingParcelIdRoute =
     path: '/splitsing/$parcelId',
     getParentRoute: () => AuthenticatedRapportV2Route,
   } as any)
+const AuthenticatedRapportV2DakkapelParcelIdRoute =
+  AuthenticatedRapportV2DakkapelParcelIdRouteImport.update({
+    id: '/dakkapel/$parcelId',
+    path: '/dakkapel/$parcelId',
+    getParentRoute: () => AuthenticatedRapportV2Route,
+  } as any)
 const AuthenticatedOpgeslagenPerceelParcelIdRoute =
   AuthenticatedOpgeslagenPerceelParcelIdRouteImport.update({
     id: '/perceel/$parcelId',
@@ -245,6 +252,7 @@ export interface FileRoutesByFullPath {
   '/instellingen/': typeof AuthenticatedInstellingenIndexRoute
   '/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
   '/opgeslagen/perceel/$parcelId': typeof AuthenticatedOpgeslagenPerceelParcelIdRouteWithChildren
+  '/rapport-v2/dakkapel/$parcelId': typeof AuthenticatedRapportV2DakkapelParcelIdRoute
   '/rapport-v2/splitsing/$parcelId': typeof AuthenticatedRapportV2SplitsingParcelIdRoute
   '/instellingen/data-bronnen/': typeof AuthenticatedInstellingenDataBronnenIndexRoute
   '/instellingen/data-bronnen/$entityType/$entityCode': typeof AuthenticatedInstellingenDataBronnenEntityTypeEntityCodeRoute
@@ -275,6 +283,7 @@ export interface FileRoutesByTo {
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/instellingen': typeof AuthenticatedInstellingenIndexRoute
   '/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
+  '/rapport-v2/dakkapel/$parcelId': typeof AuthenticatedRapportV2DakkapelParcelIdRoute
   '/rapport-v2/splitsing/$parcelId': typeof AuthenticatedRapportV2SplitsingParcelIdRoute
   '/instellingen/data-bronnen': typeof AuthenticatedInstellingenDataBronnenIndexRoute
   '/instellingen/data-bronnen/$entityType/$entityCode': typeof AuthenticatedInstellingenDataBronnenEntityTypeEntityCodeRoute
@@ -310,6 +319,7 @@ export interface FileRoutesById {
   '/_authenticated/instellingen/': typeof AuthenticatedInstellingenIndexRoute
   '/_authenticated/instellingen/data-bronnen/$gemeenteCode': typeof AuthenticatedInstellingenDataBronnenGemeenteCodeRoute
   '/_authenticated/opgeslagen/perceel/$parcelId': typeof AuthenticatedOpgeslagenPerceelParcelIdRouteWithChildren
+  '/_authenticated/rapport-v2/dakkapel/$parcelId': typeof AuthenticatedRapportV2DakkapelParcelIdRoute
   '/_authenticated/rapport-v2/splitsing/$parcelId': typeof AuthenticatedRapportV2SplitsingParcelIdRoute
   '/_authenticated/instellingen/data-bronnen/': typeof AuthenticatedInstellingenDataBronnenIndexRoute
   '/_authenticated/instellingen/data-bronnen/$entityType/$entityCode': typeof AuthenticatedInstellingenDataBronnenEntityTypeEntityCodeRoute
@@ -345,6 +355,7 @@ export interface FileRouteTypes {
     | '/instellingen/'
     | '/instellingen/data-bronnen/$gemeenteCode'
     | '/opgeslagen/perceel/$parcelId'
+    | '/rapport-v2/dakkapel/$parcelId'
     | '/rapport-v2/splitsing/$parcelId'
     | '/instellingen/data-bronnen/'
     | '/instellingen/data-bronnen/$entityType/$entityCode'
@@ -375,6 +386,7 @@ export interface FileRouteTypes {
     | '/rapport/$id'
     | '/instellingen'
     | '/instellingen/data-bronnen/$gemeenteCode'
+    | '/rapport-v2/dakkapel/$parcelId'
     | '/rapport-v2/splitsing/$parcelId'
     | '/instellingen/data-bronnen'
     | '/instellingen/data-bronnen/$entityType/$entityCode'
@@ -409,6 +421,7 @@ export interface FileRouteTypes {
     | '/_authenticated/instellingen/'
     | '/_authenticated/instellingen/data-bronnen/$gemeenteCode'
     | '/_authenticated/opgeslagen/perceel/$parcelId'
+    | '/_authenticated/rapport-v2/dakkapel/$parcelId'
     | '/_authenticated/rapport-v2/splitsing/$parcelId'
     | '/_authenticated/instellingen/data-bronnen/'
     | '/_authenticated/instellingen/data-bronnen/$entityType/$entityCode'
@@ -614,6 +627,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRapportV2SplitsingParcelIdRouteImport
       parentRoute: typeof AuthenticatedRapportV2Route
     }
+    '/_authenticated/rapport-v2/dakkapel/$parcelId': {
+      id: '/_authenticated/rapport-v2/dakkapel/$parcelId'
+      path: '/dakkapel/$parcelId'
+      fullPath: '/rapport-v2/dakkapel/$parcelId'
+      preLoaderRoute: typeof AuthenticatedRapportV2DakkapelParcelIdRouteImport
+      parentRoute: typeof AuthenticatedRapportV2Route
+    }
     '/_authenticated/opgeslagen/perceel/$parcelId': {
       id: '/_authenticated/opgeslagen/perceel/$parcelId'
       path: '/perceel/$parcelId'
@@ -731,11 +751,14 @@ const AuthenticatedOpgeslagenRouteWithChildren =
   )
 
 interface AuthenticatedRapportV2RouteChildren {
+  AuthenticatedRapportV2DakkapelParcelIdRoute: typeof AuthenticatedRapportV2DakkapelParcelIdRoute
   AuthenticatedRapportV2SplitsingParcelIdRoute: typeof AuthenticatedRapportV2SplitsingParcelIdRoute
 }
 
 const AuthenticatedRapportV2RouteChildren: AuthenticatedRapportV2RouteChildren =
   {
+    AuthenticatedRapportV2DakkapelParcelIdRoute:
+      AuthenticatedRapportV2DakkapelParcelIdRoute,
     AuthenticatedRapportV2SplitsingParcelIdRoute:
       AuthenticatedRapportV2SplitsingParcelIdRoute,
   }
