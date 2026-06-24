@@ -1,8 +1,10 @@
+from app.jurisprudentie.dakkapel_cases import DAKKAPEL_CASES
 from app.jurisprudentie.models import JurisprudentieCase
 from app.jurisprudentie.splitsing_cases import SPLITSING_CASES
 
 _REGISTRY: dict[str, list[JurisprudentieCase]] = {
     "splitsing": SPLITSING_CASES,
+    "dakkapel": DAKKAPEL_CASES,
 }
 
 
