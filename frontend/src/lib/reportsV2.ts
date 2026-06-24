@@ -49,3 +49,39 @@ export async function fetchSplitsingReport(
     accessToken,
   })
 }
+
+export interface VergunningOordeel {
+  achterdakvlak: string
+  voor_zijdakvlak: string
+  bepalende_factoren: string[]
+}
+
+export interface WelstandBlok {
+  samenvatting: string
+  beschermd_gezicht: boolean
+  bron_geldig_van: string | null
+  bron_geldig_tot: string | null
+  confidence: number
+}
+
+export interface DakkapelReport {
+  perceel: PerceelFeiten
+  oordeel: VergunningOordeel
+  welstand: WelstandBlok | null
+  jurisprudentie: JurisprudentieCase[]
+  onzekerheden: string[]
+  bronnen: string[]
+  geldigheidsdatum: string
+  aanvraag_url: string
+  disclaimers: string[]
+}
+
+export async function fetchDakkapelReport(
+  parcelId: string,
+  accessToken: string | null,
+): Promise<DakkapelReport> {
+  return apiFetch<DakkapelReport>(`/api/reports-v2/dakkapel/${parcelId}`, {
+    method: 'GET',
+    accessToken,
+  })
+}
