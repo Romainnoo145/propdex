@@ -79,3 +79,6 @@ backend/.venv
 
 # CodeGraph index (local, per-machine)
 .codegraph/
+
+# Local review/agent state (machine-specific)
+.polly/

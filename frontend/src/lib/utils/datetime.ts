@@ -6,8 +6,22 @@
  * (TeamAttributionBadge.tsx).
  */
 
+/**
+ * Parse a backend timestamp as UTC.
+ *
+ * The backend stores naive UTC (`datetime.utcnow()`) and serializes it WITHOUT a
+ * timezone suffix (e.g. "2026-06-22T22:00:00"). JS `new Date()` parses a tz-less
+ * string as **browser-local** time — in NL (+02:00 CEST) that reads ~2h off. We
+ * append "Z" when no tz designator is present so the instant is interpreted as UTC.
+ * Strings that already carry a tz (`Z` or `±HH:MM`) are left untouched.
+ */
+export function parseUtc(iso: string): Date {
+  const hasTz = /([zZ])|([+-]\d{2}:?\d{2})$/.test(iso.trim())
+  return new Date(hasTz ? iso : `${iso}Z`)
+}
+
 export function formatRelativeNL(iso: string): string {
-  const date = new Date(iso)
+  const date = parseUtc(iso)
   const diffMs = Date.now() - date.getTime()
   const diffSec = Math.floor(diffMs / 1000)
   const diffMin = Math.floor(diffSec / 60)
