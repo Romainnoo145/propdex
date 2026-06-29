@@ -26,18 +26,24 @@ eruit, jurisprudentie-tab op accurate data.
    `ruling_analysis_job` meer. De web-service duwt niets meer naar de (dode)
    queue. De lees-tab `GET /api/jurisprudence/explorer` (pure DB-read uit
    `RulingCache`) blijft volledig werken.
-4. **Gecureerde jurisprudentie-seed.** De oude AI-rijen in `RulingCache` voor
-   Venlo waren onbetrouwbaar. Vervang ze door een geverifieerde set echte
-   uitspraken (Rechtbank Limburg, gemeente Venlo als verweerder), met per zaak
-   handmatig geverifieerde uitkomst/doorlooptijd/rechtsgronden/tegenstanders.
+4. **Gecureerde jurisprudentie-seed.** Alle oude AI-rijen in `RulingCache`
+   waren onbetrouwbaar (verkeerde uitkomst/doorlooptijd/rechtsgronden). Vervang
+   ze door een geverifieerde set echte uitspraken (~443 rijen: ~74 Venlo +
+   Rechtbank Limburg + landelijke Raad van State), met per zaak een uitkomst
+   die uit het dictum is gelezen.
 
    ```bash
-   # Idempotent; weigert te draaien zonder expliciete bevestiging.
-   railway ssh -s api "PYTHONPATH=. python -m app.tools.seed_jurisprudence_demo --confirm"
-   # lokaal: SEED_CONFIRM=1 PYTHONPATH=. python -m app.tools.seed_jurisprudence_demo
+   # Demo: --full-reset wist de HELE ruling_cache en zet alleen de gecureerde
+   # set terug (ook de legacy AI-rijen van andere gemeenten weg). Idempotent;
+   # weigert te draaien zonder --confirm.
+   railway ssh -s api "PYTHONPATH=. python -m app.tools.seed_jurisprudence_demo --confirm --full-reset"
+   # lokaal: SEED_CONFIRM=1 SEED_FULL_RESET=1 PYTHONPATH=. python -m app.tools.seed_jurisprudence_demo
    ```
-   De seed DELETE't eerst de bestaande Venlo-rijen (scoped op
-   gemeente_query/extracted_gemeente == "Venlo") en upsert de gecureerde set.
+   Zonder `--full-reset` vervangt de seed alleen de Venlo-rijen + de gecureerde
+   ECLI's (conservatief). Voor de demo gebruik je `--full-reset` zodat de
+   explorer overal 100% gecureerd is. Belangrijk bij een Railway-restore: de
+   pre-teardown dump bevat de oude hallucinatie-rijen terug — draai de seed met
+   `--full-reset` na de restore om weer schoon te zijn.
 5. **Migratie `zc_tegenstanders`** (idempotent, `ADD COLUMN IF NOT EXISTS`)
    backfilt de ontbrekende `ruling_cache.tegenstanders`-kolom. Veilig op prod
    (no-op als de kolom al bestaat) en nodig voor verse DB's. Draai

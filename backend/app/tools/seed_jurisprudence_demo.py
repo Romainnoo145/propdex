@@ -145,8 +145,18 @@ def _build_row(ruling: DemoRuling, now: datetime) -> dict[str, Any]:
     }
 
 
-async def seed_jurisprudence(db: AsyncSession) -> int:
-    """Replace the Venlo + seeded rows in RulingCache with the curated set.
+async def seed_jurisprudence(db: AsyncSession, *, full_reset: bool = False) -> int:
+    """Replace rows in RulingCache with the curated set.
+
+    By default only the Venlo rows + the curated ECLIs are replaced; other
+    gemeenten's rows are left untouched (conservative). With ``full_reset=True``
+    the ENTIRE ruling_cache table is wiped first, so the explorer shows ONLY the
+    curated, source-verified set everywhere — use this for the demo, where any
+    remaining legacy AI-analysed rows (other gemeenten) are unreliable.
+
+    full_reset is also what keeps a Railway restore reproducible: restoring the
+    pre-teardown dump brings back the old hallucinated rows, and re-running this
+    seed with --full-reset collapses them back to the curated set.
 
     Returns the number of curated rows written.
     """
@@ -154,22 +164,23 @@ async def seed_jurisprudence(db: AsyncSession) -> int:
     now = datetime.now(UTC).replace(tzinfo=None)
     seeded_eclis = [r["ecli"] for r in rulings]
 
-    # 1. Delete prior rows we are about to replace: every Venlo row (so stale
-    #    Venlo rows that are NOT in the new set are removed) plus any row whose
-    #    ECLI is in the curated set. Other gemeenten's rows are untouched.
-    deleted = cast(
-        "CursorResult[Any]",
-        await db.execute(
-            delete(RulingCache).where(
-                or_(
-                    RulingCache.gemeente_query == GEMEENTE,
-                    RulingCache.extracted_gemeente == GEMEENTE,
-                    RulingCache.ecli.in_(seeded_eclis),
-                )
+    # 1. Delete the rows we are about to replace.
+    if full_reset:
+        # Wipe everything — the curated set becomes the single source of truth.
+        delete_stmt = delete(RulingCache)
+    else:
+        # Conservative: every Venlo row (so stale Venlo rows not in the new set
+        # are removed) plus any row whose ECLI is in the curated set.
+        delete_stmt = delete(RulingCache).where(
+            or_(
+                RulingCache.gemeente_query == GEMEENTE,
+                RulingCache.extracted_gemeente == GEMEENTE,
+                RulingCache.ecli.in_(seeded_eclis),
             )
-        ),
-    )
-    print(f"[seed] Deleted {deleted.rowcount} existing rows from ruling_cache")
+        )
+    deleted = cast("CursorResult[Any]", await db.execute(delete_stmt))
+    scope = "ALL" if full_reset else "Venlo + seeded"
+    print(f"[seed] Deleted {deleted.rowcount} existing rows from ruling_cache ({scope})")
 
     # 2. Upsert the curated set (idempotent on the ECLI primary key).
     for ruling in rulings:
@@ -190,15 +201,23 @@ async def seed_jurisprudence(db: AsyncSession) -> int:
     return len(rulings)
 
 
-def _confirmed() -> bool:
+def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Seed curated demo jurisprudence.")
     parser.add_argument(
         "--confirm",
         action="store_true",
         help="Required to actually mutate ruling_cache (deletes + inserts rows).",
     )
-    args = parser.parse_args()
-    return args.confirm or os.environ.get("SEED_CONFIRM") == "1"
+    parser.add_argument(
+        "--full-reset",
+        action="store_true",
+        help=(
+            "Wipe the ENTIRE ruling_cache table before inserting, so only the "
+            "curated set remains (drops legacy AI rows for other gemeenten). "
+            "Recommended for the demo."
+        ),
+    )
+    return parser.parse_args()
 
 
 async def main() -> None:
@@ -210,11 +229,20 @@ async def main() -> None:
         )
         sys.exit(1)
 
-    if not _confirmed():
+    args = _parse_args()
+    full_reset = args.full_reset or os.environ.get("SEED_FULL_RESET") == "1"
+    confirmed = args.confirm or os.environ.get("SEED_CONFIRM") == "1"
+
+    if not confirmed:
+        scope = (
+            "the ENTIRE ruling_cache table"
+            if full_reset
+            else "the Venlo rows + seeded ECLIs in the shared ruling_cache table"
+        )
         print(
             "[seed] REFUSING to run without confirmation.\n"
-            "       This DELETES the Venlo rows + seeded ECLIs in the shared\n"
-            "       ruling_cache table and replaces them with the curated set.\n"
+            f"       This DELETES {scope}\n"
+            "       and replaces them with the curated set.\n"
             "       Re-run with --confirm (or SEED_CONFIRM=1) once you are sure the\n"
             "       DATABASE_URL points at the intended (demo) database.",
             file=sys.stderr,
@@ -225,7 +253,7 @@ async def main() -> None:
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     try:
         async with session_factory() as db:
-            await seed_jurisprudence(db)
+            await seed_jurisprudence(db, full_reset=full_reset)
     finally:
         await engine.dispose()
 
