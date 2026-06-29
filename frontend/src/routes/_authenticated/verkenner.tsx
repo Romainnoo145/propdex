@@ -1,23 +1,40 @@
 /**
- * Verkenner — Conversational AI interface to all Propdex data.
+ * Verkenner — address-anchored AI chat over all Propdex data.
  *
- * Chat-first: user asks questions, agent responds with rich markdown.
- * History panel slides in as a sibling rounded shell (same pattern as
- * parcel detail panel pushing the map).
+ * Flow: pick a parcel first (search an address, or one of your saved parcels),
+ * then ask anything. The conversation is anchored to that parcel; a right-hand
+ * panel shows the documents/sources that belong to it (the context the agent
+ * reasons over). The map tab stays the place for open, exploratory browsing.
+ *
+ * Design tokens per DESIGN.md: Morning Mist canvas, glass surfaces, Warm Amber
+ * accent, Obsidian commitment, Plus Jakarta Sans.
  */
 
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
-import { ArrowUp, Compass, Clock, X, Loader2 } from 'lucide-react'
+import { ArrowUp, Compass, MapPin, X, Bookmark } from 'lucide-react'
 import { useChat, type ChatMessage } from '@/hooks/useChat'
-import { useBulkQueryHistory } from '@/hooks/useBulkQuery'
+import { useParcelFavorites } from '@/hooks/useFavorites'
+import { AddressSearch } from '@/components/search/AddressSearch'
 import { ChatLoading } from '@/components/chat/ChatLoading'
 import { ChatAgentMessage } from '@/components/chat/ChatAgentMessage'
+import { ParcelSourcesPanel } from '@/components/verkenner/ParcelSourcesPanel'
+import type { SuggestResult } from '@/lib/types/property'
 
 export const Route = createFileRoute('/_authenticated/verkenner')({
   component: VerkennerPage,
 })
+
+/* ─── Types ─────────────────────────────────────────────────── */
+
+interface SelectedParcel {
+  /** Kadaster parcel id — the documents key (parcel_documents.parcel_id). Null
+   *  when the address isn't a saved parcel and has no document dossier. */
+  id: string | null
+  address: string
+  gemeente?: string | null
+}
 
 /* ─── Animations ────────────────────────────────────────────── */
 
@@ -31,92 +48,30 @@ const staggerContainer = {
   show: { transition: { staggerChildren: 0.08 } },
 }
 
-/* ─── Examples ──────────────────────────────────────────────── */
+/* ─── Suggested questions (address-aware) ───────────────────── */
 
-const EXAMPLES = [
-  'Vergelijk mijn opgeslagen percelen op risicoscore',
-  'Welke documenten ontbreken voor mijn rapport in Venlo?',
-  'Wat zijn de risico\'s van mijn favoriete percelen?',
-  'Waar kan ik een bodemonderzoek laten doen?',
-]
-
-/* ─── History Shell ─────────────────────────────────────────── */
-
-function HistoryShell({
-  onSelect,
-  onClose,
-}: {
-  onSelect: (query: string) => void
-  onClose: () => void
-}) {
-  const { data, isLoading } = useBulkQueryHistory(0, 50)
-
-  return (
-    <div className="h-full w-[340px] shrink-0 overflow-hidden rounded-[40px] bg-white border border-white/20 flex flex-col">
-      {/* Header */}
-      <div className="shrink-0 px-5 pt-6 pb-3 border-b border-neutral-200">
-        <div className="flex items-center justify-between">
-          <h3 className="text-[14px] font-bold text-aura-obsidian">Geschiedenis</h3>
-          <button
-            onClick={onClose}
-            className="flex size-7 items-center justify-center rounded-full border border-neutral-200 text-slate-400 hover:text-aura-obsidian hover:border-aura-obsidian transition-colors"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      </div>
-
-      {/* Scrollable list */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
-        {isLoading && (
-          <div className="flex justify-center py-8">
-            <Loader2 size={20} className="animate-spin text-slate-400" />
-          </div>
-        )}
-        {data?.queries.map((q) => (
-          <button
-            key={q.id}
-            onClick={() => onSelect(q.query_text)}
-            className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-aura-canvas transition-colors"
-          >
-            <p className="text-[13px] text-aura-obsidian font-medium line-clamp-1">
-              {q.query_text}
-            </p>
-            <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
-              <span className="tabular-nums">{q.result_count} resultaten</span>
-              <span>·</span>
-              <span>{new Date(q.created_at).toLocaleDateString('nl-NL')}</span>
-            </div>
-          </button>
-        ))}
-        {data && data.queries.length === 0 && (
-          <div className="flex flex-col items-center py-12 text-center">
-            <Clock size={24} className="text-slate-300 mb-2" />
-            <p className="text-[13px] text-slate-400">Nog geen queries</p>
-            <p className="text-[11px] text-slate-300 mt-0.5">Je zoekgeschiedenis verschijnt hier</p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
+function suggestionsFor(address: string): string[] {
+  return [
+    `Wat is de bestemming van ${address}?`,
+    `Mag ik hier optoppen of een extra woning toevoegen?`,
+    `Welke risico's spelen er op dit perceel?`,
+    `Zijn er recente uitspraken die dit perceel raken?`,
+  ]
 }
 
-/* ─── Message Bubble ────────────────────────────────────────── */
+/* ─── Message bubble ────────────────────────────────────────── */
 
-function MessageBubble({ message }: {
-  message: ChatMessage
-}) {
+function MessageBubble({ message }: { message: ChatMessage }) {
   if (message.role === 'user') {
     return (
       <motion.div variants={fadeIn} className="flex justify-end">
-        <div className="max-w-[85%] rounded-2xl rounded-br-md bg-amber-500 px-4 py-2.5 text-[13px] text-white font-medium">
+        <div className="max-w-[85%] rounded-2xl rounded-br-md bg-aura-amber px-4 py-2.5 text-[13px] font-medium text-aura-obsidian">
           {message.text}
         </div>
       </motion.div>
     )
   }
 
-  // Determine inner content based on message role
   let content: React.ReactNode
   if (message.role === 'tool_progress') {
     content = <ChatLoading tools={message.tools} />
@@ -128,145 +83,237 @@ function MessageBubble({ message }: {
 
   return (
     <motion.div variants={fadeIn} className="flex justify-start gap-2">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 mt-0.5">
-        <Compass size={14} className="text-amber-500" />
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-aura-amber/15">
+        <Compass size={14} className="text-aura-amber-hover" />
       </div>
-      <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-white border border-amber-100 px-4 py-3 shadow-sm">
+      <div className="max-w-[85%] rounded-2xl rounded-bl-md border border-white/70 bg-white/70 px-4 py-3 shadow-sm backdrop-blur-[24px]">
         {content}
       </div>
     </motion.div>
   )
 }
 
+/* ─── Composer ──────────────────────────────────────────────── */
 
-/* ─── Page ──────────────────────────────────────────────────── */
+function Composer({
+  value,
+  onChange,
+  onSubmit,
+  disabled,
+  placeholder,
+  inputRef,
+}: {
+  value: string
+  onChange: (v: string) => void
+  onSubmit: () => void
+  disabled: boolean
+  placeholder: string
+  inputRef: React.RefObject<HTMLInputElement | null>
+}) {
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        ref={inputRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault()
+            onSubmit()
+          }
+        }}
+        placeholder={placeholder}
+        className="h-12 w-full rounded-full border border-neutral-200 bg-white pl-5 pr-14 text-[14px] text-aura-obsidian placeholder:text-slate-400 transition-colors focus:border-aura-amber focus:outline-none"
+      />
+      <button
+        onClick={onSubmit}
+        disabled={!value.trim() || disabled}
+        className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-aura-amber text-aura-obsidian transition-colors hover:bg-aura-amber-hover disabled:opacity-30"
+      >
+        <ArrowUp size={16} strokeWidth={2.5} />
+      </button>
+    </div>
+  )
+}
 
-function VerkennerPage() {
+/* ─── Parcel gate (empty state) ─────────────────────────────── */
+
+function ParcelGate({ onSelect }: { onSelect: (p: SelectedParcel) => void }) {
+  const favorites = useParcelFavorites()
+  const saved = (favorites.data ?? []).filter((f) => f.address)
+
+  const handleAddress = (s: SuggestResult) => {
+    const address = s.weergavenaam
+    // Match the picked address to a saved parcel (which carries the docs key).
+    const match = (favorites.data ?? []).find(
+      (f) => f.address && address.toLowerCase().includes(f.address.toLowerCase().split(',')[0]!.trim()),
+    )
+    onSelect({
+      id: match?.parcel_id ?? null,
+      address,
+      gemeente: match?.gemeente_naam ?? null,
+    })
+  }
+
+  return (
+    <motion.div
+      variants={fadeIn}
+      initial="hidden"
+      animate="show"
+      className="mx-auto flex h-full w-full max-w-2xl flex-col items-center justify-center px-4 text-center"
+    >
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-aura-amber/15">
+        <Compass size={24} className="text-aura-amber-hover" />
+      </div>
+      <h1 className="mt-4 text-[32px] font-black tracking-tight text-aura-ink sm:text-[42px]">
+        Verkenner
+      </h1>
+      <p className="mt-2 max-w-md text-[13px] text-slate-500">
+        Kies een perceel om te verkennen. Daarna kun je alles vragen — met de
+        bijbehorende documenten als bron ernaast.
+      </p>
+
+      {/* Address search */}
+      <div className="mt-7 w-full max-w-xl">
+        <AddressSearch onSelect={handleAddress} />
+      </div>
+
+      {/* Saved parcels */}
+      {saved.length > 0 && (
+        <div className="mt-8 w-full max-w-xl text-left">
+          <div className="mb-2.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
+            <Bookmark size={13} /> Mijn opgeslagen percelen
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {saved.slice(0, 6).map((f) => (
+              <button
+                key={f.id}
+                onClick={() =>
+                  onSelect({
+                    id: f.parcel_id,
+                    address: f.address!,
+                    gemeente: f.gemeente_naam,
+                  })
+                }
+                className="group flex items-center gap-3 rounded-[16px] border border-white/60 bg-white/60 px-4 py-3 text-left backdrop-blur-[24px] transition-colors hover:border-aura-amber/40"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-aura-amber/12 text-aura-amber-hover">
+                  <MapPin size={16} strokeWidth={1.8} />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-bold text-aura-ink">{f.address}</p>
+                  <p className="truncate text-[11px] text-slate-400">
+                    {f.gemeente_naam ?? 'Onbekende gemeente'}
+                    {f.wijk_naam ? ` · ${f.wijk_naam}` : ''}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </motion.div>
+  )
+}
+
+/* ─── Workspace (parcel selected) ───────────────────────────── */
+
+function Workspace({
+  parcel,
+  onReset,
+}: {
+  parcel: SelectedParcel
+  onReset: () => void
+}) {
   const [input, setInput] = useState('')
-  const [showHistory, setShowHistory] = useState(false)
   const chat = useChat()
-  const threadRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLInputElement | null>(null)
+
+  const contextPrefix = `Context: deze vraag gaat over het perceel ${parcel.address}${
+    parcel.gemeente ? ` (gemeente ${parcel.gemeente})` : ''
+  }. Beantwoord specifiek voor dit perceel.`
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chat.messages])
 
-  useEffect(() => { inputRef.current?.focus() }, [])
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
 
-  const handleSubmit = useCallback(() => {
-    const trimmed = input.trim()
-    if (!trimmed || chat.isPending) return
-    chat.send(trimmed)
-    setInput('')
-    setShowHistory(false)
-    setTimeout(() => inputRef.current?.focus(), 50)
-  }, [input, chat])
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit() }
-  }, [handleSubmit])
-
-  const handleExample = useCallback((text: string) => { chat.send(text) }, [chat])
-
-  const handleHistorySelect = useCallback((query: string) => {
-    chat.send(query)
-    setShowHistory(false)
-  }, [chat])
+  const submit = useCallback(
+    (text: string) => {
+      const trimmed = text.trim()
+      if (!trimmed || chat.isPending) return
+      chat.send(trimmed, { contextPrefix })
+      setInput('')
+      setTimeout(() => inputRef.current?.focus(), 50)
+    },
+    [chat, contextPrefix],
+  )
 
   const isEmpty = chat.messages.length === 0
 
   return (
     <div className="flex h-full gap-4">
-      {/* ── History shell (sibling, pushes chat shell) ──── */}
-      <AnimatePresence>
-        {showHistory && (
-          <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 340, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-            className="shrink-0 h-full overflow-hidden"
+      {/* Chat shell */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-[40px] border border-white/60 bg-[#FAFCFA]/80 backdrop-blur-[24px]">
+        {/* Header — selected parcel chip */}
+        <div className="flex shrink-0 items-center gap-3 border-b border-slate-200/70 px-5 py-3.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-aura-amber/15 text-aura-amber-hover">
+            <MapPin size={15} strokeWidth={1.9} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-bold text-aura-ink">{parcel.address}</p>
+            {parcel.gemeente && (
+              <p className="truncate text-[11px] text-slate-400">{parcel.gemeente}</p>
+            )}
+          </div>
+          <button
+            onClick={onReset}
+            className="flex items-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-[12px] font-semibold text-slate-500 transition-colors hover:border-aura-obsidian hover:text-aura-obsidian"
           >
-            <HistoryShell onSelect={handleHistorySelect} onClose={() => setShowHistory(false)} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Chat shell ─────────────────────────────────── */}
-      <div className="flex-1 min-w-0 h-full overflow-hidden rounded-[40px] bg-[#FAFCFA] flex flex-col">
+            <X size={13} /> Ander perceel
+          </button>
+        </div>
 
         {/* Thread */}
-        <div ref={threadRef} className="flex-1 overflow-y-auto px-4 sm:px-6">
-          <div className="mx-auto max-w-3xl h-full flex flex-col">
-            <AnimatePresence>
-              {isEmpty && (
-                <motion.div
-                  variants={fadeIn}
-                  initial="hidden"
-                  animate="show"
-                  exit={{ opacity: 0, transition: { duration: 0.15 } }}
-                  className="flex-1 flex flex-col items-center text-center justify-center -mt-12"
-                >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
-                    <Compass size={24} className="text-amber-500" />
-                  </div>
-                  <h1 className="mt-4 text-[32px] sm:text-[42px] font-black tracking-tight text-aura-obsidian">
-                    Verkenner
-                  </h1>
-                  <p className="mt-2 text-[13px] text-slate-500 max-w-md">
-                    Stel een vraag over percelen, rapporten, opgeslagen objecten, of welke data dan ook in Propdex.
-                  </p>
-                  <div className="mt-6 flex flex-wrap justify-center gap-2">
-                    {EXAMPLES.map((ex) => (
-                      <button
-                        key={ex}
-                        onClick={() => handleExample(ex)}
-                        className="rounded-full border border-amber-200 bg-amber-50 px-3.5 py-2 text-[12px] text-amber-800 hover:bg-amber-100 hover:border-amber-300 transition-colors"
-                      >
-                        {ex}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Composer — inline in empty state */}
-                  <div className="mt-8 w-full max-w-2xl relative">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6">
+          <div className="mx-auto flex h-full max-w-3xl flex-col">
+            {isEmpty ? (
+              <motion.div
+                variants={fadeIn}
+                initial="hidden"
+                animate="show"
+                className="-mt-6 flex flex-1 flex-col items-center justify-center text-center"
+              >
+                <h2 className="text-[20px] font-bold text-aura-ink">
+                  Vraag alles over dit perceel
+                </h2>
+                <p className="mt-1 text-[13px] text-slate-500">
+                  Antwoorden met bronnen uit Propdex.
+                </p>
+                <div className="mt-5 flex flex-wrap justify-center gap-2">
+                  {suggestionsFor(parcel.address).map((q) => (
                     <button
-                      onClick={() => setShowHistory((v) => !v)}
-                      className={`absolute left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full transition-colors z-10 ${
-                        showHistory
-                          ? 'bg-aura-amber text-aura-obsidian'
-                          : 'text-slate-400 hover:text-aura-obsidian'
-                      }`}
-                      title="Geschiedenis"
+                      key={q}
+                      onClick={() => submit(q)}
+                      className="rounded-full border border-aura-amber/30 bg-aura-amber/[0.08] px-3.5 py-2 text-[12px] text-aura-amber-hover transition-colors hover:bg-aura-amber/15"
                     >
-                      <Clock size={16} />
+                      {q}
                     </button>
-                    <input
-                      type="text"
-                      ref={inputRef}
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Stel een vraag..."
-                      className="w-full rounded-full border border-neutral-200 bg-white h-12 pl-14 pr-14 text-[14px] text-aura-obsidian placeholder:text-slate-400 focus:outline-none focus:border-aura-amber transition-colors"
-                      disabled={chat.isPending}
-                    />
-                    <button
-                      onClick={handleSubmit}
-                      disabled={!input.trim() || chat.isPending}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-aura-amber text-aura-obsidian disabled:opacity-30 hover:bg-aura-amber-hover transition-colors"
-                    >
-                      <ArrowUp size={16} strokeWidth={2.5} />
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {!isEmpty && (
-              <motion.div initial="hidden" animate="show" variants={staggerContainer} className="space-y-4 py-6">
+                  ))}
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                initial="hidden"
+                animate="show"
+                variants={staggerContainer}
+                className="space-y-4 py-6"
+              >
                 {chat.messages.map((msg) => (
                   <MessageBubble key={msg.id} message={msg} />
                 ))}
@@ -276,42 +323,42 @@ function VerkennerPage() {
           </div>
         </div>
 
-        {/* Composer — only when chat has messages */}
-        {!isEmpty && (
-        <div className="shrink-0 px-4 sm:px-6 pb-4 pt-2">
-          <div className="mx-auto max-w-3xl relative">
-            <button
-              onClick={() => setShowHistory((v) => !v)}
-              className={`absolute left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full transition-colors z-10 ${
-                showHistory
-                  ? 'bg-aura-amber text-aura-obsidian'
-                  : 'text-slate-400 hover:text-aura-obsidian'
-              }`}
-              title="Geschiedenis"
-            >
-              <Clock size={16} />
-            </button>
-            <input
-              type="text"
-              ref={inputRef}
+        {/* Composer */}
+        <div className="shrink-0 px-4 pb-4 pt-2 sm:px-6">
+          <div className="mx-auto max-w-3xl">
+            <Composer
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Stel een vraag..."
-              className="w-full rounded-full border border-neutral-200 bg-white h-12 pl-14 pr-14 text-[14px] text-aura-obsidian placeholder:text-slate-400 focus:outline-none focus:border-aura-amber transition-colors"
+              onChange={setInput}
+              onSubmit={() => submit(input)}
               disabled={chat.isPending}
+              placeholder={`Vraag iets over ${parcel.address}…`}
+              inputRef={inputRef}
             />
-            <button
-              onClick={handleSubmit}
-              disabled={!input.trim() || chat.isPending}
-              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-aura-amber text-aura-obsidian disabled:opacity-30 hover:bg-aura-amber-hover transition-colors"
-            >
-              <ArrowUp size={16} strokeWidth={2.5} />
-            </button>
           </div>
         </div>
-        )}
       </div>
+
+      {/* Sources panel */}
+      <ParcelSourcesPanel parcelId={parcel.id} />
+    </div>
+  )
+}
+
+/* ─── Page ──────────────────────────────────────────────────── */
+
+function VerkennerPage() {
+  const [parcel, setParcel] = useState<SelectedParcel | null>(null)
+
+  return (
+    <div className="h-full">
+      <AnimatePresence mode="wait">
+        {parcel ? (
+          // key forces a fresh chat (useChat state) per parcel selection
+          <Workspace key={parcel.id ?? parcel.address} parcel={parcel} onReset={() => setParcel(null)} />
+        ) : (
+          <ParcelGate onSelect={setParcel} />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

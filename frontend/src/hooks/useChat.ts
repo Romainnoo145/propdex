@@ -132,9 +132,16 @@ export function useChat() {
   const conversationIdRef = useRef<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  const send = useCallback(async (text: string) => {
+  const send = useCallback(async (text: string, opts?: { contextPrefix?: string }) => {
     const trimmed = text.trim()
     if (!trimmed || isPending) return
+
+    // The user bubble shows `trimmed`; the wire message may carry an invisible
+    // context prefix (e.g. the selected parcel address) so the agent knows what
+    // the question is about without cluttering the visible conversation.
+    const wireMessage = opts?.contextPrefix
+      ? `${opts.contextPrefix}\n\n${trimmed}`
+      : trimmed
 
     // Cancel any in-flight stream
     abortRef.current?.abort()
@@ -170,7 +177,7 @@ export function useChat() {
         headers,
         credentials: 'include',
         body: JSON.stringify({
-          message: trimmed,
+          message: wireMessage,
           conversation_id: conversationIdRef.current,
         }),
         signal: controller.signal,
