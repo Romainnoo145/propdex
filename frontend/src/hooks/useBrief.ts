@@ -4,7 +4,7 @@
  * - useAfzender / useSaveAfzender: org afzender-velden (briefhoofd).
  * - useGenerateBrief / useSendBrief: brief-genereer + fake-send (hauzer_demo-gate).
  *
- * Project convention: raw fetch via apiFetch + useAuth (mirrors useDashboard/useBrkRecords).
+ * Project convention: raw fetch via apiFetch + useAuth (mirrors useBrkRecords).
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from '@/lib/api'

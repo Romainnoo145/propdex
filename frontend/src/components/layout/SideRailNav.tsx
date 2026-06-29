@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth/useAuth";
 import { useNavigate } from "@tanstack/react-router";
 import {
-  LayoutDashboard,
   Map,
   Bookmark,
   Scale,
@@ -33,11 +32,6 @@ export default function SideRailNav() {
   };
 
   const mainItems: NavItem[] = [
-    {
-      icon: <LayoutDashboard size={22} strokeWidth={1.5} />,
-      label: "Dashboard",
-      to: "/dashboard",
-    },
     { icon: <Map size={22} strokeWidth={1.5} />, label: "Kaart", to: "/map" },
     {
       icon: <Bookmark size={22} strokeWidth={1.5} />,

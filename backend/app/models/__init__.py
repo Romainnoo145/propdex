@@ -14,7 +14,6 @@ from app.models.change_record import ChangeRecord  # noqa: F401
 from app.models.chat_conversation import ChatConversation  # noqa: F401
 from app.models.chat_message import ChatMessage  # noqa: F401
 from app.models.checklist_progress import ChecklistProgress  # noqa: F401
-from app.models.dismissed_kans import DismissedKans  # noqa: F401
 from app.models.data_source_status import (  # noqa: F401
     DataSourceStatus,
     DataSourceStatusCreate,
