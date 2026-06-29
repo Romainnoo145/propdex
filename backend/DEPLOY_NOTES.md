@@ -2,6 +2,51 @@
 
 > Last deployed: 2026-06-02 (api + worker both on latest code; DB at head 7873f3326d92)
 
+## Demo relaunch (kostenreductie) — worker uit, scrapling weg, jurisprudentie gecureerd
+
+Goedkope investor-demo bovenop de bestaande productie-data (percelen, scores,
+opgeslagen tabs, Hauzer-favorites blijven staan). Doel: interne kostenmakers
+eruit, jurisprudentie-tab op accurate data.
+
+**Wat is veranderd in de code:**
+
+1. **Worker-service UIT.** Deploy/run alleen `api` + Postgres (+ Redis). De
+   worker draaide 24/7 voor 3 nachtelijke crons (change-monitor, auto-ingest,
+   BRK-cleanup) — overbodig voor een statische demo. Stop of pauzeer de
+   `worker`-service in Railway. Geen serverless cron. Met de worker uit draaien
+   alle dure Claude-jobs (document-samenvatting, jurisprudence-analyse,
+   cascade-rescore) niet → €0. Verkenner-chat (Gemini, web-service) blijft werken.
+2. **`scrapling` verwijderd** uit `pyproject.toml` + `uv.lock`; de
+   `funda_listing_ingestion.fetch_html` gebruikt nu uitsluitend de httpx-fetch.
+   Kleiner image → goedkopere RAM-tier. **Let op:** `uv.lock` is mee-geüpdatet;
+   de Docker-build `uv sync --frozen` faalt bij lockfile-mismatch.
+3. **Jurisprudentie auto-enqueue UIT** in
+   `app/api/endpoints/jurisprudence.py`: `get_gemeente_rulings` en
+   `trigger_ruling_analysis` queue'en geen `ruling_ingestion_job` /
+   `ruling_analysis_job` meer. De web-service duwt niets meer naar de (dode)
+   queue. De lees-tab `GET /api/jurisprudence/explorer` (pure DB-read uit
+   `RulingCache`) blijft volledig werken.
+4. **Gecureerde jurisprudentie-seed.** De oude AI-rijen in `RulingCache` voor
+   Venlo waren onbetrouwbaar. Vervang ze door een geverifieerde set echte
+   uitspraken (Rechtbank Limburg, gemeente Venlo als verweerder), met per zaak
+   handmatig geverifieerde uitkomst/doorlooptijd/rechtsgronden/tegenstanders.
+
+   ```bash
+   # Idempotent; weigert te draaien zonder expliciete bevestiging.
+   railway ssh -s api "PYTHONPATH=. python -m app.tools.seed_jurisprudence_demo --confirm"
+   # lokaal: SEED_CONFIRM=1 PYTHONPATH=. python -m app.tools.seed_jurisprudence_demo
+   ```
+   De seed DELETE't eerst de bestaande Venlo-rijen (scoped op
+   gemeente_query/extracted_gemeente == "Venlo") en upsert de gecureerde set.
+5. **Migratie `zc_tegenstanders`** (idempotent, `ADD COLUMN IF NOT EXISTS`)
+   backfilt de ontbrekende `ruling_cache.tegenstanders`-kolom. Veilig op prod
+   (no-op als de kolom al bestaat) en nodig voor verse DB's. Draai
+   `alembic upgrade head` vóór de seed.
+
+**Smoke na deploy:** `/api/health` → 200, login werkt, percelen + opgeslagen
+tabs zichtbaar, jurisprudentie-tab toont de accurate set (juiste
+uitkomst/doorlooptijd), Verkenner-chat werkt, en de `worker`-service staat uit.
+
 ## Services
 
 | Service | URL | Start Command | Status |

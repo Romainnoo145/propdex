@@ -82,3 +82,4 @@ backend/.venv
 
 # Local review/agent state (machine-specific)
 .polly/
+.gg/

@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango1.0-dev \
     libgdk-pixbuf2.0-dev \
     libffi-dev \
-    # scrapling / general
+    # build tooling
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 

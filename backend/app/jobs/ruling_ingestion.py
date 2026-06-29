@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.core.config import settings
 from app.government_apis.ecli_registry import extract_court_code, get_court_codes_for_gemeente
-from app.government_apis.rechtspraak import rechtspraak_client
+from app.government_apis.rechtspraak import OMGEVINGSRECHT_URI, rechtspraak_client
 from app.models.ruling_cache import RulingCache
 from app.services.geo_contextualizer import extract_gemeente_from_text, extract_uitkomst
 
@@ -72,7 +72,12 @@ async def ruling_ingestion_job(
 
         # Search Rechtspraak API with court-code filtering + RVS
         async with httpx.AsyncClient(timeout=60.0) as http_client:
-            # Pass 1: Rechtbank rulings for this gemeente's court region
+            # Pass 1: Rechtbank rulings for this gemeente's court region.
+            # Uses the default broad #bestuursrecht subject + omgevingsrecht
+            # relevance post-filter, because rechtbanken under-tag omgevingsrecht
+            # (e.g. RBLIM: 181 omgevingsrecht-tagged vs ~1016 relevant under the
+            # broad domain). This is the fix for the jurisprudence tab showing far
+            # too few rulings.
             search_results = await rechtspraak_client.search_by_court(
                 court_codes=court_codes,
                 client=http_client,
@@ -84,11 +89,15 @@ async def ruling_ingestion_job(
                 gemeente_naam,
             )
 
-            # Pass 2: RVS (Raad van State) rulings -- national, geo-tagged via text extraction
+            # Pass 2: RVS (Raad van State) rulings -- national, geo-tagged via text
+            # extraction. RVS tags omgevingsrecht reliably (~9841 rulings) and its
+            # #bestuursrecht set is dominated by vreemdelingenrecht (~97k), so keep
+            # the narrow OMGEVINGSRECHT_URI subject here (no relevance post-filter).
             rvs_results = await rechtspraak_client.search_by_court(
                 court_codes=["RVS"],
                 client=http_client,
                 max_pages=1,  # API caps at 1000 anyway; covers ~3 months
+                subject=OMGEVINGSRECHT_URI,
             )
 
             logger.info(

@@ -35,14 +35,6 @@ _ADDRESS_POSTCODE_RE = re.compile(
 _STREET_HOUSE_RE = re.compile(r"^(?P<street>.+?)\s+(?P<house>\d+[A-Za-z0-9/-]*)$")
 _HUISNUMMER_FROM_ADDRESS_RE = re.compile(r"(\d+)")
 
-try:
-    from scrapling.fetchers import Fetcher
-
-    SCRAPLING_AVAILABLE = True
-except Exception:  # pragma: no cover - environment-dependent
-    Fetcher = None
-    SCRAPLING_AVAILABLE = False
-
 
 @dataclass
 class ParsedFundaListing:
@@ -100,15 +92,6 @@ def _extract_huisnummer_from_address(address: str | None) -> int | None:
         return None
 
 
-def _fetch_html_with_scrapling(url: str, timeout_ms: int = 30000) -> tuple[str, int]:
-    if not SCRAPLING_AVAILABLE or Fetcher is None:
-        raise RuntimeError("scrapling fetcher unavailable")
-
-    page = Fetcher.get(url, timeout=timeout_ms)
-    body = page.body.decode("utf-8", errors="ignore")
-    return body, int(page.status)
-
-
 def _fetch_html_with_httpx(url: str, timeout_s: float = 30.0) -> tuple[str, int]:
     headers = {
         "User-Agent": (
@@ -124,14 +107,7 @@ def _fetch_html_with_httpx(url: str, timeout_s: float = 30.0) -> tuple[str, int]
 
 
 async def fetch_html(url: str, timeout_ms: int = 30000) -> tuple[str, int, str]:
-    """Fetch URL body using Scrapling first, fallback to plain HTTPX."""
-    if SCRAPLING_AVAILABLE:
-        try:
-            html, status = await asyncio.to_thread(_fetch_html_with_scrapling, url, timeout_ms)
-            return html, status, "scrapling"
-        except Exception as exc:  # pragma: no cover - network/runtime-dependent
-            logger.warning("Scrapling fetch failed for %s, fallback to httpx: %s", url, exc)
-
+    """Fetch URL body using plain HTTPX."""
     html, status = await asyncio.to_thread(_fetch_html_with_httpx, url, timeout_ms / 1000)
     return html, status, "httpx"
 

@@ -33,8 +33,94 @@ CONTENT_URL = "https://data.rechtspraak.nl/uitspraken/content"
 # Namespaces
 ATOM_NS = "http://www.w3.org/2005/Atom"
 
-# Omgevingsrecht subject URI — hardcoded per RECHT-01 (never search outside this domain)
+# Omgevingsrecht subject URI — the precise rechtsgebied sub-tag.
 OMGEVINGSRECHT_URI = "http://psi.rechtspraak.nl/rechtsgebied#bestuursrecht_omgevingsrecht"
+
+# Broad bestuursrecht subject URI. Rechtbanken massively UNDER-apply the
+# omgevingsrecht sub-tag (e.g. Rechtbank Limburg: only 181 rulings carry
+# #bestuursrecht_omgevingsrecht vs 3746 under #bestuursrecht), so court-scoped
+# ingestion searches the broad domain and post-filters on omgevingsrecht
+# relevance keywords (see is_omgevingsrecht_relevant). This keeps RECHT-01's
+# intent — only omgevingsrecht rulings are ever cached/shown — while no longer
+# missing ~95% of relevant rulings. NOTE: the Raad van State DOES tag
+# omgevingsrecht reliably (9841 rulings) and its #bestuursrecht set is dominated
+# by vreemdelingenrecht (97k), so RVS must keep using OMGEVINGSRECHT_URI.
+BESTUURSRECHT_URI = "http://psi.rechtspraak.nl/rechtsgebied#bestuursrecht"
+
+# Omgevingsrecht relevance keywords, matched (case-insensitively) against a
+# ruling's title + summary. The modern Rechtspraak Atom feed populates summaries
+# for ~100% of rulings across all years, so this metadata filter is reliable and
+# avoids fetching full documents for irrelevant rulings. Tuned against Rechtbank
+# Limburg: 1016/3746 bestuursrecht rulings match (~27%); the excluded remainder
+# is genuinely non-omgevingsrecht (Opiumwet-woningsluiting, bijstand, WOZ, BRP,
+# ambtenarenrecht, Wob, Leerplichtwet, vreemdelingenrecht).
+OMGEVINGSRECHT_KEYWORDS: tuple[str, ...] = (
+    "omgevingsvergunning",
+    "omgevingswet",
+    "omgevingsplan",
+    "bestemmingsplan",
+    "wabo",
+    "algemene bepalingen omgevingsrecht",
+    "ruimtelijke ordening",
+    "ruimtelijke onderbouwing",
+    "ruimtelijke",
+    "planologisch",
+    "bouwvergunning",
+    "bouwwerk",
+    "bouwplan",
+    "bouwbesluit",
+    "bouwkavel",
+    "het bouwen",
+    "het verbouwen",
+    "dakkapel",
+    "dakopbouw",
+    "aanbouw",
+    "bijgebouw",
+    "erfafscheiding",
+    "wet natuurbescherming",
+    "natuurvergunning",
+    "stikstof",
+    "pas-melder",
+    "wet milieubeheer",
+    "milieuvergunning",
+    "exploitatieplan",
+    "welstand",
+    "beheersverordening",
+    "buitenplanse",
+    "vergunningvrij",
+    "kruimelgeval",
+    "principebesluit",
+    "in strijd met het bestemmingsplan",
+    "afwijking van het bestemmingsplan",
+    "wijzigingsplan",
+    "uitwerkingsplan",
+    "voorbereidingsbesluit",
+    "projectafwijking",
+    "planschade",
+    "kamergewijze",
+    "kamerverhuur",
+    "kamerbewoning",
+    "woningsplitsing",
+    "woningonttrekking",
+    "huisvestingsvergunning",
+    "inrit",
+    "uitweg",
+)
+
+_OMGEVINGSRECHT_RE = re.compile(
+    "|".join(re.escape(k) for k in OMGEVINGSRECHT_KEYWORDS), re.IGNORECASE
+)
+
+
+def is_omgevingsrecht_relevant(title: str, summary: str) -> bool:
+    """Return True if a ruling's metadata indicates the omgevingsrecht domain.
+
+    Used to post-filter broad #bestuursrecht court searches down to omgevingsrecht
+    without fetching every full document. Matches OMGEVINGSRECHT_KEYWORDS against
+    the combined title + summary.
+    """
+    return bool(_OMGEVINGSRECHT_RE.search(f"{title} {summary}"))
+
 
 # ECLI format: ECLI:CC:COURT:YEAR:LOCALID
 _ECLI_RE = re.compile(
@@ -188,24 +274,6 @@ class RechtspraakClient:
         logger.info("Rechtspraak search: found %d valid results", len(results))
         return results
 
-    def _extract_next_link(self, response_content: bytes) -> str | None:
-        """Extract the next page URL from an Atom feed response.
-
-        The Rechtspraak API includes <link rel="next" href="..."/> for pagination.
-
-        Returns:
-            Next page URL or None if no more pages.
-        """
-        try:
-            root = etree.fromstring(response_content, _parser)
-        except etree.XMLSyntaxError:
-            return None
-
-        for link in root.findall(f"{{{ATOM_NS}}}link"):
-            if link.get("rel") == "next":
-                return link.get("href")
-        return None
-
     async def search_by_court(
         self,
         court_codes: list[str],
@@ -213,6 +281,7 @@ class RechtspraakClient:
         date_from: str | None = None,
         date_to: str | None = None,
         max_pages: int = 20,
+        subject: str = BESTUURSRECHT_URI,
     ) -> list[dict]:
         """Search omgevingsrecht rulings filtered by court using the creator param.
 
@@ -220,12 +289,19 @@ class RechtspraakClient:
         for server-side filtering. This returns far more results than client-side
         ECLI prefix filtering (e.g. 100 RBLIM results vs 2 with client-side).
 
+        By default `subject` is the broad #bestuursrecht domain and results are
+        post-filtered to omgevingsrecht via is_omgevingsrecht_relevant(), because
+        rechtbanken under-apply the omgevingsrecht sub-tag. Callers that query a
+        court which DOES tag omgevingsrecht reliably (Raad van State) should pass
+        `subject=OMGEVINGSRECHT_URI`, which disables the keyword post-filter.
+
         Args:
             court_codes: List of court codes to match (e.g., ["RBLIM", "RBMAA"]).
             client: Shared httpx AsyncClient from app.state.
             date_from: Optional start date filter (YYYY-MM-DD).
             date_to: Optional end date filter (YYYY-MM-DD).
             max_pages: Safety limit on pagination per court (default 20).
+            subject: Rechtsgebied subject URI (default broad #bestuursrecht).
 
         Returns:
             list[dict]: Results with keys: ecli, title, summary, date
@@ -235,10 +311,14 @@ class RechtspraakClient:
             GovernmentAPIError: If XML parsing fails or API returns error.
         """
         PAGE_SIZE = 1000
+        # Only post-filter on keywords when we searched the broad domain; a
+        # narrow OMGEVINGSRECHT_URI search is already correctly scoped.
+        apply_relevance_filter = subject == BESTUURSRECHT_URI
 
         logger.info(
-            "Rechtspraak court search: codes=%s, date_from=%s, date_to=%s",
+            "Rechtspraak court search: codes=%s, subject=%s, date_from=%s, date_to=%s",
             court_codes,
+            subject,
             date_from,
             date_to,
         )
@@ -253,7 +333,7 @@ class RechtspraakClient:
                 continue
 
             params: list[tuple[str, str]] = [
-                ("subject", OMGEVINGSRECHT_URI),
+                ("subject", subject),
                 ("creator", owms_uri),
                 ("max", str(PAGE_SIZE)),
                 ("sort", "DESC"),
@@ -264,26 +344,23 @@ class RechtspraakClient:
             if date_to:
                 params.append(("date", date_to))
 
-            url: str | None = SEARCH_URL
-            current_params: list[tuple[str, str]] | None = params
+            # Paginate via the `from` offset parameter. The Rechtspraak Atom feed
+            # does NOT emit a rel="next" link, so offset paging is the only way to
+            # read past the first 1000 results (previously the hard ceiling, which
+            # silently capped each court at its newest 1000 rulings).
             page = 0
 
-            while url and page < max_pages:
+            while page < max_pages:
+                page_params = [*params, ("from", str(page * PAGE_SIZE))]
                 page += 1
                 try:
                     async with rechtspraak_limiter:
-                        if current_params is not None:
-                            response = await retry_with_backoff(
-                                lambda u=url, p=current_params: client.get(
-                                    u, params=p, timeout=30.0
-                                ),
-                                source="rechtspraak",
-                            )
-                        else:
-                            response = await retry_with_backoff(
-                                lambda u=url: client.get(u, timeout=30.0),
-                                source="rechtspraak",
-                            )
+                        response = await retry_with_backoff(
+                            lambda p=page_params: client.get(
+                                SEARCH_URL, params=p, timeout=30.0
+                            ),
+                            source="rechtspraak",
+                        )
                 except httpx.TimeoutException as exc:
                     raise APITimeoutError(
                         "rechtspraak",
@@ -304,11 +381,18 @@ class RechtspraakClient:
 
                 results = self._parse_search_results(response.content)
 
-                # Deduplicate across court codes
+                # Deduplicate across court codes; when searching the broad
+                # #bestuursrecht domain, keep only omgevingsrecht-relevant rulings
+                # (cheap title+summary match, no full-document fetch needed).
                 for r in results:
-                    if r["ecli"] not in seen_eclis:
-                        all_results.append(r)
-                        seen_eclis.add(r["ecli"])
+                    if r["ecli"] in seen_eclis:
+                        continue
+                    if apply_relevance_filter and not is_omgevingsrecht_relevant(
+                        r.get("title", ""), r.get("summary", "")
+                    ):
+                        continue
+                    all_results.append(r)
+                    seen_eclis.add(r["ecli"])
 
                 logger.info(
                     "Rechtspraak %s page %d: %d results, %d total so far",
@@ -320,13 +404,6 @@ class RechtspraakClient:
 
                 if len(results) < PAGE_SIZE:
                     break
-
-                next_url = self._extract_next_link(response.content)
-                if not next_url:
-                    break
-
-                url = next_url
-                current_params = None
 
         logger.info(
             "Rechtspraak court search complete: %d results for %s",

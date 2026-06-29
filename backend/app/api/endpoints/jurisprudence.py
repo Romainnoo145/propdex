@@ -83,14 +83,15 @@ async def get_gemeente_rulings(
 ):
     """Get cached omgevingsrecht rulings for a gemeente.
 
-    Returns cached rulings immediately. If cache is stale (>7 days) or empty,
-    enqueues a background ingestion job to refresh. Org-agnostic -- court
-    rulings are public data.
+    Returns cached rulings directly from RulingCache (pure DB read, no AI).
+    Background ingestion/enrichment is intentionally disabled for the demo
+    relaunch -- the worker service is offline and the curated seed is the
+    source of truth. Org-agnostic -- court rulings are public data.
 
     Returns ingestion_status:
       - fresh: cache hit within 7-day TTL
-      - refreshing: stale cache returned, background job enqueued
-      - pending: no cache, background job enqueued (returns empty list)
+      - refreshing: cache present but stale (no refresh is triggered)
+      - pending: no cache present (no ingestion is triggered)
     """
     # Validate gemeente is known
     court_codes = get_court_codes_for_gemeente(gemeente_naam)
@@ -137,29 +138,9 @@ async def get_gemeente_rulings(
         if age_seconds > RULING_CACHE_TTL_SECONDS:
             ingestion_status = "refreshing"
 
-    # Enqueue background ingestion if stale or empty
-    if ingestion_status in ("pending", "refreshing"):
-        arq_pool = getattr(request.app.state, "arq_pool", None)
-        if arq_pool is not None:
-            try:
-                await arq_pool.enqueue_job(
-                    "ruling_ingestion_job",
-                    gemeente_naam,
-                    _job_id=f"ruling_ingest:{gemeente_naam}",
-                )
-                logger.info(
-                    "Enqueued ruling ingestion job for %s (status: %s)",
-                    gemeente_naam,
-                    ingestion_status,
-                )
-            except Exception as exc:
-                logger.warning(
-                    "Failed to enqueue ruling ingestion for %s: %s",
-                    gemeente_naam,
-                    exc,
-                )
-        else:
-            logger.warning("ARQ pool not available — skipping ruling ingestion for %s", gemeente_naam)
+    # NOTE: Background ingestion is intentionally disabled for the demo relaunch.
+    # The worker service is offline; rulings come from the curated seed only.
+    # ingestion_status is still reported for UI display but never triggers a job.
 
     # Win/loss ratio aggregation from uitkomst column
     win_loss: dict[str, int] = {
@@ -247,11 +228,12 @@ async def trigger_ruling_analysis(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_active_user),
 ):
-    """Trigger per-ruling AI analysis for a municipality.
+    """Aggregate per-ruling analysis for a municipality from cached data.
 
-    Queries RulingCache for geo-filtered rulings. Splits into already-analyzed
-    and needs-analysis sets. Returns complete result from analyzed rulings
-    immediately, enqueues ARQ job for un-analyzed rulings if any.
+    Queries RulingCache for geo-filtered rulings and aggregates over rulings
+    that already carry an ai_analysis. AI enrichment of un-analyzed rulings is
+    intentionally disabled for the demo relaunch (worker offline) -- no ARQ job
+    is enqueued. Returns the aggregation built from already-analyzed rulings.
     """
     # Query all geo-filtered rulings for this gemeente
     stmt = select(RulingCache).where(
@@ -286,33 +268,10 @@ async def trigger_ruling_analysis(
     # See app.services.ruling_aggregator and M046/S01 for rationale.
     aggregation = aggregate_dev_type_rulings(ruling_analyses)
 
+    # NOTE: AI enrichment of un-analyzed rulings is disabled for the demo
+    # relaunch. The worker service is offline, so no ARQ job is enqueued;
+    # the response aggregates only over already-analyzed cached rulings.
     job_id = None
-    if needs_analysis:
-        # Enqueue ARQ job for un-analyzed rulings
-        ecli_list = [r.ecli for r in needs_analysis]
-        arq_pool = getattr(request.app.state, "arq_pool", None)
-        if arq_pool is not None:
-            try:
-                arq_job = await arq_pool.enqueue_job(
-                    "ruling_analysis_job",
-                    gemeente_naam,
-                    ecli_list,
-                    _job_id=f"ruling_analyze:{gemeente_naam}",
-                )
-                job_id = arq_job.job_id if arq_job else None
-                logger.info(
-                    "Enqueued ruling analysis job for %s (%d un-analyzed)",
-                    gemeente_naam,
-                    len(ecli_list),
-                )
-            except Exception as exc:
-                logger.warning(
-                    "Failed to enqueue ruling analysis for %s: %s",
-                    gemeente_naam,
-                    exc,
-                )
-        else:
-            logger.warning("ARQ pool not available — skipping ruling analysis for %s", gemeente_naam)
 
     return {
         "status": "complete" if not needs_analysis else "partial",
