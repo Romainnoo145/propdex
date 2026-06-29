@@ -149,17 +149,19 @@ function Tile({
   valueSize?: number
 }) {
   return (
-    <div className="rounded-[14px] border border-white/50 bg-white/45 px-4 py-[14px]">
+    <div className="rounded-[14px] border border-slate-200/80 bg-white/85 px-4 py-[14px] shadow-[0_1px_2px_rgba(14,17,17,0.04),0_4px_12px_rgba(14,17,17,0.03)]">
       <div className="text-[10px] font-bold uppercase tracking-[0.06em] text-slate-400">
         {label}
       </div>
       <div
-        className="mt-[5px] font-bold tracking-[-0.01em] text-aura-ink"
+        className="mt-[6px] font-bold tracking-[-0.01em] text-aura-ink"
         style={{ fontSize: `${valueSize}px` }}
       >
         {value}
       </div>
-      <div className="mt-[3px] text-[11px] text-slate-400">{meta}</div>
+      <div className="mt-[4px] border-t border-slate-100 pt-[5px] text-[11px] text-slate-400">
+        {meta}
+      </div>
     </div>
   )
 }

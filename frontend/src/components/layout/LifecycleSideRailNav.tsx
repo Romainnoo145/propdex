@@ -1,6 +1,6 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
-import { LogOut } from 'lucide-react'
+import { ArrowLeft, LogOut } from 'lucide-react'
 import { useAuth } from '@/lib/auth/useAuth'
 import { LIFECYCLE_PHASES, type LifecyclePhaseKey } from '@/lib/lifecycle/phases'
 import { phaseLinkTarget } from './phaseLinkTarget'
@@ -26,19 +26,24 @@ export default function LifecycleSideRailNav({ activePhaseKey, parcelId }: Props
       aria-label="Lifecycle-navigatie"
       className="fixed left-0 top-0 bottom-0 w-[130px] flex flex-col items-center justify-between py-10 z-[100]"
     >
-      {/* Top: Logo → exit workspace, back to /opgeslagen list */}
+      {/* Top: Logo → exit workspace, back to /opgeslagen list.
+          On hover the logo cross-fades into an obsidian circle with an amber
+          back-arrow — a clear "go back" affordance instead of a bare ring. */}
       <div className="w-full flex justify-center">
         <Link
           to="/opgeslagen"
           search={{ stage: undefined }}
           aria-label="Terug naar opgeslagen lijst"
-          className="group relative flex h-16 w-16 items-center justify-center rounded-full overflow-hidden hover:ring-2 hover:ring-aura-amber/40 transition-all"
+          className="group relative flex h-16 w-16 items-center justify-center rounded-full overflow-hidden"
         >
           <img
             src="/images/propdex-logo.svg"
             alt="Propdex"
-            className="h-16 w-16"
+            className="h-16 w-16 transition-opacity duration-200 group-hover:opacity-0"
           />
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-aura-obsidian opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+            <ArrowLeft size={26} strokeWidth={2.2} className="text-aura-amber" />
+          </span>
           <span className="pointer-events-none absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-aura-obsidian/90 backdrop-blur-md px-2.5 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
             Terug naar opgeslagen
           </span>
