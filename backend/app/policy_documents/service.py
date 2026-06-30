@@ -279,10 +279,20 @@ async def get_document_for_download(
     organization_id: uuid.UUID,
     db: AsyncSession,
 ) -> PolicyDocument | None:
-    """Get a document with file bytes for download."""
+    """Get a document with file bytes for download.
+
+    Policy documents are vendor-global (is_global=true) and shared across every
+    tenant — consistent with list_documents / get_summaries / the cascade. So a
+    doc is downloadable if the caller's org owns it OR it is global; otherwise
+    the Beleid page would list files (which are global) but 404 on opening them
+    for any non-vendor tenant like Hauzer.
+    """
     stmt = select(PolicyDocument).where(
         PolicyDocument.id == document_id,
-        PolicyDocument.organization_id == organization_id,
+        or_(
+            PolicyDocument.organization_id == organization_id,
+            PolicyDocument.is_global.is_(True),
+        ),
     )
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
