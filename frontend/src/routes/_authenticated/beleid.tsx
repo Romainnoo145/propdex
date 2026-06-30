@@ -7,9 +7,10 @@
  */
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { staggerContainer, fadeUp } from "@/lib/animations";
+import StepTransition from "@/components/motion/StepTransition";
 import {
   Landmark,
   Building2,
@@ -700,6 +701,17 @@ function CategoryTabbedSources({
     [sources, activeCategory],
   );
 
+  // Slide direction for the shared StepTransition: based on the tab's position
+  // relative to the previously-active tab (right = forward, left = back).
+  const activeIndex = availableCategories.findIndex(
+    (c) => c.key === activeCategory,
+  );
+  const prevIndexRef = useRef(activeIndex);
+  const direction = activeIndex >= prevIndexRef.current ? 1 : -1;
+  useEffect(() => {
+    prevIndexRef.current = activeIndex;
+  }, [activeIndex]);
+
   return (
     <div className="space-y-5">
       {/* Pill tab bar */}
@@ -739,14 +751,8 @@ function CategoryTabbedSources({
         })}
       </div>
 
-      {/* Progress + card grid */}
-      <motion.div
-        key={activeCategory}
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.15 }}
-        className="space-y-4"
-      >
+      {/* Progress + card grid — shared directional step transition */}
+      <StepTransition stepKey={activeCategory} direction={direction} className="space-y-4">
         <motion.div
           variants={staggerContainer}
           initial="hidden"
@@ -765,7 +771,7 @@ function CategoryTabbedSources({
             </motion.div>
           ))}
         </motion.div>
-      </motion.div>
+      </StepTransition>
     </div>
   );
 }

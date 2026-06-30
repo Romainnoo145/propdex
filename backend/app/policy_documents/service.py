@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import cast
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.gemeente_provincie_map import GemeenteProvincieMap
@@ -134,11 +134,22 @@ async def list_documents(
     source_key: str | None,
     db: AsyncSession,
 ) -> tuple[list[PolicyDocument], int]:
-    """List policy documents for an entity, optionally filtered by source_key."""
+    """List policy documents for an entity, optionally filtered by source_key.
+
+    Policy documents are vendor-global (uploads always set is_global=True) and
+    shared across every tenant — consistent with get_summaries / the cascade /
+    get_document_for_download, which are all org-agnostic. So this lists any doc
+    the caller's org owns OR any global doc, otherwise the Beleid page would show
+    no files for tenants that aren't the vendor org that uploaded them.
+    """
+    org_or_global = or_(
+        PolicyDocument.organization_id == organization_id,
+        PolicyDocument.is_global.is_(True),
+    )
     stmt = (
         select(PolicyDocument)
         .where(
-            PolicyDocument.organization_id == organization_id,
+            org_or_global,
             PolicyDocument.entity_type == entity_type,
             PolicyDocument.entity_code == entity_code,
         )
@@ -148,7 +159,7 @@ async def list_documents(
         select(func.count())
         .select_from(PolicyDocument)
         .where(
-            PolicyDocument.organization_id == organization_id,
+            org_or_global,
             PolicyDocument.entity_type == entity_type,
             PolicyDocument.entity_code == entity_code,
         )

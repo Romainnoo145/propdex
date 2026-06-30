@@ -19,7 +19,7 @@ import {
   FileText,
   FolderOpen,
   Loader2,
-  FilePlus2,
+  MapPin,
   ScrollText,
   ChevronRight,
   Compass,
@@ -377,12 +377,13 @@ function CreateReportPrompt({
   return (
     <div className="flex h-full flex-col items-center justify-center px-5 text-center">
       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-aura-amber/12">
-        <FilePlus2 size={22} className="text-aura-amber-hover" strokeWidth={1.8} />
+        <MapPin size={22} className="text-aura-amber-hover" strokeWidth={1.8} />
       </div>
-      <p className="text-[14px] font-bold text-aura-ink">Nog geen dossier</p>
-      <p className="mt-1 max-w-[230px] text-[12px] leading-snug text-slate-400">
-        Dit adres staat nog niet in je portfolio. Maak een rapport om de bronnen
-        op te halen.
+      <p className="text-[14px] font-bold text-aura-ink">Nog geen bronnen</p>
+      <p className="mt-1 max-w-[240px] text-[12px] leading-snug text-slate-400">
+        Dit adres staat nog niet in je portfolio, dus er zijn nog geen documenten.
+        Open het op de kaart om het perceel te analyseren en op te slaan — daarna
+        verschijnen de bronnen hier.
       </p>
       <button
         type="button"
@@ -393,9 +394,9 @@ function CreateReportPrompt({
         {loading ? (
           <Loader2 size={15} className="animate-spin" />
         ) : (
-          <FilePlus2 size={15} strokeWidth={2} />
+          <MapPin size={15} strokeWidth={2} />
         )}
-        {loading ? 'Bezig…' : 'Maak rapport'}
+        {loading ? 'Bezig…' : 'Bekijk op de kaart'}
       </button>
     </div>
   )

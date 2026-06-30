@@ -1,17 +1,8 @@
 import { useState, useMemo } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Check, Search } from 'lucide-react'
 import type { ExplorerFilters, FacetItem } from '@/hooks/useExplorer'
 import { SearchInput } from '@/components/primitives'
-
-/* Directional slide for step transitions. mode="wait" guarantees the exiting
- * step is fully gone before the next enters — no overlap, no flash-back. */
-const stepVariants = {
-  enter: (dir: number) => ({ opacity: 0, x: dir >= 0 ? 28 : -28 }),
-  center: { opacity: 1, x: 0 },
-  exit: (dir: number) => ({ opacity: 0, x: dir >= 0 ? -28 : 28 }),
-}
-const stepTransition = { duration: 0.24, ease: [0.4, 0, 0.2, 1] as const }
+import StepTransition from '@/components/motion/StepTransition'
 
 type Facets = {
   gemeente: FacetItem[]
@@ -169,17 +160,7 @@ export default function WizardFlow({
 
       {/* ── Step content ─────────────────────────────────── */}
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-8">
-        <AnimatePresence mode="wait" custom={direction} initial={false}>
-          <motion.div
-            key={stepKey}
-            custom={direction}
-            variants={stepVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={stepTransition}
-            className="flex w-full justify-center"
-          >
+        <StepTransition stepKey={stepKey} direction={direction} className="flex w-full justify-center">
         {/* Step 0: Schaalniveau */}
         {step === 0 && (
           <StepPage
@@ -361,8 +342,7 @@ export default function WizardFlow({
             </div>
           </StepPage>
         )}
-          </motion.div>
-        </AnimatePresence>
+        </StepTransition>
       </div>
 
       {/* ── Navigation bar ──────────────────────────────── */}
