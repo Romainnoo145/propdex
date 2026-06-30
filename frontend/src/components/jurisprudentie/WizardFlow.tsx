@@ -1,7 +1,17 @@
 import { useState, useMemo } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Check, Search } from 'lucide-react'
 import type { ExplorerFilters, FacetItem } from '@/hooks/useExplorer'
 import { SearchInput } from '@/components/primitives'
+
+/* Directional slide for step transitions. mode="wait" guarantees the exiting
+ * step is fully gone before the next enters — no overlap, no flash-back. */
+const stepVariants = {
+  enter: (dir: number) => ({ opacity: 0, x: dir >= 0 ? 28 : -28 }),
+  center: { opacity: 1, x: 0 },
+  exit: (dir: number) => ({ opacity: 0, x: dir >= 0 ? -28 : 28 }),
+}
+const stepTransition = { duration: 0.24, ease: [0.4, 0, 0.2, 1] as const }
 
 type Facets = {
   gemeente: FacetItem[]
@@ -85,7 +95,15 @@ export default function WizardFlow({
     }
     return 0
   })
+  // Slide direction: +1 = forward (next), -1 = backward (previous).
+  const [direction, setDirection] = useState(0)
   const [gemeenteSearch, setGemeenteSearch] = useState('')
+
+  /** Single entry point for step changes so the slide direction is always set. */
+  const goToStep = (next: number) => {
+    setDirection(next >= step ? 1 : -1)
+    setStep(next)
+  }
 
   const gemeenteFacets = facets?.gemeente ?? []
   const filteredGemeenten = useMemo(() => {
@@ -98,18 +116,18 @@ export default function WizardFlow({
   /* ── Navigation ────────────────────────────────────── */
   const goNext = () => {
     if (step === 0 && schaal === 'landelijk') {
-      setStep(2)
+      goToStep(2)
     } else if (step < 4) {
-      setStep(step + 1)
+      goToStep(step + 1)
     }
   }
 
   const goBack = () => {
     if (step === 0) return
     if (step === 2 && schaal === 'landelijk') {
-      setStep(0)
+      goToStep(0)
     } else {
-      setStep(step - 1)
+      goToStep(step - 1)
     }
   }
 
@@ -119,16 +137,14 @@ export default function WizardFlow({
       onFilterChange('rechtbank_niveau', undefined)
     }
     setSchaal(s)
-    if (s === 'landelijk') {
-      setStep(2)
-    } else {
-      setStep(1)
-    }
+    goToStep(s === 'landelijk' ? 2 : 1)
   }
 
   /* ── Progress ──────────────────────────────────────── */
   const stepSequence = schaal === 'landelijk' ? [0, 2, 3, 4] : [0, 1, 2, 3, 4]
   const progressIndex = stepSequence.indexOf(step)
+  // Distinguish the two step-1 variants so switching schaal also animates.
+  const stepKey = `${step}-${step === 1 ? (schaal ?? 'none') : ''}`
 
   return (
     <div className="flex h-full flex-col bg-[#FAFCFA] rounded-[40px] pb-14 md:pb-0">
@@ -138,7 +154,7 @@ export default function WizardFlow({
           {stepSequence.map((s, i) => (
             <button
               key={i}
-              onClick={() => setStep(s)}
+              onClick={() => goToStep(s)}
               className={`h-2 rounded-full transition-all duration-300 ${
                 i === progressIndex
                   ? 'w-8 bg-aura-amber'
@@ -153,6 +169,17 @@ export default function WizardFlow({
 
       {/* ── Step content ─────────────────────────────────── */}
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-8">
+        <AnimatePresence mode="wait" custom={direction} initial={false}>
+          <motion.div
+            key={stepKey}
+            custom={direction}
+            variants={stepVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={stepTransition}
+            className="flex w-full justify-center"
+          >
         {/* Step 0: Schaalniveau */}
         {step === 0 && (
           <StepPage
@@ -197,7 +224,7 @@ export default function WizardFlow({
                   selected={filters.rechtbank_niveau === f.value}
                   onClick={() => {
                     onFilterChange('rechtbank_niveau', f.value)
-                    setStep(2)
+                    goToStep(2)
                   }}
                 />
               ))}
@@ -228,7 +255,7 @@ export default function WizardFlow({
                     selected={filters.gemeente === f.value}
                     onClick={() => {
                       onFilterChange('gemeente', f.value)
-                      setStep(2)
+                      goToStep(2)
                     }}
                   />
                 ))}
@@ -249,7 +276,7 @@ export default function WizardFlow({
             subtitle="Ga terug om een schaalniveau te kiezen"
           >
             <button
-              onClick={() => setStep(0)}
+              onClick={() => goToStep(0)}
               className="rounded-full bg-aura-canvas px-5 py-2.5 text-[13px] font-semibold text-aura-obsidian transition-colors hover:bg-neutral-200"
             >
               Ga naar schaalniveau
@@ -269,7 +296,7 @@ export default function WizardFlow({
                   selected={filters.vergunningstype === f.value}
                   onClick={() => {
                     onFilterChange('vergunningstype', f.value)
-                    setStep(3)
+                    goToStep(3)
                   }}
                 />
               ))}
@@ -293,7 +320,7 @@ export default function WizardFlow({
                   selected={filters.rechtsgrond === f.value}
                   onClick={() => {
                     onFilterChange('rechtsgrond', f.value)
-                    setStep(4)
+                    goToStep(4)
                   }}
                 />
               ))}
@@ -334,6 +361,8 @@ export default function WizardFlow({
             </div>
           </StepPage>
         )}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* ── Navigation bar ──────────────────────────────── */}

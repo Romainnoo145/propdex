@@ -13,7 +13,7 @@
  * Design tokens per DESIGN.md (glass surface, Morning Mist canvas, amber accent).
  */
 
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   FileText,
@@ -22,8 +22,6 @@ import {
   FilePlus2,
   ScrollText,
   ChevronRight,
-  ChevronDown,
-  BookOpen,
   Compass,
   Home,
   ParkingSquare,
@@ -35,12 +33,12 @@ import {
 import { toast } from 'sonner'
 import { useParcelDocuments } from '@/hooks/useDocuments'
 import { usePolicySummaries } from '@/hooks/usePolicySummaries'
+import { usePolicyDocuments, type PolicyDocument } from '@/hooks/usePolicyDocuments'
 import { useAuth } from '@/lib/auth/useAuth'
-import { getDocumentDownloadUrl } from '@/lib/api'
+import { getDocumentDownloadUrl, fetchPolicyDocumentBlob } from '@/lib/api'
 import { DOC_TYPE_TO_SLOT } from '@/lib/documents/typeRegistry'
 import { GHOST_ICONS } from '@/lib/cockpit/dossier-pages'
 import type { ParcelDocumentMeta } from '@/lib/types/document'
-import type { Randvoorwaarde } from '@/components/map/panels/parcel/OmgevingsvisiePopup'
 
 /** Lucide icons per gemeente beleidsbron — monochrome, no color chip. */
 const BELEID_ICON: Record<string, typeof FileText> = {
@@ -150,64 +148,39 @@ function SourceRow({
 }
 
 /**
- * BeleidRow — same quiet row as SourceRow, but with an amber 'gemeente' pill and
- * an accordion: clicking expands the randvoorwaarden that apply to this parcel
- * (mirrors the omgevingsvisie/woonvisie detail opened from the parcel panel),
- * with a 'Lees …' button that deep-links into /beleid.
+ * BeleidRow — same quiet row as SourceRow, with an amber 'gemeente' pill.
+ * Clicking opens the actual policy document in a new window (blob fetch with
+ * auth), exactly like a perceeldocument — no inline accordion.
  */
 function BeleidRow({
   icon: Icon,
   label,
-  randvoorwaarden,
-  onReadMore,
+  onOpen,
 }: {
   icon: typeof FileText
   label: string
-  randvoorwaarden: Randvoorwaarde[]
-  onReadMore: () => void
+  onOpen: () => void
 }) {
-  const [open, setOpen] = useState(false)
-
   return (
-    <div>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="group flex w-full items-center gap-3 rounded-[12px] px-2.5 py-2.5 text-left transition-colors hover:bg-aura-amber/[0.06]"
-      >
-        <Icon
-          size={15}
-          strokeWidth={1.7}
-          className="shrink-0 text-slate-400 transition-colors group-hover:text-aura-amber-hover"
-        />
-        <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-aura-ink">{label}</p>
-        <span className="shrink-0 rounded-full bg-aura-amber/12 px-2 py-0.5 text-[10px] font-semibold text-aura-amber-hover">
-          gemeente
-        </span>
-        <ChevronDown
-          size={14}
-          className={`shrink-0 text-slate-300 transition-transform ${open ? 'rotate-180' : ''}`}
-        />
-      </button>
-
-      {open && (
-        <div className="mb-1 ml-[27px] mr-1 space-y-2.5 border-l border-slate-200/70 pl-3.5 pt-1">
-          {randvoorwaarden.map((rv, i) => (
-            <div key={`${rv.titel}-${i}`}>
-              <p className="text-[12px] font-semibold text-aura-ink">{rv.titel}</p>
-              <p className="mt-0.5 text-[12px] leading-snug text-slate-500">{rv.samenvatting}</p>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={onReadMore}
-            className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-aura-amber/30 bg-aura-amber/[0.08] px-3 py-1.5 text-[11px] font-semibold text-aura-amber-hover transition-colors hover:bg-aura-amber/15"
-          >
-            <BookOpen size={12} /> Lees {label.toLowerCase()}
-          </button>
-        </div>
-      )}
-    </div>
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group flex w-full items-center gap-3 rounded-[12px] px-2.5 py-2.5 text-left transition-colors hover:bg-aura-amber/[0.06]"
+    >
+      <Icon
+        size={15}
+        strokeWidth={1.7}
+        className="shrink-0 text-slate-400 transition-colors group-hover:text-aura-amber-hover"
+      />
+      <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-aura-ink">{label}</p>
+      <span className="shrink-0 rounded-full bg-aura-amber/12 px-2 py-0.5 text-[10px] font-semibold text-aura-amber-hover">
+        gemeente
+      </span>
+      <ChevronRight
+        size={14}
+        className="shrink-0 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100"
+      />
+    </button>
   )
 }
 
@@ -238,16 +211,27 @@ export function ParcelSourcesPanel({
       : `GM${gemeenteCode}`
     : undefined
   const { data: policy } = usePolicySummaries(gmCode)
+  const { data: policyDocs } = usePolicyDocuments('gemeente', gmCode ?? '', undefined, !!gmCode)
+
+  // Map source_key → latest policy document (for opening the file in a new tab).
+  const docBySourceKey = useMemo(() => {
+    const m = new Map<string, PolicyDocument>()
+    for (const d of policyDocs?.documents ?? []) {
+      const existing = m.get(d.source_key)
+      if (!existing || d.version_number > existing.version_number) m.set(d.source_key, d)
+    }
+    return m
+  }, [policyDocs])
+
   const beleid = policy?.summaries
     ? BELEID_ORDER.filter((k) => policy.summaries[k]?.length).map((k) => ({
         key: k,
         label: BELEID_LABEL[k]!,
-        randvoorwaarden: policy.summaries[k]!,
       }))
     : []
   const total = docTotal + beleid.length
 
-  // Open a document by fetching its blob with auth (mirrors BronnenLayer).
+  // Open a parcel document by fetching its blob with auth (mirrors BronnenLayer).
   const openDoc = useCallback(
     async (doc: ParcelDocumentMeta) => {
       if (!parcelId) return
@@ -272,6 +256,37 @@ export function ParcelSourcesPanel({
       }
     },
     [parcelId, accessToken],
+  )
+
+  // Open a gemeente beleidsdocument in a new window (same UX as a perceeldocument).
+  const openBeleidDoc = useCallback(
+    async (sourceKey: string) => {
+      if (!gmCode) return
+      const doc = docBySourceKey.get(sourceKey)
+      if (!doc) {
+        // No file behind this slot — fall back to the Beleid page detail.
+        navigate({
+          to: '/beleid',
+          search: {
+            gemeente: gmCode,
+            provincie: undefined,
+            source: sourceKey,
+            category: undefined,
+            niveau: undefined,
+          },
+        })
+        return
+      }
+      try {
+        const blob = await fetchPolicyDocumentBlob('gemeente', gmCode, doc.id, accessToken)
+        const blobUrl = URL.createObjectURL(blob)
+        window.open(blobUrl, '_blank', 'noopener,noreferrer')
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
+      } catch {
+        toast.error('Beleidsdocument openen mislukt.')
+      }
+    },
+    [gmCode, docBySourceKey, accessToken, navigate],
   )
 
   return (
@@ -303,19 +318,7 @@ export function ParcelSourcesPanel({
                   key={b.key}
                   icon={BELEID_ICON[b.key] ?? ScrollText}
                   label={b.label}
-                  randvoorwaarden={b.randvoorwaarden}
-                  onReadMore={() =>
-                    navigate({
-                      to: '/beleid',
-                      search: {
-                        gemeente: gmCode,
-                        provincie: undefined,
-                        source: b.key,
-                        category: undefined,
-                        niveau: undefined,
-                      },
-                    })
-                  }
+                  onOpen={() => openBeleidDoc(b.key)}
                 />
               ))}
             </div>
