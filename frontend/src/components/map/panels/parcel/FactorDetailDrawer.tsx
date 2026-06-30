@@ -46,9 +46,8 @@ export function FactorDetailDrawer({ isOpen, onClose, children }: FactorDetailDr
         >
           <button
             type="button" onClick={onClose} aria-label="Sluiten"
-            className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full text-[#9CA3AF] transition-colors hover:bg-[#F2F6F3] hover:text-[#0E1111]"
-          >
-            <X size={14} strokeWidth={2} />
+            className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center text-[#9CA3AF] transition-colors hover:hover:text-[#0E1111]"
+          ><X size={14} strokeWidth={2} />
           </button>
           <div className="min-h-0 flex-1 overflow-y-auto px-12 py-12">{children}</div>
         </motion.div>

@@ -67,10 +67,9 @@ export function WorkspaceContactModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F2F6F3] text-[#0E1111] transition-colors hover:bg-[#E8EDEB] ml-3"
+              className="flex h-8 w-8 shrink-0 items-center justify-center text-[#0E1111] transition-colors ml-3"
               aria-label="Sluiten"
-            >
-              <X size={15} strokeWidth={2} />
+            ><X size={15} strokeWidth={2} />
             </button>
           </div>
           <div className="px-6 pb-2">

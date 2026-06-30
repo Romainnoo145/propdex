@@ -232,10 +232,9 @@ function ItemDetailModal({ item, checked, onClose, onToggle, onUpload, isUploadi
             <button
               type="button"
               onClick={onClose}
-              className="ml-4 mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-[#F2F6F3] text-[#0E1111] transition-colors hover:bg-[#E8EDEB]"
+              className="ml-4 mt-0.5 flex size-9 shrink-0 items-center justify-center text-[#0E1111] transition-colors"
               aria-label="Sluiten"
-            >
-              <X size={16} strokeWidth={2} />
+            ><X size={16} strokeWidth={2} />
             </button>
           </div>
 

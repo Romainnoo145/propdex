@@ -344,9 +344,9 @@ function Workspace({
             onClick={onReset}
             aria-label="Ander perceel"
             title="Ander perceel"
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-200 text-slate-400 transition-colors hover:border-aura-obsidian hover:text-aura-obsidian"
+            className="flex h-8 w-8 items-center justify-center text-slate-400 transition-colors hover:text-aura-obsidian"
           >
-            <X size={15} />
+            <X size={18} />
           </button>
         </div>
 

@@ -120,10 +120,9 @@ export function ScoreBreakdownModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F2F6F3] text-[#0E1111] transition-colors hover:bg-[#E8EDEB] ml-4 mt-0.5"
+              className="flex h-9 w-9 shrink-0 items-center justify-center text-[#0E1111] transition-colors ml-4 mt-0.5"
               aria-label="Sluiten"
-            >
-              <X size={16} strokeWidth={2} />
+            ><X size={16} strokeWidth={2} />
             </button>
           </div>
 
