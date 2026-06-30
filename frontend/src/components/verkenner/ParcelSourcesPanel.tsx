@@ -96,8 +96,8 @@ export function ParcelSourcesPanel({ parcelId }: { parcelId: string | null }) {
 
   return (
     <div className="flex h-full w-[340px] shrink-0 flex-col overflow-hidden rounded-[40px] border border-white/60 bg-white/60 backdrop-blur-[24px]">
-      {/* Header */}
-      <div className="shrink-0 border-b border-slate-200/70 px-5 pb-4 pt-6">
+      {/* Header — h-[72px] matches the chat-shell header so the two divider lines align */}
+      <div className="flex h-[72px] shrink-0 flex-col justify-center border-b border-slate-200/70 px-5">
         <h3 className="text-[14px] font-bold text-aura-ink">Bronnen voor dit perceel</h3>
         <p className="mt-0.5 text-[12px] text-slate-400">
           {total > 0

@@ -13,7 +13,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
-import { ArrowUp, Compass, MapPin, X, Bookmark } from 'lucide-react'
+import { ArrowUp, Compass, MapPin, X, Bookmark, Search } from 'lucide-react'
 import { useChat, type ChatMessage } from '@/hooks/useChat'
 import { useParcelFavorites } from '@/hooks/useFavorites'
 import { AddressSearch } from '@/components/search/AddressSearch'
@@ -21,6 +21,7 @@ import { ChatLoading } from '@/components/chat/ChatLoading'
 import { ChatAgentMessage } from '@/components/chat/ChatAgentMessage'
 import { ParcelSourcesPanel } from '@/components/verkenner/ParcelSourcesPanel'
 import type { SuggestResult } from '@/lib/types/property'
+import type { FavoriteResponse } from '@/lib/types/portfolio'
 
 export const Route = createFileRoute('/_authenticated/verkenner')({
   component: VerkennerPage,
@@ -57,6 +58,28 @@ function suggestionsFor(address: string): string[] {
     `Welke risico's spelen er op dit perceel?`,
     `Zijn er recente uitspraken die dit perceel raken?`,
   ]
+}
+
+/* ─── Address → parcel resolution ───────────────────────────── */
+
+/**
+ * Resolve a picked address to a SelectedParcel. If the address matches one of
+ * the user's saved parcels we adopt its kadaster id (the documents key); else
+ * the parcel is chat-only (id=null) and the sources panel stays empty.
+ */
+function resolveParcel(
+  suggestion: SuggestResult,
+  favorites: FavoriteResponse[],
+): SelectedParcel {
+  const address = suggestion.weergavenaam
+  const match = favorites.find(
+    (f) => f.address && address.toLowerCase().includes(f.address.toLowerCase().split(',')[0]!.trim()),
+  )
+  return {
+    id: match?.parcel_id ?? null,
+    address,
+    gemeente: match?.gemeente_naam ?? null,
+  }
 }
 
 /* ─── Message bubble ────────────────────────────────────────── */
@@ -102,6 +125,7 @@ function Composer({
   disabled,
   placeholder,
   inputRef,
+  onPickAddress,
 }: {
   value: string
   onChange: (v: string) => void
@@ -109,7 +133,10 @@ function Composer({
   disabled: boolean
   placeholder: string
   inputRef: React.RefObject<HTMLTextAreaElement | null>
+  onPickAddress: (s: SuggestResult) => void
 }) {
+  const [showAddr, setShowAddr] = useState(false)
+
   // Auto-grow the textarea up to a max height (Omnigent/Claude-style composer).
   useEffect(() => {
     const ta = inputRef.current
@@ -119,32 +146,63 @@ function Composer({
   }, [value, inputRef])
 
   return (
-    <div className="rounded-[24px] border border-neutral-200 bg-white shadow-[0_2px_14px_rgba(14,17,17,0.05)] transition-colors focus-within:border-aura-amber/60">
-      <textarea
-        ref={inputRef}
-        rows={1}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault()
-            onSubmit()
-          }
-        }}
-        placeholder={placeholder}
-        className="block max-h-[168px] w-full resize-none bg-transparent px-5 pt-4 pb-1.5 text-[14px] leading-relaxed text-aura-obsidian placeholder:text-slate-400 outline-none"
-      />
-      <div className="flex items-center justify-between px-3.5 pb-3 pt-1">
-        <span className="select-none text-[11px] text-slate-400">
-          Enter om te versturen · Shift+Enter voor nieuwe regel
-        </span>
-        <button
-          onClick={onSubmit}
-          disabled={!value.trim() || disabled}
-          className="flex h-9 w-9 items-center justify-center rounded-[13px] bg-aura-obsidian text-aura-amber transition-colors hover:bg-aura-obsidian/90 disabled:opacity-30"
-        >
-          <ArrowUp size={17} strokeWidth={2.5} />
-        </button>
+    <div className="relative">
+      {/* Address popover — verken een ander perceel zonder terug te gaan */}
+      {showAddr && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setShowAddr(false)} />
+          <div className="absolute bottom-full left-0 z-20 mb-2 w-[360px] rounded-[20px] border border-neutral-200 bg-white p-3 shadow-[0_8px_30px_rgba(14,17,17,0.12)]">
+            <p className="mb-2 px-1 text-[12px] font-semibold text-slate-500">
+              Verken een ander adres
+            </p>
+            <div className="flex items-center rounded-[14px] border border-neutral-200 bg-white px-3.5 py-2.5">
+              <AddressSearch
+                fullWidth
+                className="flex-1"
+                onSelect={(s) => {
+                  setShowAddr(false)
+                  onPickAddress(s)
+                }}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      <div className="rounded-[24px] border border-neutral-200 bg-white shadow-[0_2px_14px_rgba(14,17,17,0.05)] transition-colors focus-within:border-aura-amber/60">
+        <textarea
+          ref={inputRef}
+          rows={1}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              onSubmit()
+            }
+          }}
+          placeholder={placeholder}
+          className="block max-h-[168px] w-full resize-none bg-transparent px-5 pt-4 pb-1.5 text-[14px] leading-relaxed text-aura-obsidian placeholder:text-slate-400 outline-none"
+        />
+        <div className="flex items-center justify-between px-3.5 pb-3 pt-1">
+          <button
+            onClick={() => setShowAddr((v) => !v)}
+            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
+              showAddr
+                ? 'border-aura-amber/50 bg-aura-amber/[0.08] text-aura-amber-hover'
+                : 'border-neutral-200 text-slate-500 hover:border-aura-amber/50 hover:text-aura-ink'
+            }`}
+          >
+            <Search size={13} /> Ander adres
+          </button>
+          <button
+            onClick={onSubmit}
+            disabled={!value.trim() || disabled}
+            className="flex h-9 w-9 items-center justify-center rounded-[13px] bg-aura-obsidian text-aura-amber transition-colors hover:bg-aura-obsidian/90 disabled:opacity-30"
+          >
+            <ArrowUp size={17} strokeWidth={2.5} />
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -157,16 +215,7 @@ function ParcelGate({ onSelect }: { onSelect: (p: SelectedParcel) => void }) {
   const saved = (favorites.data ?? []).filter((f) => f.address)
 
   const handleAddress = (s: SuggestResult) => {
-    const address = s.weergavenaam
-    // Match the picked address to a saved parcel (which carries the docs key).
-    const match = (favorites.data ?? []).find(
-      (f) => f.address && address.toLowerCase().includes(f.address.toLowerCase().split(',')[0]!.trim()),
-    )
-    onSelect({
-      id: match?.parcel_id ?? null,
-      address,
-      gemeente: match?.gemeente_naam ?? null,
-    })
+    onSelect(resolveParcel(s, favorites.data ?? []))
   }
 
   const hasSaved = saved.length > 0
@@ -221,9 +270,7 @@ function ParcelGate({ onSelect }: { onSelect: (p: SelectedParcel) => void }) {
                 }
                 className="group flex w-full items-center gap-3 rounded-[16px] border border-slate-200/80 bg-white/70 px-3.5 py-3 text-left transition-colors hover:border-aura-amber/40 hover:bg-white"
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-aura-amber/12 text-aura-amber-hover">
-                  <MapPin size={16} strokeWidth={1.8} />
-                </span>
+                <MapPin size={18} strokeWidth={1.8} className="shrink-0 text-aura-amber-hover" />
                 <div className="min-w-0">
                   <p className="truncate text-[13px] font-bold text-aura-ink">{f.address}</p>
                   <p className="truncate text-[11px] text-slate-400">
@@ -245,12 +292,15 @@ function ParcelGate({ onSelect }: { onSelect: (p: SelectedParcel) => void }) {
 function Workspace({
   parcel,
   onReset,
+  onSwitchParcel,
 }: {
   parcel: SelectedParcel
   onReset: () => void
+  onSwitchParcel: (p: SelectedParcel) => void
 }) {
   const [input, setInput] = useState('')
   const chat = useChat()
+  const favorites = useParcelFavorites()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -283,8 +333,8 @@ function Workspace({
     <div className="flex h-full gap-4">
       {/* Chat shell */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-[40px] border border-white/60 bg-[#FAFCFA]/80 backdrop-blur-[24px]">
-        {/* Header — selected parcel chip */}
-        <div className="flex shrink-0 items-center gap-3 border-b border-slate-200/70 px-5 py-3.5">
+        {/* Header — selected parcel chip (h-[72px] matches the sources panel header so the divider lines align) */}
+        <div className="flex h-[72px] shrink-0 items-center gap-3 border-b border-slate-200/70 px-5">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-aura-amber/15 text-aura-amber-hover">
             <MapPin size={15} strokeWidth={1.9} />
           </span>
@@ -356,6 +406,7 @@ function Workspace({
               disabled={chat.isPending}
               placeholder={`Vraag iets over ${parcel.address}…`}
               inputRef={inputRef}
+              onPickAddress={(s) => onSwitchParcel(resolveParcel(s, favorites.data ?? []))}
             />
           </div>
         </div>
@@ -377,7 +428,12 @@ function VerkennerPage() {
       <AnimatePresence mode="wait">
         {parcel ? (
           // key forces a fresh chat (useChat state) per parcel selection
-          <Workspace key={parcel.id ?? parcel.address} parcel={parcel} onReset={() => setParcel(null)} />
+          <Workspace
+            key={parcel.id ?? parcel.address}
+            parcel={parcel}
+            onReset={() => setParcel(null)}
+            onSwitchParcel={setParcel}
+          />
         ) : (
           <ParcelGate onSelect={setParcel} />
         )}
