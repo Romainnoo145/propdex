@@ -28,7 +28,7 @@ export default function StepTransition({
   children,
 }: StepTransitionProps) {
   return (
-    <AnimatePresence mode="wait" custom={direction} initial={false}>
+    <AnimatePresence mode="wait" custom={direction}>
       <motion.div
         key={stepKey}
         custom={direction}
