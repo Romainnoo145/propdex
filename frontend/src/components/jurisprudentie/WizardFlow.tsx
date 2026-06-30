@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, ArrowRight, Check, Search } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Search } from 'lucide-react'
 import { staggerContainer, fadeUp } from '@/lib/animations'
 import type { ExplorerFilters, FacetItem } from '@/hooks/useExplorer'
 import { SearchInput } from '@/components/primitives'
@@ -64,8 +64,7 @@ const THEMA_MAP: Record<string, { label: string; desc: string }> = {
  *   0 — Schaalniveau (landelijk / provinciaal / gemeentelijk)
  *   1 — Locatie (skipped for landelijk)
  *   2 — Vergunningstype
- *   3 — Thema
- *   4 — Periode
+ *   3 — Thema (laatste stap)
  */
 
 export default function WizardFlow({
@@ -83,8 +82,8 @@ export default function WizardFlow({
 
   const [step, setStep] = useState(() => {
     // If filters are already set, start at the last step so user can tweak
-    if (filters.periode || filters.rechtsgrond || filters.vergunningstype || filters.gemeente || filters.rechtbank_niveau) {
-      return 4
+    if (filters.rechtsgrond || filters.vergunningstype || filters.gemeente || filters.rechtbank_niveau) {
+      return 3
     }
     return 0
   })
@@ -110,7 +109,7 @@ export default function WizardFlow({
   const goNext = () => {
     if (step === 0 && schaal === 'landelijk') {
       goToStep(2)
-    } else if (step < 4) {
+    } else if (step < 3) {
       goToStep(step + 1)
     }
   }
@@ -134,7 +133,7 @@ export default function WizardFlow({
   }
 
   /* ── Progress ──────────────────────────────────────── */
-  const stepSequence = schaal === 'landelijk' ? [0, 2, 3, 4] : [0, 1, 2, 3, 4]
+  const stepSequence = schaal === 'landelijk' ? [0, 2, 3] : [0, 1, 2, 3]
   const progressIndex = stepSequence.indexOf(step)
   // Distinguish the two step-1 variants so switching schaal also animates.
   const stepKey = `${step}-${step === 1 ? (schaal ?? 'none') : ''}`
@@ -301,7 +300,7 @@ export default function WizardFlow({
           </StepPage>
         )}
 
-        {/* Step 3: Thema */}
+        {/* Step 3: Thema (laatste stap) */}
         {step === 3 && (
           <StepPage title="Welk thema?" subtitle="Waar gaat het geschil over?">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -314,7 +313,7 @@ export default function WizardFlow({
                   selected={filters.rechtsgrond === f.value}
                   onClick={() => {
                     onFilterChange('rechtsgrond', f.value)
-                    goToStep(4)
+                    onComplete()
                   }}
                 />
               ))}
@@ -322,37 +321,6 @@ export default function WizardFlow({
             {!facets?.rechtsgrond?.length && (
               <p className="mt-4 text-[13px] text-slate-400">Gegevens laden...</p>
             )}
-          </StepPage>
-        )}
-
-        {/* Step 4: Periode */}
-        {step === 4 && (
-          <StepPage title="Welke periode?" subtitle="Hoe ver wil je terugkijken?">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {(
-                [
-                  { value: '1jaar', label: '1 jaar', sub: 'Sinds vorig jaar' },
-                  { value: '3jaar', label: '3 jaar', sub: 'Recente trends' },
-                  { value: '5jaar', label: '5 jaar', sub: 'Breed overzicht' },
-                  { value: 'alles', label: 'Alles', sub: 'Volledige database' },
-                ] as const
-              ).map((opt) => {
-                const isSelected =
-                  opt.value === 'alles' ? !filters.periode : filters.periode === opt.value
-                return (
-                  <WizardCard
-                    key={opt.value}
-                    label={opt.label}
-                    desc={opt.sub}
-                    selected={isSelected}
-                    onClick={() => {
-                      onFilterChange('periode', opt.value === 'alles' ? undefined : opt.value)
-                      onComplete()
-                    }}
-                  />
-                )
-              })}
-            </div>
           </StepPage>
         )}
         </StepTransition>
@@ -373,7 +341,7 @@ export default function WizardFlow({
         )}
 
         <div className="flex items-center gap-3">
-          {step > 0 && step < 4 && (
+          {step > 0 && step < 3 && (
             <button
               onClick={goNext}
               className="rounded-full px-4 py-2 text-[13px] font-medium text-slate-400 transition-colors hover:text-slate-600"
@@ -448,9 +416,6 @@ function WizardCard({
           : 'border-aura-obsidian/40 bg-aura-glass-white/60 hover:border-aura-amber hover:shadow-[0_4px_20px_rgba(249,168,38,0.15)]'
       }`}
     >
-      {selected && (
-        <Check size={14} className="absolute right-3 top-3 text-aura-obsidian" />
-      )}
       <span
         className={`block text-[15px] font-bold leading-snug ${
           selected ? 'text-aura-obsidian' : 'text-aura-obsidian'
@@ -501,10 +466,7 @@ function SubCard({
           : 'border-aura-obsidian/40 bg-aura-glass-white/60 text-aura-obsidian hover:border-aura-obsidian/60 hover:shadow-sm'
       }`}
     >
-      <span className="flex items-center gap-1.5">
-        {selected && <Check size={12} className="text-aura-obsidian" />}
-        {label}
-      </span>
+      <span className="flex items-center gap-1.5">{label}</span>
       <span className={`ml-1.5 text-[11px] font-semibold tabular-nums ${
         selected ? 'text-aura-obsidian/70' : 'text-aura-amber'
       }`}>({count})</span>
