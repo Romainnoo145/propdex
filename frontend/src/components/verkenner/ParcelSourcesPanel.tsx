@@ -13,7 +13,7 @@
  * Design tokens per DESIGN.md (glass surface, Morning Mist canvas, amber accent).
  */
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   FileText,
@@ -22,6 +22,8 @@ import {
   FilePlus2,
   ScrollText,
   ChevronRight,
+  ChevronDown,
+  BookOpen,
   Compass,
   Home,
   ParkingSquare,
@@ -38,6 +40,7 @@ import { getDocumentDownloadUrl } from '@/lib/api'
 import { DOC_TYPE_TO_SLOT } from '@/lib/documents/typeRegistry'
 import { GHOST_ICONS } from '@/lib/cockpit/dossier-pages'
 import type { ParcelDocumentMeta } from '@/lib/types/document'
+import type { Randvoorwaarde } from '@/components/map/panels/parcel/OmgevingsvisiePopup'
 
 /** Lucide icons per gemeente beleidsbron — monochrome, no color chip. */
 const BELEID_ICON: Record<string, typeof FileText> = {
@@ -118,42 +121,93 @@ function SourceRow({
   icon: Icon,
   label,
   meta,
-  snippet,
   onOpen,
 }: {
   icon: typeof FileText
   label: string
   meta: string
-  snippet: string | null
   onOpen: () => void
 }) {
   return (
     <button
       type="button"
       onClick={onOpen}
-      className="group w-full rounded-[12px] px-2.5 py-2.5 text-left transition-colors hover:bg-aura-amber/[0.06]"
+      className="group flex w-full items-center gap-3 rounded-[12px] px-2.5 py-2.5 text-left transition-colors hover:bg-aura-amber/[0.06]"
     >
-      <div className="flex items-center gap-3">
+      <Icon
+        size={15}
+        strokeWidth={1.7}
+        className="shrink-0 text-slate-400 transition-colors group-hover:text-aura-amber-hover"
+      />
+      <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-aura-ink">{label}</p>
+      <span className="shrink-0 text-[11px] tabular-nums text-slate-400">{meta}</span>
+      <ChevronRight
+        size={14}
+        className="shrink-0 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100"
+      />
+    </button>
+  )
+}
+
+/**
+ * BeleidRow — same quiet row as SourceRow, but with an amber 'gemeente' pill and
+ * an accordion: clicking expands the randvoorwaarden that apply to this parcel
+ * (mirrors the omgevingsvisie/woonvisie detail opened from the parcel panel),
+ * with a 'Lees …' button that deep-links into /beleid.
+ */
+function BeleidRow({
+  icon: Icon,
+  label,
+  randvoorwaarden,
+  onReadMore,
+}: {
+  icon: typeof FileText
+  label: string
+  randvoorwaarden: Randvoorwaarde[]
+  onReadMore: () => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="group flex w-full items-center gap-3 rounded-[12px] px-2.5 py-2.5 text-left transition-colors hover:bg-aura-amber/[0.06]"
+      >
         <Icon
           size={15}
           strokeWidth={1.7}
           className="shrink-0 text-slate-400 transition-colors group-hover:text-aura-amber-hover"
         />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-medium text-aura-ink">{label}</p>
-        </div>
-        <span className="shrink-0 text-[11px] tabular-nums text-slate-400">{meta}</span>
-        <ChevronRight
+        <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-aura-ink">{label}</p>
+        <span className="shrink-0 rounded-full bg-aura-amber/12 px-2 py-0.5 text-[10px] font-semibold text-aura-amber-hover">
+          gemeente
+        </span>
+        <ChevronDown
           size={14}
-          className="shrink-0 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100"
+          className={`shrink-0 text-slate-300 transition-transform ${open ? 'rotate-180' : ''}`}
         />
-      </div>
-      {snippet && (
-        <p className="mt-1.5 line-clamp-2 pl-[27px] text-[12px] leading-snug text-slate-400">
-          {snippet}
-        </p>
+      </button>
+
+      {open && (
+        <div className="mb-1 ml-[27px] mr-1 space-y-2.5 border-l border-slate-200/70 pl-3.5 pt-1">
+          {randvoorwaarden.map((rv, i) => (
+            <div key={`${rv.titel}-${i}`}>
+              <p className="text-[12px] font-semibold text-aura-ink">{rv.titel}</p>
+              <p className="mt-0.5 text-[12px] leading-snug text-slate-500">{rv.samenvatting}</p>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={onReadMore}
+            className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-aura-amber/30 bg-aura-amber/[0.08] px-3 py-1.5 text-[11px] font-semibold text-aura-amber-hover transition-colors hover:bg-aura-amber/15"
+          >
+            <BookOpen size={12} /> Lees {label.toLowerCase()}
+          </button>
+        </div>
       )}
-    </button>
+    </div>
   )
 }
 
@@ -188,7 +242,7 @@ export function ParcelSourcesPanel({
     ? BELEID_ORDER.filter((k) => policy.summaries[k]?.length).map((k) => ({
         key: k,
         label: BELEID_LABEL[k]!,
-        snippet: policy.summaries[k]![0]?.samenvatting ?? null,
+        randvoorwaarden: policy.summaries[k]!,
       }))
     : []
   const total = docTotal + beleid.length
@@ -245,19 +299,18 @@ export function ParcelSourcesPanel({
             <SectionLabel>Beleid</SectionLabel>
             <div className="mt-0.5">
               {beleid.map((b) => (
-                <SourceRow
+                <BeleidRow
                   key={b.key}
                   icon={BELEID_ICON[b.key] ?? ScrollText}
                   label={b.label}
-                  meta="gemeente"
-                  snippet={b.snippet}
-                  onOpen={() =>
+                  randvoorwaarden={b.randvoorwaarden}
+                  onReadMore={() =>
                     navigate({
                       to: '/beleid',
                       search: {
                         gemeente: gmCode,
                         provincie: undefined,
-                        source: undefined,
+                        source: b.key,
                         category: undefined,
                         niveau: undefined,
                       },
@@ -291,7 +344,6 @@ export function ParcelSourcesPanel({
                   icon={GHOST_ICONS[group.slot] ?? FileText}
                   label={group.label}
                   meta={`${group.docs.length}`}
-                  snippet={group.docs.find((d) => d.ai_summary)?.ai_summary ?? null}
                   onOpen={() => openDoc(group.docs[0]!)}
                 />
               ))}
