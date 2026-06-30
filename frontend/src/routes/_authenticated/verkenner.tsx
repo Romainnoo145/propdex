@@ -38,6 +38,9 @@ interface SelectedParcel {
   id: string | null
   address: string
   gemeente?: string | null
+  /** CBS gemeente code (e.g. "GM0983") — drives the gemeente-level beleidsbronnen
+   *  (omgevingsvisie, woonvisie, …) shown in the sources panel. */
+  gemeenteCode?: string | null
   /** PDOK suggestion id — kept for non-saved parcels so we can resolve the
    *  address (postcode/huisnummer) and kick off a report on the map. */
   pdokId?: string | null
@@ -85,6 +88,7 @@ function resolveParcel(
     id: match?.parcel_id ?? null,
     address,
     gemeente: match?.gemeente_naam ?? null,
+    gemeenteCode: match?.gemeente_code ?? null,
     pdokId: suggestion.id,
   }
 }
@@ -235,6 +239,7 @@ function ParcelGate({ onSelect }: { onSelect: (p: SelectedParcel) => void }) {
                     id: f.parcel_id,
                     address: f.address!,
                     gemeente: f.gemeente_naam,
+                    gemeenteCode: f.gemeente_code,
                   })
                 }
                 className="group flex w-full items-center gap-3 rounded-[16px] border border-slate-200/80 bg-white/70 px-3.5 py-3 text-left transition-colors hover:border-aura-amber/40 hover:bg-white"
@@ -407,6 +412,7 @@ function Workspace({
       {/* Sources panel */}
       <ParcelSourcesPanel
         parcelId={parcel.id}
+        gemeenteCode={parcel.gemeenteCode ?? null}
         onCreateReport={parcel.id ? undefined : createReport}
         creatingReport={creatingReport}
       />

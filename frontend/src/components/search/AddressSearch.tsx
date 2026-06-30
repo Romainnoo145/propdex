@@ -123,7 +123,7 @@ export function AddressSearch({ onSelect, className = '', fullWidth = false }: A
 
       {/* Dropdown — positioned below the entire Command Center */}
       {isDropdownVisible && (
-        <ul className={`absolute top-full left-0 z-[var(--z-dropdown)] mt-3 ${fullWidth ? 'w-full' : 'w-[320px]'} max-h-[280px] overflow-y-auto rounded-2xl border border-white/40 bg-white/70 backdrop-blur-2xl shadow-lg`}>
+        <ul className={`absolute top-full left-0 z-[var(--z-dropdown)] mt-3 ${fullWidth ? 'w-full' : 'w-[320px]'} max-h-[220px] overflow-y-auto rounded-2xl border border-white/40 bg-white/70 backdrop-blur-2xl shadow-lg`}>
           {suggestions.length > 0 ? (
             suggestions.map((suggestion, index) => (
               <li

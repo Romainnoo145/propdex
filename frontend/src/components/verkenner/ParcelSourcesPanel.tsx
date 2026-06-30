@@ -14,14 +14,28 @@
  */
 
 import { useCallback } from 'react'
-import { FileText, FolderOpen, Loader2, FilePlus2 } from 'lucide-react'
+import { useNavigate } from '@tanstack/react-router'
+import { FileText, FolderOpen, Loader2, FilePlus2, ScrollText, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { useParcelDocuments } from '@/hooks/useDocuments'
+import { usePolicySummaries } from '@/hooks/usePolicySummaries'
 import { useAuth } from '@/lib/auth/useAuth'
 import { getDocumentDownloadUrl } from '@/lib/api'
 import { DOC_TYPE_TO_SLOT } from '@/lib/documents/typeRegistry'
 import { GHOST_ICONS } from '@/lib/cockpit/dossier-pages'
 import type { ParcelDocumentMeta } from '@/lib/types/document'
+
+/** Gemeente-level beleidsbronnen (policy docs) shown above the parcel documents. */
+const BELEID_LABEL: Record<string, string> = {
+  omgevingsvisie: 'Omgevingsvisie',
+  woonvisie: 'Woonvisie',
+  parkeerbeleid: 'Parkeerbeleid',
+  huisvestingsverordening: 'Huisvestingsverordening',
+  welstandsnota: 'Welstandsnota',
+  duurzaamheidsbeleid: 'Duurzaamheidsbeleid',
+  erfgoedverordening: 'Erfgoedverordening',
+}
+const BELEID_ORDER = Object.keys(BELEID_LABEL)
 
 /** Friendly Dutch labels per dossier slot. */
 const SLOT_LABEL: Record<string, string> = {
@@ -108,18 +122,39 @@ function SourceCard({
 
 export function ParcelSourcesPanel({
   parcelId,
+  gemeenteCode,
   onCreateReport,
   creatingReport = false,
 }: {
   parcelId: string | null
+  /** CBS gemeente code (e.g. "GM0983") for gemeente-level beleidsbronnen. */
+  gemeenteCode?: string | null
   /** Provided only for non-saved parcels — turns the empty state into an action. */
   onCreateReport?: () => void
   creatingReport?: boolean
 }) {
   const { accessToken } = useAuth()
+  const navigate = useNavigate()
   const { data, isLoading } = useParcelDocuments(parcelId ?? undefined)
   const groups = data ? groupBySlot(data.documents) : []
-  const total = data?.total ?? 0
+  const docTotal = data?.total ?? 0
+
+  // Gemeente-level beleid (omgevingsvisie, woonvisie, …) that also applies to
+  // this parcel — the same context surfaced in the parcel detail card.
+  const gmCode = gemeenteCode
+    ? gemeenteCode.startsWith('GM')
+      ? gemeenteCode
+      : `GM${gemeenteCode}`
+    : undefined
+  const { data: policy } = usePolicySummaries(gmCode)
+  const beleid = policy?.summaries
+    ? BELEID_ORDER.filter((k) => policy.summaries[k]?.length).map((k) => ({
+        key: k,
+        label: BELEID_LABEL[k]!,
+        snippet: policy.summaries[k]![0]?.samenvatting ?? null,
+      }))
+    : []
+  const total = docTotal + beleid.length
 
   // Open a document by fetching its blob with auth (mirrors BronnenLayer).
   const openDoc = useCallback(
@@ -155,7 +190,7 @@ export function ParcelSourcesPanel({
         <h3 className="text-[14px] font-bold text-aura-ink">Bronnen voor dit perceel</h3>
         <p className="mt-0.5 text-[12px] text-slate-400">
           {total > 0
-            ? `${total} ${total === 1 ? 'document' : 'documenten'} · context voor de Verkenner`
+            ? `${total} ${total === 1 ? 'bron' : 'bronnen'} · context voor de Verkenner`
             : 'Documenten die bij dit perceel horen'}
         </p>
       </div>
@@ -167,23 +202,94 @@ export function ParcelSourcesPanel({
           <CreateReportPrompt onCreateReport={onCreateReport} loading={creatingReport} />
         )}
 
+        {/* Gemeente beleid — applies to this parcel via its gemeente. */}
+        {beleid.length > 0 && (
+          <>
+            <p className="px-1 pb-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+              Beleid · gemeente
+            </p>
+            {beleid.map((b) => (
+              <BeleidCard
+                key={b.key}
+                label={b.label}
+                snippet={b.snippet}
+                onOpen={() =>
+                  navigate({
+                    to: '/beleid',
+                    search: {
+                      gemeente: gmCode,
+                      provincie: undefined,
+                      source: undefined,
+                      category: undefined,
+                      niveau: undefined,
+                    },
+                  })
+                }
+              />
+            ))}
+          </>
+        )}
+
         {parcelId && isLoading && (
           <div className="flex justify-center py-10">
             <Loader2 size={20} className="animate-spin text-slate-400" />
           </div>
         )}
-        {parcelId && !isLoading && groups.length === 0 && (
+        {parcelId && !isLoading && groups.length === 0 && beleid.length === 0 && (
           <Empty
             icon={<FolderOpen size={22} className="text-slate-300" />}
             title="Nog geen documenten"
             sub="Vraag de Verkenner — die haalt de publieke bronnen erbij."
           />
         )}
-        {groups.map((group) => (
-          <SourceCard key={group.slot} group={group} onOpen={openDoc} />
-        ))}
+        {groups.length > 0 && (
+          <>
+            {beleid.length > 0 && (
+              <p className="px-1 pb-0.5 pt-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                Perceeldocumenten
+              </p>
+            )}
+            {groups.map((group) => (
+              <SourceCard key={group.slot} group={group} onOpen={openDoc} />
+            ))}
+          </>
+        )}
       </div>
     </div>
+  )
+}
+
+function BeleidCard({
+  label,
+  snippet,
+  onOpen,
+}: {
+  label: string
+  snippet: string | null
+  onOpen: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group w-full rounded-[16px] border border-violet-200/70 bg-violet-50/40 p-3.5 text-left transition-colors hover:border-violet-300 hover:bg-violet-50"
+    >
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-violet-100 text-violet-500">
+          <ScrollText size={16} strokeWidth={1.8} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[13px] font-bold text-aura-ink">{label}</p>
+          <p className="text-[11px] text-slate-400">Gemeentelijk beleid</p>
+        </div>
+        <ChevronRight size={15} className="shrink-0 text-slate-300 group-hover:text-violet-400" />
+      </div>
+      {snippet && (
+        <p className="mt-2.5 line-clamp-3 border-t border-violet-100 pt-2.5 text-[12px] leading-snug text-slate-500">
+          {snippet}
+        </p>
+      )}
+    </button>
   )
 }
 
