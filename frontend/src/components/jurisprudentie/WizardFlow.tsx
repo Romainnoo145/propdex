@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react'
+import { motion } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Check, Search } from 'lucide-react'
+import { staggerContainer, fadeUp } from '@/lib/animations'
 import type { ExplorerFilters, FacetItem } from '@/hooks/useExplorer'
 import { SearchInput } from '@/components/primitives'
 import StepTransition from '@/components/motion/StepTransition'
@@ -167,26 +169,37 @@ export default function WizardFlow({
             title="Op welk niveau zoek je?"
             subtitle="Kies het schaalniveau voor je zoekopdracht"
           >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <WizardCard
-                label="Landelijk"
-                desc="Zoek door alle uitspraken in heel Nederland"
-                selected={schaal === 'landelijk'}
-                onClick={() => handleSchaal('landelijk')}
-              />
-              <WizardCard
-                label="Provinciaal"
-                desc="Zoek binnen een specifieke rechtbankregio"
-                selected={schaal === 'provinciaal'}
-                onClick={() => handleSchaal('provinciaal')}
-              />
-              <WizardCard
-                label="Gemeentelijk"
-                desc="Zoek uitspraken voor een specifieke gemeente"
-                selected={schaal === 'gemeentelijk'}
-                onClick={() => handleSchaal('gemeentelijk')}
-              />
-            </div>
+            <motion.div
+              variants={staggerContainer}
+              initial="hidden"
+              animate="show"
+              className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+            >
+              <motion.div variants={fadeUp}>
+                <WizardCard
+                  label="Landelijk"
+                  desc="Zoek door alle uitspraken in heel Nederland"
+                  selected={schaal === 'landelijk'}
+                  onClick={() => handleSchaal('landelijk')}
+                />
+              </motion.div>
+              <motion.div variants={fadeUp}>
+                <WizardCard
+                  label="Provinciaal"
+                  desc="Zoek binnen een specifieke rechtbankregio"
+                  selected={schaal === 'provinciaal'}
+                  onClick={() => handleSchaal('provinciaal')}
+                />
+              </motion.div>
+              <motion.div variants={fadeUp}>
+                <WizardCard
+                  label="Gemeentelijk"
+                  desc="Zoek uitspraken voor een specifieke gemeente"
+                  selected={schaal === 'gemeentelijk'}
+                  onClick={() => handleSchaal('gemeentelijk')}
+                />
+              </motion.div>
+            </motion.div>
           </StepPage>
         )}
 
@@ -394,16 +407,18 @@ function StepPage({
 }) {
   return (
     <div className="w-full max-w-3xl text-center">
-      <div className="flex items-center justify-center gap-2 mb-3">
-        <div className="size-1.5 rounded-full bg-aura-amber" />
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400">
-          Jurisprudentie
-        </p>
-      </div>
-      <h1 className="text-[28px] font-black tracking-tight text-aura-obsidian sm:text-[36px]">
-        {title}
-      </h1>
-      <p className="mt-2 text-[13px] text-slate-500">{subtitle}</p>
+      <motion.div variants={fadeUp} initial="hidden" animate="show">
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <div className="size-1.5 rounded-full bg-aura-amber" />
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400">
+            Jurisprudentie
+          </p>
+        </div>
+        <h1 className="text-[28px] font-black tracking-tight text-aura-obsidian sm:text-[36px]">
+          {title}
+        </h1>
+        <p className="mt-2 text-[13px] text-slate-500">{subtitle}</p>
+      </motion.div>
       <div className="mt-8">{children}</div>
     </div>
   )
