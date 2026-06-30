@@ -42,7 +42,7 @@ export default function LifecycleSideRailNav({ activePhaseKey, parcelId }: Props
             className="h-16 w-16 transition-opacity duration-200 group-hover:opacity-0"
           />
           <span className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-aura-obsidian shadow-[0_0_20px_rgba(14,17,17,0.3)]">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-aura-obsidian">
               <ArrowLeft size={22} strokeWidth={2} className="text-aura-amber" />
             </span>
           </span>

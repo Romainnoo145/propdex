@@ -10,16 +10,19 @@
  * accent, Obsidian commitment, Plus Jakarta Sans.
  */
 
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
-import { ArrowUp, Compass, MapPin, X, Bookmark, Search } from 'lucide-react'
+import { toast } from 'sonner'
+import { ArrowUp, Compass, MapPin, X, Bookmark } from 'lucide-react'
 import { useChat, type ChatMessage } from '@/hooks/useChat'
 import { useParcelFavorites } from '@/hooks/useFavorites'
 import { AddressSearch } from '@/components/search/AddressSearch'
 import { ChatLoading } from '@/components/chat/ChatLoading'
 import { ChatAgentMessage } from '@/components/chat/ChatAgentMessage'
 import { ParcelSourcesPanel } from '@/components/verkenner/ParcelSourcesPanel'
+import { lookupPdokAddress } from '@/lib/api'
+import { toMapAddressSearch } from '@/lib/navigation/mapSearch'
 import type { SuggestResult } from '@/lib/types/property'
 import type { FavoriteResponse } from '@/lib/types/portfolio'
 
@@ -35,6 +38,9 @@ interface SelectedParcel {
   id: string | null
   address: string
   gemeente?: string | null
+  /** PDOK suggestion id — kept for non-saved parcels so we can resolve the
+   *  address (postcode/huisnummer) and kick off a report on the map. */
+  pdokId?: string | null
 }
 
 /* ─── Animations ────────────────────────────────────────────── */
@@ -79,6 +85,7 @@ function resolveParcel(
     id: match?.parcel_id ?? null,
     address,
     gemeente: match?.gemeente_naam ?? null,
+    pdokId: suggestion.id,
   }
 }
 
@@ -125,7 +132,6 @@ function Composer({
   disabled,
   placeholder,
   inputRef,
-  onPickAddress,
 }: {
   value: string
   onChange: (v: string) => void
@@ -133,10 +139,7 @@ function Composer({
   disabled: boolean
   placeholder: string
   inputRef: React.RefObject<HTMLTextAreaElement | null>
-  onPickAddress: (s: SuggestResult) => void
 }) {
-  const [showAddr, setShowAddr] = useState(false)
-
   // Auto-grow the textarea up to a max height (Omnigent/Claude-style composer).
   useEffect(() => {
     const ta = inputRef.current
@@ -146,63 +149,29 @@ function Composer({
   }, [value, inputRef])
 
   return (
-    <div className="relative">
-      {/* Address popover — verken een ander perceel zonder terug te gaan */}
-      {showAddr && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setShowAddr(false)} />
-          <div className="absolute bottom-full left-0 z-20 mb-2 w-[360px] rounded-[20px] border border-neutral-200 bg-white p-3 shadow-[0_8px_30px_rgba(14,17,17,0.12)]">
-            <p className="mb-2 px-1 text-[12px] font-semibold text-slate-500">
-              Verken een ander adres
-            </p>
-            <div className="flex items-center rounded-[14px] border border-neutral-200 bg-white px-3.5 py-2.5">
-              <AddressSearch
-                fullWidth
-                className="flex-1"
-                onSelect={(s) => {
-                  setShowAddr(false)
-                  onPickAddress(s)
-                }}
-              />
-            </div>
-          </div>
-        </>
-      )}
-
-      <div className="rounded-[24px] border border-neutral-200 bg-white shadow-[0_2px_14px_rgba(14,17,17,0.05)] transition-colors focus-within:border-aura-amber/60">
-        <textarea
-          ref={inputRef}
-          rows={1}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              onSubmit()
-            }
-          }}
-          placeholder={placeholder}
-          className="block max-h-[168px] w-full resize-none bg-transparent px-5 pt-4 pb-1.5 text-[14px] leading-relaxed text-aura-obsidian placeholder:text-slate-400 outline-none"
-        />
-        <div className="flex items-center justify-between px-3.5 pb-3 pt-1">
-          <button
-            onClick={() => setShowAddr((v) => !v)}
-            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
-              showAddr
-                ? 'border-aura-amber/50 bg-aura-amber/[0.08] text-aura-amber-hover'
-                : 'border-neutral-200 text-slate-500 hover:border-aura-amber/50 hover:text-aura-ink'
-            }`}
-          >
-            <Search size={13} /> Ander adres
-          </button>
-          <button
-            onClick={onSubmit}
-            disabled={!value.trim() || disabled}
-            className="flex h-9 w-9 items-center justify-center rounded-[13px] bg-aura-obsidian text-aura-amber transition-colors hover:bg-aura-obsidian/90 disabled:opacity-30"
-          >
-            <ArrowUp size={17} strokeWidth={2.5} />
-          </button>
-        </div>
+    <div className="rounded-[24px] border border-neutral-200 bg-white shadow-[0_2px_14px_rgba(14,17,17,0.05)] transition-colors focus-within:border-aura-amber/60">
+      <textarea
+        ref={inputRef}
+        rows={1}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault()
+            onSubmit()
+          }
+        }}
+        placeholder={placeholder}
+        className="block max-h-[168px] w-full resize-none bg-transparent px-5 pt-4 pb-1.5 text-[14px] leading-relaxed text-aura-obsidian placeholder:text-slate-400 outline-none"
+      />
+      <div className="flex items-center justify-end px-3.5 pb-3 pt-1">
+        <button
+          onClick={onSubmit}
+          disabled={!value.trim() || disabled}
+          className="flex h-9 w-9 items-center justify-center rounded-[13px] bg-aura-obsidian text-aura-amber transition-colors hover:bg-aura-obsidian/90 disabled:opacity-30"
+        >
+          <ArrowUp size={17} strokeWidth={2.5} />
+        </button>
       </div>
     </div>
   )
@@ -292,15 +261,14 @@ function ParcelGate({ onSelect }: { onSelect: (p: SelectedParcel) => void }) {
 function Workspace({
   parcel,
   onReset,
-  onSwitchParcel,
 }: {
   parcel: SelectedParcel
   onReset: () => void
-  onSwitchParcel: (p: SelectedParcel) => void
 }) {
   const [input, setInput] = useState('')
   const chat = useChat()
-  const favorites = useParcelFavorites()
+  const navigate = useNavigate()
+  const [creatingReport, setCreatingReport] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -327,6 +295,29 @@ function Workspace({
     [chat, contextPrefix],
   )
 
+  // Non-saved parcel → resolve the PDOK address and hand off to the map, where
+  // the proven lookup → report-generation flow lives.
+  const createReport = useCallback(async () => {
+    if (!parcel.pdokId || creatingReport) return
+    setCreatingReport(true)
+    try {
+      const details = await lookupPdokAddress(parcel.pdokId)
+      const postcode = details.postcode?.replace(/\s/g, '')
+      if (!postcode || !details.huisnummer) {
+        toast.error('Adres kon niet worden omgezet naar een perceel.')
+        return
+      }
+      navigate({
+        to: '/map',
+        search: toMapAddressSearch({ postcode, huisnummer: details.huisnummer }),
+      })
+    } catch {
+      toast.error('Adres opzoeken mislukt. Probeer het opnieuw.')
+    } finally {
+      setCreatingReport(false)
+    }
+  }, [parcel.pdokId, creatingReport, navigate])
+
   const isEmpty = chat.messages.length === 0
 
   return (
@@ -346,9 +337,11 @@ function Workspace({
           </div>
           <button
             onClick={onReset}
-            className="flex items-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-[12px] font-semibold text-slate-500 transition-colors hover:border-aura-obsidian hover:text-aura-obsidian"
+            aria-label="Ander perceel"
+            title="Ander perceel"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-200 text-slate-400 transition-colors hover:border-aura-obsidian hover:text-aura-obsidian"
           >
-            <X size={13} /> Ander perceel
+            <X size={15} />
           </button>
         </div>
 
@@ -406,14 +399,17 @@ function Workspace({
               disabled={chat.isPending}
               placeholder={`Vraag iets over ${parcel.address}…`}
               inputRef={inputRef}
-              onPickAddress={(s) => onSwitchParcel(resolveParcel(s, favorites.data ?? []))}
             />
           </div>
         </div>
       </div>
 
       {/* Sources panel */}
-      <ParcelSourcesPanel parcelId={parcel.id} />
+      <ParcelSourcesPanel
+        parcelId={parcel.id}
+        onCreateReport={parcel.id ? undefined : createReport}
+        creatingReport={creatingReport}
+      />
     </div>
   )
 }
@@ -432,7 +428,6 @@ function VerkennerPage() {
             key={parcel.id ?? parcel.address}
             parcel={parcel}
             onReset={() => setParcel(null)}
-            onSwitchParcel={setParcel}
           />
         ) : (
           <ParcelGate onSelect={setParcel} />

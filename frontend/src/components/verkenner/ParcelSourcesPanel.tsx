@@ -3,15 +3,22 @@
  *
  * Lists the documents that exist for the selected parcel, grouped by dossier
  * slot (bestemmingsplan, bodem, vergunningen, WOZ, …). These are the sources
- * the Verkenner chat reasons over — picking a parcel first, then asking
- * anything, with the relevant docs visible alongside the conversation.
+ * the Verkenner chat reasons over. Each source group is clickable: it opens the
+ * first underlying document (blob fetch with auth, same as BronnenLayer).
  *
- * Pure presentation: data comes from useParcelDocuments(parcelCacheId).
+ * When the selected address is NOT a saved parcel (parcelId === null), the panel
+ * shows a single primary action — "Maak rapport" — instead of an empty state,
+ * so the user can turn the address into a real parcel/report.
+ *
  * Design tokens per DESIGN.md (glass surface, Morning Mist canvas, amber accent).
  */
 
-import { FileText, FolderOpen, Loader2 } from 'lucide-react'
+import { useCallback } from 'react'
+import { FileText, FolderOpen, Loader2, FilePlus2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { useParcelDocuments } from '@/hooks/useDocuments'
+import { useAuth } from '@/lib/auth/useAuth'
+import { getDocumentDownloadUrl } from '@/lib/api'
 import { DOC_TYPE_TO_SLOT } from '@/lib/documents/typeRegistry'
 import { GHOST_ICONS } from '@/lib/cockpit/dossier-pages'
 import type { ParcelDocumentMeta } from '@/lib/types/document'
@@ -63,12 +70,22 @@ function groupBySlot(docs: ParcelDocumentMeta[]): SourceGroup[] {
     .sort((a, b) => a.label.localeCompare(b.label, 'nl'))
 }
 
-function SourceCard({ group }: { group: SourceGroup }) {
+function SourceCard({
+  group,
+  onOpen,
+}: {
+  group: SourceGroup
+  onOpen: (doc: ParcelDocumentMeta) => void
+}) {
   const Icon = GHOST_ICONS[group.slot] ?? FileText
   const summary = group.docs.find((d) => d.ai_summary)?.ai_summary ?? null
 
   return (
-    <div className="rounded-[16px] border border-slate-200/80 bg-white/70 p-3.5 shadow-[0_1px_2px_rgba(14,17,17,0.03),0_4px_12px_rgba(14,17,17,0.03)]">
+    <button
+      type="button"
+      onClick={() => onOpen(group.docs[0]!)}
+      className="group w-full rounded-[16px] border border-slate-200/80 bg-white/70 p-3.5 text-left shadow-[0_1px_2px_rgba(14,17,17,0.03),0_4px_12px_rgba(14,17,17,0.03)] transition-colors hover:border-aura-amber/40 hover:bg-white"
+    >
       <div className="flex items-center gap-2.5">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-aura-amber/12 text-aura-amber-hover">
           <Icon size={16} strokeWidth={1.8} />
@@ -85,14 +102,51 @@ function SourceCard({ group }: { group: SourceGroup }) {
           {summary}
         </p>
       )}
-    </div>
+    </button>
   )
 }
 
-export function ParcelSourcesPanel({ parcelId }: { parcelId: string | null }) {
+export function ParcelSourcesPanel({
+  parcelId,
+  onCreateReport,
+  creatingReport = false,
+}: {
+  parcelId: string | null
+  /** Provided only for non-saved parcels — turns the empty state into an action. */
+  onCreateReport?: () => void
+  creatingReport?: boolean
+}) {
+  const { accessToken } = useAuth()
   const { data, isLoading } = useParcelDocuments(parcelId ?? undefined)
   const groups = data ? groupBySlot(data.documents) : []
   const total = data?.total ?? 0
+
+  // Open a document by fetching its blob with auth (mirrors BronnenLayer).
+  const openDoc = useCallback(
+    async (doc: ParcelDocumentMeta) => {
+      if (!parcelId) return
+      try {
+        const headers: HeadersInit = {}
+        if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
+        const response = await fetch(getDocumentDownloadUrl(parcelId, doc.id), {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        })
+        if (!response.ok) {
+          toast.error('Document kon niet worden geopend.')
+          return
+        }
+        const blobUrl = URL.createObjectURL(await response.blob())
+        window.open(blobUrl, '_blank', 'noopener,noreferrer')
+        // Revoke after the new tab has had time to load.
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
+      } catch {
+        toast.error('Document openen mislukt.')
+      }
+    },
+    [parcelId, accessToken],
+  )
 
   return (
     <div className="flex h-full w-[340px] shrink-0 flex-col overflow-hidden rounded-[40px] border border-white/60 bg-white/60 backdrop-blur-[24px]">
@@ -108,13 +162,11 @@ export function ParcelSourcesPanel({ parcelId }: { parcelId: string | null }) {
 
       {/* Body */}
       <div className="flex-1 space-y-2.5 overflow-y-auto px-4 py-4">
-        {!parcelId && (
-          <Empty
-            icon={<FolderOpen size={22} className="text-slate-300" />}
-            title="Geen perceelkoppeling"
-            sub="Dit adres is nog niet als perceel opgeslagen."
-          />
+        {/* Non-saved parcel → primary action instead of an empty message. */}
+        {!parcelId && onCreateReport && (
+          <CreateReportPrompt onCreateReport={onCreateReport} loading={creatingReport} />
         )}
+
         {parcelId && isLoading && (
           <div className="flex justify-center py-10">
             <Loader2 size={20} className="animate-spin text-slate-400" />
@@ -128,9 +180,43 @@ export function ParcelSourcesPanel({ parcelId }: { parcelId: string | null }) {
           />
         )}
         {groups.map((group) => (
-          <SourceCard key={group.slot} group={group} />
+          <SourceCard key={group.slot} group={group} onOpen={openDoc} />
         ))}
       </div>
+    </div>
+  )
+}
+
+function CreateReportPrompt({
+  onCreateReport,
+  loading,
+}: {
+  onCreateReport: () => void
+  loading: boolean
+}) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center px-5 text-center">
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-aura-amber/12">
+        <FilePlus2 size={22} className="text-aura-amber-hover" strokeWidth={1.8} />
+      </div>
+      <p className="text-[14px] font-bold text-aura-ink">Nog geen dossier</p>
+      <p className="mt-1 max-w-[230px] text-[12px] leading-snug text-slate-400">
+        Dit adres staat nog niet in je portfolio. Maak een rapport om de bronnen
+        op te halen.
+      </p>
+      <button
+        type="button"
+        onClick={onCreateReport}
+        disabled={loading}
+        className="mt-5 inline-flex items-center gap-2 rounded-full bg-aura-obsidian px-5 py-2.5 text-[13px] font-semibold text-aura-amber transition-colors hover:bg-aura-obsidian/90 disabled:opacity-50"
+      >
+        {loading ? (
+          <Loader2 size={15} className="animate-spin" />
+        ) : (
+          <FilePlus2 size={15} strokeWidth={2} />
+        )}
+        {loading ? 'Bezig…' : 'Maak rapport'}
+      </button>
     </div>
   )
 }
