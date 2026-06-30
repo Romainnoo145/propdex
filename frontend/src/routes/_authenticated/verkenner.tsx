@@ -108,13 +108,21 @@ function Composer({
   onSubmit: () => void
   disabled: boolean
   placeholder: string
-  inputRef: React.RefObject<HTMLInputElement | null>
+  inputRef: React.RefObject<HTMLTextAreaElement | null>
 }) {
+  // Auto-grow the textarea up to a max height (Omnigent/Claude-style composer).
+  useEffect(() => {
+    const ta = inputRef.current
+    if (!ta) return
+    ta.style.height = 'auto'
+    ta.style.height = `${Math.min(ta.scrollHeight, 168)}px`
+  }, [value, inputRef])
+
   return (
-    <div className="relative">
-      <input
-        type="text"
+    <div className="rounded-[24px] border border-neutral-200 bg-white shadow-[0_2px_14px_rgba(14,17,17,0.05)] transition-colors focus-within:border-aura-amber/60">
+      <textarea
         ref={inputRef}
+        rows={1}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
@@ -124,15 +132,20 @@ function Composer({
           }
         }}
         placeholder={placeholder}
-        className="h-12 w-full rounded-full border border-neutral-200 bg-white pl-5 pr-14 text-[14px] text-aura-obsidian placeholder:text-slate-400 transition-colors focus:border-aura-amber focus:outline-none"
+        className="block max-h-[168px] w-full resize-none bg-transparent px-5 pt-4 pb-1.5 text-[14px] leading-relaxed text-aura-obsidian placeholder:text-slate-400 outline-none"
       />
-      <button
-        onClick={onSubmit}
-        disabled={!value.trim() || disabled}
-        className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-aura-amber text-aura-obsidian transition-colors hover:bg-aura-amber-hover disabled:opacity-30"
-      >
-        <ArrowUp size={16} strokeWidth={2.5} />
-      </button>
+      <div className="flex items-center justify-between px-3.5 pb-3 pt-1">
+        <span className="select-none text-[11px] text-slate-400">
+          Enter om te versturen · Shift+Enter voor nieuwe regel
+        </span>
+        <button
+          onClick={onSubmit}
+          disabled={!value.trim() || disabled}
+          className="flex h-9 w-9 items-center justify-center rounded-[13px] bg-aura-obsidian text-aura-amber transition-colors hover:bg-aura-obsidian/90 disabled:opacity-30"
+        >
+          <ArrowUp size={17} strokeWidth={2.5} />
+        </button>
+      </div>
     </div>
   )
 }
@@ -156,37 +169,47 @@ function ParcelGate({ onSelect }: { onSelect: (p: SelectedParcel) => void }) {
     })
   }
 
+  const hasSaved = saved.length > 0
+
   return (
-    <motion.div
-      variants={fadeIn}
-      initial="hidden"
-      animate="show"
-      className="mx-auto flex h-full w-full max-w-2xl flex-col items-center justify-center px-4 text-center"
-    >
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-aura-amber/15">
-        <Compass size={24} className="text-aura-amber-hover" />
-      </div>
-      <h1 className="mt-4 text-[32px] font-black tracking-tight text-aura-ink sm:text-[42px]">
-        Verkenner
-      </h1>
-      <p className="mt-2 max-w-md text-[13px] text-slate-500">
-        Kies een perceel om te verkennen. Daarna kun je alles vragen — met de
-        bijbehorende documenten als bron ernaast.
-      </p>
+    <div className="flex h-full gap-4">
+      {/* Left — hero + search */}
+      <motion.div
+        variants={fadeIn}
+        initial="hidden"
+        animate="show"
+        className="flex min-w-0 flex-1 flex-col items-center justify-center px-4 text-center"
+      >
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-aura-amber/15">
+          <Compass size={24} className="text-aura-amber-hover" />
+        </div>
+        <h1 className="mt-4 text-[32px] font-black tracking-tight text-aura-ink sm:text-[42px]">
+          Verkenner
+        </h1>
+        <p className="mt-2 max-w-md text-[13px] text-slate-500">
+          Kies een perceel om te verkennen. Daarna vraag je alles, met de
+          bijbehorende documenten als bron ernaast.
+        </p>
 
-      {/* Address search */}
-      <div className="mt-7 w-full max-w-xl">
-        <AddressSearch onSelect={handleAddress} />
-      </div>
-
-      {/* Saved parcels */}
-      {saved.length > 0 && (
-        <div className="mt-8 w-full max-w-xl text-left">
-          <div className="mb-2.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
-            <Bookmark size={13} /> Mijn opgeslagen percelen
+        {/* Visible search field (glass container around the shared AddressSearch) */}
+        <div className="mt-7 w-full max-w-xl">
+          <div className="flex items-center rounded-[20px] border border-neutral-200 bg-white px-5 py-3 shadow-[0_2px_14px_rgba(14,17,17,0.05)] transition-colors focus-within:border-aura-amber/60">
+            <AddressSearch onSelect={handleAddress} fullWidth className="flex-1" />
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {saved.slice(0, 6).map((f) => (
+        </div>
+      </motion.div>
+
+      {/* Right — saved parcels rail (mirrors the workspace sources panel) */}
+      {hasSaved && (
+        <div className="flex h-full w-[340px] shrink-0 flex-col overflow-hidden rounded-[40px] border border-white/60 bg-white/60 backdrop-blur-[24px]">
+          <div className="shrink-0 border-b border-slate-200/70 px-5 pb-4 pt-6">
+            <h3 className="flex items-center gap-2 text-[14px] font-bold text-aura-ink">
+              <Bookmark size={15} className="text-aura-amber-hover" /> Opgeslagen percelen
+            </h3>
+            <p className="mt-0.5 text-[12px] text-slate-400">Snel verder waar je was</p>
+          </div>
+          <div className="flex-1 space-y-2 overflow-y-auto px-4 py-4">
+            {saved.map((f) => (
               <button
                 key={f.id}
                 onClick={() =>
@@ -196,9 +219,9 @@ function ParcelGate({ onSelect }: { onSelect: (p: SelectedParcel) => void }) {
                     gemeente: f.gemeente_naam,
                   })
                 }
-                className="group flex items-center gap-3 rounded-[16px] border border-white/60 bg-white/60 px-4 py-3 text-left backdrop-blur-[24px] transition-colors hover:border-aura-amber/40"
+                className="group flex w-full items-center gap-3 rounded-[16px] border border-slate-200/80 bg-white/70 px-3.5 py-3 text-left transition-colors hover:border-aura-amber/40 hover:bg-white"
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-aura-amber/12 text-aura-amber-hover">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-aura-amber/12 text-aura-amber-hover">
                   <MapPin size={16} strokeWidth={1.8} />
                 </span>
                 <div className="min-w-0">
@@ -213,7 +236,7 @@ function ParcelGate({ onSelect }: { onSelect: (p: SelectedParcel) => void }) {
           </div>
         </div>
       )}
-    </motion.div>
+    </div>
   )
 }
 
@@ -229,7 +252,7 @@ function Workspace({
   const [input, setInput] = useState('')
   const chat = useChat()
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement | null>(null)
+  const inputRef = useRef<HTMLTextAreaElement | null>(null)
 
   const contextPrefix = `Context: deze vraag gaat over het perceel ${parcel.address}${
     parcel.gemeente ? ` (gemeente ${parcel.gemeente})` : ''

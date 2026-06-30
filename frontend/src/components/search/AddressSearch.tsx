@@ -5,9 +5,12 @@ import type { SuggestResult } from '@/lib/types/property';
 interface AddressSearchProps {
   onSelect: (suggestion: SuggestResult) => void;
   className?: string;
+  /** Fill the available width (Verkenner gate field) instead of the fixed
+   *  270px used inside the map command-bar. */
+  fullWidth?: boolean;
 }
 
-export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) {
+export function AddressSearch({ onSelect, className = '', fullWidth = false }: AddressSearchProps) {
   const [query, setQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -102,7 +105,7 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
           name="address-search"
           data-lpignore="true"
           data-1p-ignore="true"
-          className="w-[270px] bg-transparent text-sm text-aura-ink placeholder:text-slate-400 outline-none"
+          className={`${fullWidth ? 'w-full' : 'w-[270px]'} bg-transparent text-sm text-aura-ink placeholder:text-slate-400 outline-none`}
         />
         {isLoading && query.length >= 3 && <Spinner />}
         {query && (
@@ -120,7 +123,7 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
 
       {/* Dropdown — positioned below the entire Command Center */}
       {isDropdownVisible && (
-        <ul className="absolute top-full left-0 z-[var(--z-dropdown)] mt-3 w-[320px] overflow-hidden rounded-2xl border border-white/40 bg-white/70 backdrop-blur-2xl shadow-lg">
+        <ul className={`absolute top-full left-0 z-[var(--z-dropdown)] mt-3 ${fullWidth ? 'w-full' : 'w-[320px]'} overflow-hidden rounded-2xl border border-white/40 bg-white/70 backdrop-blur-2xl shadow-lg`}>
           {suggestions.length > 0 ? (
             suggestions.map((suggestion, index) => (
               <li
