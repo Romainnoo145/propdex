@@ -11,8 +11,10 @@
  */
 import { useNavigate } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
+import { Heart } from 'lucide-react'
 import { fadeUp } from '@/lib/animations'
 import { useAerialCrop } from '@/hooks/useScans'
+import { useRemoveFavorite } from '@/hooks/useFavorites'
 import { Skeleton } from '@/components/feedback/Skeleton'
 import { ScoreBadge } from '@/components/projects/ScoreDetailModal'
 import { PipelineStagePill } from '@/components/projects/PipelineStagePill'
@@ -39,6 +41,7 @@ export function SavedParcelCard({
   const aerialQuery = useAerialCrop(parcel.parcel_cache_id ?? parcel.parcel_id)
   const thumbnailUrl = aerialQuery.data
   const thumbnailLoading = aerialQuery.isLoading
+  const removeFavorite = useRemoveFavorite()
 
   const handleCardClick = () => {
     // Plan 04 mounts /opgeslagen/perceel/$parcelId — until that lands clicks land on 404.
@@ -122,6 +125,16 @@ export function SavedParcelCard({
             onClick={() => onRisicoClick?.()}
           />
         )}
+        <button
+          type="button"
+          onClick={() => removeFavorite.mutate({ parcelId: parcel.parcel_id })}
+          disabled={removeFavorite.isPending}
+          aria-label="Verwijderen uit portfolio"
+          title="Verwijderen uit portfolio"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-aura-amber-hover transition-colors hover:bg-rose-50 hover:text-rose-500 disabled:opacity-50"
+        >
+          <Heart size={16} strokeWidth={2} className="fill-current" />
+        </button>
       </div>
     </motion.div>
   )

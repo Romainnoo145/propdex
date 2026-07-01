@@ -190,6 +190,91 @@ export function useToggleFavorite() {
 }
 
 /**
+ * Save a parcel to favorites straight from an address (Verkenner chat).
+ *
+ * POST /api/parcels/favorites/from-address — the backend resolves the address
+ * against ParcelCache (BRK-free) to a stable parcel_code, then creates the
+ * favorite. Returns the created/existing FavoriteResponse; its parcel_id is the
+ * kadastraal parcel_code the Verkenner sources panel keys on.
+ */
+export function useSaveFavoriteFromAddress() {
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation<
+    FavoriteResponse,
+    Error,
+    { street: string; huisnummer: number; postcode?: string | null; address?: string | null }
+  >({
+    mutationFn: ({ street, huisnummer, postcode, address }) =>
+      apiFetch<FavoriteResponse>(`${FAVORITES_BASE}/from-address`, {
+        method: 'POST',
+        accessToken,
+        body: JSON.stringify({
+          street,
+          huisnummer,
+          postcode: postcode ?? null,
+          address: address ?? null,
+        }),
+      }),
+
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['favorites'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio'] })
+    },
+  })
+}
+
+/**
+ * Remove a parcel from favorites by its parcel_id (kadaster code string).
+ *
+ * DELETE /api/parcels/favorites/{parcel_id}. Optimistically drops the parcel
+ * from the favorites + portfolio caches; rolls back on error. Use this on the
+ * portfolio/opgeslagen view where the full ScanResultItem isn't available (so
+ * useToggleFavorite doesn't fit).
+ */
+export function useRemoveFavorite() {
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation<
+    null,
+    Error,
+    { parcelId: string },
+    { previousFavorites: FavoriteResponse[] | undefined }
+  >({
+    mutationFn: async ({ parcelId }) => {
+      await apiFetch<null>(`${FAVORITES_BASE}/${encodeURIComponent(parcelId)}`, {
+        method: 'DELETE',
+        accessToken,
+      })
+      return null
+    },
+
+    onMutate: async ({ parcelId }) => {
+      await queryClient.cancelQueries({ queryKey: ['favorites'] })
+      const previousFavorites = queryClient.getQueryData<FavoriteResponse[]>(['favorites'])
+      queryClient.setQueryData<FavoriteResponse[]>(['favorites'], (old) =>
+        (old ?? []).filter((f) => f.parcel_id !== parcelId),
+      )
+      return { previousFavorites }
+    },
+
+    onError: (_error, _variables, context) => {
+      if (context?.previousFavorites !== undefined) {
+        queryClient.setQueryData(['favorites'], context.previousFavorites)
+      }
+      toast.error('Kon perceel niet verwijderen')
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['favorites'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio'] })
+    },
+  })
+}
+
+/**
  * Update the pipeline stage for a favorited parcel
  *
  * Performs an optimistic update: the favorites cache is updated immediately

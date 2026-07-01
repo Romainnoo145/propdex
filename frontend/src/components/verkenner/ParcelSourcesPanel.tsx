@@ -7,8 +7,9 @@
  * first underlying document (blob fetch with auth, same as BronnenLayer).
  *
  * When the selected address is NOT a saved parcel (parcelId === null), the panel
- * shows a single primary action — "Maak rapport" — instead of an empty state,
- * so the user can turn the address into a real parcel/report.
+ * shows a primary action — "Opslaan in portfolio" — instead of an empty state,
+ * so the user can turn the address into a real parcel; opening it on the map
+ * stays available as a secondary action.
  *
  * Design tokens per DESIGN.md (glass surface, Morning Mist canvas, amber accent).
  */
@@ -29,6 +30,7 @@ import {
   Palette,
   Leaf,
   Landmark,
+  Bookmark,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useParcelDocuments } from '@/hooks/useDocuments'
@@ -187,19 +189,30 @@ function BeleidRow({
 export function ParcelSourcesPanel({
   parcelId,
   gemeenteCode,
-  onCreateReport,
+  onSaveToPortfolio,
+  savingToPortfolio = false,
+  onOpenMap,
   creatingReport = false,
+  analyzing = false,
 }: {
   parcelId: string | null
   /** CBS gemeente code (e.g. "GM0983") for gemeente-level beleidsbronnen. */
   gemeenteCode?: string | null
-  /** Provided only for non-saved parcels — turns the empty state into an action. */
-  onCreateReport?: () => void
+  /** Provided only for non-saved parcels — primary action: save to portfolio. */
+  onSaveToPortfolio?: () => void
+  savingToPortfolio?: boolean
+  /** Secondary action for non-saved parcels — open the parcel on the map. */
+  onOpenMap?: () => void
   creatingReport?: boolean
+  /** True while the parcel analysis (report + dossier docs) is being generated. */
+  analyzing?: boolean
 }) {
   const { accessToken } = useAuth()
   const navigate = useNavigate()
-  const { data, isLoading } = useParcelDocuments(parcelId ?? undefined)
+  // Poll the documents while the analysis runs so they surface as they're built.
+  const { data, isLoading } = useParcelDocuments(parcelId ?? undefined, {
+    poll: analyzing,
+  })
   const groups = data ? groupBySlot(data.documents) : []
   const docTotal = data?.total ?? 0
 
@@ -304,8 +317,13 @@ export function ParcelSourcesPanel({
       {/* Body */}
       <div className="flex-1 overflow-y-auto px-3 py-3">
         {/* Non-saved parcel → primary action instead of an empty message. */}
-        {!parcelId && onCreateReport && (
-          <CreateReportPrompt onCreateReport={onCreateReport} loading={creatingReport} />
+        {!parcelId && onSaveToPortfolio && (
+          <SaveToPortfolioPrompt
+            onSaveToPortfolio={onSaveToPortfolio}
+            saving={savingToPortfolio}
+            onOpenMap={onOpenMap}
+            openingMap={creatingReport}
+          />
         )}
 
         {/* Gemeente beleid — applies to this parcel via its gemeente. */}
@@ -330,7 +348,22 @@ export function ParcelSourcesPanel({
             <Loader2 size={20} className="animate-spin text-slate-400" />
           </div>
         )}
-        {parcelId && !isLoading && groups.length === 0 && beleid.length === 0 && (
+        {/* Analysis in progress — the report + dossier documents are being built. */}
+        {parcelId && analyzing && (
+          <div
+            className={
+              beleid.length > 0
+                ? 'mt-3 flex items-center gap-2.5 border-t border-slate-200/60 pt-3 px-2.5'
+                : 'flex items-center gap-2.5 px-2.5 py-2'
+            }
+          >
+            <Loader2 size={15} className="animate-spin text-aura-amber-hover" />
+            <p className="text-[12px] text-slate-500">
+              Perceel wordt geanalyseerd — documenten verschijnen zo…
+            </p>
+          </div>
+        )}
+        {parcelId && !isLoading && !analyzing && groups.length === 0 && beleid.length === 0 && (
           <Empty
             icon={<FolderOpen size={22} className="text-slate-300" />}
             title="Nog geen documenten"
@@ -367,37 +400,55 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-function CreateReportPrompt({
-  onCreateReport,
-  loading,
+function SaveToPortfolioPrompt({
+  onSaveToPortfolio,
+  saving,
+  onOpenMap,
+  openingMap,
 }: {
-  onCreateReport: () => void
-  loading: boolean
+  onSaveToPortfolio: () => void
+  saving: boolean
+  onOpenMap?: () => void
+  openingMap: boolean
 }) {
+  const busy = saving || openingMap
   return (
     <div className="flex h-full flex-col items-center justify-center px-5 text-center">
       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-aura-amber/12">
-        <MapPin size={22} className="text-aura-amber-hover" strokeWidth={1.8} />
+        <Bookmark size={22} className="text-aura-amber-hover" strokeWidth={1.8} />
       </div>
       <p className="text-[14px] font-bold text-aura-ink">Nog geen bronnen</p>
       <p className="mt-1 max-w-[240px] text-[12px] leading-snug text-slate-400">
-        Dit adres staat nog niet in je portfolio, dus er zijn nog geen documenten.
-        Open het op de kaart om het perceel te analyseren en op te slaan — daarna
-        verschijnen de bronnen hier.
+        Nog niet in je portfolio. Sla op om de bronnen hier te zien.
       </p>
       <button
         type="button"
-        onClick={onCreateReport}
-        disabled={loading}
+        onClick={onSaveToPortfolio}
+        disabled={busy}
         className="mt-5 inline-flex items-center gap-2 rounded-full bg-aura-obsidian px-5 py-2.5 text-[13px] font-semibold text-aura-amber transition-colors hover:bg-aura-obsidian/90 disabled:opacity-50"
       >
-        {loading ? (
+        {saving ? (
           <Loader2 size={15} className="animate-spin" />
         ) : (
-          <MapPin size={15} strokeWidth={2} />
+          <Bookmark size={15} strokeWidth={2} />
         )}
-        {loading ? 'Bezig…' : 'Bekijk op de kaart'}
+        {saving ? 'Bezig…' : 'Opslaan in portfolio'}
       </button>
+      {onOpenMap && (
+        <button
+          type="button"
+          onClick={onOpenMap}
+          disabled={busy}
+          className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-medium text-slate-400 transition-colors hover:text-aura-obsidian disabled:opacity-50"
+        >
+          {openingMap ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <MapPin size={13} strokeWidth={2} />
+          )}
+          Bekijk op de kaart
+        </button>
+      )}
     </div>
   )
 }

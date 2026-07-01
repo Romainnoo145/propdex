@@ -16,12 +16,14 @@ import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import { toast } from 'sonner'
 import { ArrowUp, Compass, MapPin, X, Bookmark } from 'lucide-react'
 import { useChat, type ChatMessage } from '@/hooks/useChat'
-import { useParcelFavorites } from '@/hooks/useFavorites'
+import { useParcelFavorites, useSaveFavoriteFromAddress } from '@/hooks/useFavorites'
 import { AddressSearch } from '@/components/search/AddressSearch'
 import { ChatLoading } from '@/components/chat/ChatLoading'
 import { ChatAgentMessage } from '@/components/chat/ChatAgentMessage'
 import { ParcelSourcesPanel } from '@/components/verkenner/ParcelSourcesPanel'
-import { lookupPdokAddress } from '@/lib/api'
+import { lookupPdokAddress, generateReportFromParcel } from '@/lib/api'
+import { useAuth } from '@/lib/auth/useAuth'
+import { useQueryClient } from '@tanstack/react-query'
 import { toMapAddressSearch } from '@/lib/navigation/mapSearch'
 import type { SuggestResult } from '@/lib/types/property'
 import type { FavoriteResponse } from '@/lib/types/portfolio'
@@ -266,20 +268,30 @@ function ParcelGate({ onSelect }: { onSelect: (p: SelectedParcel) => void }) {
 function Workspace({
   parcel,
   onReset,
+  onParcelUpdate,
 }: {
   parcel: SelectedParcel
   onReset: () => void
+  onParcelUpdate: (patch: Partial<SelectedParcel>) => void
 }) {
   const [input, setInput] = useState('')
   const chat = useChat()
   const navigate = useNavigate()
+  const saveFavorite = useSaveFavoriteFromAddress()
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
   const [creatingReport, setCreatingReport] = useState(false)
+  const [savingToPortfolio, setSavingToPortfolio] = useState(false)
+  // True from the moment we kick off the parcel analysis until the report call
+  // resolves — drives the loading indicator + document polling in the panel.
+  const [analyzing, setAnalyzing] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
 
-  const contextPrefix = `Context: deze vraag gaat over het perceel ${parcel.address}${
-    parcel.gemeente ? ` (gemeente ${parcel.gemeente})` : ''
-  }. Beantwoord specifiek voor dit perceel.`
+  const gemeenteContext = parcel.gemeente
+    ? ` (gemeente ${parcel.gemeente}${parcel.gemeenteCode ? `, code ${parcel.gemeenteCode}` : ''})`
+    : ''
+  const contextPrefix = `Context: deze vraag gaat over het perceel ${parcel.address}${gemeenteContext}. Beantwoord specifiek voor dit perceel.`
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -300,8 +312,60 @@ function Workspace({
     [chat, contextPrefix],
   )
 
-  // Non-saved parcel → resolve the PDOK address and hand off to the map, where
-  // the proven lookup → report-generation flow lives.
+  // Non-saved parcel → resolve the PDOK address to a stable parcel_code and save
+  // it to the portfolio in one step. On success the parcel becomes "saved"
+  // (id set to the new parcel_code), so the sources panel loads immediately
+  // without leaving the chat.
+  const saveToPortfolio = useCallback(async () => {
+    if (!parcel.pdokId || savingToPortfolio) return
+    setSavingToPortfolio(true)
+    try {
+      const details = await lookupPdokAddress(parcel.pdokId)
+      const postcode = details.postcode?.replace(/\s/g, '')
+      if (!details.straatnaam || !details.huisnummer) {
+        toast.error('Adres kon niet worden omgezet naar een perceel.')
+        return
+      }
+      const fav = await saveFavorite.mutateAsync({
+        street: details.straatnaam,
+        huisnummer: details.huisnummer,
+        postcode,
+        address: parcel.address,
+      })
+      onParcelUpdate({
+        id: fav.parcel_id,
+        gemeente: fav.gemeente_naam ?? parcel.gemeente,
+        gemeenteCode: fav.gemeente_code ?? parcel.gemeenteCode,
+      })
+      toast.success('Opgeslagen in portfolio')
+      // Parity with the map flow: kick off the parcel analysis so the saved
+      // parcel gets its report/scores + dossier documents. The panel polls the
+      // documents while `analyzing` is true so they surface as they're built.
+      if (fav.parcel_cache_id && !fav.has_report) {
+        setAnalyzing(true)
+        generateReportFromParcel(fav.parcel_cache_id, accessToken, {
+          address_override: parcel.address,
+        })
+          .then(() => {
+            queryClient.invalidateQueries({ queryKey: ['favorites'] })
+            queryClient.invalidateQueries({ queryKey: ['parcel-documents', fav.parcel_id] })
+          })
+          .catch(() => {
+            toast.error('Analyse mislukt. Het perceel is opgeslagen; probeer het rapport later opnieuw.')
+          })
+          .finally(() => {
+            setAnalyzing(false)
+          })
+      }
+    } catch {
+      toast.error('Opslaan mislukt. Dit perceel is nog niet gescand of het adres kon niet worden gevonden.')
+    } finally {
+      setSavingToPortfolio(false)
+    }
+  }, [parcel.pdokId, parcel.address, parcel.gemeente, parcel.gemeenteCode, savingToPortfolio, saveFavorite, accessToken, queryClient, onParcelUpdate])
+
+  // Secondary action: hand off to the map, where the proven lookup →
+  // report-generation flow lives.
   const createReport = useCallback(async () => {
     if (!parcel.pdokId || creatingReport) return
     setCreatingReport(true)
@@ -413,8 +477,11 @@ function Workspace({
       <ParcelSourcesPanel
         parcelId={parcel.id}
         gemeenteCode={parcel.gemeenteCode ?? null}
-        onCreateReport={parcel.id ? undefined : createReport}
+        onSaveToPortfolio={parcel.id ? undefined : saveToPortfolio}
+        savingToPortfolio={savingToPortfolio}
+        onOpenMap={parcel.id ? undefined : createReport}
         creatingReport={creatingReport}
+        analyzing={analyzing}
       />
     </div>
   )
@@ -431,9 +498,14 @@ function VerkennerPage() {
         {parcel ? (
           // key forces a fresh chat (useChat state) per parcel selection
           <Workspace
-            key={parcel.id ?? parcel.address}
+            // Keyed by address (stable across a save) so saving to portfolio
+            // updates the parcel in place without resetting the conversation.
+            key={parcel.address}
             parcel={parcel}
             onReset={() => setParcel(null)}
+            onParcelUpdate={(patch) =>
+              setParcel((p) => (p ? { ...p, ...patch } : p))
+            }
           />
         ) : (
           <ParcelGate onSelect={setParcel} />

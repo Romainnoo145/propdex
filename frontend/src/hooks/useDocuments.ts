@@ -23,8 +23,14 @@ import type { ParcelDocumentListResponse, ParcelDocumentMeta } from '@/lib/types
  *
  * Query key: ['parcel-documents', parcelId]
  * Stale time: 30 seconds
+ *
+ * When `poll` is true the list refetches every few seconds — used right after a
+ * parcel is saved/analysed so the dossier documents surface as they're built.
  */
-export function useParcelDocuments(parcelId: string | undefined) {
+export function useParcelDocuments(
+  parcelId: string | undefined,
+  options?: { poll?: boolean },
+) {
   const { accessToken } = useAuth()
 
   return useQuery<ParcelDocumentListResponse, Error>({
@@ -32,6 +38,7 @@ export function useParcelDocuments(parcelId: string | undefined) {
     queryFn: () => fetchParcelDocuments(parcelId!, accessToken),
     enabled: !!parcelId && !!accessToken,
     staleTime: 30 * 1000,
+    refetchInterval: options?.poll ? 4000 : false,
   })
 }
 

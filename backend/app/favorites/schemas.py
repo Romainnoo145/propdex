@@ -17,6 +17,23 @@ class FavoriteCreate(BaseModel):
     address: str | None = Field(default=None, max_length=500)
 
 
+class FavoriteFromAddressCreate(BaseModel):
+    """Save a parcel to favorites straight from an address (Verkenner chat).
+
+    The address is resolved against the existing ParcelCache (the map's proven,
+    BRK-free path) to obtain a stable parcel_code — no Kadaster call required.
+    """
+
+    street: str = Field(min_length=2, max_length=200)
+    huisnummer: int = Field(ge=1)
+    postcode: str | None = Field(default=None, max_length=10)
+    address: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Display address the user picked (preferred over the cache address).",
+    )
+
+
 class PipelineUpdateRequest(BaseModel):
     stage: PipelineStage
     afgerond_reden: str | None = Field(

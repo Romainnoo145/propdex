@@ -10,7 +10,6 @@ from google.genai import types
 
 from app.agents.agent_tools import execute_tool, get_agent_tools
 
-
 # ── Helpers ──────────────────────────────────────────────────────────────
 
 USER_ID = str(uuid.uuid4())
@@ -85,9 +84,9 @@ class TestToolSchemas:
     """Verify get_agent_tools() returns Gemini Tool objects."""
 
     def test_tool_count(self):
-        """get_agent_tools() returns 2 Tool objects: functions + GoogleSearch."""
+        """get_agent_tools() returns 1 Tool object with function declarations."""
         tools = get_agent_tools()
-        assert len(tools) == 2
+        assert len(tools) == 1
 
     def test_tools_are_gemini_type(self):
         tools = get_agent_tools()
@@ -95,20 +94,34 @@ class TestToolSchemas:
             assert isinstance(t, types.Tool)
 
     def test_function_declarations_tool(self):
-        """First Tool has 3 FunctionDeclarations."""
+        """First Tool has 6 FunctionDeclarations."""
         tools = get_agent_tools()
         func_tool = tools[0]
         assert func_tool.function_declarations is not None
-        assert len(func_tool.function_declarations) == 3
+        assert len(func_tool.function_declarations) == 6
 
     def test_function_declaration_names(self):
         tools = get_agent_tools()
         names = {fd.name for fd in tools[0].function_declarations}
-        assert names == {"list_favorites", "list_reports", "get_report"}
+        assert names == {
+            "list_favorites",
+            "list_reports",
+            "get_report",
+            "query_policy_documents",
+            "get_checklist_status",
+            "get_beleidscontext",
+        }
 
     @pytest.mark.parametrize(
         "name",
-        ["list_favorites", "list_reports", "get_report"],
+        [
+            "list_favorites",
+            "list_reports",
+            "get_report",
+            "query_policy_documents",
+            "get_checklist_status",
+            "get_beleidscontext",
+        ],
     )
     def test_function_declaration_has_description_and_params(self, name):
         tools = get_agent_tools()
@@ -116,13 +129,6 @@ class TestToolSchemas:
         assert fd.description and len(fd.description) > 10
         assert fd.parameters is not None
         assert fd.parameters.type == "OBJECT"
-
-    def test_google_search_tool(self):
-        """Second Tool has GoogleSearch grounding."""
-        tools = get_agent_tools()
-        search_tool = tools[1]
-        assert search_tool.google_search is not None
-        assert isinstance(search_tool.google_search, types.GoogleSearch)
 
     def test_list_favorites_params(self):
         tools = get_agent_tools()
@@ -360,23 +366,123 @@ class TestReadOnlyConstraint:
 # ── Google Search grounding tool ─────────────────────────────────────────
 
 
-class TestGoogleSearchTool:
-    """Test Google Search grounding is present in tool definitions."""
+class TestGetBeleidscontext:
+    """Test the get_beleidscontext executor (cascade randvoorwaarden + klimaat)."""
 
-    def test_google_search_tool_in_agent_tools(self):
-        """GoogleSearch grounding tool present in get_agent_tools()."""
-        tools = get_agent_tools()
-        has_search = any(t.google_search is not None for t in tools)
-        assert has_search, "GoogleSearch grounding tool not found in get_agent_tools()"
+    ORG_ID = str(uuid.uuid4())
 
-    def test_google_search_not_in_executors(self):
-        """google_search is server-side grounding; execute_tool returns 'Onbekende tool' error."""
-        import asyncio
+    @staticmethod
+    def _rv(titel, samenvatting, categorie="wonen"):
+        return {
+            "categorie": categorie,
+            "titel": titel,
+            "samenvatting": samenvatting,
+            "citaat": "Letterlijk citaat " * 40,
+            "pagina": 12,
+        }
+
+    @pytest.mark.asyncio
+    async def test_happy_path_includes_randvoorwaarden_and_klimaat(self):
+        summaries = {
+            "woonvisie": [self._rv("Sociale huur 30%", "Minimaal 30% sociaal bij nieuwbouw.")],
+            "omgevingsvisie": [self._rv("Inbreiding voor uitbreiding", "Verdichting binnen bestaand gebied.")],
+        }
+        klimaat = {
+            "approval_rate": 0.62,
+            "ruling_count": 14,
+            "ruling_count_dev_types": 9,
+            "missing": False,
+            "reason": None,
+        }
         db = AsyncMock()
-        result = asyncio.get_event_loop().run_until_complete(
-            execute_tool("google_search", {}, db, USER_ID)
-        )
-        import json
+        with patch(
+            "app.agents.agent_tools.get_summaries", new=AsyncMock(return_value=summaries)
+        ), patch(
+            "app.agents.agent_tools.build_juridisch_klimaat_payload",
+            new=AsyncMock(return_value=klimaat),
+        ), patch(
+            "app.agents.agent_tools.resolve_gemeente_code", new=AsyncMock(return_value="GM0983")
+        ):
+            result = await execute_tool(
+                "get_beleidscontext",
+                {"gemeente": "Venlo", "gemeente_code": "GM0983"},
+                db,
+                USER_ID,
+                organization_id=self.ORG_ID,
+            )
         data = json.loads(result)
-        assert "error" in data
-        assert "Onbekende tool" in data["error"]
+        assert data["gemeente"] == "Venlo"
+        assert data["gemeente_code"] == "GM0983"
+        # Labels resolved via get_source_key_label
+        assert "Woonvisie" in data["beleid"]
+        assert "Omgevingsvisie" in data["beleid"]
+        assert any("Sociale huur 30%" in item for item in data["beleid"]["Woonvisie"])
+        assert data["juridisch_klimaat"]["goedkeuringspercentage"] == 62
+        assert data["juridisch_klimaat"]["aantal_uitspraken"] == 14
+
+    @pytest.mark.asyncio
+    async def test_gemeente_code_preferred_over_name_resolve(self):
+        resolve_mock = AsyncMock(return_value="GM9999")
+        summaries_mock = AsyncMock(return_value={"woonvisie": [self._rv("X", "Y")]})
+        db = AsyncMock()
+        with patch(
+            "app.agents.agent_tools.get_summaries", new=summaries_mock
+        ), patch(
+            "app.agents.agent_tools.build_juridisch_klimaat_payload",
+            new=AsyncMock(return_value=None),
+        ), patch(
+            "app.agents.agent_tools.resolve_gemeente_code", new=resolve_mock
+        ):
+            result = await execute_tool(
+                "get_beleidscontext",
+                {"gemeente": "Venlo", "gemeente_code": "GM0983"},
+                db,
+                USER_ID,
+                organization_id=self.ORG_ID,
+            )
+        data = json.loads(result)
+        # resolve_gemeente_code must NOT be used when code is supplied
+        resolve_mock.assert_not_awaited()
+        # get_summaries called with the supplied code
+        assert summaries_mock.await_args.args[1] == "GM0983"
+        assert data["gemeente_code"] == "GM0983"
+
+    @pytest.mark.asyncio
+    async def test_unknown_gemeente_returns_message(self):
+        db = AsyncMock()
+        with patch(
+            "app.agents.agent_tools.resolve_gemeente_code", new=AsyncMock(return_value=None)
+        ):
+            result = await execute_tool(
+                "get_beleidscontext",
+                {"gemeente": "Nergenshuizen"},
+                db,
+                USER_ID,
+                organization_id=self.ORG_ID,
+            )
+        data = json.loads(result)
+        assert "message" in data
+        assert "niet gevonden" in data["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_empty_cascade_returns_message(self):
+        db = AsyncMock()
+        with patch(
+            "app.agents.agent_tools.get_summaries", new=AsyncMock(return_value={})
+        ), patch(
+            "app.agents.agent_tools.build_juridisch_klimaat_payload",
+            new=AsyncMock(return_value=None),
+        ), patch(
+            "app.agents.agent_tools.get_gemeente_name_map",
+            new=AsyncMock(return_value={"GM0983": "Venlo"}),
+        ):
+            result = await execute_tool(
+                "get_beleidscontext",
+                {"gemeente_code": "GM0983"},
+                db,
+                USER_ID,
+                organization_id=self.ORG_ID,
+            )
+        data = json.loads(result)
+        assert "message" in data
+        assert "Venlo" in data["message"]

@@ -13,11 +13,16 @@ from google.genai import types
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.parcel_favorite import ParcelFavorite
-from app.models.report import SavedReport
-from app.models.policy_document import PolicyDocument
+from app.agents.bulk_query_service import resolve_gemeente_code
 from app.models.checklist_progress import ChecklistProgress
+from app.models.parcel_favorite import ParcelFavorite
+from app.models.policy_document import PolicyDocument
+from app.models.report import SavedReport
+from app.policy_documents.service import get_summaries
+from app.policy_documents.source_keys import get_source_key_label
 from app.services.checklists import CHECKLISTS
+from app.services.gemeente_name_lookup import get_gemeente_name_map
+from app.services.juridisch_klimaat_builder import build_juridisch_klimaat_payload
 
 # ── Gemini FunctionDeclaration definitions ───────────────────────────────
 
@@ -150,6 +155,48 @@ _GET_CHECKLIST_STATUS = types.FunctionDeclaration(
 )
 
 
+_GET_BELEIDSCONTEXT = types.FunctionDeclaration(
+    name="get_beleidscontext",
+    description=(
+        "Haal de concrete gemeentelijke beleidsrandvoorwaarden (uit omgevingsvisie, "
+        "woonvisie, parkeerbeleid, huisvestingsverordening, etc.) EN het juridisch "
+        "klimaat (goedkeuringspercentage uit jurisprudentie) op voor een gemeente. "
+        "Gebruik dit ALTIJD bij ontwikkel- of beleidsvragen over een perceel — "
+        "bijvoorbeeld 'mag ik hier optoppen / splitsen / een woning toevoegen / "
+        "transformeren?'. Geeft geëxtraheerde, letterlijke randvoorwaarden terug die "
+        "je moet citeren met bronvermelding. Verzin nooit zelf randvoorwaarden."
+    ),
+    parameters=types.Schema(
+        type="OBJECT",
+        properties={
+            "gemeente": types.Schema(
+                type="STRING",
+                description=(
+                    "Gemeentenaam (bijv. 'Venlo'). Gebruik de gemeente van het perceel "
+                    "waarover de vraag gaat."
+                ),
+            ),
+            "gemeente_code": types.Schema(
+                type="STRING",
+                description=(
+                    "CBS gemeentecode (bijv. 'GM0983'). Geef deze mee wanneer bekend — "
+                    "dan is de resolutie exact. Wordt geprefereerd boven de naam."
+                ),
+            ),
+            "source_key": types.Schema(
+                type="STRING",
+                description=(
+                    "Optioneel filter op één documenttype: omgevingsvisie, woonvisie, "
+                    "parkeerbeleid, huisvestingsverordening, welstandsnota. Laat leeg "
+                    "voor alle beschikbare beleidsdocumenten."
+                ),
+            ),
+        },
+        required=[],
+    ),
+)
+
+
 def get_agent_tools() -> list[types.Tool]:
     """Return Gemini Tool objects: user-data functions.
 
@@ -162,8 +209,15 @@ def get_agent_tools() -> list[types.Tool]:
         types.Tool(function_declarations=[
             _LIST_FAVORITES, _LIST_REPORTS, _GET_REPORT,
             _QUERY_POLICY_DOCUMENTS, _GET_CHECKLIST_STATUS,
+            _GET_BELEIDSCONTEXT,
         ]),
     ]
+
+
+# Bound the tool output so a data-rich gemeente (e.g. Venlo ~48 randvoorwaarden)
+# cannot blow up the agent context window.
+_MAX_RANDVOORWAARDEN_TOTAL = 40
+_MAX_SAMENVATTING_CHARS = 320
 
 
 # ── Internal executor helpers (read-only queries) ───────────────────────
@@ -386,6 +440,115 @@ async def _get_checklist_status(
     return _serialize(statuses)
 
 
+def _compact_randvoorwaarde(rv: dict[str, object]) -> str:
+    """Render one randvoorwaarde as a compact, bounded one-liner for the LLM.
+
+    Keeps titel + samenvatting (the developer-facing bullet) and drops the long
+    citaat/pagina fields to keep tool output within budget.
+    """
+    titel = str(rv.get("titel") or "").strip()
+    samenvatting = str(rv.get("samenvatting") or "").strip()
+    if len(samenvatting) > _MAX_SAMENVATTING_CHARS:
+        samenvatting = samenvatting[: _MAX_SAMENVATTING_CHARS].rstrip() + "…"
+    if titel and samenvatting:
+        return f"{titel} — {samenvatting}"
+    text_val = titel or samenvatting
+    if text_val:
+        return text_val
+    # Fallback for unexpected shapes: truncated JSON of the raw dict.
+    return _serialize(rv)[: _MAX_SAMENVATTING_CHARS]
+
+
+def _build_klimaat_block(klimaat: dict[str, object] | None) -> dict[str, object]:
+    """Shape build_juridisch_klimaat_payload output into a compact LLM block."""
+    if not klimaat:
+        return {"toelichting": "Geen jurisprudentie-data beschikbaar voor deze gemeente."}
+    approval_rate = klimaat.get("approval_rate")
+    block: dict[str, object] = {
+        "aantal_uitspraken": klimaat.get("ruling_count"),
+        "aantal_uitspraken_ontwikkeltypes": klimaat.get("ruling_count_dev_types"),
+    }
+    if isinstance(approval_rate, (int, float)):
+        block["goedkeuringspercentage"] = round(approval_rate * 100)
+    if klimaat.get("missing"):
+        block["toelichting"] = (
+            "Beperkte jurisprudentie-data — goedkeuringspercentage is indicatief."
+        )
+    return block
+
+
+async def _get_beleidscontext(
+    db: AsyncSession,
+    organization_id: str,
+    gemeente: str | None = None,
+    gemeente_code: str | None = None,
+    source_key: str | None = None,
+) -> str:
+    """Fetch cascade beleidsrandvoorwaarden + juridisch klimaat for a gemeente.
+
+    Org-agnostic public data: get_summaries filters on is_global docs and
+    build_juridisch_klimaat_payload reads the org-agnostic RulingCache. The
+    organization_id is passed only to satisfy get_summaries' signature.
+    """
+    # 1. Resolve GM-code — supplied code is preferred over fuzzy name resolve.
+    code = (gemeente_code or "").strip() or None
+    if code is None and gemeente:
+        code = await resolve_gemeente_code(gemeente, db)
+    if not code:
+        return _serialize(
+            {"message": f"Gemeente niet gevonden: {gemeente or gemeente_code or '(geen)'}."}
+        )
+
+    # 2. Resolve gemeente-naam (needed for the jurisprudence lookup).
+    naam = (gemeente or "").strip()
+    if not naam:
+        name_map = await get_gemeente_name_map(db)
+        naam = name_map.get(code, code)
+
+    # 3. Fetch cascade randvoorwaarden (org_id is ignored by get_summaries).
+    try:
+        org_uuid = _uuid.UUID(organization_id) if organization_id else _uuid.UUID(int=0)
+    except ValueError:
+        org_uuid = _uuid.UUID(int=0)
+    summaries = await get_summaries("gemeente", code, org_uuid, db)
+
+    if source_key:
+        summaries = {k: v for k, v in summaries.items() if k == source_key}
+
+    # 4. Fetch juridisch klimaat (may be None).
+    klimaat = await build_juridisch_klimaat_payload(db, naam)
+    klimaat_block = _build_klimaat_block(klimaat)
+
+    # 5. Build compact, capped payload.
+    beleid: dict[str, list[str]] = {}
+    remaining = _MAX_RANDVOORWAARDEN_TOTAL
+    for skey, randvoorwaarden in summaries.items():
+        if remaining <= 0:
+            break
+        label = get_source_key_label("gemeente", skey) or skey
+        items = [_compact_randvoorwaarde(rv) for rv in randvoorwaarden[:remaining]]
+        if items:
+            beleid[label] = items
+            remaining -= len(items)
+
+    if not beleid:
+        return _serialize(
+            {
+                "message": f"Geen beleidsrandvoorwaarden gevonden voor {naam}.",
+                "juridisch_klimaat": klimaat_block,
+            }
+        )
+
+    return _serialize(
+        {
+            "gemeente": naam,
+            "gemeente_code": code,
+            "beleid": beleid,
+            "juridisch_klimaat": klimaat_block,
+        }
+    )
+
+
 # ── Public dispatcher ────────────────────────────────────────────────────
 
 
@@ -425,6 +588,14 @@ async def execute_tool(
             db, user_id,
             parcel_id=tool_input.get("parcel_id", ""),
             use_case=tool_input.get("use_case"),
+        )
+    if name == "get_beleidscontext":
+        return await _get_beleidscontext(
+            db,
+            organization_id=organization_id or "",
+            gemeente=tool_input.get("gemeente"),
+            gemeente_code=tool_input.get("gemeente_code"),
+            source_key=tool_input.get("source_key"),
         )
 
     return _serialize({"error": f"Onbekende tool: {name}"})

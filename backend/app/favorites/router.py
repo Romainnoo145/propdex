@@ -11,6 +11,7 @@ from app.favorites.favorites_service import (
     NoteResponse,
     NoteUpdateRequest,
     create_favorite,
+    create_favorite_from_address,
     create_favorites_bulk,
     create_note,
     delete_favorite,
@@ -26,6 +27,7 @@ from app.favorites.favorites_service import (
 from app.favorites.schemas import (
     FavoriteCentroidResponse,
     FavoriteCreate,
+    FavoriteFromAddressCreate,
     FavoriteResponse,
     NotitieUpdateRequest,
     PipelineUpdateRequest,
@@ -56,6 +58,33 @@ async def create_favorite_endpoint(
         gemeente_code=body.gemeente_code,
         gemeente_naam=body.gemeente_naam,
         wijk_naam=body.wijk_naam,
+        address=body.address,
+        user_id=current_user.id,
+        db=db,
+    )
+
+
+@router.post(
+    "/favorites/from-address",
+    response_model=FavoriteResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@limiter.limit("30/minute")
+async def create_favorite_from_address_endpoint(
+    request: Request,
+    body: FavoriteFromAddressCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> FavoriteResponse:
+    """Save a parcel to favorites straight from an address (Verkenner chat).
+
+    Resolves the address against ParcelCache (BRK-free) to a stable parcel_code,
+    then creates the favorite. Idempotent: returns the existing favorite with 200.
+    """
+    return await create_favorite_from_address(  # type: ignore[return-value]
+        street=body.street,
+        huisnummer=body.huisnummer,
+        postcode=body.postcode,
         address=body.address,
         user_id=current_user.id,
         db=db,

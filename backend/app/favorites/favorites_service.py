@@ -115,7 +115,9 @@ async def _get_favorite_or_404(
     try:
         cache_uuid = uuid.UUID(parcel_id)
     except (ValueError, AttributeError):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Favorite not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Favorite not found"
+        ) from None
 
     cache_result = await db.execute(
         select(ParcelCache.parcel_id).where(ParcelCache.id == cache_uuid)
@@ -247,6 +249,83 @@ async def create_favorite(
     return FavoriteResponse.model_validate(fav)
 
 
+async def create_favorite_from_address(
+    street: str,
+    huisnummer: int,
+    postcode: str | None,
+    user_id: uuid.UUID,
+    db: AsyncSession,
+    address: str | None = None,
+) -> "FavoriteResponse | JSONResponse":
+    """Save a parcel to favorites straight from an address.
+
+    Resolves the address against the existing ParcelCache (the map's proven,
+    BRK-free path), reads the stable parcel_code, then delegates to
+    create_favorite. No Kadaster/BRK call is required — the parcel must already
+    exist in parcel_cache (i.e. it sits in a scanned area). Raises 404 when the
+    address cannot be resolved to a cached kadastraal perceel.
+
+    The caller-supplied ``address`` (the display address the user picked) is
+    preferred, and the gemeente name is resolved from the gemeente_code so the
+    favorite groups under the right gemeente instead of "Onbekend".
+    """
+    # Local imports avoid import-time coupling with the scans/services packages.
+    from app.scans.parcels_service import resolve_parcel_by_address
+    from app.services.gemeente_name_lookup import get_gemeente_name_map
+
+    resolved = await resolve_parcel_by_address(
+        db=db, street=street, huisnummer=huisnummer, postcode=postcode
+    )  # raises HTTPException(404) when no parcel matches
+
+    try:
+        cache_uuid = uuid.UUID(str(resolved["parcel_id"]))
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Perceel niet gevonden voor dit adres.",
+        ) from None
+
+    row = (
+        await db.execute(
+            select(
+                ParcelCache.parcel_id,
+                ParcelCache.parcel_code,
+                ParcelCache.gemeente_code,
+                ParcelCache.address,
+            ).where(ParcelCache.id == cache_uuid)
+        )
+    ).first()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Geen kadastraal perceel gevonden voor dit adres.",
+        )
+
+    # Prefer the human-readable parcel_code; fall back to the kadaster parcel_id
+    # string when it's absent (only ~half of cached parcels carry a parcel_code).
+    # create_favorite matches on either, so both are valid favorite keys.
+    favorite_key = row.parcel_code or row.parcel_id
+
+    # Resolve the gemeente name from its code so the favorite lands under the
+    # right gemeente group (the portfolio groups on gemeente_naam). Non-scanned
+    # parcels have no scan-derived name, hence this explicit lookup.
+    gemeente_naam: str | None = None
+    normalized = _normalize_gemeente_code(row.gemeente_code)
+    if normalized:
+        name_map = await get_gemeente_name_map(db)
+        gemeente_naam = name_map.get(normalized) or name_map.get(row.gemeente_code)
+
+    return await create_favorite(
+        parcel_id=favorite_key,
+        gemeente_code=row.gemeente_code,
+        gemeente_naam=gemeente_naam,
+        wijk_naam=None,
+        address=address or resolved.get("address") or row.address,
+        user_id=user_id,
+        db=db,
+    )
+
+
 async def create_favorites_bulk(
     parcel_ids: list[str],
     gemeente_code: str | None,
@@ -345,6 +424,15 @@ async def list_favorites(
         select(
             SavedReport.source_parcel_id.label("parcel_id"),
             SavedReport.id.label("report_id"),
+            # Fallback scores for parcels without a scan-time ScanResult (e.g.
+            # saved via the Verkenner from an address that geocodes to an
+            # unscanned parcel). Same 0-100 scale as the scan scores.
+            SavedReport.report_data["scores_v3"]["potentie"].as_float().label(
+                "report_potentie"
+            ),
+            SavedReport.report_data["scores_v3"]["risico"].as_float().label(
+                "report_risico"
+            ),
         )
         .where(
             SavedReport.user_id == user_id,
@@ -374,6 +462,8 @@ async def list_favorites(
             scores_sq.c.risico_score,
             report_sq.c.report_id,
             project_type_sq.c.project_type,
+            report_sq.c.report_potentie,
+            report_sq.c.report_risico,
         )
         .outerjoin(scores_sq, scores_sq.c.parcel_id == ParcelFavorite.parcel_cache_id)
         .outerjoin(report_sq, report_sq.c.parcel_id == ParcelFavorite.parcel_cache_id)
@@ -385,8 +475,12 @@ async def list_favorites(
     for row in result.all():
         fav = row[0]
         resp = FavoriteResponse.model_validate(fav)
-        resp.potentie_score = round(row[1], 1) if row[1] is not None else None
-        resp.risico_score = round(row[2], 1) if row[2] is not None else None
+        # Prefer scan-time scores; fall back to the report's scores_v3 for
+        # parcels that were never part of a scored area scan.
+        potentie = row[1] if row[1] is not None else row[5]
+        risico = row[2] if row[2] is not None else row[6]
+        resp.potentie_score = round(potentie, 1) if potentie is not None else None
+        resp.risico_score = round(risico, 1) if risico is not None else None
         resp.has_report = row[3] is not None
         resp.report_id = row[3]
         resp.project_type = row[4]
