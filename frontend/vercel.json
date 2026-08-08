@@ -2,6 +2,11 @@
   "framework": null,
   "buildCommand": "pnpm install && npx vite build",
   "outputDirectory": "dist",
+  "git": {
+    "deploymentEnabled": {
+      "internal-agent-context-rollout": false
+    }
+  },
   "rewrites": [
     {
       "source": "/api/auth/:path*",

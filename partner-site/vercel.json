@@ -5,6 +5,11 @@
   "framework": null,
   "cleanUrls": false,
   "trailingSlash": false,
+  "git": {
+    "deploymentEnabled": {
+      "internal-agent-context-rollout": false
+    }
+  },
   "rewrites": [
     {
       "source": "/",
